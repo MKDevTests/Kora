@@ -8,6 +8,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ViewQuilt
@@ -52,6 +53,7 @@ fun SeriesActionsMenu(
     showDownloadOption: Boolean,
     onDismissRequest: () -> Unit,
     onToggleImmersiveMode: (() -> Unit)? = null,
+    onOpenInKomga: (() -> Unit)? = null,
 ) {
     val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
     val isOffline = LocalOfflineMode.current.collectAsState().value
@@ -274,6 +276,17 @@ fun SeriesActionsMenu(
                 leadingIcon = { Icon(Icons.Rounded.ViewQuilt, null) },
                 onClick = {
                     onToggleImmersiveMode()
+                    onDismissRequest()
+                }
+            )
+        }
+
+        if (onOpenInKomga != null) {
+            DropdownMenuItem(
+                text = { Text("Open in Komga", style = MaterialTheme.typography.labelLarge) },
+                leadingIcon = { Icon(Icons.Rounded.OpenInNew, null) },
+                onClick = {
+                    onOpenInKomga()
                     onDismissRequest()
                 }
             )

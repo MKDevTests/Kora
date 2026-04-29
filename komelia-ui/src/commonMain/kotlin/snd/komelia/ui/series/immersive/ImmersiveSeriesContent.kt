@@ -123,6 +123,7 @@ fun ImmersiveSeriesContent(
     onDownload: () -> Unit,
     initiallyExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
+    onOpenInKomga: (() -> Unit)? = null,
 ) {
     val hideParentheses = LocalHideParenthesesInNames.current
     val title = if (hideParentheses) series.metadata.title.removeParentheses() else series.metadata.title
@@ -285,6 +286,7 @@ fun ImmersiveSeriesContent(
                             showDownloadOption = false,
                             onDismissRequest = { expandActions = false },
                             onToggleImmersiveMode = LocalToggleImmersiveMorphingCover.current,
+                            onOpenInKomga = onOpenInKomga,
                         )
                     }
                 }
