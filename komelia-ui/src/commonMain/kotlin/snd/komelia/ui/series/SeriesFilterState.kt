@@ -219,6 +219,12 @@ class SeriesFilterState(
         checkIfAllDefault()
     }
 
+    /** Restore a previously-persisted filter as the current state. */
+    fun restore(filter: SeriesFilter) {
+        mutableFilterState.value = filter
+        checkIfAllDefault()
+    }
+
     fun onSortOrderChange(sortOrder: SeriesSort) {
         mutableFilterState.update { it.copy(sortOrder = sortOrder) }
         checkIfAllDefault()

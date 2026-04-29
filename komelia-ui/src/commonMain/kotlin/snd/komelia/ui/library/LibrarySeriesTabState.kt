@@ -49,6 +49,7 @@ class LibrarySeriesTabState(
     private val library: StateFlow<KomgaLibrary?>,
     private val taskEmitter: OfflineTaskEmitter,
     val cardWidth: StateFlow<Dp>,
+    private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
     val pageLoadSize = MutableStateFlow(50)
     var series by mutableStateOf<List<KomgaSeries>>(emptyList())
@@ -81,7 +82,18 @@ class LibrarySeriesTabState(
 
         screenModelScope.launch {
             filterState.initialize()
-            if (filter != null) filterState.applyFilter(filter)
+            // Restore persisted per-library filter unless an explicit filter was provided
+            if (filter != null) {
+                filterState.applyFilter(filter)
+            } else {
+                library.value?.let { lib ->
+                    runCatching {
+                        librarySeriesFiltersRepository.get(lib.id)?.let { json ->
+                            kotlinx.serialization.json.Json.decodeFromString<SeriesFilterDto>(json).toDomain()
+                        }
+                    }.getOrNull()?.let { restored -> filterState.restore(restored) }
+                }
+            }
 
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
             loadSeriesPage(1)
@@ -102,8 +114,16 @@ class LibrarySeriesTabState(
             delay(1000)
         }.launchIn(screenModelScope)
 
-        filterState.state.drop(1).onEach { loadSeriesPage(1) }
-            .launchIn(screenModelScope)
+        filterState.state.drop(1).onEach { current ->
+            loadSeriesPage(1)
+            // Persist user-modified filters per library
+            library.value?.let { lib ->
+                runCatching {
+                    val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
+                    librarySeriesFiltersRepository.put(lib.id, json)
+                }
+            }
+        }.launchIn(screenModelScope)
     }
 
     fun reload() {
