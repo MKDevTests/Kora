@@ -32,12 +32,16 @@ import snd.komelia.ui.series.SeriesFilter
 import snd.komelia.ui.series.SeriesFilterState
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.common.KomgaSort
+import snd.komga.client.common.KomgaSort.Direction.ASC
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.common.Page
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.sse.KomgaEvent
+
+private const val SERIES_RANDOM_SORT = "random"
 
 class LibrarySeriesTabState(
     private val bookApi: KomgaBookApi,
@@ -109,6 +113,27 @@ class LibrarySeriesTabState(
     fun reload() {
         screenModelScope.launch {
             loadSeriesPage(1)
+        }
+    }
+
+    fun openRandomSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
+        if (totalSeriesCount == 0) return
+        notifications.runCatchingToNotifications(screenModelScope) {
+            val filter = filterState.state.value
+            val condition = allOfSeries {
+                library.value?.let { library { isEqualTo(it.id) } }
+                filter.addConditionTo(this)
+            }
+            val page = seriesApi.getSeriesList(
+                conditionBuilder = condition,
+                fulltextSearch = filter.searchTerm.ifBlank { null },
+                pageRequest = KomgaPageRequest(
+                    size = 1,
+                    pageIndex = 0,
+                    sort = SeriesSort.RANDOM.komgaSort
+                )
+            )
+            page.content.firstOrNull()?.let(onSeriesSelected)
         }
     }
 
@@ -232,6 +257,7 @@ class LibrarySeriesTabState(
         TITLE_DESC(KomgaSeriesSort.byTitleDesc()),
         DATE_ADDED_DESC(KomgaSeriesSort.byCreatedDateDesc()),
         DATE_ADDED_ASC(KomgaSeriesSort.byCreatedDateAsc()),
+        RANDOM(KomgaSeriesSort(listOf(KomgaSort.Order(SERIES_RANDOM_SORT, ASC)))),
         //        FOLDER_NAME_ASC(KomgaSeriesSort.byFolderNameAsc()),
 //        FOLDER_NAME_DESC(KomgaSeriesSort.byFolderNameDesc()),
 //        BOOKS_COUNT_ASC(KomgaSeriesSort.byBooksCountAsc()),

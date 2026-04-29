@@ -250,6 +250,10 @@ class LibraryScreen(
                                     onBrowseClick = vm::toBrowseTab,
                                     onCollectionsClick = vm::toCollectionsTab,
                                     onReadListsClick = vm::toReadListsTab,
+                                    randomSeriesEnabled = vm.seriesTabState.totalSeriesCount > 0,
+                                    onRandomSeriesClick = {
+                                        vm.seriesTabState.openRandomSeries { navigator.push(seriesScreen(it)) }
+                                    },
                                     contentPadding = PaddingValues(horizontal = gridPadding)
                                 )
                                 if (showContinueReading) {
@@ -555,6 +559,8 @@ private fun LibraryTabChips(
     onBrowseClick: () -> Unit,
     onCollectionsClick: () -> Unit,
     onReadListsClick: () -> Unit,
+    randomSeriesEnabled: Boolean = false,
+    onRandomSeriesClick: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     val chipColors = AppFilterChipDefaults.filterChipColors()
@@ -609,6 +615,20 @@ private fun LibraryTabChips(
                 shape = AppFilterChipDefaults.shape(),
                 border = AppFilterChipDefaults.filterChipBorder(showContinueReading),
             )
+        }
+
+        if (currentTab == SERIES) {
+            item {
+                FilterChip(
+                    selected = false,
+                    enabled = randomSeriesEnabled,
+                    onClick = onRandomSeriesClick,
+                    label = { Text(LocalStrings.current.seriesFilter.sortRandom) },
+                    colors = chipColors,
+                    shape = AppFilterChipDefaults.shape(),
+                    border = AppFilterChipDefaults.filterChipBorder(false),
+                )
+            }
         }
     }
 }

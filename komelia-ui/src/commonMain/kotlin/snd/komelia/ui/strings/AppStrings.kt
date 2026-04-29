@@ -461,6 +461,7 @@ data class SeriesFilterStrings(
     val anyValue: String,
     val search: String,
     val sort: String,
+    val sortRandom: String,
     val sortTitleAsc: String,
     val sortTitleDesc: String,
     val sortDateAddedAsc: String,
@@ -506,6 +507,7 @@ data class SeriesFilterStrings(
             LibrarySeriesTabState.SeriesSort.RELEASE_DATE_DESC -> sortReleaseDateDesc
             LibrarySeriesTabState.SeriesSort.UPDATED_DESC -> sortUpdatedDesc
             LibrarySeriesTabState.SeriesSort.UPDATED_ASC -> sortUpdatedAsc
+            LibrarySeriesTabState.SeriesSort.RANDOM -> sortRandom
 //            FOLDER_NAME_ASC -> sortFolderNameAsc
 //            FOLDER_NAME_DESC -> sortFolderNameDesc
 //            BOOKS_COUNT_ASC -> sortBooksCountAsc
