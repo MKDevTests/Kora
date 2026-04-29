@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent as AndroidKeyEvent
 import android.webkit.WebView
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -14,6 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toComposeRect
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
@@ -44,6 +49,18 @@ private val _incomingFileUriFlow = MutableSharedFlow<String>(replay = 1)
 val incomingFileUriFlow: SharedFlow<String> = _incomingFileUriFlow.asSharedFlow()
 
 class MainActivity : AppCompatActivity() {
+
+    private val keyEvents = MutableSharedFlow<KeyEvent>(extraBufferCapacity = Int.MAX_VALUE)
+
+    override fun dispatchKeyEvent(event: AndroidKeyEvent): Boolean {
+        if (event.keyCode == AndroidKeyEvent.KEYCODE_VOLUME_UP ||
+            event.keyCode == AndroidKeyEvent.KEYCODE_VOLUME_DOWN
+        ) {
+            keyEvents.tryEmit(KeyEvent(event as NativeKeyEvent))
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)
@@ -95,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                     windowWidth = WindowSizeClass.fromDp(windowSize.width),
                     windowHeight = WindowSizeClass.fromDp(windowSize.height),
                     platformType = PlatformType.MOBILE,
-                    keyEvents = MutableSharedFlow()
+                    keyEvents = keyEvents
                 )
             }
         }
