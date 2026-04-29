@@ -81,6 +81,9 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
+        // Ensure IME is shown on focus and content resizes around it.
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             val windowSize = rememberWindowSize()

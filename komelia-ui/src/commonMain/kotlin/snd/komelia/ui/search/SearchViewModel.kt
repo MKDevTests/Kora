@@ -23,6 +23,9 @@ import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.search.allOfBooks
+import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesSearch
 
@@ -49,6 +52,16 @@ class SearchViewModel(
         private set
 
     var query by mutableStateOf("")
+
+    var selectedLibraryId by mutableStateOf<KomgaLibraryId?>(null)
+        private set
+
+    val availableLibraries: StateFlow<List<KomgaLibrary>> = libraries
+
+    fun onSelectedLibraryChange(libraryId: KomgaLibraryId?) {
+        selectedLibraryId = libraryId
+        reload()
+    }
 
     private var userSelectedTab by mutableStateOf(SearchResultsTab.SERIES)
     var currentTab by mutableStateOf(SearchResultsTab.SERIES)
@@ -101,8 +114,17 @@ class SearchViewModel(
 
     private suspend fun loadSeriesPage(pageNumber: Int) {
         appNotifications.runCatchingToNotifications {
+            val libId = selectedLibraryId
+            val search = if (libId != null) {
+                KomgaSeriesSearch(
+                    condition = allOfSeries { library { isEqualTo(libId) } }.toSeriesCondition(),
+                    fullTextSearch = query,
+                )
+            } else {
+                KomgaSeriesSearch(fullTextSearch = query)
+            }
             val page = seriesApi.getSeriesList(
-                KomgaSeriesSearch(fullTextSearch = query),
+                search,
                 KomgaPageRequest(
                     pageIndex = pageNumber - 1,
                     size = 10,
@@ -126,8 +148,17 @@ class SearchViewModel(
 
     private suspend fun loadBooksPage(pageNumber: Int) {
         appNotifications.runCatchingToNotifications {
+            val libId = selectedLibraryId
+            val search = if (libId != null) {
+                KomgaBookSearch(
+                    condition = allOfBooks { library { isEqualTo(libId) } }.toBookCondition(),
+                    fullTextSearch = query,
+                )
+            } else {
+                KomgaBookSearch(fullTextSearch = query)
+            }
             val page = bookApi.getBookList(
-                KomgaBookSearch(fullTextSearch = query),
+                search,
                 KomgaPageRequest(
                     pageIndex = pageNumber - 1,
                     size = 10,
