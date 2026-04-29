@@ -89,6 +89,7 @@ class PagedReaderState(
 
     val pageSpreads = MutableStateFlow<List<List<PageMetadata>>>(emptyList())
     val currentSpreadIndex = MutableStateFlow(0)
+    private var requestedSpreadIndex = 0
     val lastImageBounds = MutableStateFlow<Rect?>(null)
     val currentSpread: MutableStateFlow<PageSpread> = MutableStateFlow(PageSpread(emptyList()))
     val transitionPage: MutableStateFlow<TransitionPage?> = MutableStateFlow(null)
@@ -248,20 +249,27 @@ class PagedReaderState(
             pages = pageSpreads[newSpreadIndex].map { Page(it, null) },
         )
         currentSpreadIndex.value = newSpreadIndex
+        requestedSpreadIndex = newSpreadIndex
 
         jumpToPage(newSpreadIndex)
     }
 
     fun nextPage() {
-        val currentSpreadIndex = currentSpreadIndex.value
+        val spreads = pageSpreads.value
+        if (spreads.isEmpty()) return
+
+        val currentSpreadIndex = requestedSpreadIndex.coerceIn(spreads.indices)
+        val lastSpreadIndex = spreads.lastIndex
         val currentTransitionPage = transitionPage.value
+
         when {
-            currentSpreadIndex < pageSpreads.value.size - 1 -> {
-                if (currentTransitionPage != null) this.transitionPage.value = null
-                else onPageChange(currentSpreadIndex + 1)
+            currentSpreadIndex < lastSpreadIndex -> {
+                loadPage(currentSpreadIndex + 1)
             }
 
             currentTransitionPage == null -> {
+                requestedSpreadIndex = lastSpreadIndex
+                loadSpreadJob?.cancel()
                 val bookState = readerState.booksState.value ?: return
                 this.transitionPage.value = BookEnd(
                     currentBook = bookState.currentBook,
@@ -280,16 +288,20 @@ class PagedReaderState(
     }
 
     fun previousPage() {
-        val currentSpreadIndex = currentSpreadIndex.value
+        val spreads = pageSpreads.value
+        if (spreads.isEmpty()) return
+
+        val currentSpreadIndex = requestedSpreadIndex.coerceIn(spreads.indices)
         val currentTransitionPage = transitionPage.value
+
         when {
             currentSpreadIndex != 0 -> {
-                if (currentTransitionPage != null) this.transitionPage.value = null
-                else onPageChange(currentSpreadIndex - 1)
-
+                loadPage(currentSpreadIndex - 1)
             }
 
             currentTransitionPage == null -> {
+                requestedSpreadIndex = 0
+                loadSpreadJob?.cancel()
                 val bookState = readerState.booksState.value ?: return
                 this.transitionPage.value = BookStart(
                     currentBook = bookState.currentBook,
@@ -308,6 +320,7 @@ class PagedReaderState(
     }
 
     fun onPageChange(page: Int) {
+        if (page in pageSpreads.value.indices) requestedSpreadIndex = page
         if (currentSpreadIndex.value == page) return
         pageChangeFlow.tryEmit(Unit)
         loadPage(page)
@@ -315,6 +328,8 @@ class PagedReaderState(
 
     fun moveToLastPage() {
         val lastPageIndex = pageSpreads.value.size - 1
+        if (lastPageIndex < 0) return
+        requestedSpreadIndex = lastPageIndex
         if (currentSpreadIndex.value == lastPageIndex) return
         pageChangeFlow.tryEmit(Unit)
         loadPage(lastPageIndex)
@@ -323,6 +338,8 @@ class PagedReaderState(
     fun jumpToPage(page: Int) {
         val spreads = pageSpreads.value
         if (page !in spreads.indices) return
+        requestedSpreadIndex = page
+        transitionPage.value = null
         pageChangeFlow.tryEmit(Unit)
         val pageNumber = spreads[page].last().pageNumber
         readerState.onProgressChange(pageNumber)
@@ -336,7 +353,9 @@ class PagedReaderState(
     private fun loadPage(spreadIndex: Int) {
         val spreads = pageSpreads.value
         if (spreadIndex !in spreads.indices) return
+        requestedSpreadIndex = spreadIndex
 
+        transitionPage.value = null
         if (spreadIndex != currentSpreadIndex.value) {
             val pageNumber = spreads[spreadIndex].last().pageNumber
             readerState.onProgressChange(pageNumber)
@@ -368,14 +387,12 @@ class PagedReaderState(
             if (currentSpreadJob.isActive) {
                 currentSpread.value = PageSpread(currentSpreadMetadata.map { Page(it, null) })
                 currentSpreadIndex.value = loadSpreadIndex
-                transitionPage.value = null
             }
         }
 
         val completedPagesJob = currentSpreadJob.await()
         currentSpread.value = completedPagesJob.spread
         currentSpreadIndex.value = loadSpreadIndex
-        transitionPage.value = null
 
         val newScale = completedPagesJob.scale
         screenScaleState.apply(newScale)

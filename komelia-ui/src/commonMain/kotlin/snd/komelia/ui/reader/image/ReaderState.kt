@@ -67,6 +67,7 @@ import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.ReaderType
+import snd.komelia.ui.book.BookFilter
 import snd.komelia.ui.BookSiblingsContext
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.MainScreen
@@ -75,10 +76,15 @@ import snd.komelia.ui.platform.CommonParcelable
 import snd.komelia.ui.platform.CommonParcelize
 import snd.komelia.ui.platform.CommonParcelizeRawValue
 import snd.komelia.ui.series.SeriesScreen
+import snd.komelia.ui.series.SeriesNavigationContext
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.book.KomgaBookReadProgressUpdateRequest
+import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaReadingDirection
+import snd.komga.client.search.allOfBooks
+import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
+import snd.komga.client.series.KomgaSeriesId
 
 typealias SpreadIndex = Int
 
@@ -207,7 +213,7 @@ class ReaderState(
             val bookPages = loadBookPages(newBook.id)
             val prevBook = getPreviousBook(bookId)
             val prevBookPages = if (prevBook != null) loadBookPages(prevBook.id) else emptyList()
-            val nextBook = getNextBook(bookId)
+            val nextBook = getNextBook(newBook)
             val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
 
             booksState.value = BookState(
@@ -226,18 +232,7 @@ class ReaderState(
             }
             currentBookId.value = bookId
 
-            if (!newBook.seriesId.value.startsWith("local")) {
-                val currentSeries = seriesApi.getOneSeries(newBook.seriesId)
-                series.value = currentSeries
-                readerType.value = when (currentSeries.metadata.readingDirection) {
-                    KomgaReadingDirection.LEFT_TO_RIGHT -> ReaderType.PAGED
-                    KomgaReadingDirection.RIGHT_TO_LEFT -> ReaderType.PAGED
-                    KomgaReadingDirection.WEBTOON -> ReaderType.CONTINUOUS
-                    KomgaReadingDirection.VERTICAL, null -> readerSettingsRepository.getReaderType().first()
-                }
-            } else {
-                readerType.value = readerSettingsRepository.getReaderType().first()
-            }
+            updateCurrentSeriesAndReaderType(newBook)
 
             initialSync()
             state.value = LoadState.Success(Unit)
@@ -269,19 +264,132 @@ class ReaderState(
         }
     }
 
-    private suspend fun getNextBook(currentBookId: KomgaBookId): KomeliaBook? {
-        return try {
+    private suspend fun updateCurrentSeriesAndReaderType(book: KomeliaBook) {
+        if (!book.seriesId.value.startsWith("local")) {
+            val currentSeries = seriesApi.getOneSeries(book.seriesId)
+            series.value = currentSeries
+            readerType.value = when (currentSeries.metadata.readingDirection) {
+                KomgaReadingDirection.LEFT_TO_RIGHT -> ReaderType.PAGED
+                KomgaReadingDirection.RIGHT_TO_LEFT -> ReaderType.PAGED
+                KomgaReadingDirection.WEBTOON -> ReaderType.CONTINUOUS
+                KomgaReadingDirection.VERTICAL, null -> readerSettingsRepository.getReaderType().first()
+            }
+        } else {
+            readerType.value = readerSettingsRepository.getReaderType().first()
+        }
+    }
+
+    private suspend fun getNextBook(currentBook: KomeliaBook): KomeliaBook? {
+        val sibling = try {
             when (bookSiblingsContext) {
                 is BookSiblingsContext.ReadList ->
-                    readListApi.getBookSiblingNext(bookSiblingsContext.id, currentBookId)
+                    readListApi.getBookSiblingNext(bookSiblingsContext.id, currentBook.id)
 
-                is BookSiblingsContext.Series -> bookApi.getBookSiblingNext(currentBookId)
+                is BookSiblingsContext.Series -> bookApi.getBookSiblingNext(currentBook.id)
             }
         } catch (e: ClientRequestException) {
             if (e.response.status != NotFound) throw e
             else null
         }
 
+        if (sibling != null) return sibling
+
+        return when (bookSiblingsContext) {
+            is BookSiblingsContext.Series -> getNextSeriesFirstBook(currentBook)
+            is BookSiblingsContext.ReadList -> null
+        }
+    }
+
+    private suspend fun getNextSeriesFirstBook(currentBook: KomeliaBook): KomeliaBook? {
+        val listContext = SeriesNavigationContext.get(currentBook.seriesId) ?: return null
+        if (currentBook.seriesId.value.startsWith("local")) return null
+
+        val bookFilter = when (val context = bookSiblingsContext) {
+            is BookSiblingsContext.Series -> context.filter ?: BookFilter.DEFAULT
+            is BookSiblingsContext.ReadList -> BookFilter.DEFAULT
+        }
+        val allowCompletedFallback = listContext.filter.readStatus.isEmpty() && bookFilter.readStatus.isEmpty()
+        var pageNumber = listContext.currentPage.coerceAtLeast(1)
+
+        while (true) {
+            val page = getSeriesPage(pageNumber, listContext)
+            if (page.content.isEmpty()) return null
+
+            val currentSeriesIndex = page.content.indexOfFirst { it.id == currentBook.seriesId }
+            val startIndex = when {
+                currentSeriesIndex >= 0 -> currentSeriesIndex + 1
+                pageNumber == listContext.currentPage -> (listContext.seriesIndexInPage + 1)
+                    .coerceIn(0, page.content.size)
+
+                else -> 0
+            }
+
+            page.content.drop(startIndex).forEachIndexed { offset, candidateSeries ->
+                getFirstBookForNextSeries(
+                    candidateSeriesId = candidateSeries.id,
+                    bookFilter = bookFilter,
+                    allowCompletedFallback = allowCompletedFallback
+                )?.let { nextSeriesFirstBook ->
+                    SeriesNavigationContext.put(
+                        candidateSeries.id,
+                        listContext.copy(
+                            currentPage = pageNumber,
+                            seriesIndexInPage = startIndex + offset
+                        )
+                    )
+                    return nextSeriesFirstBook
+                }
+            }
+
+            if (pageNumber >= page.totalPages) return null
+            pageNumber++
+        }
+    }
+
+    private suspend fun getSeriesPage(
+        pageNumber: Int,
+        context: SeriesNavigationContext.SeriesListContext,
+    ) = seriesApi.getSeriesList(
+        conditionBuilder = allOfSeries {
+            context.libraryId?.let { library { isEqualTo(it) } }
+            context.filter.addConditionTo(this)
+        },
+        fulltextSearch = context.filter.searchTerm.ifBlank { null },
+        pageRequest = KomgaPageRequest(
+            size = context.pageSize.coerceAtLeast(1),
+            pageIndex = pageNumber - 1,
+            sort = context.filter.sortOrder.komgaSort
+        )
+    )
+
+    private suspend fun getFirstBookForNextSeries(
+        candidateSeriesId: KomgaSeriesId,
+        bookFilter: BookFilter,
+        allowCompletedFallback: Boolean,
+    ): KomeliaBook? {
+        var firstFilteredBook: KomeliaBook? = null
+        var pageIndex = 0
+
+        while (true) {
+            val page = bookApi.getBookList(
+                conditionBuilder = allOfBooks {
+                    seriesId { isEqualTo(candidateSeriesId) }
+                    bookFilter.addConditionTo(this)
+                },
+                pageRequest = KomgaPageRequest(
+                    pageIndex = pageIndex,
+                    size = 50,
+                    sort = bookFilter.sortOrder.komgaSort
+                )
+            )
+            if (firstFilteredBook == null) firstFilteredBook = page.content.firstOrNull()
+            page.content.firstOrNull { it.readProgress?.completed != true }?.let { return it }
+
+            pageIndex++
+            if (pageIndex >= page.totalPages) break
+        }
+
+        return if (allowCompletedFallback) firstFilteredBook else null
     }
 
     private suspend fun getPreviousBook(currentBookId: KomgaBookId): KomeliaBook? {
@@ -302,7 +410,7 @@ class ReaderState(
     suspend fun loadNextBook() {
         val booksState = requireNotNull(booksState.value)
         if (booksState.nextBook != null) {
-            val nextBook = getNextBook(booksState.nextBook.id)
+            val nextBook = getNextBook(booksState.nextBook)
             val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
 
             readProgressPage.value = 1
@@ -315,6 +423,8 @@ class ReaderState(
                 nextBook = nextBook,
                 nextBookPages = nextBookPages
             )
+            currentBookId.value = booksState.nextBook.id
+            updateCurrentSeriesAndReaderType(booksState.nextBook)
             onProgressChange(1)
         } else {
             navigator replace MainScreen(

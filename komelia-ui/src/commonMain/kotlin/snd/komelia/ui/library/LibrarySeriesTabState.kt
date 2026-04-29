@@ -29,6 +29,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.series.SeriesFilter
+import snd.komelia.ui.series.SeriesNavigationContext
 import snd.komelia.ui.series.SeriesFilterState
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.series.KomgaSeriesId
@@ -110,6 +111,21 @@ class LibrarySeriesTabState(
         screenModelScope.launch {
             loadSeriesPage(1)
         }
+    }
+
+    fun registerSeriesListContext(selectedSeries: KomgaSeries) {
+        SeriesNavigationContext.put(
+            selectedSeries.id,
+            SeriesNavigationContext.SeriesListContext(
+                libraryId = library.value?.id,
+                filter = filterState.state.value,
+                pageSize = pageLoadSize.value,
+                currentPage = currentSeriesPage,
+                seriesIndexInPage = series
+                    .indexOfFirst { it.id == selectedSeries.id }
+                    .coerceAtLeast(0)
+            )
+        )
     }
 
     fun seriesMenuActions() = SeriesMenuActions(seriesApi, notifications, taskEmitter, screenModelScope)
