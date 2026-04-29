@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import snd.komelia.ui.LocalKeyEvents
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -98,6 +99,24 @@ fun BoxScope.PagedReaderContent(
     val ocrResults by pagedReaderState.readerState.ocrResults.collectAsState()
     val ocrPageId by pagedReaderState.readerState.ocrPageId.collectAsState()
 
+    val keyEvents = LocalKeyEvents.current
+    LaunchedEffect(volumeKeysNavigation, readingDirection) {
+        keyEvents.collect { event ->
+            if (!volumeKeysNavigation) return@collect
+            if (event.type != KeyUp) return@collect
+            when (event.key) {
+                Key.VolumeUp -> {
+                    if (readingDirection == LEFT_TO_RIGHT) pagedReaderState.previousPage()
+                    else pagedReaderState.nextPage()
+                }
+                Key.VolumeDown -> {
+                    if (readingDirection == LEFT_TO_RIGHT) pagedReaderState.nextPage()
+                    else pagedReaderState.previousPage()
+                }
+                else -> {}
+            }
+        }
+    }
     val currentContainerSize = screenScaleState.areaSize.collectAsState().value
 
     val pagerState = rememberPagerState(
