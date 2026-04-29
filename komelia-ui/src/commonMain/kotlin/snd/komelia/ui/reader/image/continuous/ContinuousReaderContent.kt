@@ -44,6 +44,7 @@ import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import snd.komelia.ui.LocalKeyEvents
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -107,6 +108,24 @@ fun BoxScope.ContinuousReaderContent(
             scrollToLastPage = { coroutineScope.launch { continuousReaderState.scrollToLastPage() } },
             changeReadingDirection = continuousReaderState::onReadingDirectionChange
         )
+    }
+
+    val keyEvents = LocalKeyEvents.current
+    LaunchedEffect(keysState) {
+        keyEvents.collect { event ->
+            when (event.type) {
+                KeyDown -> when (event.key) {
+                    Key.VolumeUp -> keysState.onVolumeUpKeyDown()
+                    Key.VolumeDown -> keysState.onVolumeDownKeyDown()
+                    else -> {}
+                }
+                KeyUp -> when (event.key) {
+                    Key.VolumeUp -> keysState.onVolumeUpKeyUp()
+                    Key.VolumeDown -> keysState.onVolumeDownKeyUp()
+                    else -> {}
+                }
+            }
+        }
     }
     ReaderControlsOverlay(
         readingDirection = layoutDirection,

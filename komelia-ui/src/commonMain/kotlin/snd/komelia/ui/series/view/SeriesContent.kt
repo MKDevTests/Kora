@@ -102,6 +102,7 @@ fun SeriesContent(
     onSeriesClick: (KomgaSeries) -> Unit,
 
     onDownload: () -> Unit,
+    onOpenInKomga: (() -> Unit)? = null,
 ) {
     val windowWidth = LocalWindowWidth.current
     val contentPadding = when (windowWidth) {
@@ -132,6 +133,7 @@ fun SeriesContent(
             series = series,
             seriesMenuActions = seriesMenuActions,
             onDownload = onDownload,
+            onOpenInKomga = onOpenInKomga,
         )
 
         val scrollState = rememberLazyGridState()
@@ -228,6 +230,7 @@ fun SeriesToolBar(
     series: KomgaSeries?,
     seriesMenuActions: SeriesMenuActions,
     onDownload: () -> Unit,
+    onOpenInKomga: (() -> Unit)? = null,
 ) {
     val hideParentheses = LocalHideParenthesesInNames.current
     Row(
@@ -257,6 +260,7 @@ fun SeriesToolBar(
                     showEditOption = false,
                     showDownloadOption = false,
                     onDismissRequest = { expandActions = false },
+                    onOpenInKomga = onOpenInKomga,
                 )
             }
 

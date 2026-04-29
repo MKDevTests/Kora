@@ -63,12 +63,16 @@ class SearchScreen(
                                     .padding(top = floatingPadding)
                             ) {
                                 val state by vm.state.collectAsState()
+                                val libraries by vm.availableLibraries.collectAsState()
                                 SearchBarWithResults(
                                     query = vm.query,
                                     onQueryChange = { vm.query = it },
                                     isLoading = state == LoadState.Loading,
                                     onBack = { navigator.pop() },
                                     startExpanded = true,
+                                    libraries = libraries,
+                                    selectedLibraryId = vm.selectedLibraryId,
+                                    onSelectedLibraryChange = vm::onSelectedLibraryChange,
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
                                     when (state) {
@@ -103,12 +107,16 @@ class SearchScreen(
                     }
                 } else {
                 val state by vm.state.collectAsState()
+                val libraries by vm.availableLibraries.collectAsState()
                 SearchBarWithResults(
                     query = vm.query,
                     onQueryChange = { vm.query = it },
                     isLoading = state == LoadState.Loading,
                     onBack = { navigator.pop() },
                     startExpanded = true,
+                    libraries = libraries,
+                    selectedLibraryId = vm.selectedLibraryId,
+                    onSelectedLibraryChange = vm::onSelectedLibraryChange,
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     when (state) {

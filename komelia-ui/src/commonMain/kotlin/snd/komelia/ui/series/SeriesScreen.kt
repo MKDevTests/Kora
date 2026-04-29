@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalUriHandler
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
@@ -12,6 +13,7 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import snd.komelia.ui.BookSiblingsContext
 import snd.komelia.ui.LoadState.Error
+import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalReloadEvents
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.ReloadableScreen
@@ -82,6 +84,11 @@ class SeriesScreen(
         val platform = LocalPlatform.current
         val useNewUI = LocalUseNewLibraryUI.current
         val series = vm.series.collectAsState().value
+        val uriHandler = LocalUriHandler.current
+        val serverUrl = LocalKomgaState.current.serverUrl.collectAsState().value
+        val openInKomga: (() -> Unit)? = series?.let {
+            { uriHandler.openUri("$serverUrl/series/${it.id.value}") }
+        }
         if (platform == PlatformType.MOBILE && useNewUI && series != null) {
             ImmersiveSeriesContent(
                 series = series,
@@ -119,7 +126,8 @@ class SeriesScreen(
                 onBackClick = { onBackPress(navigator, series.libraryId) },
                 onDownload = vm::onDownload,
                 initiallyExpanded = vm.isExpanded,
-                onExpandChange = { vm.isExpanded = it }
+                onExpandChange = { vm.isExpanded = it },
+                onOpenInKomga = openInKomga,
             )
 
             BackPressHandler { onBackPress(navigator, series.libraryId) }
@@ -172,7 +180,8 @@ class SeriesScreen(
                                 else SeriesScreen(series, vm.currentTab)
                             )
                         },
-                        onDownload = vm::onDownload
+                        onDownload = vm::onDownload,
+                        onOpenInKomga = openInKomga,
                     )
                 }
             }

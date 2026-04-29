@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.input.delete
@@ -47,12 +48,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
@@ -73,7 +77,6 @@ import snd.komga.client.series.KomgaSeries
  * [content] directly below it. Pass [startExpanded] = true on a dedicated search
  * screen to auto-expand on entry.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBarWithResults(
     query: String,
@@ -81,66 +84,74 @@ fun SearchBarWithResults(
     isLoading: Boolean,
     onBack: () -> Unit,
     startExpanded: Boolean = false,
+    libraries: List<KomgaLibrary> = emptyList(),
+    selectedLibraryId: KomgaLibraryId? = null,
+    onSelectedLibraryChange: (KomgaLibraryId?) -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val textFieldState = rememberTextFieldState(initialText = query)
-    val searchBarState = rememberSearchBarState()
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val forceShowKeyboard = snd.komelia.ui.platform.rememberForceShowKeyboard()
 
-    // Sync TextFieldState → ViewModel
-    LaunchedEffect(textFieldState) {
-        snapshotFlow { textFieldState.text.toString() }
-            .distinctUntilChanged()
-            .collect { onQueryChange(it) }
-    }
-
-    // Auto-expand when the composable first enters the composition
     LaunchedEffect(startExpanded) {
-        if (startExpanded) searchBarState.animateToExpanded()
+        if (startExpanded) {
+            kotlinx.coroutines.delay(100)
+            focusRequester.requestFocus()
+            kotlinx.coroutines.delay(100)
+            keyboardController?.show()
+            forceShowKeyboard()
+        }
     }
 
     Column(modifier = modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp)) {
-        SearchBar(
-            state = searchBarState,
-            inputField = {
-                SearchBarDefaults.InputField(
-                    textFieldState = textFieldState,
-                    searchBarState = searchBarState,
-                    onSearch = {},
-                    placeholder = { Text("Search") },
-                    leadingIcon = {
-                        if (searchBarState.currentValue == SearchBarValue.Expanded) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = "Search"
-                            )
-                        }
-                    },
-                    trailingIcon = {
-                        if (textFieldState.text.isNotEmpty()) {
-                            IconButton(onClick = {
-                                textFieldState.edit { delete(0, length) }
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = "Clear"
-                                )
-                            }
-                        }
-                    }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
                 )
             }
-        )
+            SearchTextField(
+                query = query,
+                onQueryChange = onQueryChange,
+                onDone = {},
+                onDismiss = { onQueryChange("") },
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester)
+            )
+        }
 
         if (isLoading) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        if (libraries.size > 1) {
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                item {
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedLibraryId == null,
+                        onClick = { onSelectedLibraryChange(null) },
+                        label = { Text("All") }
+                    )
+                }
+                items(libraries.size) { idx ->
+                    val lib = libraries[idx]
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedLibraryId == lib.id,
+                        onClick = { onSelectedLibraryChange(lib.id) },
+                        label = { Text(lib.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    )
+                }
+            }
         }
 
         content()
