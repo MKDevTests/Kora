@@ -64,6 +64,7 @@ class LibraryViewModel(
     private val komgaEvents: SharedFlow<KomgaEvent>,
     libraryFlow: Flow<KomgaLibrary?>,
     private val settingsRepository: CommonSettingsRepository,
+    private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val library = libraryFlow.onEach { settingsRepository.putLastSelectedLibraryId(it?.id) }
         .stateIn(screenModelScope, SharingStarted.Eagerly, null)
@@ -94,6 +95,7 @@ class LibraryViewModel(
         library = library,
         cardWidth = cardWidth,
         taskEmitter = taskEmitter,
+        librarySeriesFiltersRepository = librarySeriesFiltersRepository,
     )
     val collectionsTabState = LibraryCollectionsTabState(
         collectionApi = collectionApi,

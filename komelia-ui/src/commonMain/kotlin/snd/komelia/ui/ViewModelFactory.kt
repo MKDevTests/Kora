@@ -135,6 +135,7 @@ class ViewModelFactory(
             libraryFlow = getLibraryFlow(libraryId),
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
+            librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
         )
     }
 

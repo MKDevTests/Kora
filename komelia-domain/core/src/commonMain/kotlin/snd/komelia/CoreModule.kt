@@ -5,6 +5,7 @@ import snd.komelia.color.repository.ColorCurvePresetRepository
 import snd.komelia.color.repository.ColorLevelsPresetRepository
 import snd.komelia.fonts.UserFontsRepository
 import snd.komelia.homefilters.HomeScreenFilterRepository
+import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
 import snd.komelia.offline.OfflineModule
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.EpubReaderSettingsRepository
@@ -38,5 +39,6 @@ data class AppRepositories(
     val secretsRepository: SecretsRepository,
     val komfSettingsRepository: KomfSettingsRepository,
     val homeScreenFilterRepository: HomeScreenFilterRepository,
+    val librarySeriesFiltersRepository: LibrarySeriesFiltersRepository,
     val transcriptionSettingsRepository: TranscriptionSettingsRepository,
 )
