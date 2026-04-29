@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -98,6 +99,7 @@ fun NavBarContent(
 @Composable
 fun LibrariesNavBarContent(
     currentScreen: Screen,
+    modifier: Modifier,
     libraries: List<KomgaLibrary>,
     libraryActions: LibraryMenuActions,
     onLibrariesClick: () -> Unit,
@@ -107,7 +109,6 @@ fun LibrariesNavBarContent(
         val scrollState: ScrollState = rememberScrollState()
         Column(
             modifier = Modifier
-                .padding(top = 20.dp)
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
@@ -119,6 +120,7 @@ fun LibrariesNavBarContent(
                 onLibrariesClick = onLibrariesClick,
                 onLibraryClick = onLibraryClick
             )
+            Spacer(Modifier.size(30.dp))
         }
     }
 
