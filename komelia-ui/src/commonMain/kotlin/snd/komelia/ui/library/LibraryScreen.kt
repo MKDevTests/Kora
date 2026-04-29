@@ -363,7 +363,10 @@ class LibraryScreen(
                     downloadedSeriesIds = seriesTabState.downloadedSeriesIds,
                     seriesActions = seriesTabState.seriesMenuActions(),
                     seriesTotalCount = seriesTabState.totalSeriesCount,
-                    onSeriesClick = { navigator.push(seriesScreen(it)) },
+                    onSeriesClick = {
+                        seriesTabState.registerSeriesListContext(it)
+                        navigator.push(seriesScreen(it))
+                    },
 
                     editMode = seriesTabState.isInEditMode.collectAsState().value,
                     onEditModeChange = seriesTabState::onEditModeChange,

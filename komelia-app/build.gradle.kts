@@ -118,6 +118,7 @@ android {
         applicationId = "io.github.eserero.sipurra"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
+        manifestPlaceholders["appLabel"] = "Sipurra"
         versionCode = 23
         versionName = libs.versions.app.version.get()
 
@@ -150,6 +151,10 @@ android {
         }
     }
     buildTypes {
+        debug {
+            applicationIdSuffix = ".v2"
+            manifestPlaceholders["appLabel"] = "Sipurra V2"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

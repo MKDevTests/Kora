@@ -29,6 +29,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType.Companion.KeyUp
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import snd.komelia.ui.LocalKeyEvents
@@ -56,6 +57,7 @@ import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage.BookEnd
 import snd.komelia.ui.reader.image.paged.PagedReaderState.TransitionPage.BookStart
 import snd.komelia.ui.reader.image.common.AdaptiveBackground
+import snd.komelia.ui.common.images.BookThumbnail
 import kotlin.math.abs
 
 import androidx.compose.ui.geometry.Rect
@@ -318,15 +320,29 @@ private fun TransitionPage(page: TransitionPage) {
                 Spacer(Modifier.size(50.dp))
 
                 if (page.nextBook != null) {
-                    Column {
-                        Text("Next:", style = MaterialTheme.typography.bodyMedium)
+                    val nextSeries = page.nextBook.seriesId != page.currentBook.seriesId
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            if (nextSeries) "Next series:" else "Next:",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (nextSeries) {
+                            Spacer(Modifier.size(12.dp))
+                            BookThumbnail(
+                                page.nextBook.id,
+                                modifier = Modifier.size(width = 120.dp, height = 180.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.size(12.dp))
+                            Text(page.nextBook.seriesTitle, style = MaterialTheme.typography.titleLarge)
+                        }
                         Text(
                             page.nextBook.metadata.title,
-                            style = MaterialTheme.typography.titleLarge
+                            style = if (nextSeries) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleLarge
                         )
                     }
                 } else {
-                    Text("There's no next book")
+                    Text("No next series with the current filters")
                 }
 
             }

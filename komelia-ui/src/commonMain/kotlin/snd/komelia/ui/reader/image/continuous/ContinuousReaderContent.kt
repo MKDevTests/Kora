@@ -349,7 +349,7 @@ private fun LazyListScope.continuousPagesLayout(
         Box(
             modifier = Modifier.sizeIn(minHeight = 300.dp, minWidth = 300.dp).fillMaxSize(),
             contentAlignment = Alignment.Center
-        ) { Text("Reached the end of the series", style = MaterialTheme.typography.titleLarge) }
+        ) { Text("No next series with the current filters", style = MaterialTheme.typography.titleLarge) }
     }
 
 }
