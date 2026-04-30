@@ -37,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -193,20 +194,26 @@ fun SeriesListContent(
         val fab = LocalFloatingActionButton.current
         if (filterState != null) {
             if (useFloatingNavigationBar) {
-                if (!showFilters && !editMode) {
-                    DisposableEffect(filterState, filterState.isChanged) {
+                val shouldShowFab = !showFilters && !editMode
+                val onShowFiltersClick = rememberUpdatedState { showFilters = true }
+                val isChangedState = rememberUpdatedState(filterState.isChanged)
+                val accentColorState = rememberUpdatedState(accentColor)
+                DisposableEffect(filterState, shouldShowFab) {
+                    if (shouldShowFab) {
                         fab.value = filterState to {
                             FloatingFAB(
                                 icon = Icons.Default.FilterList,
-                                onClick = { showFilters = true },
-                                accentColor = accentColor,
-                                iconTint = if (filterState.isChanged) Color(0xFFFFD600) else null
+                                onClick = { onShowFiltersClick.value() },
+                                accentColor = accentColorState.value,
+                                iconTint = if (isChangedState.value) Color(0xFFFFD600) else null
                             )
                         }
-                        onDispose {
-                            if (fab.value?.first == filterState) {
-                                fab.value = null
-                            }
+                    } else if (fab.value?.first == filterState) {
+                        fab.value = null
+                    }
+                    onDispose {
+                        if (fab.value?.first == filterState) {
+                            fab.value = null
                         }
                     }
                 }

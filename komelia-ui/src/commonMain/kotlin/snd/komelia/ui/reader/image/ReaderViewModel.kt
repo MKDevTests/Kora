@@ -110,6 +110,7 @@ class ReaderViewModel(
     )
 
     val readerState: ReaderState = ReaderState(
+        imageLoader = imageLoader,
         bookApi = bookApi,
         seriesApi = seriesApi,
         readListApi = readListApi,
