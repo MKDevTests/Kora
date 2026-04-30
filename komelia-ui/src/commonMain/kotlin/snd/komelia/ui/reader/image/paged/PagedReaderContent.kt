@@ -139,7 +139,7 @@ fun BoxScope.PagedReaderContent(
                     is PagedReaderState.PageNavigationEvent.Animated -> {
                         pagerState.animateScrollToPage(
                             page = event.pageIndex,
-                            animationSpec = ReaderAnimation.navSpringSpec(density)
+                            animationSpec = tween(50)
                         )
                     }
 
@@ -168,7 +168,7 @@ fun BoxScope.PagedReaderContent(
             if (abs(pageOffset) > 0.001f) {
                 pagerState.animateScrollToPage(
                     page = pagerState.currentPage,
-                    animationSpec = ReaderAnimation.navSpringSpec(density)
+                    animationSpec = tween(50)
                 )
             }
         }

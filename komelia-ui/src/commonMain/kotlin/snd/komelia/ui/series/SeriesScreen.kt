@@ -128,6 +128,11 @@ class SeriesScreen(
                 initiallyExpanded = vm.isExpanded,
                 onExpandChange = { vm.isExpanded = it },
                 onOpenInKomga = openInKomga,
+                onRandomSiblingClick = {
+                    vm.openRandomSiblingSeries { newSeries ->
+                        navigator.replace(seriesScreen(newSeries))
+                    }
+                },
             )
 
             BackPressHandler { onBackPress(navigator, series.libraryId) }
@@ -182,6 +187,11 @@ class SeriesScreen(
                         },
                         onDownload = vm::onDownload,
                         onOpenInKomga = openInKomga,
+                        onRandomSiblingClick = {
+                            vm.openRandomSiblingSeries { newSeries ->
+                                navigator.replace(seriesScreen(newSeries))
+                            }
+                        },
                     )
                 }
             }

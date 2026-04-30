@@ -39,6 +39,9 @@ import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.sse.KomgaEvent
+import snd.komelia.ui.library.LibrarySeriesTabState
+import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.search.allOfSeries
 
 class SeriesViewModel(
     series: KomgaSeries?,
@@ -119,6 +122,25 @@ class SeriesViewModel(
             mutableState.value = Loading
             loadSeries()
             booksState.reload()
+        }
+    }
+
+    fun openRandomSiblingSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
+        val currentSeries = series.value ?: return
+        notifications.runCatchingToNotifications(screenModelScope) {
+            val condition = allOfSeries {
+                library { isEqualTo(currentSeries.libraryId) }
+            }
+            val page = seriesApi.getSeriesList(
+                conditionBuilder = condition,
+                fulltextSearch = null,
+                pageRequest = KomgaPageRequest(
+                    size = 1,
+                    pageIndex = 0,
+                    sort = LibrarySeriesTabState.SeriesSort.RANDOM.komgaSort
+                )
+            )
+            page.content.firstOrNull()?.let(onSeriesSelected)
         }
     }
 

@@ -220,6 +220,8 @@ fun AppearanceSettingsContent(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
+
+
         }
 
         HorizontalDivider()
