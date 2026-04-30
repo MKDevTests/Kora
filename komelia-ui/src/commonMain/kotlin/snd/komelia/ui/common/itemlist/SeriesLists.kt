@@ -48,6 +48,14 @@ import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.VerticalScrollbarWithFullSpans
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
+import coil3.SingletonImageLoader
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collect
+import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 
 @Composable
 fun SeriesLazyCardGrid(
@@ -80,6 +88,34 @@ fun SeriesLazyCardGrid(
     )
     LaunchedEffect(reorderableLazyGridState.isAnyItemDragging) {
         onReorderDragStateChange(reorderableLazyGridState.isAnyItemDragging)
+    }
+
+    // Prefetch upcoming thumbnails as the user scrolls (~10 items ahead)
+    val context = LocalPlatformContext.current
+    val imageLoader = remember { SingletonImageLoader.get(context) }
+    LaunchedEffect(series, gridState) {
+        snapshotFlow {
+            val info = gridState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible
+        }
+            .distinctUntilChanged()
+            .collect { lastVisible ->
+                val prefetchCount = 10
+                val end = (lastVisible + prefetchCount).coerceAtMost(series.size)
+                val start = (lastVisible + 1).coerceAtLeast(0)
+                if (start >= end) return@collect
+                for (i in start until end) {
+                    val target = series.getOrNull(i) ?: continue
+                    val request = ImageRequest.Builder(context)
+                        .data(SeriesDefaultThumbnailRequest(target.id))
+                        .memoryCacheKey(target.id.value)
+                        .placeholderMemoryCacheKey(target.id.value)
+                        .diskCacheKey(target.id.value)
+                        .build()
+                    imageLoader.enqueue(request)
+                }
+            }
     }
 
 
