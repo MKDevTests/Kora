@@ -46,6 +46,7 @@ import snd.komelia.ui.platform.imageExtension
 import snd.komelia.ui.platform.sanitizeFilename
 import snd.komelia.ui.platform.saveImageToDownloads
 import snd.komelia.color.repository.BookColorCorrectionRepository
+import snd.komelia.image.BookImageLoader
 import snd.komelia.image.OcrElementBox
 import snd.komelia.image.OcrService
 import snd.komelia.image.ReadingDirection
@@ -108,6 +109,7 @@ class ReaderState(
     private val readerSyncService: ReaderSyncService,
     private val komgaEvents: ManagedKomgaEvents,
     val pageChangeFlow: SharedFlow<Unit>,
+    private val imageLoader: BookImageLoader,
     private val ocrService: OcrService,
 ) {
     private val currentSyncBlob = MutableStateFlow<String?>(null)
@@ -224,6 +226,8 @@ class ReaderState(
                 nextBook = nextBook,
                 nextBookPages = nextBookPages
             )
+            preloadFirstPage(nextBook)
+            preloadFirstPage(prevBook)
 
             val bookProgress = newBook.readProgress
             readProgressPage.value = when {
@@ -412,6 +416,8 @@ class ReaderState(
         if (booksState.nextBook != null) {
             val nextBook = getNextBook(booksState.nextBook)
             val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
+            // preload-after-loadnext
+            preloadFirstPage(nextBook)
 
             readProgressPage.value = 1
             this.booksState.value = BookState(
@@ -813,6 +819,13 @@ class ReaderState(
         )
         runCatching { bookApi.updateReadiumProgression(currentBook.id, r2Prog) }
             .onFailure { appNotifications.runCatchingToNotifications { throw it } }
+    }
+
+    private fun preloadFirstPage(book: KomeliaBook?) {
+        if (book == null) return
+        stateScope.launch {
+            runCatching { imageLoader.loadReaderImage(book.id, 1) }
+        }
     }
 }
 
