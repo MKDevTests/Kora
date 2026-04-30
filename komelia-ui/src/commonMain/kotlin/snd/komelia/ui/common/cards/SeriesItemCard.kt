@@ -59,6 +59,7 @@ import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.utils.removeParentheses
 import snd.komga.client.series.KomgaSeries
+import androidx.compose.material3.LinearProgressIndicator
 
 @Composable
 fun SeriesImageCard(
@@ -98,6 +99,19 @@ fun SeriesImageCard(
                 seriesActions = seriesMenuActions,
             ) {
                 SeriesImageBadges(series = series, isDownloaded = isDownloaded)
+            }
+        },
+        progress = {
+            val total = series.booksCount
+            val read = series.booksReadCount
+            if (total > 0 && read > 0 && read < total) {
+                LinearProgressIndicator(
+                    progress = { read.toFloat() / total.toFloat() },
+                    color = MaterialTheme.colorScheme.tertiary,
+                    trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
+                    modifier = Modifier.height(4.dp).fillMaxWidth().align(Alignment.BottomStart),
+                    drawStopIndicator = {}
+                )
             }
         }
     )
