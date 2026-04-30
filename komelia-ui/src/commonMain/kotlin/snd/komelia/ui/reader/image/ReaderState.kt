@@ -218,6 +218,12 @@ class ReaderState(
             val nextBook = getNextBook(newBook)
             val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
 
+            // Set readProgressPage BEFORE booksState to avoid race condition
+            val bookProgress = newBook.readProgress
+            readProgressPage.value = when {
+                bookProgress == null || bookProgress.completed -> 1
+                else -> bookProgress.page
+            }
             booksState.value = BookState(
                 currentBook = newBook,
                 currentBookPages = bookPages,
@@ -228,12 +234,6 @@ class ReaderState(
             )
             preloadFirstPage(nextBook)
             preloadFirstPage(prevBook)
-
-            val bookProgress = newBook.readProgress
-            readProgressPage.value = when {
-                bookProgress == null || bookProgress.completed -> 1
-                else -> bookProgress.page
-            }
             currentBookId.value = bookId
 
             updateCurrentSeriesAndReaderType(newBook)
