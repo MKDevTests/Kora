@@ -129,6 +129,8 @@ import snd.komelia.ui.reader.image.panels.PanelsReaderState
 import snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsState
 import snd.komelia.ui.settings.imagereader.ncnn.isNcnnSupported
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -305,7 +307,11 @@ fun BottomSheetSettingsOverlay(
                         currentImage?.let { commonReaderState.scanCurrentPageForText(it) }
                     },
                     showCarousel = showCarousel,
-                    onToggleCarousel = commonReaderState::onToggleCarousel
+                    onToggleCarousel = commonReaderState::onToggleCarousel,
+                    onPreviousBook = { coroutineScope.launch { commonReaderState.loadPreviousBook(fromStart = true) } },
+                    onNextBook = { coroutineScope.launch { commonReaderState.loadNextBook() } },
+                    hasPreviousBook = commonReaderState.booksState.collectAsState().value?.previousBook != null,
+                    hasNextBook = commonReaderState.booksState.collectAsState().value?.nextBook != null,
                 )
             }
         }
@@ -977,6 +983,10 @@ fun ImageReaderControlsCardNewUI(
     onScanTextClick: () -> Unit = {},
     showCarousel: Boolean,
     onToggleCarousel: () -> Unit,
+    onPreviousBook: () -> Unit = {},
+    onNextBook: () -> Unit = {},
+    hasPreviousBook: Boolean = false,
+    hasNextBook: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val accentColor = LocalAccentColor.current
@@ -1012,17 +1022,37 @@ fun ImageReaderControlsCardNewUI(
                         modifier = Modifier.fillMaxWidth().clickable { onToggleCarousel() },
                     )
 
-                    ProgressSlider(
-                        pages = pages,
-                        currentPageIndex = currentPageIndex,
-                        onPageNumberChange = onPageNumberChange,
-                        loadThumbnailPreviews = loadThumbnailPreviews,
-                        show = true,
-                        layoutDirection = androidx.compose.ui.unit.LayoutDirection.Ltr, // TODO: handle RTL
-                        isBare = true,
+                    val accentColorForButtons = LocalAccentColor.current ?: MaterialTheme.colorScheme.primary
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        onLabelClick = onToggleCarousel
-                    )
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = onPreviousBook, enabled = hasPreviousBook) {
+                            Icon(
+                                Icons.Rounded.SkipPrevious,
+                                contentDescription = "Previous volume",
+                                tint = if (hasPreviousBook) accentColorForButtons else accentColorForButtons.copy(alpha = 0.3f)
+                            )
+                        }
+                        ProgressSlider(
+                            pages = pages,
+                            currentPageIndex = currentPageIndex,
+                            onPageNumberChange = onPageNumberChange,
+                            loadThumbnailPreviews = loadThumbnailPreviews,
+                            show = true,
+                            layoutDirection = androidx.compose.ui.unit.LayoutDirection.Ltr, // TODO: handle RTL
+                            isBare = true,
+                            modifier = Modifier.weight(1f),
+                            onLabelClick = onToggleCarousel
+                        )
+                        IconButton(onClick = onNextBook, enabled = hasNextBook) {
+                            Icon(
+                                Icons.Rounded.SkipNext,
+                                contentDescription = "Next volume",
+                                tint = if (hasNextBook) accentColorForButtons else accentColorForButtons.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
 
                     Row(
                         modifier = Modifier
