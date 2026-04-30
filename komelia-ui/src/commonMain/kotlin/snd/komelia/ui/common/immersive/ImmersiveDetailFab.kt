@@ -39,6 +39,8 @@ import snd.komelia.ui.Theme
 import snd.komelia.ui.common.FloatingFAB
 import snd.komelia.ui.common.FloatingFABWithDropdownMenu
 import snd.komelia.ui.common.SplitFabMenu
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -49,6 +51,10 @@ fun ImmersiveDetailFab(
     accentColor: Color? = null,
     showReadActions: Boolean = true,
     onRandomSiblingClick: (() -> Unit)? = null,
+    onPreviousSiblingSeriesClick: (() -> Unit)? = null,
+    onNextSiblingSeriesClick: (() -> Unit)? = null,
+    hasPreviousSiblingSeries: Boolean = false,
+    hasNextSiblingSeries: Boolean = false,
 ) {
     val theme = LocalTheme.current
     val navBarColor = LocalNavBarColor.current
@@ -125,14 +131,37 @@ fun ImmersiveDetailFab(
                 }
                 onDispose { if (fab.value?.first == ownerKey) fab.value = null }
             }
-            DisposableEffect(onRandomSiblingClick) {
-                if (onRandomSiblingClick != null) {
+            DisposableEffect(onRandomSiblingClick, onPreviousSiblingSeriesClick, onNextSiblingSeriesClick, hasPreviousSiblingSeries, hasNextSiblingSeries) {
+                if (onRandomSiblingClick != null || onPreviousSiblingSeriesClick != null || onNextSiblingSeriesClick != null) {
                     fabLeft.value = ownerKey to {
-                        FloatingFAB(
-                            icon = Icons.Rounded.Casino,
-                            onClick = onRandomSiblingClick,
-                            accentColor = accentColor,
-                        )
+                        androidx.compose.foundation.layout.Row(
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            if (onPreviousSiblingSeriesClick != null) {
+                                FloatingFAB(
+                                    icon = Icons.Rounded.SkipPrevious,
+                                    onClick = onPreviousSiblingSeriesClick,
+                                    accentColor = accentColor,
+                                    iconTint = if (hasPreviousSiblingSeries) null else (accentColor ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.3f)
+                                )
+                            }
+                            if (onRandomSiblingClick != null) {
+                                FloatingFAB(
+                                    icon = Icons.Rounded.Casino,
+                                    onClick = onRandomSiblingClick,
+                                    accentColor = accentColor,
+                                )
+                            }
+                            if (onNextSiblingSeriesClick != null) {
+                                FloatingFAB(
+                                    icon = Icons.Rounded.SkipNext,
+                                    onClick = onNextSiblingSeriesClick,
+                                    accentColor = accentColor,
+                                    iconTint = if (hasNextSiblingSeries) null else (accentColor ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.3f)
+                                )
+                            }
+                        }
                     }
                 }
                 onDispose { if (fabLeft.value?.first == ownerKey) fabLeft.value = null }

@@ -42,6 +42,7 @@ import snd.komga.client.sse.KomgaEvent
 import snd.komelia.ui.library.LibrarySeriesTabState
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.search.allOfSeries
+import snd.komelia.ui.series.SeriesNavigationContext
 
 class SeriesViewModel(
     series: KomgaSeries?,
@@ -62,6 +63,8 @@ class SeriesViewModel(
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, BufferOverflow.DROP_OLDEST)
 
     val series = MutableStateFlow(series?.withSortedTags())
+    val hasNextSiblingSeries = MutableStateFlow(false)
+    val hasPreviousSiblingSeries = MutableStateFlow(false)
     val library = MutableStateFlow<KomgaLibrary?>(null)
     var currentTab by mutableStateOf(defaultTab)
     var isExpanded by mutableStateOf(false)
@@ -109,6 +112,7 @@ class SeriesViewModel(
 
         booksState.initialize()
         collectionsState.initialize()
+        screenModelScope.launch { updateSiblingAvailability() }
         startKomgaEventListener()
 
         reloadJobsFlow.onEach {
@@ -141,6 +145,125 @@ class SeriesViewModel(
                 )
             )
             page.content.firstOrNull()?.let(onSeriesSelected)
+        }
+    }
+
+    private suspend fun updateSiblingAvailability() {
+        val currentSeries = series.value ?: return
+        val ctx = SeriesNavigationContext.get(currentSeries.id)
+        if (ctx == null) {
+            // Pas de contexte de liste filtree : on tente une recherche library + sort par titre
+            try {
+                val page = seriesApi.getSeriesList(
+                    conditionBuilder = allOfSeries {
+                        library { isEqualTo(currentSeries.libraryId) }
+                    },
+                    fulltextSearch = null,
+                    pageRequest = snd.komga.client.common.KomgaPageRequest(
+                        size = 1,
+                        pageIndex = 0,
+                        sort = snd.komga.client.common.KomgaSort.KomgaSeriesSort.byTitleAsc()
+                    )
+                )
+                hasNextSiblingSeries.value = page.totalElements > 1
+                hasPreviousSiblingSeries.value = page.totalElements > 1
+            } catch (_: Throwable) {
+                hasNextSiblingSeries.value = false
+                hasPreviousSiblingSeries.value = false
+            }
+            return
+        }
+        // Avec contexte : on a deja la position, donc on peut deduire les flags
+        try {
+            val totalNeeded = (ctx.currentPage - 1) * ctx.pageSize + ctx.seriesIndexInPage
+            hasPreviousSiblingSeries.value = totalNeeded > 0
+            // Pour le next, il faut connaitre le total : 1 requete legere
+            val page = seriesApi.getSeriesList(
+                conditionBuilder = allOfSeries {
+                    ctx.libraryId?.let { library { isEqualTo(it) } }
+                    ctx.filter.addConditionTo(this)
+                },
+                fulltextSearch = ctx.filter.searchTerm.ifBlank { null },
+                pageRequest = snd.komga.client.common.KomgaPageRequest(
+                    size = 1,
+                    pageIndex = 0,
+                    sort = ctx.filter.sortOrder.komgaSort
+                )
+            )
+            hasNextSiblingSeries.value = totalNeeded < (page.totalElements - 1)
+        } catch (_: Throwable) {
+            hasNextSiblingSeries.value = false
+            hasPreviousSiblingSeries.value = false
+        }
+    }
+
+    fun openNextSiblingSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
+        val currentSeries = series.value ?: return
+        val ctx = SeriesNavigationContext.get(currentSeries.id)
+        notifications.runCatchingToNotifications(screenModelScope) {
+            val targetIndex = if (ctx != null) {
+                (ctx.currentPage - 1) * ctx.pageSize + ctx.seriesIndexInPage + 1
+            } else 1
+            val pageSize = ctx?.pageSize ?: 50
+            val pageIndex = targetIndex / pageSize
+            val withinPage = targetIndex % pageSize
+
+            val page = seriesApi.getSeriesList(
+                conditionBuilder = allOfSeries {
+                    if (ctx != null) {
+                        ctx.libraryId?.let { library { isEqualTo(it) } }
+                        ctx.filter.addConditionTo(this)
+                    } else {
+                        library { isEqualTo(currentSeries.libraryId) }
+                    }
+                },
+                fulltextSearch = ctx?.filter?.searchTerm?.ifBlank { null },
+                pageRequest = snd.komga.client.common.KomgaPageRequest(
+                    size = pageSize,
+                    pageIndex = pageIndex,
+                    sort = ctx?.filter?.sortOrder?.komgaSort ?: snd.komga.client.common.KomgaSort.KomgaSeriesSort.byTitleAsc()
+                )
+            )
+            val target = page.content.getOrNull(withinPage) ?: return@runCatchingToNotifications
+            SeriesNavigationContext.put(target.id, SeriesNavigationContext.SeriesListContext(
+                libraryId = ctx?.libraryId ?: currentSeries.libraryId,
+                filter = ctx?.filter ?: SeriesFilter(),
+                pageSize = pageSize,
+                currentPage = pageIndex + 1,
+                seriesIndexInPage = withinPage
+            ))
+            onSeriesSelected(target)
+        }
+    }
+
+    fun openPreviousSiblingSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
+        val currentSeries = series.value ?: return
+        val ctx = SeriesNavigationContext.get(currentSeries.id) ?: return
+        notifications.runCatchingToNotifications(screenModelScope) {
+            val currentGlobalIndex = (ctx.currentPage - 1) * ctx.pageSize + ctx.seriesIndexInPage
+            if (currentGlobalIndex <= 0) return@runCatchingToNotifications
+            val targetIndex = currentGlobalIndex - 1
+            val pageIndex = targetIndex / ctx.pageSize
+            val withinPage = targetIndex % ctx.pageSize
+
+            val page = seriesApi.getSeriesList(
+                conditionBuilder = allOfSeries {
+                    ctx.libraryId?.let { library { isEqualTo(it) } }
+                    ctx.filter.addConditionTo(this)
+                },
+                fulltextSearch = ctx.filter.searchTerm.ifBlank { null },
+                pageRequest = snd.komga.client.common.KomgaPageRequest(
+                    size = ctx.pageSize,
+                    pageIndex = pageIndex,
+                    sort = ctx.filter.sortOrder.komgaSort
+                )
+            )
+            val target = page.content.getOrNull(withinPage) ?: return@runCatchingToNotifications
+            SeriesNavigationContext.put(target.id, ctx.copy(
+                currentPage = pageIndex + 1,
+                seriesIndexInPage = withinPage
+            ))
+            onSeriesSelected(target)
         }
     }
 
