@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -47,6 +48,7 @@ fun ImmersiveDetailFab(
     onDownloadClick: () -> Unit,
     accentColor: Color? = null,
     showReadActions: Boolean = true,
+    onRandomSiblingClick: (() -> Unit)? = null,
 ) {
     val theme = LocalTheme.current
     val navBarColor = LocalNavBarColor.current
@@ -123,7 +125,16 @@ fun ImmersiveDetailFab(
                 }
                 onDispose { if (fab.value?.first == ownerKey) fab.value = null }
             }
-            DisposableEffect(Unit) {
+            DisposableEffect(onRandomSiblingClick) {
+                if (onRandomSiblingClick != null) {
+                    fabLeft.value = ownerKey to {
+                        FloatingFAB(
+                            icon = Icons.Rounded.Casino,
+                            onClick = onRandomSiblingClick,
+                            accentColor = accentColor,
+                        )
+                    }
+                }
                 onDispose { if (fabLeft.value?.first == ownerKey) fabLeft.value = null }
             }
         }

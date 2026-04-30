@@ -122,6 +122,12 @@ import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesStatus
 import kotlin.jvm.Transient
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 
 class LibraryScreen(
     val libraryId: KomgaLibraryId? = null,
@@ -622,15 +628,23 @@ private fun LibraryTabChips(
 
         if (currentTab == SERIES) {
             item {
-                FilterChip(
-                    selected = false,
-                    enabled = randomSeriesEnabled,
+                FilledTonalIconButton(
                     onClick = onRandomSeriesClick,
-                    label = { Text(LocalStrings.current.seriesFilter.sortRandom) },
-                    colors = chipColors,
-                    shape = AppFilterChipDefaults.shape(),
-                    border = AppFilterChipDefaults.filterChipBorder(false),
-                )
+                    enabled = randomSeriesEnabled,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    modifier = Modifier.border(
+                        BorderStroke(1.5.dp, Color.Black),
+                        CircleShape
+                    )
+                ) {
+                    Icon(
+                        Icons.Rounded.Casino,
+                        contentDescription = LocalStrings.current.seriesFilter.sortRandom
+                    )
+                }
             }
         }
     }

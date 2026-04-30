@@ -82,6 +82,14 @@ import snd.komga.client.collection.KomgaCollection
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.series.KomgaSeries
 import kotlin.math.max
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun SeriesContent(
@@ -103,6 +111,7 @@ fun SeriesContent(
 
     onDownload: () -> Unit,
     onOpenInKomga: (() -> Unit)? = null,
+    onRandomSiblingClick: (() -> Unit)? = null,
 ) {
     val windowWidth = LocalWindowWidth.current
     val contentPadding = when (windowWidth) {
@@ -134,6 +143,7 @@ fun SeriesContent(
             seriesMenuActions = seriesMenuActions,
             onDownload = onDownload,
             onOpenInKomga = onOpenInKomga,
+            onRandomSiblingClick = onRandomSiblingClick,
         )
 
         val scrollState = rememberLazyGridState()
@@ -231,6 +241,7 @@ fun SeriesToolBar(
     seriesMenuActions: SeriesMenuActions,
     onDownload: () -> Unit,
     onOpenInKomga: (() -> Unit)? = null,
+    onRandomSiblingClick: (() -> Unit)? = null,
 ) {
     val hideParentheses = LocalHideParenthesesInNames.current
     Row(
@@ -247,6 +258,21 @@ fun SeriesToolBar(
                 modifier = Modifier.weight(1f, false)
             )
 
+            if (onRandomSiblingClick != null) {
+                FilledTonalIconButton(
+                    onClick = onRandomSiblingClick,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    modifier = Modifier.border(
+                        BorderStroke(1.5.dp, Color.Black),
+                        CircleShape
+                    )
+                ) {
+                    Icon(Icons.Rounded.Casino, contentDescription = "Random series in library")
+                }
+            }
             Box {
                 var expandActions by remember { mutableStateOf(false) }
                 IconButton(onClick = { expandActions = true }) {

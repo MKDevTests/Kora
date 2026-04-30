@@ -100,6 +100,11 @@ import snd.komga.client.collection.KomgaCollection
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.series.KomgaSeries
 import kotlin.math.roundToInt
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 
 private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS }
 
@@ -124,6 +129,7 @@ fun ImmersiveSeriesContent(
     initiallyExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
     onOpenInKomga: (() -> Unit)? = null,
+    onRandomSiblingClick: (() -> Unit)? = null,
 ) {
     val hideParentheses = LocalHideParenthesesInNames.current
     val title = if (hideParentheses) series.metadata.title.removeParentheses() else series.metadata.title
@@ -299,6 +305,7 @@ fun ImmersiveSeriesContent(
                 onDownloadClick = { showDownloadConfirmationDialog = true },
                 accentColor = accentColor,
                 showReadActions = false,
+                onRandomSiblingClick = onRandomSiblingClick,
             )
         },
         cardContent = { expandFraction, onThumbnailPositioned, onTextPositioned ->

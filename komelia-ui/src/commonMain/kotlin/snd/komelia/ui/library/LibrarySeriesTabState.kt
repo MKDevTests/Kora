@@ -29,7 +29,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.series.SeriesFilter
-import snd.komelia.ui.series.SeriesNavigationCont ext
+import snd.komelia.ui.series.SeriesNavigationContext
 import snd.komelia.ui.series.SeriesFilterState
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.series.KomgaSeriesId
