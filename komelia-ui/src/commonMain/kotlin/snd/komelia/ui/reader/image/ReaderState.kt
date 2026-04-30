@@ -434,14 +434,14 @@ class ReaderState(
         }
     }
 
-    suspend fun loadPreviousBook() {
+    suspend fun loadPreviousBook(fromStart: Boolean = false) {
         val booksState = requireNotNull(booksState.value)
         if (booksState.previousBook != null) {
             val previousBook = getPreviousBook(booksState.previousBook.id)
             val previousBookPages =
                 if (previousBook != null) loadBookPages(previousBook.id) else emptyList()
 
-            readProgressPage.value = booksState.previousBookPages.size
+            readProgressPage.value = if (fromStart) 1 else booksState.previousBookPages.size
             this.booksState.value = BookState(
                 currentBook = booksState.previousBook,
                 currentBookPages = booksState.previousBookPages,
