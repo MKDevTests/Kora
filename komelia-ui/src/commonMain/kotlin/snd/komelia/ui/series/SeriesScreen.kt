@@ -133,6 +133,18 @@ class SeriesScreen(
                         navigator.replace(seriesScreen(newSeries))
                     }
                 },
+                onPreviousSiblingSeriesClick = {
+                    vm.openPreviousSiblingSeries { newSeries ->
+                        navigator.replace(seriesScreen(newSeries))
+                    }
+                },
+                onNextSiblingSeriesClick = {
+                    vm.openNextSiblingSeries { newSeries ->
+                        navigator.replace(seriesScreen(newSeries))
+                    }
+                },
+                hasPreviousSiblingSeries = vm.hasPreviousSiblingSeries.collectAsState().value,
+                hasNextSiblingSeries = vm.hasNextSiblingSeries.collectAsState().value,
             )
 
             BackPressHandler { onBackPress(navigator, series.libraryId) }

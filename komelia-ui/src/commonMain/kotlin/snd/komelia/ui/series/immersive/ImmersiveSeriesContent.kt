@@ -105,6 +105,8 @@ import androidx.compose.foundation.border
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 
 private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS }
 
@@ -130,6 +132,10 @@ fun ImmersiveSeriesContent(
     onExpandChange: (Boolean) -> Unit,
     onOpenInKomga: (() -> Unit)? = null,
     onRandomSiblingClick: (() -> Unit)? = null,
+    onPreviousSiblingSeriesClick: (() -> Unit)? = null,
+    onNextSiblingSeriesClick: (() -> Unit)? = null,
+    hasPreviousSiblingSeries: Boolean = false,
+    hasNextSiblingSeries: Boolean = false,
 ) {
     val hideParentheses = LocalHideParenthesesInNames.current
     val title = if (hideParentheses) series.metadata.title.removeParentheses() else series.metadata.title
@@ -306,6 +312,10 @@ fun ImmersiveSeriesContent(
                 accentColor = accentColor,
                 showReadActions = false,
                 onRandomSiblingClick = onRandomSiblingClick,
+                onPreviousSiblingSeriesClick = onPreviousSiblingSeriesClick,
+                onNextSiblingSeriesClick = onNextSiblingSeriesClick,
+                hasPreviousSiblingSeries = hasPreviousSiblingSeries,
+                hasNextSiblingSeries = hasNextSiblingSeries,
             )
         },
         cardContent = { expandFraction, onThumbnailPositioned, onTextPositioned ->
