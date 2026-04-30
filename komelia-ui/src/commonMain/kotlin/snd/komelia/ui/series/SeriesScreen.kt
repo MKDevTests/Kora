@@ -130,7 +130,7 @@ class SeriesScreen(
                 onOpenInKomga = openInKomga,
                 onRandomSiblingClick = {
                     vm.openRandomSiblingSeries { newSeries ->
-                        navigator.push(seriesScreen(newSeries))
+                        navigator.replace(seriesScreen(newSeries))
                     }
                 },
             )
@@ -189,7 +189,7 @@ class SeriesScreen(
                         onOpenInKomga = openInKomga,
                         onRandomSiblingClick = {
                             vm.openRandomSiblingSeries { newSeries ->
-                                navigator.push(seriesScreen(newSeries))
+                                navigator.replace(seriesScreen(newSeries))
                             }
                         },
                     )
