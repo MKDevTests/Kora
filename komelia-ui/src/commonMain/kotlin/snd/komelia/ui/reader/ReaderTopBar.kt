@@ -50,6 +50,7 @@ fun ReaderTopBar(
     seriesTitle: String,
     bookTitle: String,
     onBack: () -> Unit,
+    seriesBookCount: Int? = null,
     upscaleActivities: Map<Int, UpscaleStatus> = emptyMap(),
     modifier: Modifier = Modifier,
 ) {
@@ -60,7 +61,8 @@ fun ReaderTopBar(
 
     val hideParentheses = LocalHideParenthesesInNames.current
     val finalSeriesTitle = if (hideParentheses) seriesTitle.removeParentheses() else seriesTitle
-    val finalBookTitle = if (hideParentheses) bookTitle.removeParentheses() else bookTitle
+    val baseBookTitle = if (hideParentheses) bookTitle.removeParentheses() else bookTitle
+    val finalBookTitle = if (seriesBookCount != null && seriesBookCount > 0) "$baseBookTitle/$seriesBookCount" else baseBookTitle
 
     val lockScreenRotation = LocalLockScreenRotation.current
     val onLockScreenRotationChange = LocalOnLockScreenRotationChange.current

@@ -330,10 +330,13 @@ fun ReaderContent(
 
                 if (showSettingsMenu && useNewUI2) {
                     val book = commonReaderState.booksState.collectAsState().value?.currentBook
+                    val series = commonReaderState.series.collectAsState().value
+                    val totalBooks = series?.metadata?.totalBookCount ?: series?.booksCount
                     val allUpscaleActivities by ncnnSettingsState.globalUpscaleActivities.collectAsState()
                     ReaderTopBar(
                         seriesTitle = book?.seriesTitle ?: "",
                         bookTitle = book?.metadata?.title ?: "",
+                        seriesBookCount = totalBooks,
                         onBack = onExit,
                         upscaleActivities = allUpscaleActivities,
                         modifier = Modifier.align(Alignment.TopCenter)
