@@ -16,7 +16,7 @@ group = "io.github.snd-r.komelia"
 version = libs.versions.app.version.get()
 
 base {
-    archivesName = "sipurra-app"
+    archivesName = "kora-app"
 }
 
 kotlin {
@@ -61,6 +61,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.appcompat)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.core.splashscreen)
             implementation(libs.androidx.window)
             implementation(libs.androidx.workManager)
             implementation(libs.androidx.workManager.ktx)
@@ -115,10 +116,10 @@ android {
         buildConfig = true
     }
     defaultConfig {
-        applicationId = "io.github.eserero.sipurra"
+        applicationId = "io.github.mkdevtests.kora"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        manifestPlaceholders["appLabel"] = "Sipurra"
+        manifestPlaceholders["appLabel"] = "Kora"
         versionCode = 24
         versionName = libs.versions.app.version.get()
 
@@ -152,8 +153,8 @@ android {
     }
     buildTypes {
         debug {
-            applicationIdSuffix = ".v2"
-            manifestPlaceholders["appLabel"] = "SipurraV2"
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["appLabel"] = "KoraDebug"
         }
         release {
             isMinifyEnabled = true
@@ -196,7 +197,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "Sipurra"
+            packageName = "Kora"
             packageVersion = libs.versions.app.version.get()
             description = "Komga media client"
             vendor = "eserero"

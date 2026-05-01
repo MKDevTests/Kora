@@ -337,7 +337,7 @@ class TtsuReaderState(
 
         val newProgression = R2Progression(
             modified = Instant.fromEpochMilliseconds(bookmark.lastBookmarkModified),
-            device = R2Device("unused", "Sipurra"),
+            device = R2Device("unused", "Kora"),
             locator = R2Locator(
                 href = bookmark.chapterReference.replace(resourceBaseUriRegex, ""),
                 type = type,

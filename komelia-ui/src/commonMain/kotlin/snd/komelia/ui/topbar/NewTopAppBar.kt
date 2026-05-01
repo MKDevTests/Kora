@@ -100,7 +100,7 @@ fun NewTopAppBar(
             }
 
             Text(
-                "Sipurra",
+                "Kora",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontFamily = notoSerif,
                     fontWeight = FontWeight.Bold,

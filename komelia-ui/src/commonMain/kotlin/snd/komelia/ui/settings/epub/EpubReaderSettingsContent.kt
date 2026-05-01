@@ -71,11 +71,11 @@ fun EpubReaderSettingsContent(
             TTSU_EPUB -> Text(
                 """
                     Loads entire book data at once. May cause long load times or performance issues
-                    Adapted for use in Sipurra with storage/statistics features removed
+                    Adapted for use in Kora with storage/statistics features removed
                 """.trimIndent()
             )
 
-            KOMGA_EPUB -> Text("Komga webui epub reader adapted for use in Sipurra")
+            KOMGA_EPUB -> Text("Komga webui epub reader adapted for use in Kora")
 
             EPUB3_READER -> {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

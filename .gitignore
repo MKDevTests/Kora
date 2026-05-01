@@ -34,3 +34,9 @@ third_party/secret-service/
 # Prebuilt native libraries
 **/androidMain/jniLibs/**/*.so
 .worktrees
+
+# Personal migration artifacts
+sipurraP-data.tar
+*.b64
+v2.sqlite
+stable.sqlite

@@ -89,20 +89,20 @@ enum class Theme(
 
     LIGHT_MODERN(
         lightColorScheme(
-            primary = Color(0xFF6A1CF6.toInt()),
-            onPrimary = Color(0xFFF7F0FF.toInt()),
-            primaryContainer = Color(0xFFAC8EFF.toInt()),
-            onPrimaryContainer = Color(0xFF2A0070.toInt()),
+            primary = Color(0xFF3B82F6.toInt()),
+            onPrimary = Color(0xFFEFF6FF.toInt()),
+            primaryContainer = Color(0xFF93C5FD.toInt()),
+            onPrimaryContainer = Color(0xFF0B2A60.toInt()),
 
             secondary = Color(0xFF5C5B5B.toInt()),
             onSecondary = Color(0xFFF5F2F1.toInt()),
             secondaryContainer = Color(0xFFE5E2E1.toInt()),
             onSecondaryContainer = Color(0xFF525151.toInt()),
 
-            tertiary = Color(0xFF9720AB.toInt()),
-            onTertiary = Color(0xFFFEEEFB.toInt()),
-            tertiaryContainer = Color(0xFFF288FF.toInt()),
-            onTertiaryContainer = Color(0xFF570066.toInt()),
+            tertiary = Color(0xFF06B6D4.toInt()),
+            onTertiary = Color(0xFFECFEFF.toInt()),
+            tertiaryContainer = Color(0xFF67E8F9.toInt()),
+            onTertiaryContainer = Color(0xFF064E5C.toInt()),
 
             background = Color(0xFFF8F6F1.toInt()),
             onBackground = Color(0xFF2E2F2C.toInt()),
@@ -130,7 +130,7 @@ enum class Theme(
             errorContainer = Color(0xFFF74B6D.toInt()),
             onErrorContainer = Color(0xFF510017.toInt()),
 
-            inversePrimary = Color(0xFF9D79FF.toInt()),
+            inversePrimary = Color(0xFF60A5FA.toInt()),
             inverseSurface = Color(0xFF0E0E0C.toInt()),
             inverseOnSurface = Color(0xFF9E9D99.toInt()),
         ),
@@ -140,20 +140,20 @@ enum class Theme(
 
     DARK_MODERN(
         darkColorScheme(
-            primary = Color(0xFFBA9EFF.toInt()),
-            onPrimary = Color(0xFF39008C.toInt()),
-            primaryContainer = Color(0xFFAE8DFF.toInt()),
-            onPrimaryContainer = Color(0xFF2B006E.toInt()),
+            primary = Color(0xFF60A5FA.toInt()),
+            onPrimary = Color(0xFF0B2A60.toInt()),
+            primaryContainer = Color(0xFF3B82F6.toInt()),
+            onPrimaryContainer = Color(0xFFDBEAFE.toInt()),
 
-            secondary = Color(0xFF9492FF.toInt()),
-            onSecondary = Color(0xFF120076.toInt()),
-            secondaryContainer = Color(0xFF3323CC.toInt()),
-            onSecondaryContainer = Color(0xFFCECBFF.toInt()),
+            secondary = Color(0xFF7DD3FC.toInt()),
+            onSecondary = Color(0xFF082F49.toInt()),
+            secondaryContainer = Color(0xFF075985.toInt()),
+            onSecondaryContainer = Color(0xFFE0F2FE.toInt()),
 
-            tertiary = Color(0xFFFF97B8.toInt()),
-            onTertiary = Color(0xFF6A0936.toInt()),
-            tertiaryContainer = Color(0xFFFC81AB.toInt()),
-            onTertiaryContainer = Color(0xFF59002B.toInt()),
+            tertiary = Color(0xFF22D3EE.toInt()),
+            onTertiary = Color(0xFF064E5C.toInt()),
+            tertiaryContainer = Color(0xFF155E75.toInt()),
+            onTertiaryContainer = Color(0xFFCFFAFE.toInt()),
 
             background = Color(0xFF0E0E0E.toInt()),
             onBackground = Color(0xFFFFFFFF.toInt()),
@@ -181,7 +181,7 @@ enum class Theme(
             errorContainer = Color(0xFFA70138.toInt()),
             onErrorContainer = Color(0xFFFFB2B9.toInt()),
 
-            inversePrimary = Color(0xFF6E3BD7.toInt()),
+            inversePrimary = Color(0xFF2563EB.toInt()),
             inverseSurface = Color(0xFFFCF9F8.toInt()),
             inverseOnSurface = Color(0xFF565555.toInt()),
         ),
