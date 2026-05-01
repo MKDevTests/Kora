@@ -30,6 +30,8 @@ import snd.komga.client.search.KomgaSearchCondition
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesSearch
 
+private const val SERIES_RANDOM_SORT = "random"
+
 class SeriesFilterEditState(
     private val seriesApi: KomgaSeriesApi,
     private val collectionApi: KomgaCollectionsApi,
@@ -301,12 +303,13 @@ class SeriesCustomFilterState(
             SeriesSort.LastModifiedDate -> KomgaSort.KomgaSeriesSort.byLastModifiedDate(direction)
             SeriesSort.ReleaseDate -> KomgaSort.KomgaSeriesSort.byReleaseDate(direction)
             SeriesSort.BookCount -> KomgaSort.KomgaSeriesSort.byBooksCount(direction)
+            SeriesSort.Random -> KomgaSort.KomgaSeriesSort(listOf(KomgaSort.Order(SERIES_RANDOM_SORT, ASC)))
             SeriesSort.Unsorted -> KomgaSort.Unsorted
         }
     }
 
     private fun toSeriesSort(sort: KomgaSort): SeriesSort {
-        if (sort !is KomgaSort.KomgaBooksSort) return SeriesSort.Unsorted
+        if (sort !is KomgaSort.KomgaSeriesSort) return SeriesSort.Unsorted
         val komgaSort = sort.orders.firstOrNull() ?: return SeriesSort.Unsorted
         return when (komgaSort.property) {
             "metadata.titleSort" -> SeriesSort.Title
@@ -314,6 +317,7 @@ class SeriesCustomFilterState(
             "lastModified" -> SeriesSort.LastModifiedDate
             "booksMetadata.releaseDate" -> SeriesSort.ReleaseDate
             "booksCount" -> SeriesSort.BookCount
+            SERIES_RANDOM_SORT -> SeriesSort.Random
             else -> SeriesSort.Unsorted
         }
     }
@@ -422,6 +426,7 @@ enum class SeriesSort {
     LastModifiedDate,
     ReleaseDate,
     BookCount,
+    Random,
     Unsorted,
 }
 
