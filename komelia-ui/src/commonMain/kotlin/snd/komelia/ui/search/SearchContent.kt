@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import snd.komelia.komga.api.model.KomeliaBook
+import snd.komelia.ui.LocalTheme
+import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.cards.BookDetailedListCard
 import snd.komelia.ui.common.cards.SeriesDetailedListCard
@@ -96,6 +98,12 @@ fun SearchContent(
                                 onPageChange = onSeriesPageChange
                             )
                         }
+                        item {
+                            val theme = LocalTheme.current
+                            if (theme.transparentBars) {
+                                Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
+                            }
+                        }
                     }
 
                     SearchResultsTab.BOOKS -> {
@@ -113,7 +121,12 @@ fun SearchContent(
                                 onPageChange = onBookPageChange
                             )
                         }
-
+                        item {
+                            val theme = LocalTheme.current
+                            if (theme.transparentBars) {
+                                Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
+                            }
+                        }
                     }
                 }
             }

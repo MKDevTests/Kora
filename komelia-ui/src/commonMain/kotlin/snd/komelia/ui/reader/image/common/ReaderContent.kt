@@ -1,13 +1,17 @@
 package snd.komelia.ui.reader.image.common
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -22,10 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
-import snd.komelia.ui.LocalHazeState
-import snd.komelia.ui.LocalTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -45,16 +45,28 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import snd.komelia.ui.common.components.AnimatedDropdownMenu
+import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 import snd.komelia.settings.model.ReaderTapNavigationMode
+import snd.komelia.settings.model.ReaderType
 import snd.komelia.settings.model.ReaderType.CONTINUOUS
 import snd.komelia.settings.model.ReaderType.PAGED
 import snd.komelia.settings.model.ReaderType.PANELS
+import snd.komelia.ui.LocalHazeState
 import snd.komelia.ui.LocalPlatform
+import snd.komelia.ui.LocalTheme
+import snd.komelia.ui.LocalUseNewLibraryUI2
 import snd.komelia.ui.LocalWindowState
+import snd.komelia.ui.common.components.AnimatedDropdownMenu
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
+import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.PlatformType.MOBILE
+import snd.komelia.ui.reader.ReaderTopBar
+import snd.komelia.ui.reader.common.ImagePageLocation
+import snd.komelia.ui.reader.common.NavigationSource
+import snd.komelia.ui.reader.common.ReaderNavigationBackButton
 import snd.komelia.ui.reader.image.ReaderState
 import snd.komelia.ui.reader.image.ScreenScaleState
 import snd.komelia.ui.reader.image.continuous.ContinuousReaderContent
@@ -63,9 +75,6 @@ import snd.komelia.ui.reader.image.paged.PagedReaderContent
 import snd.komelia.ui.reader.image.paged.PagedReaderState
 import snd.komelia.ui.reader.image.panels.PanelsReaderContent
 import snd.komelia.ui.reader.image.panels.PanelsReaderState
-import snd.komelia.ui.LocalUseNewLibraryUI2
-import snd.komelia.ui.platform.BackPressHandler
-import snd.komelia.ui.reader.ReaderTopBar
 import snd.komelia.ui.reader.image.settings.SettingsOverlay
 import snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsState
 import snd.komelia.ui.settings.imagereader.onnxruntime.OnnxRuntimeSettingsState
@@ -86,6 +95,11 @@ fun ReaderContent(
 ) {
     var showHelpDialog by remember { mutableStateOf(false) }
     var showSettingsMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(showSettingsMenu) {
+        if (!showSettingsMenu) {
+            commonReaderState.showCarousel.value = false
+        }
+    }
     var showImageContextMenu by remember { mutableStateOf(false) }
     var showComicContentDialog by remember { mutableStateOf(false) }
     var contextMenuAnchorOffset by remember { mutableStateOf(Offset.Zero) }
@@ -135,6 +149,19 @@ fun ReaderContent(
     var hasFocus by remember { mutableStateOf(false) }
     val ocrSettings by commonReaderState.ocrSettings.collectAsState()
     val readerType by commonReaderState.readerType.collectAsState()
+
+    val backButtonBottomPadding by animateDpAsState(
+        targetValue = if (showSettingsMenu && useNewUI2) 200.dp else 32.dp,
+        animationSpec = spring(),
+        label = "BackButtonBottomPadding"
+    )
+    val isGestureInProgress by screenScaleState.isGestureInProgress.collectAsState()
+    LaunchedEffect(isGestureInProgress) {
+        if (isGestureInProgress) {
+            commonReaderState.navigationHistory.dismissBackButton()
+        }
+    }
+
     CompositionLocalProvider(LocalHazeState provides readerHazeState) {
         Box(
             Modifier
@@ -343,6 +370,39 @@ fun ReaderContent(
                     )
                 }
 
+                ReaderNavigationBackButton(
+                    isVisible = commonReaderState.navigationHistory.buttonVisible.collectAsState().value,
+                    onClick = {
+                        val currentIdx = when (readerType) {
+                            PAGED -> pagedReaderState.currentSpreadIndex.value
+                            CONTINUOUS -> commonReaderState.readProgressPage.value - 1
+                            PANELS -> panelsReaderState?.currentPageIndex?.value?.page ?: 0
+                        }
+                        val entry = commonReaderState.navigationHistory.popEntry()
+                        if (entry != null && entry.location is ImagePageLocation) {
+                            val targetPage = entry.location.page
+                            commonReaderState.navigationHistory.addEntry(
+                                NavigationSource.BACK_BUTTON,
+                                ImagePageLocation(currentIdx)
+                            )
+                            when (readerType) {
+                                PAGED -> pagedReaderState.jumpToPage(targetPage)
+                                CONTINUOUS -> coroutineScope.launch {
+                                    continuousReaderState.scrollToBookPage(targetPage + 1)
+                                }
+
+                                PANELS -> panelsReaderState?.jumpToPage(targetPage)
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            bottom = backButtonBottomPadding,
+                            end = 32.dp
+                        )
+                )
+
                 EInkFlashOverlay(
                     enabled = commonReaderState.flashOnPageChange.collectAsState().value,
                     pageChangeFlow = commonReaderState.pageChangeFlow,
@@ -359,10 +419,23 @@ fun ReaderContent(
                             showComicContentDialog = false
                             val loc = annotation.location as? snd.komelia.annotations.AnnotationLocation.ComicLocation
                             if (loc != null) {
-                                when (commonReaderState.readerType.value) {
-                                    PAGED -> pagedReaderState.onPageChange(loc.page)
-                                    CONTINUOUS -> coroutineScope.launch { continuousReaderState.scrollToBookPage(loc.page + 1) }
-                                    PANELS -> panelsReaderState?.onPageChange(loc.page)
+                                val currentIdx = when (readerType) {
+                                    PAGED -> pagedReaderState.currentSpreadIndex.value
+                                    CONTINUOUS -> commonReaderState.readProgressPage.value - 1
+                                    PANELS -> panelsReaderState?.currentPageIndex?.value?.page ?: 0
+                                }
+                                commonReaderState.navigationHistory.addEntry(
+                                    NavigationSource.NOTES,
+                                    ImagePageLocation(currentIdx)
+                                )
+
+                                when (readerType) {
+                                    PAGED -> pagedReaderState.jumpToPage(loc.page)
+                                    CONTINUOUS -> coroutineScope.launch {
+                                        continuousReaderState.scrollToBookPage(loc.page + 1)
+                                    }
+
+                                    PANELS -> panelsReaderState?.jumpToPage(loc.page)
                                 }
                             }
                             commonReaderState.editingComicAnnotation.value = annotation
@@ -433,13 +506,23 @@ fun ReaderContent(
                                 val prev = sortedAnnotationsComic[currentIndexComic - 1]
                                 commonReaderState.editingComicAnnotation.value = prev
                                 (prev.location as? snd.komelia.annotations.AnnotationLocation.ComicLocation)?.let { loc ->
+                                    val currentIdx = when (readerType) {
+                                        PAGED -> pagedReaderState.currentSpreadIndex.value
+                                        CONTINUOUS -> commonReaderState.readProgressPage.value - 1
+                                        PANELS -> panelsReaderState?.currentPageIndex?.value?.page ?: 0
+                                    }
+                                    commonReaderState.navigationHistory.addEntry(
+                                        NavigationSource.NOTES,
+                                        ImagePageLocation(currentIdx)
+                                    )
+
                                     commonReaderState.onProgressChange(loc.page + 1)
                                     coroutineScope.launch {
-                                        when (commonReaderState.readerType.value) {
+                                        when (readerType) {
                                             PAGED -> {
                                                 pagedReaderState.pageSpreads.value.indexOfFirst { spread ->
                                                     spread.any { it.pageNumber == loc.page + 1 }
-                                                }.takeIf { it != -1 }?.let { pagedReaderState.onPageChange(it) }
+                                                }.takeIf { it != -1 }?.let { pagedReaderState.jumpToPage(it) }
                                             }
 
                                             CONTINUOUS -> continuousReaderState.scrollToBookPage(loc.page + 1)
@@ -454,13 +537,23 @@ fun ReaderContent(
                                 val next = sortedAnnotationsComic[currentIndexComic + 1]
                                 commonReaderState.editingComicAnnotation.value = next
                                 (next.location as? snd.komelia.annotations.AnnotationLocation.ComicLocation)?.let { loc ->
+                                    val currentIdx = when (readerType) {
+                                        PAGED -> pagedReaderState.currentSpreadIndex.value
+                                        CONTINUOUS -> commonReaderState.readProgressPage.value - 1
+                                        PANELS -> panelsReaderState?.currentPageIndex?.value?.page ?: 0
+                                    }
+                                    commonReaderState.navigationHistory.addEntry(
+                                        NavigationSource.NOTES,
+                                        ImagePageLocation(currentIdx)
+                                    )
+
                                     commonReaderState.onProgressChange(loc.page + 1)
                                     coroutineScope.launch {
-                                        when (commonReaderState.readerType.value) {
+                                        when (readerType) {
                                             PAGED -> {
                                                 pagedReaderState.pageSpreads.value.indexOfFirst { spread ->
                                                     spread.any { it.pageNumber == loc.page + 1 }
-                                                }.takeIf { it != -1 }?.let { pagedReaderState.onPageChange(it) }
+                                                }.takeIf { it != -1 }?.let { pagedReaderState.jumpToPage(it) }
                                             }
 
                                             CONTINUOUS -> continuousReaderState.scrollToBookPage(loc.page + 1)

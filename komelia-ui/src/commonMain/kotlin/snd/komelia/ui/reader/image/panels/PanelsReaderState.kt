@@ -294,6 +294,7 @@ class PanelsReaderState(
     }
 
     fun nextPanel() {
+        readerState.navigationHistory.dismissBackButton()
         val pageIndex = currentPageIndex.value
         val currentPage = currentPage.value
         if (currentPage == null || currentPage.panelData == null) {
@@ -348,6 +349,7 @@ class PanelsReaderState(
     }
 
     fun previousPanel() {
+        readerState.navigationHistory.dismissBackButton()
         val pageIndex = currentPageIndex.value
         val currentPage = currentPage.value
         if (currentPage == null || currentPage.panelData == null) {

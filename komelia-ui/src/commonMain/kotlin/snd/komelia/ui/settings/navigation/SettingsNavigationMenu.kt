@@ -1,6 +1,8 @@
 package snd.komelia.ui.settings.navigation
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import snd.komelia.ui.LocalOfflineMode
+import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.settings.account.AccountSettingsScreen
 import snd.komelia.ui.settings.analysis.MediaAnalysisScreen
@@ -209,6 +212,8 @@ fun SettingsNavigationMenu(
                 isSelected = false,
             )
         }
+
+        Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
 
         if (showLogoutConfirmation) {
             ConfirmationDialog(

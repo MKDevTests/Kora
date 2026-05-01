@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -60,6 +61,7 @@ class SettingsScreen : Screen {
                     navMenu = {
                         Row(
                             Modifier
+                                .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(top = settingsDesktopTopPadding, start = 10.dp, end = 10.dp)
                         ) {
@@ -73,7 +75,7 @@ class SettingsScreen : Screen {
                                 newVersionIsAvailable = vm.newVersionIsAvailable,
                                 onLogout = vm::logout,
                                 contentColor = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.width(settingsDesktopNavMenuWidth),
+                                modifier = Modifier.width(settingsDesktopNavMenuWidth).fillMaxHeight(),
                                 user = vm.user.collectAsState().value
                             )
                         }

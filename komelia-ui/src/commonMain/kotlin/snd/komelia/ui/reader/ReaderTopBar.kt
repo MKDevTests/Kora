@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.ScreenLockRotation
+import androidx.compose.material.icons.outlined.ScreenLockRotation
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -139,7 +139,7 @@ fun ReaderTopBar(
                 
                 IconButton(onClick = { onLockScreenRotationChange(!lockScreenRotation) }) {
                     Icon(
-                        if (lockScreenRotation) Icons.Rounded.ScreenLockRotation else Icons.Rounded.ScreenRotation,
+                        if (lockScreenRotation) Icons.Outlined.ScreenLockRotation else Icons.Rounded.ScreenRotation,
                         contentDescription = if (lockScreenRotation) "Unlock screen rotation" else "Lock screen rotation",
                         tint = accentColor
                     )

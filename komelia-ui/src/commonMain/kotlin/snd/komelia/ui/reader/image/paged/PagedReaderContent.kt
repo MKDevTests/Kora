@@ -60,6 +60,7 @@ import snd.komelia.ui.reader.image.common.AdaptiveBackground
 import snd.komelia.ui.common.images.BookThumbnail
 import kotlin.math.abs
 
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.toSize

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.ViewStream
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -118,6 +120,8 @@ import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.common.components.accentInputChipColors
 import snd.komelia.ui.platform.WindowSizeClass.COMPACT
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.ui.reader.common.ImagePageLocation
+import snd.komelia.ui.reader.common.NavigationSource
 import snd.komelia.ui.reader.ReaderControlsCard
 import snd.komelia.ui.reader.image.PageMetadata
 import snd.komelia.ui.reader.image.ReaderState
@@ -281,11 +285,26 @@ fun BottomSheetSettingsOverlay(
                 ImageReaderControlsCardNewUI(
                     pages = pages,
                     currentPageIndex = currentPageIndex,
-                    onPageNumberChange = {
+                    onSliderPageChange = {
+                        commonReaderState.navigationHistory.addEntry(
+                            NavigationSource.SLIDER,
+                            ImagePageLocation(currentPageIndex)
+                        )
                         when (readerType) {
-                            PAGED -> pagedReaderState.onPageChange(it)
-                            CONTINUOUS -> coroutineScope.launch { continuousReaderState.scrollToBookPage(it + 1) }
-                            PANELS -> panelsReaderState?.onPageChange(it)
+                            ReaderType.PAGED -> pagedReaderState.jumpToPage(it)
+                            ReaderType.CONTINUOUS -> coroutineScope.launch { continuousReaderState.scrollToBookPage(it + 1) }
+                            ReaderType.PANELS -> panelsReaderState?.jumpToPage(it)
+                        }
+                    },
+                    onCarouselPageChange = {
+                        commonReaderState.navigationHistory.addEntry(
+                            NavigationSource.CAROUSEL,
+                            ImagePageLocation(currentPageIndex)
+                        )
+                        when (readerType) {
+                            ReaderType.PAGED -> pagedReaderState.jumpToPage(it)
+                            ReaderType.CONTINUOUS -> coroutineScope.launch { continuousReaderState.scrollToBookPage(it + 1) }
+                            ReaderType.PANELS -> panelsReaderState?.jumpToPage(it)
                         }
                     },
                     loadThumbnailPreviews = loadThumbnailPreviews,
@@ -969,7 +988,8 @@ internal fun ReaderModeIconButton(
 fun ImageReaderControlsCardNewUI(
     pages: List<PageMetadata>,
     currentPageIndex: Int,
-    onPageNumberChange: (Int) -> Unit,
+    onSliderPageChange: (Int) -> Unit,
+    onCarouselPageChange: (Int) -> Unit,
     loadThumbnailPreviews: Boolean,
     readerType: ReaderType,
     onReaderTypeChange: (ReaderType) -> Unit,
@@ -993,7 +1013,10 @@ fun ImageReaderControlsCardNewUI(
     val ncnnSettings by ncnnSettingsState.ncnnUpscalerSettings.collectAsState()
     val showUpscale = isNcnnSupported()
 
-    ReaderControlsCard(modifier = modifier) {
+    ReaderControlsCard(
+        modifier = modifier,
+        isFullWidth = showCarousel
+    ) {
         AnimatedContent(
             targetState = showCarousel,
             transitionSpec = {
@@ -1007,20 +1030,33 @@ fun ImageReaderControlsCardNewUI(
                     pages = pages,
                     currentPageIndex = currentPageIndex,
                     onPageChange = {
-                        onPageNumberChange(it)
-                        onToggleCarousel()
+                        onCarouselPageChange(it)
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-            } else {
+                } else {
                 Column {
-                    Text(
-                        text = "Page ${currentPageIndex + 1} of ${pages.size}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().clickable { onToggleCarousel() },
-                    )
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Row(
+                            modifier = Modifier.clickable { onToggleCarousel() },
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.ViewCarousel,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp).padding(end = 4.dp).offset(y = (-2).dp)
+                            )
+                            Text(
+                                text = "Page ${currentPageIndex + 1} of ${pages.size}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.offset(y = (-2).dp)
+                            )
+                        }
+                    }
 
                     val accentColorForButtons = LocalAccentColor.current ?: MaterialTheme.colorScheme.primary
                     Row(
@@ -1037,7 +1073,7 @@ fun ImageReaderControlsCardNewUI(
                         ProgressSlider(
                             pages = pages,
                             currentPageIndex = currentPageIndex,
-                            onPageNumberChange = onPageNumberChange,
+                            onPageNumberChange = onSliderPageChange,
                             loadThumbnailPreviews = loadThumbnailPreviews,
                             show = true,
                             layoutDirection = androidx.compose.ui.unit.LayoutDirection.Ltr, // TODO: handle RTL

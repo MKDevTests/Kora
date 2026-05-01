@@ -1,6 +1,7 @@
 package snd.komelia.ui.reader.image.continuous
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.spring
@@ -97,6 +98,7 @@ fun BoxScope.ContinuousReaderContent(
     }
 
     val areaSize = screenScaleState.areaSize.collectAsState().value
+
     val keysState = remember(readingDirection, volumeKeysNavigation) {
         KeyMapState(
             readingDirection = readingDirection,

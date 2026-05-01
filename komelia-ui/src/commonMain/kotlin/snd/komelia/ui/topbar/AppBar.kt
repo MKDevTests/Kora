@@ -46,7 +46,7 @@ import snd.komelia.ui.ReloadableScreen
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.platform.PlatformTitleBar
 import snd.komelia.ui.platform.WindowSizeClass.FULL
-import snd.komelia.ui.search.SearchBar
+import snd.komelia.ui.search.ResultsSearchBar
 import snd.komelia.ui.search.SearchResults
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
@@ -99,7 +99,7 @@ fun AppBar(
             else -> Modifier.align(Alignment.Start).width(300.dp)
         }
 
-        SearchBar(
+        ResultsSearchBar(
             modifier = searchBarModifier,
             searchResults = searchResults,
             query = query,

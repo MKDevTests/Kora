@@ -3,14 +3,17 @@
 ## What's New in this Fork
 Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on improving the Android experience. It contains all the good in Komelia and adding many new featurs:
 *  Completly revamped UX 
+*  **Multi-Server Support**: Support for adding and switching between multiple Komga server accounts.
 *  New epub3 reader supporting immersive Audio + Text reading (based on storyteller)
-*  Audio books playback
-*  Many new features in the comic reader (AI upscaling, additional navigation options, improved panel mode and more)
+*  Audio books playback with **live transcription**.
+*  Many new features in the comic reader (**OCR text selection**, AI upscaling, additional navigation options, improved panel mode and more)
 *  Bookmarks and Annotation support for books and audiobooks, Annotation and highlighting for books and comics. Fully Synchronized between devices.
+*  **Local File Support**: Native support for PDF, CBR, and CBZ files with page and bookmark persistence.
 *  Much more - read below to find out :-)
 
 ### New UX and Themes
 *   **Material 3**: Standardized M3 `TopAppBar` with cleaner menu location and a hamburger menu to choose the library. Floating FAB to open the filter dialog. Standardize Navigation Bar.
+*   **Multi-Server Management**: Users can now add, switch between, and manage multiple Komga server connections. Session management, login flows, and offline synchronization have been updated to support per-server states.
 *   **Smaller Thumbnails**: allowing smaller thumbnails in the setting screen (choose 110) which shows 3 thumbnail per row instead of only two. Thumbnails are also nicer with some options to choose from (text below thumbnail, transparent background for text)
 *   **New Dark and Light Themes**: clearer colors, supporting "Haze" effect (transparency with blur) for toolbars and some of the floating elements.
 
@@ -27,6 +30,7 @@ Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on impr
 ### Home Screen
 *   **New screen design**: similar to the library screen, Section management and settings moved to a Floating Action Button at the bottom-right for easy one-handed use.
 *   **Horizontal Layout**: Organized content into horizontal rows (Keep Reading, On Deck, etc.) for a compact and discoverable dashboard. This is similar to how komga web show it.
+*   **Offline Toggle**: Quick-toggle in the top app bar to manually switch between online and offline modes.
 
 ### Search
 *   **Updated screen design**: similar to library and home screens with Full M3 `SearchBar` implementation with smooth animations, native back-navigation, and clear-text support.
@@ -47,14 +51,18 @@ Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on impr
 
 ### Image/Comic Reader
 *   **New Controls UX**: Aligned with the new epub reader and matching the new dark/light teams and immersive card color. provide easy access to switching between reading modes (Page, continous, panel), turn on/of upscaling and lock screen rotation.
-*   **Adaptive Backgrounds**: "Blooming" gradient backgrounds that sample edge colors in real-time for both Paged and Panel modes.
-*   **High-Performance GPU Upscaling**: Integrated NCNN-powered upscaling (Waifu2x, RealCUGAN, RealSR, Real-ESRGAN) specifically optimized for Android GPU hardware. upscaling is really good but may require some time to complete depending on your mobile cpu/gpu. there are page upscaling indicators showing you what is goingn on.
+*   **OCR Text Selection**: Integrated Google ML Kit and RapidOCR for text recognition. Supports on-demand scanning and an "Auto-Scan" mode. OCR bounding boxes are logically merged based on reading direction (LTR/RTL).
+*   **Text Actions**: Directly **Translate**, copy text, or create annotations from OCR-selected text (with the note automatically pinned to the relevant area).
+*   **Thumbnail Carousel**: A horizontal thumbnail strip for fast visual navigation, with auto-scroll synchronization to keep the active page centered.
+*   **Adaptive Immersive Backgrounds**: gradient backgrounds that sample edge colors in real-time for both Paged and Panel modes.
+*   **High-Performance GPU Upscaling**: Integrated NCNN-powered upscaling specifically optimized for Android GPU hardware.
 *   **Swiping Navigation in Page Mode**: swiping now work and allow you to move forward/backward pages smoothly.
-*   **Improved Panel Navigation**: Smooth pan-and-zoom animations. Ability to show the full screen before and/or after the panels for context, fixed several issues when changing from portrait to landscape.
+*   **Improved Panel Navigation**: Smooth pan-and-zoom animations. Ability to show the full screen before and/or after the panels for context.
 *   **Save Current Image**: long-press quick-save to Downloads
-*   **Double Tap to Zoom**: ability to configure double-tap to zoom for panel and page modes (make tap navigation a bit slower)
-*   **Additional Navigation Options**: tap left to back and right to forward, tap right to forward and left to back, tap top side to back and lower side to forward, tap lower side to back and top to forward.
-*   **Keep Screen Awake**: setting to prevent the screen to turn off when in the reader. (in the image reader setting page)
+*   **Double Tap to Zoom**: ability to configure double-tap to zoom for panel and page modes.
+*   **Additional Navigation Options**: Multiple tap-zone configurations for forward/backward navigation.
+*   **Navigation History**: Added navigation history and a floating back button for better exploration.
+*   **Keep Screen Awake**: setting to prevent the screen to turn off when in the reader.
 
 **Adaptive Backgrounds**
 | Light Theme | Dark Theme | Controls Hidden |
@@ -75,14 +83,17 @@ Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on impr
 | <img src="screenshots/New UI 2/Comic Reader - Comic page with controls without upscaling B&W.jpg" width="250"> | <img src="screenshots/New UI 2/Comic Reader - Comic page with controls with upscaling B&W.jpg" width="250"> |
 
 ### Epub Reader with support for Epub 3 audio layer and Audio Books
-*   **New Epub Viewer**: Completely new epub viewer that can be toggled in settings. based on Storyteller and Redium Kotlin Tookit - support epubs with audio layer to a combined text + Audio reading (You can easily create such books using storyteller
-*   **Audio Book player**: integrated audio books player, with chapter navigation , double tap on a text row to choose sentenses to play, including a mini player and integrated full screen "audio book" interface. Audio books must alwasy be inside the book epub file (which is a zip file) and there are 2 modes: 1. if you are using Storyteller to create an immersive reading experience you will get a synchronized text and audio experiece. 2. if you just have an audiobook or audio folder inside your epub then you can use it as a normal audio book without text synchronization.
-*   **New controls**: completly new reading controls matching the new comic reader controls - easily select chapter, bookmark, search and lock screen rotation.
-*   **New setting screen**: Theme and appearance selection, margins, fonts and audio settings. 
-*   **Better Navigation**: Ability to swipe to turn pages (swipe left/right to move about, scroll based reading etc.)
-*   **Bookmark and Search**: new implementation of chapter, bookmarking and text search
-*   **Keep Screen Awake**: setting to prevent the screen to turn off when in the reader. (in the image reader setting page - both use the same settings)
-
+*   **New Epub Viewer**: Completely new epub viewer based on Storyteller and Redium Kotlin Tookit. Support epubs with audio layer for combined text + Audio reading.
+*   **Text Selection & Translation**: Long-press text to access a native context menu with **Translate**, Copy, and Search options.
+*   **Audio Book player**: Integrated player with chapter navigation, mini player, and full-screen interface.
+    *   **Live Transcription**: Real-time transcription for folder-based audiobooks using Whisper (Local/Native) and ML Kit. Includes a scrollable chat-log transcript UI.
+    *   **Embedded Metadata & Chapters**: Automatic extraction and caching of embedded chapter metadata for folder-based audiobooks (titles, start/end times and other metadata items).
+    *   **Audio Metadata Dialog**: View detailed track tags and embedded chapters directly from the player.
+    *   **New controls**: Completely new reading controls matching the new comic reader controls.
+*   **New setting screen**: Theme and appearance selection, margins, fonts, and audio settings. 
+*   **Better Navigation**: Swipe to turn pages, scroll-based reading, etc.
+*   **Bookmark and Search**: New implementation of chapter, bookmarking, and text search.
+*   **Keep Screen Awake**: Master setting to prevent screen timeout in all reader modes.
 
 **Controls and Audio Player**
 | Light Theme | Dark Theme | Mini Player |
@@ -100,9 +111,10 @@ Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on impr
 | <img src="screenshots/New UI 2/Epub3 reader Table of Content.jpg" width="250"> | <img src="screenshots/New UI 2/Epub3 reader Bookmarks.jpg" width="250"> | <img src="screenshots/New UI 2/Epub3 reader Search.jpg" width="250"> |
 
 ### Settings Page
-*   **Nicer Navigation page**: Refactored menu structure for a more moden m3 look.
+*   **Nicer Navigation page**: Refactored menu structure for a more modern M3 look.
+*   **Advanced Cache Management**: User-configurable limits for Image and EPUB readers with LRU-based trimming and manual clearing options.
 *   **New Visual Toggles**: Immersive color strength sliders, unified app-wide accent color presets, and a master toggle for the "New Library UI".
-*   **Deep Customization**: Per-mode toggles for tap-to-zoom, configurable tap navigation zones with visual diagrams, and granular adaptive background settings.
+*   **Deep Customization**: Per-mode toggles for tap-to-zoom, configurable tap navigation zones, and granular adaptive background settings.
 
 **Comic Reader Settings**
 | Reading Modes | Image Settings | Navigation |
@@ -115,9 +127,10 @@ Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on impr
 | <img src="screenshots/New UI 2/Epub3 reader settings - Appearance.jpg" width="250"> | <img src="screenshots/New UI 2/Epub3 reader settings - Fonts.jpg" width="250"> | <img src="screenshots/New UI 2/Epub3 reader settings - audio.jpg" width="250"> |
 
 ### General improvements
-*   **Prefer local files**: If the files are downloaded, they will be used instead of downloading from the server - this is very helpfull for large comics or epub files with audio - which can get pretty large. This is working even in online mode although the app will still go to the server to fetch metadata.
-*   **Ability to open local files through android context**: Ability to open cbz and epub files from android. it will not let you manage these files, but it will remember the page and bookmarks based on the file location. maybe in the future I will add more local file management.
-*   **Reload local cache**: It is possible to reload files downloaded by a previous installation or to transfer downloaded files to a new device and then just reload them to a new installation of the application. you can do this in the aplication setting offline screen - there is a new button "scan for existing files" - it will link all the existing files to the app and provide a report.
+*   **Prefer local files**: If files are downloaded, they are used instead of the server. 
+*   **Improved Offline file support**: Native support for local PDF, CBR files on device in addition to epub and cbz.
+*   **Ability to open local files through android context**: Open CBZ, CBR, PDF, and EPUB files from Android with page and bookmark persistence.
+*   **Reload local cache**: Scan for existing files to link them to the app, facilitating device transfers or fresh installs.
 
 
 

@@ -23,6 +23,7 @@ import snd.komelia.ui.LocalTheme
 @Composable
 fun ReaderControlsCard(
     modifier: Modifier = Modifier,
+    isFullWidth: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val theme = LocalTheme.current
@@ -31,32 +32,41 @@ fun ReaderControlsCard(
         HazeMaterials.thin(theme.colorScheme.surface.copy(alpha = 0.4f))
     } else null
 
-    val commonModifier = modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)
-        .padding(bottom = 16.dp)
-        .navigationBarsPadding()
+    val shape = if (isFullWidth) RoundedCornerShape(0.dp) else RoundedCornerShape(28.dp)
+    val commonModifier = if (isFullWidth) {
+        modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+    } else {
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 16.dp)
+            .navigationBarsPadding()
+    }
 
     Box(modifier = commonModifier) {
         if (hazeState != null && hazeStyle != null) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .shadow(8.dp, RoundedCornerShape(28.dp))
-                    .clip(RoundedCornerShape(28.dp))
+                    .shadow(if (isFullWidth) 0.dp else 8.dp, shape)
+                    .clip(shape)
                     .hazeEffect(hazeState) { style = hazeStyle }
             )
         } else {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .shadow(8.dp, RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp))
+                    .shadow(if (isFullWidth) 0.dp else 8.dp, shape)
+                    .background(MaterialTheme.colorScheme.surface, shape)
             )
         }
 
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(if (isFullWidth) 0.dp else 16.dp),
         ) {
             content()
         }

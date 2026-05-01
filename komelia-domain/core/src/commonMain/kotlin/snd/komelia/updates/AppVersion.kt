@@ -17,7 +17,7 @@ data class AppVersion(
 ) : Comparable<AppVersion> {
 
     companion object {
-        val current = AppVersion(2, 1, 0)
+        val current = AppVersion(2, 2, 0)
 
         fun fromString(value: String): AppVersion {
             val sanitized = value.removePrefix("v")

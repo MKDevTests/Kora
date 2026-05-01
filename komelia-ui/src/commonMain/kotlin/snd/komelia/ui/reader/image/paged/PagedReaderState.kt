@@ -255,6 +255,7 @@ class PagedReaderState(
     }
 
     fun nextPage() {
+        readerState.navigationHistory.dismissBackButton()
         val spreads = pageSpreads.value
         if (spreads.isEmpty()) return
 
@@ -288,6 +289,7 @@ class PagedReaderState(
     }
 
     fun previousPage() {
+        readerState.navigationHistory.dismissBackButton()
         val spreads = pageSpreads.value
         if (spreads.isEmpty()) return
 

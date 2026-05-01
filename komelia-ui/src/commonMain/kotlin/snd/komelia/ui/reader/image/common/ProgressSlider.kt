@@ -19,14 +19,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -200,10 +205,9 @@ private fun Slider(
         } else MaterialTheme.colorScheme.onSurfaceVariant
 
         if (showPreview || !isBare) {
-            Text(
-                label,
-                textAlign = TextAlign.Center,
-                color = onLabelColor,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .background(
                         color = labelBackground,
@@ -212,7 +216,20 @@ private fun Slider(
                     .clickable { onLabelClick() }
                     .padding(horizontal = 12.dp, vertical = 4.dp)
                     .defaultMinSize(minWidth = 40.dp)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ViewCarousel,
+                    contentDescription = null,
+                    tint = onLabelColor,
+                    modifier = Modifier.size(20.dp).padding(end = 4.dp).offset(y = (-2).dp)
+                )
+                Text(
+                    label,
+                    textAlign = TextAlign.Center,
+                    color = onLabelColor,
+                    modifier = Modifier.offset(y = (-2).dp)
+                )
+            }
         } else Spacer(Modifier)
 
         Slider(
@@ -299,11 +316,16 @@ fun BookPageThumbnail(
     page: PageMetadata,
 //    image: ImageResult?,
     modifier: Modifier,
+    useRoundedCorners: Boolean = true,
+    isCurrentPage: Boolean = false
 ) {
+    val shape = if (useRoundedCorners) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
+    val borderColor = if (isCurrentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+    val borderWidth = 2.dp
     Column(
         modifier = modifier
-            .border(BorderStroke(2.dp, MaterialTheme.colorScheme.surface), RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
+            .border(BorderStroke(borderWidth, borderColor), shape)
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -329,7 +351,11 @@ fun BookPageThumbnail(
 //                modifier = modifier
 //            )
 //        }
-        AsyncImage(request, null)
+        AsyncImage(
+            model = request,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

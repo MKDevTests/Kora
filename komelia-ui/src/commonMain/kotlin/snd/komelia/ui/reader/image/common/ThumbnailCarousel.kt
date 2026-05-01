@@ -8,20 +8,15 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.debounce
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import coil3.SingletonImageLoader
-import coil3.compose.LocalPlatformContext
-import coil3.request.ImageRequest
-import coil3.size.Precision
-import snd.komelia.image.coil.BookPageThumbnailRequest
 import snd.komelia.ui.reader.image.PageMetadata
 
 @Composable
@@ -32,8 +27,6 @@ fun ThumbnailCarousel(
     modifier: Modifier = Modifier
 ) {
     val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = currentPageIndex)
-    val context = LocalPlatformContext.current
-    val imageLoader = SingletonImageLoader.get(context)
 
     val flingBehavior = ScrollableDefaults.flingBehavior()
 
@@ -41,48 +34,72 @@ fun ThumbnailCarousel(
         state = lazyListState,
         flingBehavior = flingBehavior,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        modifier = modifier.height(200.dp)
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+        modifier = modifier.height(180.dp)
     ) {
-        itemsIndexed(pages) { index, page ->
-            BookPageThumbnail(
-                page = page,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(0.7f)
-                    .clickable { onPageChange(index) }
-            )
+        itemsIndexed(
+            items = pages,
+            key = { _, page -> page.toPageId().toString() }
+        ) { index, page ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = (index + 1).toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                BookPageThumbnail(
+                    page = page,
+                    useRoundedCorners = false,
+                    isCurrentPage = index == currentPageIndex,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .aspectRatio(0.7f)
+                        .clickable { onPageChange(index) }
+                )
+            }
         }
     }
 
-    LaunchedEffect(lazyListState) {
-        snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo }
-            .debounce(50)
-            .collect { visibleItems ->
-                if (visibleItems.isEmpty()) return@collect
-                val firstIndex = visibleItems.first().index
-                val lastIndex = visibleItems.last().index
-
-                val preCacheRange = (firstIndex - 5)..(lastIndex + 5)
-                preCacheRange.forEach { index ->
-                    if (index in pages.indices && visibleItems.none { it.index == index }) {
-                        val page = pages[index]
-                        val pageId = page.toPageId()
-                        val request = ImageRequest.Builder(context)
-                            .data(BookPageThumbnailRequest(page.bookId, page.pageNumber))
-                            .memoryCacheKey(pageId.toString())
-                            .diskCacheKey(pageId.toString())
-                            .precision(Precision.INEXACT)
-                            .build()
-                        imageLoader.enqueue(request)
-                    }
-                }
-            }
+    var initialScrollDone by remember { mutableStateOf(false) }
+    val viewportWidth = lazyListState.layoutInfo.viewportSize.width
+    LaunchedEffect(viewportWidth) {
+        if (!initialScrollDone && viewportWidth > 0) {
+            val offset = -(viewportWidth / 2) + 150
+            lazyListState.scrollToItem(currentPageIndex, offset)
+            initialScrollDone = true
+        }
     }
 
     LaunchedEffect(currentPageIndex) {
-        if (lazyListState.firstVisibleItemIndex != currentPageIndex) {
-            lazyListState.scrollToItem(currentPageIndex)
+        if (initialScrollDone) {
+            val layoutInfo = lazyListState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            val viewportWidth = layoutInfo.viewportSize.width
+            val itemInfo = visibleItems.find { it.index == currentPageIndex }
+
+            if (itemInfo == null) {
+                val firstVisible = visibleItems.firstOrNull()?.index ?: 0
+                if (currentPageIndex < firstVisible) {
+                    lazyListState.animateScrollToItem(currentPageIndex)
+                } else {
+                    val lastItemSize = visibleItems.lastOrNull()?.size ?: 0
+                    lazyListState.animateScrollToItem(currentPageIndex, -(viewportWidth - lastItemSize))
+                }
+            } else {
+                val isFullyVisible = itemInfo.offset >= 0 &&
+                        itemInfo.offset + itemInfo.size <= viewportWidth
+
+                if (!isFullyVisible) {
+                    if (itemInfo.offset < 0) {
+                        lazyListState.animateScrollToItem(currentPageIndex)
+                    } else {
+                        lazyListState.animateScrollToItem(currentPageIndex, -(viewportWidth - itemInfo.size))
+                    }
+                }
+            }
         }
     }
 }

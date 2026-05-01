@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
@@ -40,10 +41,11 @@ class MobileSettingsScreen : Screen {
         LaunchedEffect(Unit) { vm.initialize() }
 
         Surface(
+            modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.surface,
         ) {
             Column(
-                modifier = Modifier.padding(5.dp),
+                modifier = Modifier.fillMaxSize().padding(5.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 PlatformTitleBar()

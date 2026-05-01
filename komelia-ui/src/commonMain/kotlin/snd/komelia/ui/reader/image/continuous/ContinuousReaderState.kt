@@ -344,6 +344,7 @@ class ContinuousReaderState(
     }
 
     private suspend fun animateScrollBy(amount: Float) {
+        readerState.navigationHistory.dismissBackButton()
         when {
             amount > 0 && lazyListState.canScrollForward -> {
                 lazyListState.animateScrollBy(amount, spring(stiffness = Spring.StiffnessLow))

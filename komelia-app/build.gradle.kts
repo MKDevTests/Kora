@@ -119,7 +119,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         manifestPlaceholders["appLabel"] = "Sipurra"
-        versionCode = 23
+        versionCode = 24
         versionName = libs.versions.app.version.get()
 
         val enableSelfUpdates = when (androidVariant) {
