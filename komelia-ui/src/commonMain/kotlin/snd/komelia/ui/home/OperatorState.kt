@@ -23,7 +23,7 @@ open class EqualityOpState<T>(
     init {
         val (op, value) = when (initial) {
             is Is -> Op.Equals to initial.value
-            is IsNot -> Op.Equals to initial.value
+            is IsNot -> Op.NotEquals to initial.value
             null -> Op.Equals to null
         }
         this.operator = MutableStateFlow(op)
@@ -134,11 +134,11 @@ open class StringOpState(
     init {
         val (op, value) = when (initial) {
             is KomgaSearchOperator.BeginsWith -> Op.BeginsWith to initial.value
-            is KomgaSearchOperator.Contains -> Op.BeginsWith to initial.value
-            is KomgaSearchOperator.DoesNotBeginWith -> Op.BeginsWith to initial.value
-            is KomgaSearchOperator.DoesNotContain -> Op.BeginsWith to initial.value
-            is KomgaSearchOperator.DoesNotEndWith -> Op.BeginsWith to initial.value
-            is KomgaSearchOperator.EndsWith -> Op.BeginsWith to initial.value
+            is KomgaSearchOperator.Contains -> Op.Contains to initial.value
+            is KomgaSearchOperator.DoesNotBeginWith -> Op.DoesNotBeginWith to initial.value
+            is KomgaSearchOperator.DoesNotContain -> Op.DoesNotContain to initial.value
+            is KomgaSearchOperator.DoesNotEndWith -> Op.DoesNotEndWith to initial.value
+            is KomgaSearchOperator.EndsWith -> Op.EndsWith to initial.value
             is Is<*> -> Op.Equals to initial.value as String
             is IsNot<*> -> Op.NotEquals to initial.value as String
             null -> Op.BeginsWith to null
