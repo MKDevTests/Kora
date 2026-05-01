@@ -153,7 +153,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".v2"
-            manifestPlaceholders["appLabel"] = "Sipurra V2"
+            manifestPlaceholders["appLabel"] = "SipurraV2"
         }
         release {
             isMinifyEnabled = true
