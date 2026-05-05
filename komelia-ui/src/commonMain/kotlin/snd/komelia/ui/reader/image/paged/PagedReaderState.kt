@@ -74,7 +74,7 @@ class PagedReaderState(
     private var loadSpreadJob: kotlinx.coroutines.Job? = null
 
     private val imageCache = Cache.Builder<PageId, Deferred<Page>>()
-        .maximumCacheSize(10)
+        .maximumCacheSize(16)
         .eventListener {
             val value = when (it) {
                 is Evicted -> it.value
@@ -581,8 +581,14 @@ class PagedReaderState(
     }
 
     private fun getSpreadLoadRange(spreadIndex: Int): IntRange {
+        // Direction-agnostic: spreadIndex is the reading-order index, so +N means
+        // "N spreads ahead in reading order" regardless of LTR/RTL. The visual
+        // mapping (which side of the screen the next page lands on) is handled
+        // at the layout/gesture level.
+        // Prefetch 3 spreads ahead so fast page-flipping stays smooth, plus 1
+        // behind so a quick back-nav still hits the cache.
         val spreads = pageSpreads.value
-        return (spreadIndex - 1).coerceAtLeast(0)..(spreadIndex + 1).coerceAtMost(spreads.size - 1)
+        return (spreadIndex - 1).coerceAtLeast(0)..(spreadIndex + 3).coerceAtMost(spreads.size - 1)
     }
 
     fun onLayoutChange(layout: PageDisplayLayout) {
