@@ -1,0 +1,164 @@
+#!/bin/bash
+# Build, sign, and install the Kora "release" APK from the current branch.
+# Optionally migrate user data from KoraDebug after install.
+#
+# Usage:
+#   ./scripts/build-kora-release.sh [--clean] [--migrate]
+#
+#     --clean    gradle clean before building
+#     --migrate  copy data from KoraDebug (.kora.debug) to Kora (.kora)
+#                after install, leaving KoraDebug intact as backup
+#
+# Run from the repo root in WSL or Git Bash. adb must be in PATH (or this
+# script picks up the Windows adb under /mnt/c/.../platform-tools).
+
+set -e
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# ----- args -----
+CLEAN=0
+MIGRATE=0
+for arg in "$@"; do
+    case "$arg" in
+        --clean) CLEAN=1 ;;
+        --migrate) MIGRATE=1 ;;
+        *) echo "Unknown arg: $arg"; exit 2 ;;
+    esac
+done
+
+# ----- pick adb (WSL: prefer Windows adb so we see the same device) -----
+if ! command -v adb >/dev/null 2>&1; then
+    for candidate in \
+        /mnt/c/Users/mathi/AppData/Local/Android/Sdk/platform-tools/adb.exe \
+        "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"; do
+        [[ -x "$candidate" ]] && export PATH="$(dirname "$candidate"):$PATH" && break
+    done
+fi
+
+# ----- find Android SDK build-tools (zipalign + apksigner) -----
+SDK=""
+for candidate in \
+    "$ANDROID_HOME" \
+    "$ANDROID_SDK_ROOT" \
+    "$HOME/Android/Sdk" \
+    "$HOME/AppData/Local/Android/Sdk" \
+    "/mnt/c/Users/mathi/AppData/Local/Android/Sdk"; do
+    [[ -d "$candidate/build-tools" ]] && SDK="$candidate" && break
+done
+[[ -z "$SDK" ]] && { echo "Android SDK build-tools not found. Set ANDROID_HOME."; exit 1; }
+
+BUILD_TOOLS=$(ls -d "$SDK/build-tools/"*/ | sort -V | tail -1)
+ZIPALIGN="$BUILD_TOOLS/zipalign"
+APKSIGNER="$BUILD_TOOLS/apksigner"
+[[ -f "${ZIPALIGN}.exe" ]] && ZIPALIGN="${ZIPALIGN}.exe"
+[[ -f "${APKSIGNER}.bat" ]] && APKSIGNER="${APKSIGNER}.bat"
+[[ -f "$ZIPALIGN" ]] || { echo "zipalign not found at $ZIPALIGN"; exit 1; }
+[[ -f "$APKSIGNER" ]] || { echo "apksigner not found at $APKSIGNER"; exit 1; }
+
+# ----- find debug.keystore -----
+KEYSTORE=""
+for candidate in \
+    "$HOME/.android/debug.keystore" \
+    "/mnt/c/Users/mathi/.android/debug.keystore"; do
+    [[ -f "$candidate" ]] && KEYSTORE="$candidate" && break
+done
+[[ -z "$KEYSTORE" ]] && { echo "debug.keystore not found in ~/.android/ or /mnt/c/Users/mathi/.android/"; exit 1; }
+
+echo "==> SDK: $SDK"
+echo "==> build-tools: $BUILD_TOOLS"
+echo "==> keystore: $KEYSTORE"
+
+# ----- gradle -----
+GRADLEW=./gradlew
+[[ ! -x "$GRADLEW" && -f "./gradlew.bat" ]] && GRADLEW=./gradlew.bat
+
+if [[ $CLEAN == 1 ]]; then
+    echo "==> Clean"
+    "$GRADLEW" :komelia-app:clean
+fi
+
+echo "==> Building Kora release APK"
+"$GRADLEW" :komelia-app:assembleRelease
+
+UNSIGNED="komelia-app/build/outputs/apk/release/kora-app-release-unsigned.apk"
+ALIGNED="komelia-app/build/outputs/apk/release/kora-app-release-aligned.apk"
+SIGNED="komelia-app/build/outputs/apk/release/kora-app-release-signed.apk"
+
+# Legacy fallback if archivesName change hasn't propagated
+[[ ! -f "$UNSIGNED" && -f "komelia-app/build/outputs/apk/release/sipurra-app-release-unsigned.apk" ]] && \
+    UNSIGNED="komelia-app/build/outputs/apk/release/sipurra-app-release-unsigned.apk"
+
+[[ ! -f "$UNSIGNED" ]] && { echo "Unsigned APK not found"; exit 1; }
+
+echo "==> Aligning"
+"$ZIPALIGN" -p -f 4 "$UNSIGNED" "$ALIGNED"
+
+echo "==> Signing with debug keystore"
+"$APKSIGNER" sign \
+    --ks "$KEYSTORE" \
+    --ks-pass pass:android \
+    --ks-key-alias androiddebugkey \
+    --key-pass pass:android \
+    --out "$SIGNED" \
+    "$ALIGNED"
+
+echo "==> APK ready: $SIGNED ($(du -h "$SIGNED" | cut -f1))"
+
+# ----- install -----
+REL_PKG=io.github.mkdevtests.kora
+DEBUG_PKG=io.github.mkdevtests.kora.debug
+
+if ! adb get-state >/dev/null 2>&1; then
+    echo "No device connected. Install manually:"
+    echo "    adb install -r $SIGNED"
+    exit 0
+fi
+
+echo "==> Installing on connected device"
+if ! adb install -r "$SIGNED" 2>&1; then
+    echo "Install failed (signature mismatch?). To force-replace:"
+    echo "    adb uninstall $REL_PKG && adb install $SIGNED"
+    exit 1
+fi
+
+# ----- migrate from KoraDebug if asked -----
+if [[ $MIGRATE == 1 ]]; then
+    echo ""
+    echo "==> Migrate: $DEBUG_PKG -> $REL_PKG"
+
+    if ! adb shell "run-as $DEBUG_PKG echo ok" >/dev/null 2>&1; then
+        echo "Cannot run-as $DEBUG_PKG. Is KoraDebug installed and debuggable? Skipping migration."
+        exit 0
+    fi
+
+    # Launch release once so its data dir exists
+    adb shell monkey -p "$REL_PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
+    sleep 2
+
+    if ! adb shell "run-as $REL_PKG echo ok" >/dev/null 2>&1; then
+        echo "Cannot run-as $REL_PKG. Release variant must be debuggable for migration."
+        exit 1
+    fi
+
+    adb shell am force-stop "$DEBUG_PKG"
+    adb shell am force-stop "$REL_PKG"
+
+    echo "    streaming files+shared_prefs via tar pipe"
+    adb shell "run-as $DEBUG_PKG tar cf - files shared_prefs | run-as $REL_PKG tar xf -"
+
+    echo "    renaming shared_prefs XML"
+    adb shell "run-as $REL_PKG mv shared_prefs/${DEBUG_PKG}_preferences.xml shared_prefs/${REL_PKG}_preferences.xml" 2>/dev/null \
+        || echo "    (no $DEBUG_PKG prefs file, skipping)"
+
+    echo "    verify"
+    adb shell "run-as $REL_PKG ls files" | head -8
+
+    echo ""
+    echo "==> Migration done. KoraDebug ($DEBUG_PKG) left intact as backup."
+fi
+
+echo ""
+echo "==> Launch Kora with:"
+echo "    adb shell monkey -p $REL_PKG -c android.intent.category.LAUNCHER 1"

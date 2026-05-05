@@ -157,8 +157,12 @@ android {
             manifestPlaceholders["appLabel"] = "KoraDebug"
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Personal fork: keep release debuggable so run-as data migration
+            // works (e.g. KoraDebug -> Kora) and to avoid proguard breaking
+            // native interop. Disable minify/shrink for the same reason.
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "android.pro"
