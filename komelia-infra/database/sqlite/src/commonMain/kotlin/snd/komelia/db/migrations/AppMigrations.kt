@@ -59,6 +59,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V50__rapid_ocr_models.sql",
         "V51__update_rapid_ocr_url.sql",
         "V52__library_series_filters.sql",
+        "V53__split_double_pages.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

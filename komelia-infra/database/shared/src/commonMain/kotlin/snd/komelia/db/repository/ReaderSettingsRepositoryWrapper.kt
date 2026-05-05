@@ -286,4 +286,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putImageCacheSizeLimitMb(size: Long) {
         wrapper.transform { it.copy(imageCacheSizeLimitMb = size) }
     }
+
+    override fun getPagedReaderSplitDoublePages(): Flow<Boolean> {
+        return wrapper.mapState { it.pagedSplitDoublePages }
+    }
+
+    override suspend fun putPagedReaderSplitDoublePages(enabled: Boolean) {
+        wrapper.transform { it.copy(pagedSplitDoublePages = enabled) }
+    }
 }

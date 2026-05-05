@@ -56,6 +56,7 @@ data class ImageReaderSettings(
     val panelDetectionUrl: String = PANEL_DETECTION_DEFAULT_GITHUB_URL,
     val rapidOcrModelsUrl: String = RAPID_OCR_MODELS_DEFAULT_URL,
     val imageCacheSizeLimitMb: Long = 1024L,
+    val pagedSplitDoublePages: Boolean = false,
 ) {
     companion object {
         const val PANEL_DETECTION_DEFAULT_ORIGINAL_URL =

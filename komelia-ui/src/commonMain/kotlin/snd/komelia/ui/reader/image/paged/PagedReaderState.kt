@@ -47,6 +47,7 @@ import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.PagedReadingDirection.LEFT_TO_RIGHT
 import snd.komelia.settings.model.PagedReadingDirection.RIGHT_TO_LEFT
 import snd.komelia.ui.reader.image.BookState
+import snd.komelia.ui.reader.image.PageHalf
 import snd.komelia.ui.reader.image.PageMetadata
 import snd.komelia.ui.reader.image.ReaderState
 import snd.komelia.ui.reader.image.ScreenScaleState
@@ -100,6 +101,7 @@ class PagedReaderState(
     val readingDirection = MutableStateFlow(LEFT_TO_RIGHT)
     val tapToZoom = MutableStateFlow(true)
     val adaptiveBackground = MutableStateFlow(false)
+    val splitDoublePages = MutableStateFlow(false)
 
     val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
 
@@ -113,6 +115,7 @@ class PagedReaderState(
         }
         tapToZoom.value = settingsRepository.getPagedReaderTapToZoom().first()
         adaptiveBackground.value = settingsRepository.getPagedReaderAdaptiveBackground().first()
+        splitDoublePages.value = settingsRepository.getPagedReaderSplitDoublePages().first()
 
         screenScaleState.setScrollState(null)
         screenScaleState.setScrollOrientation(Orientation.Vertical, false)
@@ -506,7 +509,10 @@ class PagedReaderState(
 
     private fun buildSpreadMap(pages: List<PageMetadata>, layout: PageDisplayLayout): List<List<PageMetadata>> {
         return when (layout) {
-            SINGLE_PAGE -> pages.map { listOf(it) }
+            SINGLE_PAGE -> {
+                if (splitDoublePages.value) pages.flatMap { splitLandscapePage(it) }.map { listOf(it) }
+                else pages.map { listOf(it) }
+            }
             DOUBLE_PAGES -> buildSpreadMapForDoublePages(
                 pages = pages,
                 withCover = true,
@@ -518,6 +524,21 @@ class PagedReaderState(
                 withCover = false,
                 offset = layoutOffset.value
             )
+        }
+    }
+
+    /**
+     * If the page is landscape (wider than tall), return two synthetic
+     * PageMetadata for its LEFT and RIGHT halves, ordered by reading
+     * direction. Otherwise return the page unchanged.
+     */
+    private fun splitLandscapePage(page: PageMetadata): List<PageMetadata> {
+        if (!page.isLandscape()) return listOf(page)
+        val left = page.copy(half = PageHalf.LEFT)
+        val right = page.copy(half = PageHalf.RIGHT)
+        return when (readingDirection.value) {
+            LEFT_TO_RIGHT -> listOf(left, right)
+            RIGHT_TO_LEFT -> listOf(right, left)
         }
     }
 
@@ -637,6 +658,12 @@ class PagedReaderState(
         this.readingDirection.value = readingDirection
         screenScaleState.setScrollOrientation(Orientation.Horizontal, readingDirection == RIGHT_TO_LEFT)
         stateScope.launch { settingsRepository.putPagedReaderReadingDirection(readingDirection) }
+
+        // If split landscape pages is on, the LEFT/RIGHT order depends on
+        // reading direction, so the spread map must be rebuilt.
+        if (splitDoublePages.value && layout.value == SINGLE_PAGE) {
+            rebuildSpreadsKeepingPosition()
+        }
     }
 
     fun onTapToZoomChange(enabled: Boolean) {
@@ -647,6 +674,29 @@ class PagedReaderState(
     fun onAdaptiveBackgroundChange(enabled: Boolean) {
         this.adaptiveBackground.value = enabled
         stateScope.launch { settingsRepository.putPagedReaderAdaptiveBackground(enabled) }
+    }
+
+    fun onSplitDoublePagesChange(enabled: Boolean) {
+        this.splitDoublePages.value = enabled
+        stateScope.launch { settingsRepository.putPagedReaderSplitDoublePages(enabled) }
+        if (layout.value == SINGLE_PAGE) {
+            rebuildSpreadsKeepingPosition()
+        }
+    }
+
+    /**
+     * Rebuilds [pageSpreads] from the current book pages using the active
+     * layout, then re-anchors the reader on the spread containing the
+     * current page (matching by pageNumber, ignoring split half).
+     */
+    private fun rebuildSpreadsKeepingPosition() {
+        val pages = readerState.booksState.value?.currentBookPages ?: return
+        pageSpreads.value = buildSpreadMap(pages, layout.value)
+        val currentPageNumber = currentSpread.value.pages.firstOrNull()?.metadata?.pageNumber ?: return
+        val newIndex = pageSpreads.value.indexOfFirst { spread ->
+            spread.any { it.pageNumber == currentPageNumber }
+        }.coerceAtLeast(0)
+        loadPage(newIndex)
     }
 
     fun getCurrentPageNumber(): Int {

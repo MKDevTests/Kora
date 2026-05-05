@@ -115,4 +115,7 @@ interface ImageReaderSettingsRepository {
 
     fun getImageCacheSizeLimitMb(): Flow<Long>
     suspend fun putImageCacheSizeLimitMb(size: Long)
+
+    fun getPagedReaderSplitDoublePages(): Flow<Boolean>
+    suspend fun putPagedReaderSplitDoublePages(enabled: Boolean)
 }

@@ -519,6 +519,7 @@ private fun PagedModeSettings(
     val scaleType = pageState.scaleType.collectAsState().value
     val tapToZoom = pageState.tapToZoom.collectAsState().value
     val adaptiveBackground = pageState.adaptiveBackground.collectAsState().value
+    val splitDoublePages = pageState.splitDoublePages.collectAsState().value
     Column {
 
         Text(strings.scaleType)
@@ -618,6 +619,15 @@ private fun PagedModeSettings(
             label = { Text(strings.adaptiveBackground) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
+
+        AnimatedVisibility(layout == PageDisplayLayout.SINGLE_PAGE) {
+            SwitchWithLabel(
+                checked = splitDoublePages,
+                onCheckedChange = pageState::onSplitDoublePagesChange,
+                label = { Text("Split landscape pages") },
+                contentPadding = PaddingValues(horizontal = 10.dp),
+            )
+        }
     }
 
 }

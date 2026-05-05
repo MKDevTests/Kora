@@ -60,5 +60,7 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("ENGLISH_CHINESE")
     val ocrMergeBoxes = bool("ocr_merge_boxes").default(true)
 
+    val pagedSplitDoublePages = bool("paged_split_double_pages").default(false)
+
     override val primaryKey = PrimaryKey(bookId)
 }

@@ -50,6 +50,7 @@ import snd.komelia.image.coil.FileMapper
 import snd.komelia.image.coil.KomeliaFetcherFactory
 import snd.komelia.image.processing.ColorCorrectionStep
 import snd.komelia.image.processing.CropBordersStep
+import snd.komelia.image.processing.SplitPageStep
 import snd.komelia.image.processing.ImageProcessingPipeline
 import snd.komelia.komga.api.KomgaApi
 import snd.komelia.komga.api.KomgaBookApi
@@ -385,6 +386,7 @@ abstract class AppModule(
         pipeline.addStep(colorCorrectionStep)
 
         pipeline.addStep(CropBordersStep(cropBorders))
+        pipeline.addStep(SplitPageStep())
         return pipeline
     }
 

@@ -90,6 +90,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         panelDetectionUrl = it[ImageReaderSettingsTable.panelDetectionUrl],
                         rapidOcrModelsUrl = it[ImageReaderSettingsTable.rapidOcrModelsUrl],
                         imageCacheSizeLimitMb = it[ImageReaderSettingsTable.imageCacheSizeLimitMb],
+                        pagedSplitDoublePages = it[ImageReaderSettingsTable.pagedSplitDoublePages],
                     )
                 }
         }
@@ -147,6 +148,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[panelDetectionUrl] = settings.panelDetectionUrl
                 it[rapidOcrModelsUrl] = settings.rapidOcrModelsUrl
                 it[imageCacheSizeLimitMb] = settings.imageCacheSizeLimitMb
+                it[pagedSplitDoublePages] = settings.pagedSplitDoublePages
             }
         }
     }

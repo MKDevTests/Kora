@@ -70,10 +70,13 @@ interface ReaderImage : AutoCloseable {
 
     data class PageId(
         val bookId: String,
-        val pageNumber: Int
+        val pageNumber: Int,
+        /** Optional split-page half identifier; null = whole page. */
+        val halfTag: String? = null,
     ) {
         override fun toString(): String {
-            return "${bookId}_$pageNumber"
+            return if (halfTag == null) "${bookId}_$pageNumber"
+            else "${bookId}_${pageNumber}_$halfTag"
         }
     }
 }

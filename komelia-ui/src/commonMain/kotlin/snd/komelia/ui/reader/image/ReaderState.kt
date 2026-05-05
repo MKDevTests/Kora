@@ -840,14 +840,17 @@ data class PageMetadata(
     val bookId: @CommonParcelizeRawValue KomgaBookId,
     val pageNumber: Int,
     val size: @CommonParcelizeRawValue IntSize?,
+    val half: PageHalf? = null,
 ) : CommonParcelable {
     fun isLandscape(): Boolean {
         if (size == null) return false
         return size.width > size.height
     }
 
-    fun toPageId() = PageId(bookId.value, pageNumber)
+    fun toPageId() = PageId(bookId.value, pageNumber, half?.name)
 }
+
+enum class PageHalf { LEFT, RIGHT }
 
 data class BookState(
     val currentBook: KomeliaBook,
