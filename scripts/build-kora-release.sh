@@ -29,9 +29,25 @@ for arg in "$@"; do
 done
 
 # ----- pick adb (WSL: prefer Windows adb so we see the same device) -----
-if ! command -v adb >/dev/null 2>&1; then
+# WSL's apt-installed adb runs its own server and can't see USB devices
+# attached to Windows. Always prefer Windows adb when we're in WSL.
+IN_WSL=0
+grep -qi microsoft /proc/version 2>/dev/null && IN_WSL=1
+
+if [[ $IN_WSL == 1 ]]; then
     for candidate in \
         /mnt/c/Users/mathi/AppData/Local/Android/Sdk/platform-tools/adb.exe \
+        "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"; do
+        if [[ -x "$candidate" ]]; then
+            export PATH="$(dirname "$candidate"):$PATH"
+            # alias `adb` to the .exe for unqualified calls below
+            adb() { "$candidate" "$@"; }
+            export -f adb
+            break
+        fi
+    done
+elif ! command -v adb >/dev/null 2>&1; then
+    for candidate in \
         "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"; do
         [[ -x "$candidate" ]] && export PATH="$(dirname "$candidate"):$PATH" && break
     done

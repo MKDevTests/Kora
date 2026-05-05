@@ -15,6 +15,20 @@
 
 set -e
 
+# WSL's apt-installed adb runs its own server and can't see USB devices.
+# Use Windows adb when we're in WSL.
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    for candidate in \
+        /mnt/c/Users/mathi/AppData/Local/Android/Sdk/platform-tools/adb.exe \
+        "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"; do
+        if [[ -x "$candidate" ]]; then
+            adb() { "$candidate" "$@"; }
+            export -f adb
+            break
+        fi
+    done
+fi
+
 OLD_PKG="io.github.eserero.sipurra.v2"
 NEW_PKG="io.github.mkdevtests.kora.debug"
 

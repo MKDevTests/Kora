@@ -38,10 +38,21 @@ APK="komelia-app/build/outputs/apk/debug/kora-app-debug.apk"
 
 echo "==> APK ready: $APK ($(du -h "$APK" | cut -f1))"
 
-if command -v adb >/dev/null 2>&1; then
-    if adb get-state >/dev/null 2>&1; then
+# WSL's apt-installed adb runs its own server and can't see USB devices.
+# Prefer Windows adb when we're in WSL.
+ADB=adb
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    for candidate in \
+        /mnt/c/Users/mathi/AppData/Local/Android/Sdk/platform-tools/adb.exe \
+        "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"; do
+        [[ -x "$candidate" ]] && ADB="$candidate" && break
+    done
+fi
+
+if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
+    if "$ADB" get-state >/dev/null 2>&1; then
         echo "==> Installing on connected device"
-        adb install -r "$APK"
+        "$ADB" install -r "$APK"
         echo "==> Done. Launch with:"
         echo "    adb shell monkey -p io.github.mkdevtests.kora.debug -c android.intent.category.LAUNCHER 1"
     else
