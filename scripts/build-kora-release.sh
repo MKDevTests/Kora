@@ -71,8 +71,15 @@ echo "==> build-tools: $BUILD_TOOLS"
 echo "==> keystore: $KEYSTORE"
 
 # ----- gradle -----
+# In WSL working on a /mnt/c repo, gradlew often has Windows CRLF line
+# endings and bash can't run it directly. gradlew.bat works through WSL
+# interop. Prefer .bat when CRLF is detected.
 GRADLEW=./gradlew
-[[ ! -x "$GRADLEW" && -f "./gradlew.bat" ]] && GRADLEW=./gradlew.bat
+if [[ -f ./gradlew.bat ]] && head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
+    GRADLEW=./gradlew.bat
+elif [[ ! -x ./gradlew && -f ./gradlew.bat ]]; then
+    GRADLEW=./gradlew.bat
+fi
 
 if [[ $CLEAN == 1 ]]; then
     echo "==> Clean"

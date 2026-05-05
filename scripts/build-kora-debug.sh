@@ -10,10 +10,15 @@ set -e
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# On Windows we need gradlew.bat from PowerShell/cmd. From Git Bash or WSL,
-# gradlew (the bash wrapper) works directly.
+# In WSL working on a /mnt/c repo, gradlew often has Windows CRLF line
+# endings and bash can't run it directly. gradlew.bat works through WSL
+# interop. Prefer .bat when CRLF is detected.
 GRADLEW=./gradlew
-[[ ! -x "$GRADLEW" ]] && GRADLEW=./gradlew.bat
+if [[ -f ./gradlew.bat ]] && head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
+    GRADLEW=./gradlew.bat
+elif [[ ! -x ./gradlew && -f ./gradlew.bat ]]; then
+    GRADLEW=./gradlew.bat
+fi
 
 if [[ "$1" == "--clean" ]]; then
     echo "==> Clean build"
