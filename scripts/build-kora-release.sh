@@ -71,15 +71,20 @@ echo "==> build-tools: $BUILD_TOOLS"
 echo "==> keystore: $KEYSTORE"
 
 # ----- gradle -----
-# In WSL working on a /mnt/c repo, gradlew often has Windows CRLF line
-# endings and bash can't run it directly. gradlew.bat works through WSL
-# interop. Prefer .bat when CRLF is detected.
-GRADLEW=./gradlew
-if [[ -f ./gradlew.bat ]] && head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
-    GRADLEW=./gradlew.bat
-elif [[ ! -x ./gradlew && -f ./gradlew.bat ]]; then
-    GRADLEW=./gradlew.bat
+# In WSL on a /mnt/c repo, gradlew is checked out with Windows CRLF and
+# bash refuses to exec it ("required file not found"). gradlew.bat is a
+# DOS batch file, also unrunnable from bash. Cleanest fix: strip CR from
+# gradlew once. The change is local-only (git restore gradlew if you
+# care), and it stays valid until the next git checkout normalizes it.
+if head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
+    if command -v dos2unix >/dev/null 2>&1; then
+        dos2unix -q ./gradlew
+    else
+        sed -i 's/\r$//' ./gradlew
+    fi
+    chmod +x ./gradlew
 fi
+GRADLEW=./gradlew
 
 if [[ $CLEAN == 1 ]]; then
     echo "==> Clean"

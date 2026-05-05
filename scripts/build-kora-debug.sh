@@ -10,15 +10,19 @@ set -e
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# In WSL working on a /mnt/c repo, gradlew often has Windows CRLF line
-# endings and bash can't run it directly. gradlew.bat works through WSL
-# interop. Prefer .bat when CRLF is detected.
-GRADLEW=./gradlew
-if [[ -f ./gradlew.bat ]] && head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
-    GRADLEW=./gradlew.bat
-elif [[ ! -x ./gradlew && -f ./gradlew.bat ]]; then
-    GRADLEW=./gradlew.bat
+# In WSL on a /mnt/c repo, gradlew is checked out with Windows CRLF and
+# bash refuses to exec it. Strip CR in-place once; the change is local
+# (git restore gradlew if you care) and stays valid until the next git
+# checkout normalizes it.
+if head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
+    if command -v dos2unix >/dev/null 2>&1; then
+        dos2unix -q ./gradlew
+    else
+        sed -i 's/\r$//' ./gradlew
+    fi
+    chmod +x ./gradlew
 fi
+GRADLEW=./gradlew
 
 if [[ "$1" == "--clean" ]]; then
     echo "==> Clean build"
