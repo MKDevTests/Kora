@@ -174,9 +174,6 @@ class PanelsReaderState(
             .filterNotNull()
             .onEach { newBook -> onNewBookLoaded(newBook) }
             .launchIn(stateScope)
-
-        val strings = appStrings.first().pagedReader
-        appNotifications.add(AppNotification.Normal("Panels ${strings.forReadingDirection(readingDirection.value)}"))
     }
 
     fun stop() {

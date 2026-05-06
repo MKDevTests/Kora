@@ -234,9 +234,6 @@ class ContinuousReaderState(
             }.launchIn(stateScope)
 
         imageDisplayFlow.drop(1).onEach { pageChangeFlow.emit(Unit) }.launchIn(stateScope)
-
-        val strings = appStrings.first().continuousReader
-        notifications.add(AppNotification.Normal("Continuous ${strings.forReadingDirection(readingDirection.value)}"))
     }
 
     fun stop() {

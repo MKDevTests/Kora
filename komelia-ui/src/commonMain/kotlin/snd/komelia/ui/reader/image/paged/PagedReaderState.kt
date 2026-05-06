@@ -153,9 +153,6 @@ class PagedReaderState(
             .drop(1)
             .onEach { onBookChange() }
             .launchIn(stateScope)
-
-        val strings = appStrings.first().pagedReader
-        appNotifications.add(AppNotification.Normal("Paged ${strings.forReadingDirection(readingDirection.value)}"))
     }
 
     fun stop() {
