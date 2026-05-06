@@ -56,6 +56,11 @@ class ReadListViewModel(
     var readList by mutableStateOf<KomgaReadList?>(null)
     var books by mutableStateOf<List<KomeliaBook>>(emptyList())
 
+    val readBookCount: Int get() = books.count { it.readProgress?.completed == true }
+    val nextUnreadBook: KomeliaBook? get() = books.firstOrNull { it.readProgress?.completed != true }
+    val progressFraction: Float
+        get() = if (books.isEmpty()) 0f else readBookCount.toFloat() / books.size.toFloat()
+
     var totalBookPages by mutableStateOf(1)
         private set
     var totalBookCount by mutableStateOf(0)

@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +49,8 @@ fun ReadListImageCard(
     readLists: KomgaReadList,
     onCollectionClick: () -> Unit,
     onCollectionDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    progress: Float? = null,
 ) {
     val cardLayoutBelow = LocalCardLayoutBelow.current
     LibraryItemCard(
@@ -65,6 +68,17 @@ fun ReadListImageCard(
         badges = {
             ReadListCardHoverOverlay(readLists, onCollectionDelete) {
                 ReadListImageBadges(showGradients = !cardLayoutBelow)
+            }
+        },
+        progress = {
+            if (progress != null) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(3.dp),
+                )
             }
         }
     )

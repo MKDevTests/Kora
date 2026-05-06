@@ -10,9 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -31,6 +39,7 @@ import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.PageSizeSelectionDropdown
+import snd.komelia.ui.common.images.BookThumbnail
 import snd.komelia.ui.common.itemlist.BookLazyCardGrid
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.ReadListActionsMenu
@@ -65,6 +74,10 @@ fun ReadListContent(
     onPageSizeChange: (Int) -> Unit,
 
     cardMinSize: Dp,
+
+    readBookCount: Int,
+    nextUnreadBook: KomeliaBook?,
+    progressFraction: Float,
 ) {
 
     Column {
@@ -84,7 +97,21 @@ fun ReadListContent(
 
                 pageSize = pageSize,
                 onPageSizeChange = onPageSizeChange,
+                readBookCount = readBookCount,
+                totalBooksLoaded = books.size,
             )
+            if (books.isNotEmpty()) {
+                LinearProgressIndicator(
+                    progress = { progressFraction },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                )
+            }
+            if (!editMode && nextUnreadBook != null && readBookCount > 0) {
+                ContinueReadingHeader(
+                    book = nextUnreadBook,
+                    onClick = { onBookReadClick(nextUnreadBook, true) },
+                )
+            }
         }
 
         if (readList.summary.isNotBlank()) {
@@ -128,6 +155,8 @@ private fun ReadListToolbar(
     onEditModeEnable: () -> Unit,
     pageSize: Int,
     onPageSizeChange: (Int) -> Unit,
+    readBookCount: Int,
+    totalBooksLoaded: Int,
 ) {
     Row(
         modifier = Modifier.padding(start = 10.dp),
@@ -146,9 +175,10 @@ private fun ReadListToolbar(
             Text(readList.name)
         }
 
+        val totalForChip = if (totalBooksLoaded > 0) totalBooksLoaded else readList.bookIds.size
         SuggestionChip(
             onClick = {},
-            label = { Text("${readList.bookIds.size} books", style = MaterialTheme.typography.bodyMedium) },
+            label = { Text("$readBookCount/$totalForChip read", style = MaterialTheme.typography.bodyMedium) },
             modifier = Modifier.padding(10.dp, 0.dp),
         )
 
@@ -172,6 +202,44 @@ private fun ReadListToolbar(
 
         Spacer(Modifier.weight(1f))
         PageSizeSelectionDropdown(pageSize, onPageSizeChange)
+    }
+}
+
+@Composable
+private fun ContinueReadingHeader(
+    book: KomeliaBook,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BookThumbnail(
+                bookId = book.id,
+                modifier = Modifier.size(width = 48.dp, height = 72.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Continue reading",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    book.metadata.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                )
+            }
+        }
     }
 }
 

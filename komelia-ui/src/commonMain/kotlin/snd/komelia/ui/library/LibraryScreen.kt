@@ -403,6 +403,21 @@ class LibraryScreen(
             onDispose { collectionsTabState.stopKomgaEventHandler() }
         }
 
+        val searchQuery = collectionsTabState.searchQuery.collectAsState().value
+        val sortOrder = collectionsTabState.sortOrder.collectAsState().value
+        val combinedBeforeContent: @Composable () -> Unit = {
+            Column {
+                beforeContent()
+                CollectionReadListSearchSortToolbar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = collectionsTabState::onSearchQueryChange,
+                    sortOrder = sortOrder,
+                    onSortOrderChange = collectionsTabState::onSortOrderChange,
+                    placeholder = "Search collections",
+                )
+            }
+        }
+
         when (val state = collectionsTabState.state.collectAsState().value) {
             Uninitialized -> LoadingMaxSizeIndicator()
             is Error -> ErrorContent(
@@ -426,7 +441,9 @@ class LibraryScreen(
                     onPageSizeChange = collectionsTabState::onPageSizeChange,
 
                     minSize = collectionsTabState.cardWidth.collectAsState().value,
-                    beforeContent = beforeContent
+                    beforeContent = combinedBeforeContent,
+                    progressOf = { collectionsTabState.progressByCollection[it] },
+                    onProgressNeeded = collectionsTabState::loadProgressFor,
                 )
 
             }
@@ -441,6 +458,21 @@ class LibraryScreen(
         DisposableEffect(Unit) {
             readListTabState.startKomgaEventHandler()
             onDispose { readListTabState.stopKomgaEventHandler() }
+        }
+
+        val searchQuery = readListTabState.searchQuery.collectAsState().value
+        val sortOrder = readListTabState.sortOrder.collectAsState().value
+        val combinedBeforeContent: @Composable () -> Unit = {
+            Column {
+                beforeContent()
+                CollectionReadListSearchSortToolbar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = readListTabState::onSearchQueryChange,
+                    sortOrder = sortOrder,
+                    onSortOrderChange = readListTabState::onSortOrderChange,
+                    placeholder = "Search readlists",
+                )
+            }
         }
 
         when (val state = readListTabState.state.collectAsState().value) {
@@ -462,7 +494,9 @@ class LibraryScreen(
                     onPageSizeChange = readListTabState::onPageSizeChange,
 
                     minSize = readListTabState.cardWidth.collectAsState().value,
-                    beforeContent = beforeContent
+                    beforeContent = combinedBeforeContent,
+                    progressOf = { readListTabState.progressByReadList[it] },
+                    onProgressNeeded = readListTabState::loadProgressFor,
                 )
             }
         }

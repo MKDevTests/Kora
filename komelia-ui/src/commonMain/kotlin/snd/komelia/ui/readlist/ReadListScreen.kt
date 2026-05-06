@@ -93,6 +93,10 @@ class ReadListScreen(val readListId: KomgaReadListId) : ReloadableScreen {
                             onPageSizeChange = vm::onPageSizeChange,
 
                             cardMinSize = vm.cardWidth.collectAsState().value,
+
+                            readBookCount = vm.readBookCount,
+                            nextUnreadBook = vm.nextUnreadBook,
+                            progressFraction = vm.progressFraction,
                         )
                 }
             }

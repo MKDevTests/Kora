@@ -27,6 +27,8 @@ fun LibraryReadListsContent(
 
     minSize: Dp,
     beforeContent: (@Composable () -> Unit)? = null,
+    progressOf: ((KomgaReadListId) -> Float?)? = null,
+    onProgressNeeded: ((KomgaReadListId) -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.Center) {
 
@@ -42,7 +44,9 @@ fun LibraryReadListsContent(
                 currentPage = currentPage,
                 onPageChange = onPageChange,
                 minSize = minSize,
-                beforeContent = beforeContent
+                beforeContent = beforeContent,
+                progressOf = progressOf,
+                onProgressNeeded = onProgressNeeded,
             )
         }
     }

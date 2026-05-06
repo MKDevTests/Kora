@@ -1,16 +1,23 @@
 package snd.komelia.ui.collection
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -28,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.PageSizeSelectionDropdown
+import snd.komelia.ui.common.images.SeriesThumbnail
 import snd.komelia.ui.common.itemlist.SeriesLazyCardGrid
 import snd.komelia.ui.common.menus.CollectionActionsMenu
 import snd.komelia.ui.common.menus.SeriesMenuActions
@@ -66,6 +74,11 @@ fun CollectionContent(
     onPageSizeChange: (Int) -> Unit,
 
     cardMinSize: Dp,
+
+    readBooksAcrossSeries: Int,
+    totalBooksAcrossSeries: Int,
+    progressFraction: Float,
+    nextInProgressSeries: KomgaSeries?,
 ) {
     Column {
         if (editMode) {
@@ -76,16 +89,31 @@ fun CollectionContent(
                 selectedSeries = selectedSeries,
                 onSeriesSelect = onSeriesSelect
             )
-        } else CollectionToolbar(
-            collection = collection,
-            onCollectionDelete = onCollectionDelete,
-            onEditModeEnable = { onEditModeChange(true) },
+        } else {
+            CollectionToolbar(
+                collection = collection,
+                onCollectionDelete = onCollectionDelete,
+                onEditModeEnable = { onEditModeChange(true) },
 
-            totalSeriesCount = totalSeriesCount,
-            pageSize = pageSize,
-            onPageSizeChange = onPageSizeChange,
-
+                totalSeriesCount = totalSeriesCount,
+                pageSize = pageSize,
+                onPageSizeChange = onPageSizeChange,
+                readBooksAcrossSeries = readBooksAcrossSeries,
+                totalBooksAcrossSeries = totalBooksAcrossSeries,
             )
+            if (totalBooksAcrossSeries > 0) {
+                LinearProgressIndicator(
+                    progress = { progressFraction },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                )
+            }
+            if (nextInProgressSeries != null && readBooksAcrossSeries > 0) {
+                ContinueReadingSeriesHeader(
+                    series = nextInProgressSeries,
+                    onClick = { onSeriesClick(nextInProgressSeries) },
+                )
+            }
+        }
 
         SeriesLazyCardGrid(
             series = series,
@@ -126,8 +154,9 @@ private fun CollectionToolbar(
     totalSeriesCount: Int,
     pageSize: Int,
     onPageSizeChange: (Int) -> Unit,
-
-    ) {
+    readBooksAcrossSeries: Int,
+    totalBooksAcrossSeries: Int,
+) {
     Row(
         modifier = Modifier.padding(start = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -147,6 +176,18 @@ private fun CollectionToolbar(
             label = { Text("$totalSeriesCount series", style = MaterialTheme.typography.bodyMedium) },
             modifier = Modifier.padding(horizontal = 10.dp),
         )
+        if (totalBooksAcrossSeries > 0) {
+            SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        "$readBooksAcrossSeries/$totalBooksAcrossSeries read",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                modifier = Modifier.padding(end = 10.dp),
+            )
+        }
 
         val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
         if (isAdmin) {
@@ -169,6 +210,49 @@ private fun CollectionToolbar(
 
         Spacer(Modifier.weight(1f))
         PageSizeSelectionDropdown(pageSize, onPageSizeChange)
+    }
+}
+
+@Composable
+private fun ContinueReadingSeriesHeader(
+    series: KomgaSeries,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SeriesThumbnail(
+                seriesId = series.id,
+                modifier = Modifier.size(width = 48.dp, height = 72.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Continue reading",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    series.metadata.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                )
+                Text(
+                    "${series.booksReadCount}/${series.booksCount} read",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

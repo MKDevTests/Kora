@@ -58,6 +58,15 @@ class CollectionViewModel(
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, SharingStarted.Eagerly, defaultCardWidth.dp)
     var series by mutableStateOf<List<KomgaSeries>>(emptyList())
         private set
+
+    val totalBooksAcrossSeries: Int get() = series.sumOf { it.booksCount }
+    val readBooksAcrossSeries: Int get() = series.sumOf { it.booksReadCount }
+    val progressFraction: Float
+        get() = if (totalBooksAcrossSeries == 0) 0f
+        else readBooksAcrossSeries.toFloat() / totalBooksAcrossSeries.toFloat()
+    val nextInProgressSeries: KomgaSeries?
+        get() = series.firstOrNull { it.booksReadCount > 0 && it.booksReadCount < it.booksCount }
+            ?: series.firstOrNull { it.booksReadCount < it.booksCount }
     var totalSeriesPages by mutableStateOf(1)
         private set
     var totalSeriesCount by mutableStateOf(0)

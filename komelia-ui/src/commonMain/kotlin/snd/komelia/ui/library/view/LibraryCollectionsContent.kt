@@ -26,6 +26,8 @@ fun LibraryCollectionsContent(
 
     minSize: Dp,
     beforeContent: (@Composable () -> Unit)? = null,
+    progressOf: ((KomgaCollectionId) -> Float?)? = null,
+    onProgressNeeded: ((KomgaCollectionId) -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.Center) {
 
@@ -41,7 +43,9 @@ fun LibraryCollectionsContent(
                 currentPage = currentPage,
                 onPageChange = onPageChange,
                 minSize = minSize,
-                beforeContent = beforeContent
+                beforeContent = beforeContent,
+                progressOf = progressOf,
+                onProgressNeeded = onProgressNeeded,
             )
         }
     }

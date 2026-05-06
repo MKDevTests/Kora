@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,8 @@ fun ReadListLazyCardGrid(
     minSize: Dp = 200.dp,
     scrollState: LazyGridState = rememberLazyGridState(),
     beforeContent: (@Composable () -> Unit)? = null,
+    progressOf: ((KomgaReadListId) -> Float?)? = null,
+    onProgressNeeded: ((KomgaReadListId) -> Unit)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val useNewLibraryUI = LocalUseNewLibraryUI.current
@@ -69,11 +72,15 @@ fun ReadListLazyCardGrid(
             }
 
             items(readLists) {
+                if (onProgressNeeded != null) {
+                    LaunchedEffect(it.id) { onProgressNeeded(it.id) }
+                }
                 ReadListImageCard(
                     readLists = it,
                     onCollectionClick = { onReadListClick(it.id) },
                     onCollectionDelete = { onReadListDelete(it.id) },
                     modifier = Modifier.fillMaxSize(),
+                    progress = progressOf?.invoke(it.id),
                 )
             }
             item(

@@ -69,6 +69,11 @@ class CollectionScreen(val collectionId: KomgaCollectionId) : ReloadableScreen {
                         onPageSizeChange = vm::onPageSizeChange,
 
                         cardMinSize = vm.cardWidth.collectAsState().value,
+
+                        readBooksAcrossSeries = vm.readBooksAcrossSeries,
+                        totalBooksAcrossSeries = vm.totalBooksAcrossSeries,
+                        progressFraction = vm.progressFraction,
+                        nextInProgressSeries = vm.nextInProgressSeries,
                     )
             }
 
