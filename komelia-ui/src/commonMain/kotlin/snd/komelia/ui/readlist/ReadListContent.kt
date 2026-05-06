@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.rounded.MoreVert
@@ -80,7 +81,7 @@ fun ReadListContent(
     progressFraction: Float,
 ) {
 
-    Column {
+    Column(modifier = Modifier.statusBarsPadding()) {
         if (editMode)
             BulkActionsToolbar(
                 onCancel = { onEditModeChange(false) },
@@ -142,7 +143,7 @@ fun ReadListContent(
         val width = LocalWindowWidth.current
         if ((width == WindowSizeClass.COMPACT || width == WindowSizeClass.MEDIUM) && selectedBooks.isNotEmpty()) {
             BottomPopupBulkActionsPanel {
-                ReadListBulkActionsContent(readList, books, true)
+                ReadListBulkActionsContent(readList, selectedBooks, true)
             }
         }
     }
@@ -267,7 +268,7 @@ private fun BulkActionsToolbar(
                 if (selectedBooks.isNotEmpty()) {
                     Spacer(Modifier.weight(1f))
 
-                    ReadListBulkActionsContent(readList, books, false)
+                    ReadListBulkActionsContent(readList, selectedBooks, false)
                 }
             }
 
@@ -277,7 +278,7 @@ private fun BulkActionsToolbar(
                     else Text("Selection mode: Click on items to select or deselect them")
                 } else {
                     Spacer(Modifier.weight(1f))
-                    ReadListBulkActionsContent(readList, books, false)
+                    ReadListBulkActionsContent(readList, selectedBooks, false)
                 }
             }
 
