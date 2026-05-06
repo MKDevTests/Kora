@@ -415,7 +415,7 @@ class PagedReaderState(
 
             if (cached != null && !cached.isCancelled) cached
             else pageLoadScope.async {
-                val imageResult = imageLoader.loadReaderImage(meta.bookId, meta.pageNumber)
+                val imageResult = imageLoader.loadReaderImage(meta.bookId, meta.pageNumber, meta.half?.name)
                 val containerSize = screenScaleState.areaSize.value
                 val imageSize = if (imageResult is ReaderImageResult.Success) {
                     imageResult.image.calculateSizeForArea(containerSize, true)
@@ -482,7 +482,7 @@ class PagedReaderState(
             cached.await()
         } else {
             val job = pageLoadScope.async {
-                val imageResult = imageLoader.loadReaderImage(page.bookId, page.pageNumber)
+                val imageResult = imageLoader.loadReaderImage(page.bookId, page.pageNumber, page.half?.name)
                 val containerSize = screenScaleState.areaSize.value
                 val imageSize = if (imageResult is ReaderImageResult.Success) {
                     imageResult.image.calculateSizeForArea(containerSize, true)

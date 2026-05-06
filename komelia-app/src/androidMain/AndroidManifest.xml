@@ -78,6 +78,7 @@
         <activity
                 android:name="snd.komelia.CrashActivity"
                 android:exported="false"
+                android:theme="@style/AppTheme.PostSplash"
                 android:process=":error_handler"/>
 
         <receiver

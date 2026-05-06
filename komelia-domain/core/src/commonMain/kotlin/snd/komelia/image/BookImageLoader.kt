@@ -26,10 +26,16 @@ class BookImageLoader(
 ) {
     val fileSystem = diskCache?.fileSystem
 
-    suspend fun loadReaderImage(bookId: KomgaBookId, page: Int): ReaderImageResult {
+    suspend fun loadReaderImage(
+        bookId: KomgaBookId,
+        page: Int,
+        halfTag: String? = null,
+    ): ReaderImageResult {
         return try {
             val source = doLoad(bookId, page)
-            ReaderImageResult.Success(readerImageFactory.getImage(source, ReaderImage.PageId(bookId.value, page)))
+            ReaderImageResult.Success(
+                readerImageFactory.getImage(source, ReaderImage.PageId(bookId.value, page, halfTag))
+            )
         } catch (e: Throwable) {
             currentCoroutineContext().ensureActive()
             logger.catching(e)
