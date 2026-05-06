@@ -120,6 +120,8 @@ import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.common.components.accentInputChipColors
 import snd.komelia.ui.platform.WindowSizeClass.COMPACT
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.ui.reader.ReaderExitDestination
+import snd.komelia.ui.reader.ReaderNavigationIntent
 import snd.komelia.ui.reader.common.ImagePageLocation
 import snd.komelia.ui.reader.common.NavigationSource
 import snd.komelia.ui.reader.ReaderControlsCard
@@ -133,8 +135,12 @@ import snd.komelia.ui.reader.image.panels.PanelsReaderState
 import snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsState
 import snd.komelia.ui.settings.imagereader.ncnn.isNcnnSupported
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.rounded.Book
+import androidx.compose.material.icons.rounded.Collections
+import androidx.compose.material.icons.rounded.LibraryBooks
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -331,6 +337,19 @@ fun BottomSheetSettingsOverlay(
                     onNextBook = { coroutineScope.launch { commonReaderState.loadNextBook() } },
                     hasPreviousBook = commonReaderState.booksState.collectAsState().value?.previousBook != null,
                     hasNextBook = commonReaderState.booksState.collectAsState().value?.nextBook != null,
+                    onReturnBook = onBackPress,
+                    onReturnSeries = {
+                        book?.let {
+                            ReaderNavigationIntent.pending.value = ReaderExitDestination.Series(it.seriesId)
+                            onBackPress()
+                        }
+                    },
+                    onReturnLibrary = {
+                        book?.let {
+                            ReaderNavigationIntent.pending.value = ReaderExitDestination.Library(it.libraryId)
+                            onBackPress()
+                        }
+                    },
                 )
             }
         }
@@ -1017,6 +1036,9 @@ fun ImageReaderControlsCardNewUI(
     onNextBook: () -> Unit = {},
     hasPreviousBook: Boolean = false,
     hasNextBook: Boolean = false,
+    onReturnBook: () -> Unit = {},
+    onReturnSeries: () -> Unit = {},
+    onReturnLibrary: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val accentColor = LocalAccentColor.current
@@ -1183,9 +1205,58 @@ fun ImageReaderControlsCardNewUI(
                             )
                         }
                     }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        ReturnNavButton(
+                            icon = Icons.Rounded.Book,
+                            label = "Return book",
+                            onClick = onReturnBook,
+                        )
+                        ReturnNavButton(
+                            icon = Icons.Rounded.Collections,
+                            label = "Return serie",
+                            onClick = onReturnSeries,
+                        )
+                        ReturnNavButton(
+                            icon = Icons.Rounded.LibraryBooks,
+                            label = "Return library",
+                            onClick = onReturnLibrary,
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ReturnNavButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 11.sp,
+        )
     }
 }
 

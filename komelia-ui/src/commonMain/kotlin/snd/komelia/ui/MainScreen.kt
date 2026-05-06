@@ -92,6 +92,8 @@ import snd.komelia.ui.book.BookScreen
 import snd.komelia.ui.book.bookScreen
 import snd.komelia.ui.home.HomeScreen
 import snd.komelia.ui.library.LibraryScreen
+import snd.komelia.ui.reader.ReaderExitDestination
+import snd.komelia.ui.reader.ReaderNavigationIntent
 import snd.komelia.ui.oneshot.OneshotScreen
 import snd.komelia.ui.platform.PlatformType.DESKTOP
 import snd.komelia.ui.platform.PlatformType.MOBILE
@@ -141,6 +143,26 @@ class MainScreen(
                         navigator.pop()
                     }
 
+                }
+            }
+
+            // Consume return-nav intents posted by the image reader. The reader lives
+            // on the parent navigator (above MainScreen), so it can't push series/library
+            // screens itself without losing MainScreen's CompositionLocals (FAB, etc.).
+            // It posts an intent + pops itself; we handle the push here on the inner nav.
+            LaunchedEffect(Unit) {
+                ReaderNavigationIntent.pending.collect { intent ->
+                    when (intent) {
+                        is ReaderExitDestination.Series -> {
+                            ReaderNavigationIntent.pending.value = null
+                            navigator.push(SeriesScreen(intent.id))
+                        }
+                        is ReaderExitDestination.Library -> {
+                            ReaderNavigationIntent.pending.value = null
+                            navigator.push(LibraryScreen(intent.id))
+                        }
+                        null -> {}
+                    }
                 }
             }
         }

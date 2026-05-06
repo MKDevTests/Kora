@@ -4,11 +4,31 @@
 #
 # Run from the repo root in WSL or Git Bash.
 # Requires: gradlew, JDK 17, Android SDK at $ANDROID_HOME or local.properties.
+#
+# Refuses to build from `main` or `myversion` — feature work belongs on a
+# dedicated branch. Use `scripts/build-kora-release.sh` to ship `myversion`.
 
 set -e
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
+
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+case "$CURRENT_BRANCH" in
+    main|myversion)
+        echo "ERROR: refusing to build from '$CURRENT_BRANCH'."
+        echo "  Debug builds must come from a feature branch. Either:"
+        echo "    - check out a feature branch, or"
+        echo "    - use scripts/build-kora-release.sh to ship myversion."
+        exit 1
+        ;;
+    "")
+        echo "WARN: could not detect current branch (detached HEAD?). Continuing."
+        ;;
+    *)
+        echo "==> Building from branch: $CURRENT_BRANCH"
+        ;;
+esac
 
 # In WSL on a /mnt/c repo, gradlew is checked out with Windows CRLF and
 # bash refuses to exec it. Strip CR in-place once; the change is local

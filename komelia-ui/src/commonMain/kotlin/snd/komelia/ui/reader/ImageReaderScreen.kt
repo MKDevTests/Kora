@@ -110,6 +110,9 @@ class ImageReaderScreen(
         // restore current book when app process is killed in background on Android
         var currentBookId by rememberSaveable { mutableStateOf(bookId.value) }
         LaunchedEffect(Unit) {
+            // Ensure no stale return-nav intent leaks from a previous reader session
+            // whose caller didn't consume it.
+            ReaderNavigationIntent.pending.value = null
             val bookId = KomgaBookId(currentBookId)
             vm.initialize(bookId)
             val book = vm.readerState.booksState.value?.currentBook

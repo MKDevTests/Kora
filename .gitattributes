@@ -1,0 +1,7 @@
+# Force LF on shell scripts and gradlew so they execute under WSL/bash
+# even when the repo lives on /mnt/c (where core.autocrlf would otherwise
+# convert them to CRLF and bash refuses to exec the shebang).
+# Vendored third_party/ trees keep whatever line endings they ship with.
+
+scripts/*.sh text eol=lf
+gradlew text eol=lf
