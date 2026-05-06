@@ -217,7 +217,12 @@ fun BoxScope.PagedReaderContent(
                             userScrollEnabled = false,
                             reverseLayout = readingDirection == RIGHT_TO_LEFT,
                             modifier = Modifier.fillMaxSize(),
-                            key = { if (it < spreads.size) spreads[it].first().pageNumber else it }
+                            key = { idx ->
+                                if (idx < spreads.size) {
+                                    val first = spreads[idx].first()
+                                    first.half?.let { "${first.pageNumber}_${it.name}" } ?: first.pageNumber
+                                } else idx
+                            }
                         ) { pageIdx ->
                             if (pageIdx >= spreads.size) return@HorizontalPager
                             val spreadMetadata = spreads[pageIdx]
