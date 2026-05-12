@@ -93,6 +93,15 @@ fun BoxScope.PagedReaderContent(
         RIGHT_TO_LEFT -> LayoutDirection.Rtl
     }
     val spreads = pagedReaderState.pageSpreads.collectAsState().value
+    // Gate the rest of the composable — including rememberPagerState — until
+    // PagedReaderState has finished its initial setup. Without this, the
+    // pager is created with initialPage = 0 (the default before onNewBookLoaded
+    // has resolved the saved read-progress position), and a subsequent
+    // LaunchedEffect call to onPageChange(0) wedges the model at spread
+    // index 0. Result: opening an in-progress book sometimes resets it to
+    // page 1 on first tap. Empty spreads is the unambiguous "initial setup
+    // not done yet" marker.
+    if (spreads.isEmpty()) return
     val currentSpreadIndex = pagedReaderState.currentSpreadIndex.collectAsState().value
     val layout = pagedReaderState.layout.collectAsState().value
     val layoutOffset = pagedReaderState.layoutOffset.collectAsState().value
