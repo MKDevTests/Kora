@@ -36,6 +36,9 @@ fun ImageReaderSettingsContent(
     pagedReaderAutoDirection: Boolean,
     onPagedReaderAutoDirectionChange: (Boolean) -> Unit,
 
+    pagedAutoSkipBlankPages: Boolean,
+    onPagedAutoSkipBlankPagesChange: (Boolean) -> Unit,
+
     onCacheClear: () -> Unit,
     onnxRuntimeSettingsState: OnnxRuntimeSettingsState,
     ncnnSettingsState: NcnnSettingsState,
@@ -73,7 +76,14 @@ fun ImageReaderSettingsContent(
             checked = pagedReaderAutoDirection,
             onCheckedChange = onPagedReaderAutoDirectionChange,
             label = { Text("Auto-detect reading direction") },
-            supportingText = { Text("Use series metadata; per-series changes are saved back to the server") },
+            supportingText = { Text("Use series metadata. Manual flips are stored locally per-series.") },
+        )
+
+        SwitchWithLabel(
+            checked = pagedAutoSkipBlankPages,
+            onCheckedChange = onPagedAutoSkipBlankPagesChange,
+            label = { Text("Auto-skip blank pages") },
+            supportingText = { Text("When Crop borders is on, blank pages are removed from the reader instead of crashing.") },
         )
 
         FilledTonalButton(

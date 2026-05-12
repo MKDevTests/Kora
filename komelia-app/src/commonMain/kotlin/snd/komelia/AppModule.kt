@@ -180,9 +180,12 @@ abstract class AppModule(
 
 
         val colorCorrectionStep = ColorCorrectionStep(appRepositories.bookColorCorrectionRepository)
+        val blankPageDetector = snd.komelia.image.processing.BlankPageDetector()
         val imagePipeline = createImagePipeline(
             cropBorders = appRepositories.imageReaderSettingsRepository.getCropBorders().stateIn(initScope),
-            colorCorrectionStep = colorCorrectionStep
+            colorCorrectionStep = colorCorrectionStep,
+            autoSkipBlankPages = appRepositories.imageReaderSettingsRepository.getPagedAutoSkipBlankPages().stateIn(initScope),
+            blankPageDetector = blankPageDetector,
         )
         val onnxRuntimeInstaller = createOnnxRuntimeInstaller(updateClient)
         val onnxModelDownloader = createOnnxModelDownloader(updateClient)
@@ -263,6 +266,7 @@ abstract class AppModule(
             ocrService = snd.komelia.image.OcrService(),
             windowState = createWindowState(),
             colorCorrectionStep = colorCorrectionStep,
+            blankPageDetector = blankPageDetector,
             onnxRuntimeInstaller = onnxRuntimeInstaller,
             onnxModelDownloader = onnxModelDownloader,
             whisperModelDownloader = whisperModelDownloader,
@@ -381,11 +385,13 @@ abstract class AppModule(
     protected fun createImagePipeline(
         cropBorders: StateFlow<Boolean>,
         colorCorrectionStep: ColorCorrectionStep,
+        autoSkipBlankPages: StateFlow<Boolean>,
+        blankPageDetector: snd.komelia.image.processing.BlankPageDetector,
     ): ImageProcessingPipeline {
         val pipeline = ImageProcessingPipeline()
         pipeline.addStep(colorCorrectionStep)
 
-        pipeline.addStep(CropBordersStep(cropBorders))
+        pipeline.addStep(CropBordersStep(cropBorders, autoSkipBlankPages, blankPageDetector))
         pipeline.addStep(SplitPageStep())
         return pipeline
     }

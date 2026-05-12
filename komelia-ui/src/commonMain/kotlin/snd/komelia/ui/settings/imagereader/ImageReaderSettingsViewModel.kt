@@ -72,6 +72,7 @@ class ImageReaderSettingsViewModel(
     val keepReaderScreenOn = MutableStateFlow(false)
     val imageCacheSizeLimitMb = MutableStateFlow(1024L)
     val pagedReaderAutoDirection = MutableStateFlow(true)
+    val pagedAutoSkipBlankPages = MutableStateFlow(false)
     val availableUpsamplingModes = availableUpsamplingModes()
     val availableDownsamplingKernels = availableReduceKernels()
 
@@ -86,6 +87,7 @@ class ImageReaderSettingsViewModel(
         keepReaderScreenOn.value = commonSettingsRepository.getKeepReaderScreenOn().first()
         imageCacheSizeLimitMb.value = settingsRepository.getImageCacheSizeLimitMb().first()
         pagedReaderAutoDirection.value = settingsRepository.getPagedReaderAutoDirection().first()
+        pagedAutoSkipBlankPages.value = settingsRepository.getPagedAutoSkipBlankPages().first()
         onnxRuntimeSettingsState.initialize()
         ncnnSettingsState.initialize()
         rapidOcrSettingsState.initialize()
@@ -129,6 +131,11 @@ class ImageReaderSettingsViewModel(
     fun onPagedReaderAutoDirectionChange(enabled: Boolean) {
         pagedReaderAutoDirection.value = enabled
         screenModelScope.launch { settingsRepository.putPagedReaderAutoDirection(enabled) }
+    }
+
+    fun onPagedAutoSkipBlankPagesChange(enabled: Boolean) {
+        pagedAutoSkipBlankPages.value = enabled
+        screenModelScope.launch { settingsRepository.putPagedAutoSkipBlankPages(enabled) }
     }
 
     fun onClearImageCache() {

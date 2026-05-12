@@ -460,6 +460,7 @@ private fun ColumnScope.PagedReaderSettingsContent(
         val adaptiveBackground = pageState.adaptiveBackground.collectAsState().value
         val splitDoublePages = pageState.splitDoublePages.collectAsState().value
         val autoDirection = pageState.autoDirection.collectAsState().value
+        val autoSkipBlankPages = pageState.autoSkipBlankPages.collectAsState().value
         SwitchWithLabel(
             checked = autoDirection,
             onCheckedChange = pageState::onAutoDirectionChange,
@@ -486,6 +487,12 @@ private fun ColumnScope.PagedReaderSettingsContent(
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
         }
+        SwitchWithLabel(
+            checked = autoSkipBlankPages,
+            onCheckedChange = pageState::onAutoSkipBlankPagesChange,
+            label = { Text("Auto-skip blank pages") },
+            contentPadding = PaddingValues(horizontal = 10.dp)
+        )
     }
 }
 

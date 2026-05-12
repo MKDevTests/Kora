@@ -31,6 +31,9 @@ class ImageReaderSettingsScreen : Screen {
                 pagedReaderAutoDirection = vm.pagedReaderAutoDirection.collectAsState().value,
                 onPagedReaderAutoDirectionChange = vm::onPagedReaderAutoDirectionChange,
 
+                pagedAutoSkipBlankPages = vm.pagedAutoSkipBlankPages.collectAsState().value,
+                onPagedAutoSkipBlankPagesChange = vm::onPagedAutoSkipBlankPagesChange,
+
                 onCacheClear = vm::onClearImageCache,
                 onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
                 ncnnSettingsState = vm.ncnnSettingsState,

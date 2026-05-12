@@ -302,4 +302,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putPagedReaderAutoDirection(enabled: Boolean) {
         wrapper.transform { it.copy(pagedReaderAutoDirection = enabled) }
     }
+
+    override fun getPagedAutoSkipBlankPages(): Flow<Boolean> {
+        return wrapper.mapState { it.pagedAutoSkipBlankPages }
+    }
+
+    override suspend fun putPagedAutoSkipBlankPages(enabled: Boolean) {
+        wrapper.transform { it.copy(pagedAutoSkipBlankPages = enabled) }
+    }
 }

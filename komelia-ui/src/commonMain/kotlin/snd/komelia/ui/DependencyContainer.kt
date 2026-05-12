@@ -13,6 +13,7 @@ import snd.komelia.image.KomeliaImageDecoder
 import snd.komelia.image.KomeliaPanelDetector
 import snd.komelia.image.KomeliaUpscaler
 import snd.komelia.image.ReaderImageFactory
+import snd.komelia.image.processing.BlankPageDetector
 import snd.komelia.image.processing.ColorCorrectionStep
 import snd.komelia.komga.api.KomgaApi
 import snd.komelia.komga.api.LocalFileApiProvider
@@ -51,6 +52,7 @@ data class DependencyContainer(
 
     val windowState: AppWindowState,
     val colorCorrectionStep: ColorCorrectionStep,
+    val blankPageDetector: BlankPageDetector,
 
     val onnxRuntimeInstaller: OnnxRuntimeInstaller?,
     val onnxModelDownloader: OnnxModelDownloader?,

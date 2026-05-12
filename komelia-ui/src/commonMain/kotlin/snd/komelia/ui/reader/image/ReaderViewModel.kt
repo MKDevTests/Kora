@@ -86,6 +86,7 @@ class ReaderViewModel(
     val colorCorrectionIsActive: Flow<Boolean>,
     onBookChange: () -> Unit = {},
     private val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
+    private val blankPageDetector: snd.komelia.image.processing.BlankPageDetector,
 ) : ScreenModel {
     val screenScaleState = ScreenScaleState()
     private val pageChangeFlow = MutableSharedFlow<Unit>(
@@ -146,6 +147,7 @@ class ReaderViewModel(
         screenScaleState = screenScaleState,
         onBookChange = onBookChange,
         seriesReaderOverridesRepository = seriesReaderOverridesRepository,
+        blankPageDetector = blankPageDetector,
     )
     val panelsReaderState = panelDetector?.let { panelDetector ->
         if (!panelDetector.isAvailable.value) null

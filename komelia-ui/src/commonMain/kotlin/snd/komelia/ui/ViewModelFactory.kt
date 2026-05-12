@@ -284,6 +284,7 @@ class ViewModelFactory(
             markReadProgress = markReadProgress,
             onBookChange = dependencies.onBookChange,
             seriesReaderOverridesRepository = appRepositories.seriesReaderOverridesRepository,
+            blankPageDetector = dependencies.blankPageDetector,
         )
     }
 

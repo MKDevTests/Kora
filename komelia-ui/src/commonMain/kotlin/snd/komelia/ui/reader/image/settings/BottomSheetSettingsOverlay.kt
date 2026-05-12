@@ -276,7 +276,16 @@ fun BottomSheetSettingsOverlay(
             val bookState by commonReaderState.booksState.collectAsState()
             val pages = bookState?.currentBookPages ?: emptyList()
             val currentPageIndex = when (readerType) {
-                PAGED -> pagedReaderState.currentSpreadIndex.collectAsState().value
+                // For paged: use the real Komga page number of the first page in
+                // the current spread, not the spread index. When auto-skip-blank
+                // is on, blank pages are filtered out of the spread map and the
+                // spread index drifts away from the real page index — the
+                // bottom-bar label and slider thumb would otherwise show the
+                // wrong "Page X of Y".
+                PAGED -> {
+                    val spread = pagedReaderState.currentSpread.collectAsState().value
+                    (spread.pages.firstOrNull()?.metadata?.pageNumber ?: 1) - 1
+                }
                 CONTINUOUS -> continuousReaderState.currentBookPageIndex.collectAsState(0).value
                 PANELS -> panelsReaderState?.currentPageIndex?.collectAsState()?.value?.page ?: 0
             }
@@ -539,6 +548,7 @@ private fun PagedModeSettings(
     val tapToZoom = pageState.tapToZoom.collectAsState().value
     val adaptiveBackground = pageState.adaptiveBackground.collectAsState().value
     val splitDoublePages = pageState.splitDoublePages.collectAsState().value
+    val autoSkipBlankPages = pageState.autoSkipBlankPages.collectAsState().value
     val autoDirection = pageState.autoDirection.collectAsState().value
     Column {
 
@@ -654,6 +664,13 @@ private fun PagedModeSettings(
                 contentPadding = PaddingValues(horizontal = 10.dp),
             )
         }
+
+        SwitchWithLabel(
+            checked = autoSkipBlankPages,
+            onCheckedChange = pageState::onAutoSkipBlankPagesChange,
+            label = { Text("Auto-skip blank pages") },
+            contentPadding = PaddingValues(horizontal = 10.dp),
+        )
     }
 
 }

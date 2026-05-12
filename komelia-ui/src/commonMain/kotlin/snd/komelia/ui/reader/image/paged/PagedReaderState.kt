@@ -24,7 +24,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -70,6 +72,7 @@ class PagedReaderState(
     val screenScaleState: ScreenScaleState,
     private val onBookChange: () -> Unit = {},
     private val seriesReaderOverridesRepository: snd.komelia.reader.SeriesReaderOverridesRepository,
+    private val blankPageDetector: snd.komelia.image.processing.BlankPageDetector,
 ) {
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -104,6 +107,11 @@ class PagedReaderState(
     val adaptiveBackground = MutableStateFlow(false)
     val splitDoublePages = MutableStateFlow(false)
     val autoDirection = MutableStateFlow(true)
+    val autoSkipBlankPages = MutableStateFlow(false)
+    // Page numbers (1-based) in the CURRENT book that the image pipeline
+    // reported as blank. Used to filter the spread map when autoSkipBlankPages
+    // is on. Cleared on book change.
+    val blankPages = MutableStateFlow<Set<Int>>(emptySet())
 
     val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
 
@@ -134,6 +142,27 @@ class PagedReaderState(
         tapToZoom.value = settingsRepository.getPagedReaderTapToZoom().first()
         adaptiveBackground.value = settingsRepository.getPagedReaderAdaptiveBackground().first()
         splitDoublePages.value = settingsRepository.getPagedReaderSplitDoublePages().first()
+        autoSkipBlankPages.value = settingsRepository.getPagedAutoSkipBlankPages().first()
+        // Reset the per-book blank set and start collecting reports. We filter
+        // to the current book id so emissions for other books (background
+        // prefetch of next/previous book) don't contaminate this state.
+        blankPages.value = emptySet()
+        blankPageDetector.detected
+            .filter { reported -> reported.bookId == readerState.booksState.value?.currentBook?.id?.value }
+            .onEach { reported ->
+                blankPages.update { it + reported.pageNumber }
+                rebuildSpreadsKeepingPosition()
+            }
+            .launchIn(stateScope)
+        // Rebuild when the user toggles the setting at runtime so they see the
+        // effect without reopening the book.
+        autoSkipBlankPages.drop(1).onEach { rebuildSpreadsKeepingPosition() }.launchIn(stateScope)
+        // Clear the blank set on book change so a different book starts fresh.
+        readerState.booksState
+            .filterNotNull()
+            .drop(1)
+            .onEach { blankPages.value = emptySet() }
+            .launchIn(stateScope)
 
         screenScaleState.setScrollState(null)
         screenScaleState.setScrollOrientation(Orientation.Vertical, false)
@@ -523,19 +552,25 @@ class PagedReaderState(
     }
 
     private fun buildSpreadMap(pages: List<PageMetadata>, layout: PageDisplayLayout): List<List<PageMetadata>> {
+        // When auto-skip is on, exclude pages already detected as blank so the
+        // user never lands on them. The detector populates blankPages via the
+        // image pipeline as pages are loaded/prefetched.
+        val effectivePages = if (autoSkipBlankPages.value && blankPages.value.isNotEmpty()) {
+            pages.filter { it.pageNumber !in blankPages.value }
+        } else pages
         return when (layout) {
             SINGLE_PAGE -> {
-                if (splitDoublePages.value) pages.flatMap { splitLandscapePage(it) }.map { listOf(it) }
-                else pages.map { listOf(it) }
+                if (splitDoublePages.value) effectivePages.flatMap { splitLandscapePage(it) }.map { listOf(it) }
+                else effectivePages.map { listOf(it) }
             }
             DOUBLE_PAGES -> buildSpreadMapForDoublePages(
-                pages = pages,
+                pages = effectivePages,
                 withCover = true,
                 offset = layoutOffset.value
             )
 
             DOUBLE_PAGES_NO_COVER -> buildSpreadMapForDoublePages(
-                pages = pages,
+                pages = effectivePages,
                 withCover = false,
                 offset = layoutOffset.value
             )
@@ -715,6 +750,11 @@ class PagedReaderState(
         if (layout.value == SINGLE_PAGE) {
             rebuildSpreadsKeepingPosition()
         }
+    }
+
+    fun onAutoSkipBlankPagesChange(enabled: Boolean) {
+        this.autoSkipBlankPages.value = enabled
+        stateScope.launch { settingsRepository.putPagedAutoSkipBlankPages(enabled) }
     }
 
     /**

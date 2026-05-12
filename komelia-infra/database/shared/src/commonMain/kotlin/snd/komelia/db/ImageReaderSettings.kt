@@ -58,6 +58,7 @@ data class ImageReaderSettings(
     val imageCacheSizeLimitMb: Long = 1024L,
     val pagedSplitDoublePages: Boolean = false,
     val pagedReaderAutoDirection: Boolean = true,
+    val pagedAutoSkipBlankPages: Boolean = false,
 ) {
     companion object {
         const val PANEL_DETECTION_DEFAULT_ORIGINAL_URL =

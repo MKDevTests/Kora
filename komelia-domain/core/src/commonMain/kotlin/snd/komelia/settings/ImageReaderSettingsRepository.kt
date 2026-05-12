@@ -121,4 +121,7 @@ interface ImageReaderSettingsRepository {
 
     fun getPagedReaderAutoDirection(): Flow<Boolean>
     suspend fun putPagedReaderAutoDirection(enabled: Boolean)
+
+    fun getPagedAutoSkipBlankPages(): Flow<Boolean>
+    suspend fun putPagedAutoSkipBlankPages(enabled: Boolean)
 }

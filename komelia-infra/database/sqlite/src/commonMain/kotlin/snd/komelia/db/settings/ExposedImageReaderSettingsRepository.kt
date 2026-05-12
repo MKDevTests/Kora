@@ -92,6 +92,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         imageCacheSizeLimitMb = it[ImageReaderSettingsTable.imageCacheSizeLimitMb],
                         pagedSplitDoublePages = it[ImageReaderSettingsTable.pagedSplitDoublePages],
                         pagedReaderAutoDirection = it[ImageReaderSettingsTable.pagedReaderAutoDirection],
+                        pagedAutoSkipBlankPages = it[ImageReaderSettingsTable.pagedAutoSkipBlankPages],
                     )
                 }
         }
@@ -151,6 +152,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[imageCacheSizeLimitMb] = settings.imageCacheSizeLimitMb
                 it[pagedSplitDoublePages] = settings.pagedSplitDoublePages
                 it[pagedReaderAutoDirection] = settings.pagedReaderAutoDirection
+                it[pagedAutoSkipBlankPages] = settings.pagedAutoSkipBlankPages
             }
         }
     }

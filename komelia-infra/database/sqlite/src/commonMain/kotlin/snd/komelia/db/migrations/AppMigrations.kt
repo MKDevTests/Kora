@@ -62,6 +62,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V53__split_double_pages.sql",
         "V54__paged_reader_auto_direction.sql",
         "V55__series_reader_overrides.sql",
+        "V56__paged_auto_skip_blank_pages.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {
