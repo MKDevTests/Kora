@@ -42,6 +42,9 @@ fun ImageReaderSettingsContent(
     pagedAutoDetectWebtoon: Boolean,
     onPagedAutoDetectWebtoonChange: (Boolean) -> Unit,
 
+    continuousReaderStopAtEnd: Boolean,
+    onContinuousReaderStopAtEndChange: (Boolean) -> Unit,
+
     onCacheClear: () -> Unit,
     onnxRuntimeSettingsState: OnnxRuntimeSettingsState,
     ncnnSettingsState: NcnnSettingsState,
@@ -94,6 +97,13 @@ fun ImageReaderSettingsContent(
             onCheckedChange = onPagedAutoDetectWebtoonChange,
             label = { Text("Auto-detect webtoon") },
             supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to vertical-scroll continuous reader. Your manual override sticks for the rest of the reader session.") },
+        )
+
+        SwitchWithLabel(
+            checked = continuousReaderStopAtEnd,
+            onCheckedChange = onContinuousReaderStopAtEndChange,
+            label = { Text("Stop at end of book (continuous reader)") },
+            supportingText = { Text("Pause at the last page instead of rolling silently into the next book. Swipe again to continue. Also ensures the current book gets marked as read.") },
         )
 
         FilledTonalButton(

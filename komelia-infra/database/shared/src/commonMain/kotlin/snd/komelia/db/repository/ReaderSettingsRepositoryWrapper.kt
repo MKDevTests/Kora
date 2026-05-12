@@ -318,4 +318,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putPagedAutoDetectWebtoon(enabled: Boolean) {
         wrapper.transform { it.copy(pagedAutoDetectWebtoon = enabled) }
     }
+
+    override fun getContinuousReaderStopAtEnd(): Flow<Boolean> {
+        return wrapper.mapState { it.continuousReaderStopAtEnd }
+    }
+
+    override suspend fun putContinuousReaderStopAtEnd(enabled: Boolean) {
+        wrapper.transform { it.copy(continuousReaderStopAtEnd = enabled) }
+    }
 }

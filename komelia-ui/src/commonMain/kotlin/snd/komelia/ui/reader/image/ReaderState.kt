@@ -118,6 +118,19 @@ class ReaderState(
     private val previewLoadScope = CoroutineScope(Dispatchers.Default.limitedParallelism(1) + SupervisorJob())
     private val progressUpdateChannel = Channel<Int>(Channel.CONFLATED)
 
+    /**
+     * Independent fire-and-forget scope used by [onDispose] to flush the final
+     * read-progress to Komga. Survives the reader screen tear-down so the last
+     * page (or "completed" flag) is never lost when:
+     *  - the user exits via the system back-button while a CONFLATED progress
+     *    update is still queued;
+     *  - the user reads in random sort order and exits without scrolling onto
+     *    a sentinel "next book" page that would have committed the last page;
+     *  - the continuous reader stop-at-end fix is off and the user blew past
+     *    the boundary before the channel got a chance to push.
+     */
+    private val finalFlushScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     val state = MutableStateFlow<LoadState<Unit>>(LoadState.Uninitialized)
     val serverUnavailableDialogVisible = MutableStateFlow(false)
     val expandImageSettings = MutableStateFlow(false)
@@ -682,6 +695,15 @@ class ReaderState(
     }
 
     fun onDispose() {
+        // Belt-and-braces: flush the latest progress to Komga before tearing
+        // down. Without this, books read via random sort (or quickly past the
+        // end in continuous mode) often stay "in progress" because the
+        // CONFLATED progressUpdateChannel never drained its final value.
+        if (markReadProgress && booksState.value != null) {
+            finalFlushScope.launch {
+                runCatching { updateCacheAndPush() }
+            }
+        }
         currentBookId.value = null
         previewLoadScope.cancel()
     }

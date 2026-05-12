@@ -64,6 +64,7 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val pagedReaderAutoDirection = bool("paged_reader_auto_direction").default(true)
     val pagedAutoSkipBlankPages = bool("paged_auto_skip_blank_pages").default(false)
     val pagedAutoDetectWebtoon = bool("paged_auto_detect_webtoon").default(false)
+    val continuousReaderStopAtEnd = bool("continuous_reader_stop_at_end").default(true)
 
     override val primaryKey = PrimaryKey(bookId)
 }

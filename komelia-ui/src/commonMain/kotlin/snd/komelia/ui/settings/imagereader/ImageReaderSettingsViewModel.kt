@@ -74,6 +74,7 @@ class ImageReaderSettingsViewModel(
     val pagedReaderAutoDirection = MutableStateFlow(true)
     val pagedAutoSkipBlankPages = MutableStateFlow(false)
     val pagedAutoDetectWebtoon = MutableStateFlow(false)
+    val continuousReaderStopAtEnd = MutableStateFlow(true)
     val availableUpsamplingModes = availableUpsamplingModes()
     val availableDownsamplingKernels = availableReduceKernels()
 
@@ -90,6 +91,7 @@ class ImageReaderSettingsViewModel(
         pagedReaderAutoDirection.value = settingsRepository.getPagedReaderAutoDirection().first()
         pagedAutoSkipBlankPages.value = settingsRepository.getPagedAutoSkipBlankPages().first()
         pagedAutoDetectWebtoon.value = settingsRepository.getPagedAutoDetectWebtoon().first()
+        continuousReaderStopAtEnd.value = settingsRepository.getContinuousReaderStopAtEnd().first()
         onnxRuntimeSettingsState.initialize()
         ncnnSettingsState.initialize()
         rapidOcrSettingsState.initialize()
@@ -143,6 +145,11 @@ class ImageReaderSettingsViewModel(
     fun onPagedAutoDetectWebtoonChange(enabled: Boolean) {
         pagedAutoDetectWebtoon.value = enabled
         screenModelScope.launch { settingsRepository.putPagedAutoDetectWebtoon(enabled) }
+    }
+
+    fun onContinuousReaderStopAtEndChange(enabled: Boolean) {
+        continuousReaderStopAtEnd.value = enabled
+        screenModelScope.launch { settingsRepository.putContinuousReaderStopAtEnd(enabled) }
     }
 
     fun onClearImageCache() {

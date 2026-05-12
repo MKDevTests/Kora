@@ -56,6 +56,7 @@ import snd.komelia.settings.model.ContinuousReadingDirection
 import snd.komelia.settings.model.ContinuousReadingDirection.LEFT_TO_RIGHT
 import snd.komelia.settings.model.ContinuousReadingDirection.RIGHT_TO_LEFT
 import snd.komelia.settings.model.ContinuousReadingDirection.TOP_TO_BOTTOM
+import snd.komelia.ui.reader.image.BookState
 import snd.komelia.ui.reader.image.PageMetadata
 import snd.komelia.ui.reader.image.ReaderState
 import snd.komelia.ui.reader.image.ScreenScaleState
@@ -98,6 +99,24 @@ class ContinuousReaderState(
     private val nextBook = readerState.booksState.filterNotNull().map { it.nextBook }
     private val previousBook = readerState.booksState.filterNotNull().map { it.previousBook }
 
+    /**
+     * When true, scrolling past the end of the current book pauses at the last
+     * page instead of silently rolling into the next book. The user must scroll
+     * forward a second time to cross the boundary. Symmetric for the start of
+     * the book. Loaded from settings in [initialize].
+     */
+    private var stopAtEnd: Boolean = true
+
+    /**
+     * Set true the first time the user crosses from the current book into the
+     * next book while [stopAtEnd] is on. While true, the next crossing actually
+     * advances. Reset to false when an advance happens (so the next book's own
+     * end-stop will fire). Snap-back to the last page of the current book
+     * happens in the same step.
+     */
+    private val endOfBookAcked = MutableStateFlow(false)
+    private val startOfBookAcked = MutableStateFlow(false)
+
     private val imageCache = Cache.Builder<PageId, Deferred<ReaderImageResult>>()
         .maximumCacheSize(10)
         .eventListener {
@@ -130,6 +149,7 @@ class ContinuousReaderState(
         }
         sidePaddingFraction.value = settingsRepository.getContinuousReaderPadding().first()
         pageSpacing.value = settingsRepository.getContinuousReaderPageSpacing().first().coerceAtMost(99999)
+        stopAtEnd = settingsRepository.getContinuousReaderStopAtEnd().first()
 
         screenScaleState.setScrollState(lazyListState)
         when (readingDirection.value) {
@@ -253,22 +273,90 @@ class ContinuousReaderState(
     }
 
     suspend fun onCurrentPageChange(page: PageMetadata) {
+        val booksState = readerState.booksState.value ?: return
         when (page.bookId) {
-            nextBook.first()?.id -> {
-                readerState.loadNextBook()
-                readerState.onProgressChange(page.pageNumber)
+            booksState.nextBook?.id -> {
+                if (stopAtEnd && !endOfBookAcked.value) {
+                    // First crossing: pause at the boundary so the last page of the
+                    // current book is actually consumed (both for the user's eyes
+                    // and for Komga's "completed" flag). The user must swipe again
+                    // to cross for real. Snap so the END of the last page is at the
+                    // bottom of the viewport — i.e. the user "stays at the bottom",
+                    // not back at the top of a tall webtoon page.
+                    endOfBookAcked.value = true
+                    readerState.onProgressChange(booksState.currentBookPages.size)
+                    snapToEndOfCurrentBook(booksState)
+                    notifications.add(
+                        AppNotification.Normal("End of book — swipe again to continue")
+                    )
+                } else {
+                    endOfBookAcked.value = false
+                    readerState.loadNextBook()
+                    readerState.onProgressChange(page.pageNumber)
+                }
             }
 
-            previousBook.first()?.id -> {
-                readerState.loadPreviousBook()
-                readerState.onProgressChange(page.pageNumber)
+            booksState.previousBook?.id -> {
+                if (stopAtEnd && !startOfBookAcked.value) {
+                    // First backward crossing: pause at the start of the current book.
+                    // Snap to the top of page 1 — user "stays at the top".
+                    startOfBookAcked.value = true
+                    readerState.onProgressChange(1)
+                    scrollToBookPage(1)
+                    notifications.add(
+                        AppNotification.Normal("Start of book — swipe again to go back")
+                    )
+                } else {
+                    startOfBookAcked.value = false
+                    readerState.loadPreviousBook()
+                    readerState.onProgressChange(page.pageNumber)
+                }
             }
 
             else -> {
+                // User scrolling within the current book — keep ack flags as-is so
+                // the snap-back doesn't immediately re-trigger when handlePageScroll
+                // observes the new (current-book) page right after the snap.
                 checkAndLoadMissingIntervalPagesAt(page)
                 readerState.onProgressChange(page.pageNumber)
             }
         }
+    }
+
+    /**
+     * Snap the LazyList so that the END of the last page of the current book sits
+     * at the BOTTOM of the viewport (or right edge, for horizontal reading).
+     *
+     * For tall webtoon pages this is critical: a plain scrollToItem(lastPageIndex)
+     * positions the TOP of the page at viewport top, which can be 4-5 screens
+     * away from the boundary the user just reached. We instead pass a positive
+     * scrollOffset = (pageSize - viewportSize). LazyList interprets that as
+     * "scroll past the item by N pixels after placing its top at viewport top",
+     * effectively aligning the item's bottom edge with the viewport's bottom.
+     *
+     * pageSize comes from [guessPageDisplaySize] which handles both the cached
+     * image size and the metadata fallback — robust whether the last page is
+     * still in [LazyListLayoutInfo.visibleItemsInfo] or already scrolled past.
+     */
+    private fun snapToEndOfCurrentBook(booksState: BookState) {
+        val intervals = pageIntervals.value
+        if (intervals.isEmpty()) return
+        val idx = currentIntervalIndex.value
+        val bookStartIndex = intervals.subList(0, idx)
+            .fold(0) { acc, value -> acc + value.pages.size } - 1
+        val lastPageNumber = booksState.currentBookPages.size
+        val lastPageMeta = booksState.currentBookPages.lastOrNull() ?: return
+        val targetIndex = bookStartIndex + lastPageNumber + idx + 1
+
+        val viewport = lazyListState.layoutInfo.viewportSize
+        val displaySize = guessPageDisplaySize(lastPageMeta, lastPageMeta.size)
+        val (pageAxis, viewportAxis) = when (readingDirection.value) {
+            TOP_TO_BOTTOM -> displaySize.height to viewport.height
+            LEFT_TO_RIGHT, RIGHT_TO_LEFT -> displaySize.width to viewport.width
+        }
+        val scrollOffset = (pageAxis - viewportAxis).coerceAtLeast(0)
+
+        lazyListState.requestScrollToItem(targetIndex, scrollOffset)
     }
 
     private suspend fun checkAndLoadMissingIntervalPagesAt(page: PageMetadata) {

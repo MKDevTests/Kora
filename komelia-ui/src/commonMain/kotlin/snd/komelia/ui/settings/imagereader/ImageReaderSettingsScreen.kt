@@ -37,6 +37,9 @@ class ImageReaderSettingsScreen : Screen {
                 pagedAutoDetectWebtoon = vm.pagedAutoDetectWebtoon.collectAsState().value,
                 onPagedAutoDetectWebtoonChange = vm::onPagedAutoDetectWebtoonChange,
 
+                continuousReaderStopAtEnd = vm.continuousReaderStopAtEnd.collectAsState().value,
+                onContinuousReaderStopAtEndChange = vm::onContinuousReaderStopAtEndChange,
+
                 onCacheClear = vm::onClearImageCache,
                 onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
                 ncnnSettingsState = vm.ncnnSettingsState,

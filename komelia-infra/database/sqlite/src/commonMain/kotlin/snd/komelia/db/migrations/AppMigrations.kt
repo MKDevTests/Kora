@@ -64,6 +64,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V55__series_reader_overrides.sql",
         "V56__paged_auto_skip_blank_pages.sql",
         "V57__paged_auto_detect_webtoon.sql",
+        "V58__continuous_reader_stop_at_end.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

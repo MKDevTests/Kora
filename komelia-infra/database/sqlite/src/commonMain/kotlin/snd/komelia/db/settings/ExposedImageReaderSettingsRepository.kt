@@ -94,6 +94,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         pagedReaderAutoDirection = it[ImageReaderSettingsTable.pagedReaderAutoDirection],
                         pagedAutoSkipBlankPages = it[ImageReaderSettingsTable.pagedAutoSkipBlankPages],
                         pagedAutoDetectWebtoon = it[ImageReaderSettingsTable.pagedAutoDetectWebtoon],
+                        continuousReaderStopAtEnd = it[ImageReaderSettingsTable.continuousReaderStopAtEnd],
                     )
                 }
         }
@@ -155,6 +156,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[pagedReaderAutoDirection] = settings.pagedReaderAutoDirection
                 it[pagedAutoSkipBlankPages] = settings.pagedAutoSkipBlankPages
                 it[pagedAutoDetectWebtoon] = settings.pagedAutoDetectWebtoon
+                it[continuousReaderStopAtEnd] = settings.continuousReaderStopAtEnd
             }
         }
     }
