@@ -96,7 +96,7 @@ fun ImageReaderSettingsContent(
             checked = pagedAutoDetectWebtoon,
             onCheckedChange = onPagedAutoDetectWebtoonChange,
             label = { Text("Auto-detect webtoon") },
-            supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to vertical-scroll continuous reader. Your manual override sticks for the rest of the reader session.") },
+            supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to panel-by-panel reader (auto-zoom on each panel). Your manual override sticks for the rest of the reader session.") },
         )
 
         SwitchWithLabel(

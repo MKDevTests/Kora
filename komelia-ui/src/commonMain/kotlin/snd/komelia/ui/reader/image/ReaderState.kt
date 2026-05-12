@@ -311,7 +311,13 @@ class ReaderState(
             when (currentSeries.metadata.readingDirection) {
                 KomgaReadingDirection.LEFT_TO_RIGHT -> ReaderType.PAGED
                 KomgaReadingDirection.RIGHT_TO_LEFT -> ReaderType.PAGED
-                KomgaReadingDirection.WEBTOON -> ReaderType.CONTINUOUS
+                // Webtoons read much better in PANELS mode (auto-zoom on each
+                // detected panel) than in a single vertical scroll: tall
+                // strips with huge inter-panel gutters become tedious in
+                // continuous mode and the heuristic gutter snap couldn't
+                // close the gap. Panel-by-panel navigation handles them
+                // cleanly out of the box.
+                KomgaReadingDirection.WEBTOON -> ReaderType.PANELS
                 KomgaReadingDirection.VERTICAL, null -> readerSettingsRepository.getReaderType().first()
             }
         } else {
@@ -319,16 +325,18 @@ class ReaderState(
         }
         readerType.value = baseReaderType
 
-        // Webtoon auto-detect override. Only applies when:
+        // Local webtoon auto-detect override. Only applies when:
         //  - the setting is ON
         //  - the user hasn't manually flipped readerType already this session
         //  - the first 3 pages all look webtoon-tall (height/width >= 4)
+        // Same rationale as the metadata branch above: route to PANELS, not
+        // CONTINUOUS, because the panel-by-panel UX is what webtoons want.
         if (!userOverrodeReaderType
             && readerSettingsRepository.getPagedAutoDetectWebtoon().first()
             && isWebtoonLikely(booksState.value?.currentBookPages ?: emptyList())
         ) {
             detectedAsWebtoon.value = true
-            readerType.value = ReaderType.CONTINUOUS
+            readerType.value = ReaderType.PANELS
         }
     }
 
