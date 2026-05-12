@@ -59,6 +59,7 @@ data class ImageReaderSettings(
     val pagedSplitDoublePages: Boolean = false,
     val pagedReaderAutoDirection: Boolean = true,
     val pagedAutoSkipBlankPages: Boolean = false,
+    val pagedAutoDetectWebtoon: Boolean = false,
 ) {
     companion object {
         const val PANEL_DETECTION_DEFAULT_ORIGINAL_URL =

@@ -124,4 +124,7 @@ interface ImageReaderSettingsRepository {
 
     fun getPagedAutoSkipBlankPages(): Flow<Boolean>
     suspend fun putPagedAutoSkipBlankPages(enabled: Boolean)
+
+    fun getPagedAutoDetectWebtoon(): Flow<Boolean>
+    suspend fun putPagedAutoDetectWebtoon(enabled: Boolean)
 }

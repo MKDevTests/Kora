@@ -310,4 +310,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putPagedAutoSkipBlankPages(enabled: Boolean) {
         wrapper.transform { it.copy(pagedAutoSkipBlankPages = enabled) }
     }
+
+    override fun getPagedAutoDetectWebtoon(): Flow<Boolean> {
+        return wrapper.mapState { it.pagedAutoDetectWebtoon }
+    }
+
+    override suspend fun putPagedAutoDetectWebtoon(enabled: Boolean) {
+        wrapper.transform { it.copy(pagedAutoDetectWebtoon = enabled) }
+    }
 }

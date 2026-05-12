@@ -39,6 +39,9 @@ fun ImageReaderSettingsContent(
     pagedAutoSkipBlankPages: Boolean,
     onPagedAutoSkipBlankPagesChange: (Boolean) -> Unit,
 
+    pagedAutoDetectWebtoon: Boolean,
+    onPagedAutoDetectWebtoonChange: (Boolean) -> Unit,
+
     onCacheClear: () -> Unit,
     onnxRuntimeSettingsState: OnnxRuntimeSettingsState,
     ncnnSettingsState: NcnnSettingsState,
@@ -84,6 +87,13 @@ fun ImageReaderSettingsContent(
             onCheckedChange = onPagedAutoSkipBlankPagesChange,
             label = { Text("Auto-skip blank pages") },
             supportingText = { Text("When Crop borders is on, blank pages are removed from the reader instead of crashing.") },
+        )
+
+        SwitchWithLabel(
+            checked = pagedAutoDetectWebtoon,
+            onCheckedChange = onPagedAutoDetectWebtoonChange,
+            label = { Text("Auto-detect webtoon") },
+            supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to vertical-scroll continuous reader. Your manual override sticks for the rest of the reader session.") },
         )
 
         FilledTonalButton(

@@ -126,6 +126,23 @@ class ReaderState(
     val series = MutableStateFlow<KomgaSeries?>(null)
 
     val readerType = MutableStateFlow(ReaderType.PAGED)
+
+    /**
+     * True when the current book's first pages look like a webtoon (very tall
+     * pages, height/width >= 4) and the auto-detect setting is on. Exposed
+     * so [ContinuousReaderState] can force TOP_TO_BOTTOM direction
+     * in-memory without persisting it to the user's global setting.
+     */
+    val detectedAsWebtoon = MutableStateFlow(false)
+
+    /**
+     * Set the first time the user manually changes [readerType] after a book
+     * has loaded (i.e. via [onReaderTypeChange]). Prevents the webtoon
+     * auto-detect from re-asserting CONTINUOUS on subsequent books within
+     * the same reader session — the user's manual choice is respected for
+     * the lifetime of this state.
+     */
+    private var userOverrodeReaderType: Boolean = false
     val imageStretchToFit = MutableStateFlow(true)
     val cropBorders = MutableStateFlow(false)
     val loadThumbnailPreviews = MutableStateFlow(true)
@@ -271,17 +288,52 @@ class ReaderState(
     }
 
     private suspend fun updateCurrentSeriesAndReaderType(book: KomeliaBook) {
-        if (!book.seriesId.value.startsWith("local")) {
+        // Reset the per-book webtoon flag; we'll set it back below if the new
+        // book also qualifies.
+        detectedAsWebtoon.value = false
+
+        val baseReaderType = if (!book.seriesId.value.startsWith("local")) {
             val currentSeries = seriesApi.getOneSeries(book.seriesId)
             series.value = currentSeries
-            readerType.value = when (currentSeries.metadata.readingDirection) {
+            when (currentSeries.metadata.readingDirection) {
                 KomgaReadingDirection.LEFT_TO_RIGHT -> ReaderType.PAGED
                 KomgaReadingDirection.RIGHT_TO_LEFT -> ReaderType.PAGED
                 KomgaReadingDirection.WEBTOON -> ReaderType.CONTINUOUS
                 KomgaReadingDirection.VERTICAL, null -> readerSettingsRepository.getReaderType().first()
             }
         } else {
-            readerType.value = readerSettingsRepository.getReaderType().first()
+            readerSettingsRepository.getReaderType().first()
+        }
+        readerType.value = baseReaderType
+
+        // Webtoon auto-detect override. Only applies when:
+        //  - the setting is ON
+        //  - the user hasn't manually flipped readerType already this session
+        //  - the first 3 pages all look webtoon-tall (height/width >= 4)
+        if (!userOverrodeReaderType
+            && readerSettingsRepository.getPagedAutoDetectWebtoon().first()
+            && isWebtoonLikely(booksState.value?.currentBookPages ?: emptyList())
+        ) {
+            detectedAsWebtoon.value = true
+            readerType.value = ReaderType.CONTINUOUS
+        }
+    }
+
+    /**
+     * Heuristic: the first 3 pages (or fewer if the book has <3) must all
+     * have a height-to-width ratio of at least 4.0 for the book to be
+     * classified as a webtoon. 4× is a safe lower bound — typical manga
+     * pages cap around 1.4-2:1, while webtoon panels start at 3-6:1.
+     * Uses the raw image dimensions from Komga metadata, BEFORE any
+     * pipeline processing (crop borders etc.), so the ratio reflects the
+     * file itself.
+     */
+    private fun isWebtoonLikely(pages: List<PageMetadata>): Boolean {
+        val sample = pages.take(3)
+        if (sample.isEmpty()) return false
+        return sample.all { page ->
+            val size = page.size ?: return@all false
+            size.width > 0 && size.height.toFloat() / size.width.toFloat() >= 4.0f
         }
     }
 
@@ -469,6 +521,10 @@ class ReaderState(
     }
 
     fun onReaderTypeChange(type: ReaderType) {
+        // Any explicit user change disables webtoon auto-detect re-assertion
+        // for the rest of this reader session.
+        userOverrodeReaderType = true
+        if (type != ReaderType.CONTINUOUS) detectedAsWebtoon.value = false
         this.readerType.value = type
         stateScope.launch { readerSettingsRepository.putReaderType(type) }
     }

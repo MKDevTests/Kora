@@ -63,6 +63,7 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val pagedSplitDoublePages = bool("paged_split_double_pages").default(false)
     val pagedReaderAutoDirection = bool("paged_reader_auto_direction").default(true)
     val pagedAutoSkipBlankPages = bool("paged_auto_skip_blank_pages").default(false)
+    val pagedAutoDetectWebtoon = bool("paged_auto_detect_webtoon").default(false)
 
     override val primaryKey = PrimaryKey(bookId)
 }

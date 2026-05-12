@@ -34,6 +34,9 @@ class ImageReaderSettingsScreen : Screen {
                 pagedAutoSkipBlankPages = vm.pagedAutoSkipBlankPages.collectAsState().value,
                 onPagedAutoSkipBlankPagesChange = vm::onPagedAutoSkipBlankPagesChange,
 
+                pagedAutoDetectWebtoon = vm.pagedAutoDetectWebtoon.collectAsState().value,
+                onPagedAutoDetectWebtoonChange = vm::onPagedAutoDetectWebtoonChange,
+
                 onCacheClear = vm::onClearImageCache,
                 onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
                 ncnnSettingsState = vm.ncnnSettingsState,

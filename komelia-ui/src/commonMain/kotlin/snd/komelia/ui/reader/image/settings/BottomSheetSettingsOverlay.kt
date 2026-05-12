@@ -549,6 +549,7 @@ private fun PagedModeSettings(
     val adaptiveBackground = pageState.adaptiveBackground.collectAsState().value
     val splitDoublePages = pageState.splitDoublePages.collectAsState().value
     val autoSkipBlankPages = pageState.autoSkipBlankPages.collectAsState().value
+    val autoDetectWebtoon = pageState.autoDetectWebtoon.collectAsState().value
     val autoDirection = pageState.autoDirection.collectAsState().value
     Column {
 
@@ -669,6 +670,13 @@ private fun PagedModeSettings(
             checked = autoSkipBlankPages,
             onCheckedChange = pageState::onAutoSkipBlankPagesChange,
             label = { Text("Auto-skip blank pages") },
+            contentPadding = PaddingValues(horizontal = 10.dp),
+        )
+
+        SwitchWithLabel(
+            checked = autoDetectWebtoon,
+            onCheckedChange = pageState::onAutoDetectWebtoonChange,
+            label = { Text("Auto-detect webtoon (switch to vertical scroll)") },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
     }

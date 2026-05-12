@@ -108,6 +108,12 @@ class PagedReaderState(
     val splitDoublePages = MutableStateFlow(false)
     val autoDirection = MutableStateFlow(true)
     val autoSkipBlankPages = MutableStateFlow(false)
+    // Mirrors the global pagedAutoDetectWebtoon setting so the in-reader
+    // settings UI (bottom sheet + side menu) can read and toggle it. Actual
+    // detection runs in ReaderState.updateCurrentSeriesAndReaderType — the
+    // result must be known BEFORE the paged reader is initialized so we can
+    // hand off to ContinuousReaderState if a webtoon is detected.
+    val autoDetectWebtoon = MutableStateFlow(false)
     // Page numbers (1-based) in the CURRENT book that the image pipeline
     // reported as blank. Used to filter the spread map when autoSkipBlankPages
     // is on. Cleared on book change.
@@ -143,6 +149,7 @@ class PagedReaderState(
         adaptiveBackground.value = settingsRepository.getPagedReaderAdaptiveBackground().first()
         splitDoublePages.value = settingsRepository.getPagedReaderSplitDoublePages().first()
         autoSkipBlankPages.value = settingsRepository.getPagedAutoSkipBlankPages().first()
+        autoDetectWebtoon.value = settingsRepository.getPagedAutoDetectWebtoon().first()
         // Reset the per-book blank set and start collecting reports. We filter
         // to the current book id so emissions for other books (background
         // prefetch of next/previous book) don't contaminate this state.
@@ -755,6 +762,11 @@ class PagedReaderState(
     fun onAutoSkipBlankPagesChange(enabled: Boolean) {
         this.autoSkipBlankPages.value = enabled
         stateScope.launch { settingsRepository.putPagedAutoSkipBlankPages(enabled) }
+    }
+
+    fun onAutoDetectWebtoonChange(enabled: Boolean) {
+        this.autoDetectWebtoon.value = enabled
+        stateScope.launch { settingsRepository.putPagedAutoDetectWebtoon(enabled) }
     }
 
     /**

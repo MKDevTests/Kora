@@ -119,8 +119,13 @@ class ContinuousReaderState(
 
     suspend fun initialize() {
 
-        readingDirection.value = when (readerState.series.value?.metadata?.readingDirection) {
-            KomgaReadingDirection.WEBTOON -> TOP_TO_BOTTOM
+        readingDirection.value = when {
+            // Komga metadata explicitly says WEBTOON: always TOP_TO_BOTTOM.
+            readerState.series.value?.metadata?.readingDirection == KomgaReadingDirection.WEBTOON -> TOP_TO_BOTTOM
+            // Local auto-detect classified this book as webtoon-like (very tall pages).
+            // Force TOP_TO_BOTTOM in-memory without persisting to settings, so the
+            // user's global continuous direction isn't silently overwritten.
+            readerState.detectedAsWebtoon.value -> TOP_TO_BOTTOM
             else -> settingsRepository.getContinuousReaderReadingDirection().first()
         }
         sidePaddingFraction.value = settingsRepository.getContinuousReaderPadding().first()
