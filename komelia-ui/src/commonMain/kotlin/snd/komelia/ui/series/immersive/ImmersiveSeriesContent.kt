@@ -157,6 +157,17 @@ fun ImmersiveSeriesContent(
         booksData.books.firstOrNull { it.readProgress == null || it.readProgress?.completed == false }
             ?: booksData.books.firstOrNull()
     }
+    // Earliest non-completed book (in-progress or never-started). Null when
+    // every book in the loaded page is completed — drives the greyed state
+    // of the "Continue reading" quick button. Books are loaded in sequence
+    // order by default, so firstOrNull picks the lowest book number that
+    // still has reading to do.
+    val continueBook = remember(booksData.books) {
+        booksData.books.firstOrNull { it.readProgress?.completed != true }
+    }
+    // First book of the series (by sequence). Drives the "Read from start"
+    // quick button — always available when there are any books at all.
+    val firstBook = remember(booksData.books) { booksData.books.firstOrNull() }
 
     var showDownloadConfirmationDialog by remember { mutableStateOf(false) }
 
@@ -316,6 +327,13 @@ fun ImmersiveSeriesContent(
                 onNextSiblingSeriesClick = onNextSiblingSeriesClick,
                 hasPreviousSiblingSeries = hasPreviousSiblingSeries,
                 hasNextSiblingSeries = hasNextSiblingSeries,
+                onReadFromStartClick = firstBook?.let { book ->
+                    { onBookReadClick(book, true) }
+                },
+                onContinueReadClick = {
+                    continueBook?.let { onBookReadClick(it, true) }
+                },
+                canContinueRead = continueBook != null,
             )
         },
         cardContent = { expandFraction, onThumbnailPositioned, onTextPositioned ->

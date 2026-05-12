@@ -22,10 +22,12 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -144,6 +146,13 @@ fun SeriesContent(
             onDownload = onDownload,
             onOpenInKomga = onOpenInKomga,
             onRandomSiblingClick = onRandomSiblingClick,
+            // Same continue / first-book logic as the immersive layout —
+            // see ImmersiveSeriesContent for the rationale.
+            onContinueReadClick = booksData.books
+                .firstOrNull { it.readProgress?.completed != true }
+                ?.let { book -> { onBookReadClick(book, true) } },
+            onReadFromStartClick = booksData.books.firstOrNull()
+                ?.let { book -> { onBookReadClick(book, true) } },
         )
 
         val scrollState = rememberLazyGridState()
@@ -242,6 +251,8 @@ fun SeriesToolBar(
     onDownload: () -> Unit,
     onOpenInKomga: (() -> Unit)? = null,
     onRandomSiblingClick: (() -> Unit)? = null,
+    onContinueReadClick: (() -> Unit)? = null,
+    onReadFromStartClick: (() -> Unit)? = null,
 ) {
     val hideParentheses = LocalHideParenthesesInNames.current
     Row(
@@ -304,6 +315,19 @@ fun SeriesToolBar(
                     onClick = { showDownloadConfirmationDialog = true },
                 ) {
                     Icon(Icons.Default.Download, null)
+                }
+            }
+            if (onReadFromStartClick != null) {
+                IconButton(onClick = onReadFromStartClick) {
+                    Icon(Icons.Rounded.Replay, contentDescription = "Read from start")
+                }
+            }
+            if (onContinueReadClick != null) {
+                IconButton(onClick = onContinueReadClick) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.MenuBook,
+                        contentDescription = "Continue reading",
+                    )
                 }
             }
             if (showDownloadConfirmationDialog) {

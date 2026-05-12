@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -55,6 +56,13 @@ fun ImmersiveDetailFab(
     onNextSiblingSeriesClick: (() -> Unit)? = null,
     hasPreviousSiblingSeries: Boolean = false,
     hasNextSiblingSeries: Boolean = false,
+    // Series-level quick-read shortcuts. When set, they appear to the RIGHT of
+    // the Download FAB in the rightmost slot (i.e. ContinueRead is rightmost).
+    // `canContinueRead` greys the continue button when there's nothing left to
+    // resume (every book in the series is completed).
+    onReadFromStartClick: (() -> Unit)? = null,
+    onContinueReadClick: (() -> Unit)? = null,
+    canContinueRead: Boolean = true,
 ) {
     val theme = LocalTheme.current
     val navBarColor = LocalNavBarColor.current
@@ -120,14 +128,38 @@ fun ImmersiveDetailFab(
                 onDispose { if (fabLeft.value?.first == ownerKey) fabLeft.value = null }
             }
         } else {
-            // No read actions — just show Download on the right, nothing on the left
-            DisposableEffect(Unit) {
+            // No primary Read FAB. Right slot composes Download + optional
+            // series-level read shortcuts. Order (left → right): Download,
+            // ReadFromStart, ContinueRead. ContinueRead is rightmost as the
+            // primary action the user expects to tap most often.
+            DisposableEffect(onReadFromStartClick, onContinueReadClick, canContinueRead) {
                 fab.value = ownerKey to {
-                    FloatingFAB(
-                        icon = Icons.Rounded.Download,
-                        onClick = onDownloadClick,
-                        accentColor = accentColor,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FloatingFAB(
+                            icon = Icons.Rounded.Download,
+                            onClick = onDownloadClick,
+                            accentColor = accentColor,
+                        )
+                        if (onReadFromStartClick != null) {
+                            FloatingFAB(
+                                icon = Icons.Rounded.Replay,
+                                onClick = onReadFromStartClick,
+                                accentColor = accentColor,
+                            )
+                        }
+                        if (onContinueReadClick != null) {
+                            FloatingFAB(
+                                icon = Icons.AutoMirrored.Rounded.MenuBook,
+                                onClick = { if (canContinueRead) onContinueReadClick() },
+                                accentColor = accentColor,
+                                iconTint = if (canContinueRead) null
+                                else (accentColor ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.3f),
+                            )
+                        }
+                    }
                 }
                 onDispose { if (fab.value?.first == ownerKey) fab.value = null }
             }
