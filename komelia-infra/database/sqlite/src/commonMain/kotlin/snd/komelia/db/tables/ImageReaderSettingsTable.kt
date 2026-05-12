@@ -61,6 +61,7 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val ocrMergeBoxes = bool("ocr_merge_boxes").default(true)
 
     val pagedSplitDoublePages = bool("paged_split_double_pages").default(false)
+    val pagedReaderAutoDirection = bool("paged_reader_auto_direction").default(true)
 
     override val primaryKey = PrimaryKey(bookId)
 }

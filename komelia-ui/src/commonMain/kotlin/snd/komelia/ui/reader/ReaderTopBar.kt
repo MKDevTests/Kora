@@ -48,7 +48,7 @@ import snd.komelia.utils.removeParentheses
 @Composable
 fun ReaderTopBar(
     seriesTitle: String,
-    bookTitle: String,
+    bookNumber: Int,
     onBack: () -> Unit,
     seriesBookCount: Int? = null,
     upscaleActivities: Map<Int, UpscaleStatus> = emptyMap(),
@@ -61,8 +61,10 @@ fun ReaderTopBar(
 
     val hideParentheses = LocalHideParenthesesInNames.current
     val finalSeriesTitle = if (hideParentheses) seriesTitle.removeParentheses() else seriesTitle
-    val baseBookTitle = if (hideParentheses) bookTitle.removeParentheses() else bookTitle
-    val finalBookTitle = if (seriesBookCount != null && seriesBookCount > 0) "$baseBookTitle/$seriesBookCount" else baseBookTitle
+    val finalBookTitle = if (seriesBookCount != null && seriesBookCount > 0)
+        "$bookNumber/$seriesBookCount"
+    else
+        "$bookNumber"
 
     val lockScreenRotation = LocalLockScreenRotation.current
     val onLockScreenRotationChange = LocalOnLockScreenRotationChange.current

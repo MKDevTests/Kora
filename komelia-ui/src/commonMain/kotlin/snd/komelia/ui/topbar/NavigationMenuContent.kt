@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -105,7 +106,9 @@ fun LibrariesNavBarContent(
     onLibrariesClick: () -> Unit,
     onLibraryClick: (KomgaLibraryId) -> Unit,
 ) {
-    Surface(Modifier.width(230.dp)) {
+    // Caller-provided modifier (e.g. status-bar top padding) is applied to
+    // the Surface so the drawer content sits below the system status bar.
+    Surface(modifier.width(230.dp)) {
         val scrollState: ScrollState = rememberScrollState()
         Column(
             modifier = Modifier
@@ -217,6 +220,7 @@ private fun NavMenu(
         modifier = Modifier
             .fillMaxSize()
             .hoverable(navBarInteractionSource)
+            .statusBarsPadding()
     ) {
         Column(modifier = Modifier.verticalScroll(scrollState)) {
 

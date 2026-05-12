@@ -33,6 +33,9 @@ fun ImageReaderSettingsContent(
     imageCacheSizeLimitMb: Long,
     onImageCacheSizeLimitMbChange: (Long) -> Unit,
 
+    pagedReaderAutoDirection: Boolean,
+    onPagedReaderAutoDirectionChange: (Boolean) -> Unit,
+
     onCacheClear: () -> Unit,
     onnxRuntimeSettingsState: OnnxRuntimeSettingsState,
     ncnnSettingsState: NcnnSettingsState,
@@ -65,6 +68,13 @@ fun ImageReaderSettingsContent(
                 label = { Text("Keep screen on while reading") },
             )
         }
+
+        SwitchWithLabel(
+            checked = pagedReaderAutoDirection,
+            onCheckedChange = onPagedReaderAutoDirectionChange,
+            label = { Text("Auto-detect reading direction") },
+            supportingText = { Text("Use series metadata; per-series changes are saved back to the server") },
+        )
 
         FilledTonalButton(
             onClick = onCacheClear,

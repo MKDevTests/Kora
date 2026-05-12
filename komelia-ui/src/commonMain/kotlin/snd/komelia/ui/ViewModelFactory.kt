@@ -283,6 +283,7 @@ class ViewModelFactory(
             bookSiblingsContext = bookSiblingsContext,
             markReadProgress = markReadProgress,
             onBookChange = dependencies.onBookChange,
+            seriesReaderOverridesRepository = appRepositories.seriesReaderOverridesRepository,
         )
     }
 

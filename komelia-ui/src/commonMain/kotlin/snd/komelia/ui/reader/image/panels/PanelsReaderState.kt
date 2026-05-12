@@ -74,6 +74,7 @@ class PanelsReaderState(
     private val pageChangeFlow: MutableSharedFlow<Unit>,
     private val onnxRuntimeRfDetr: KomeliaPanelDetector,
     val screenScaleState: ScreenScaleState,
+    private val seriesReaderOverridesRepository: snd.komelia.reader.SeriesReaderOverridesRepository,
 ) {
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -105,14 +106,28 @@ class PanelsReaderState(
     val fullPageDisplayMode = MutableStateFlow(PanelsFullPageDisplayMode.NONE)
     val tapToZoom = MutableStateFlow(true)
     val adaptiveBackground = MutableStateFlow(false)
+    val autoDirection = MutableStateFlow(true)
 
     val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
 
     suspend fun initialize() {
-        readingDirection.value = when (readerState.series.value?.metadata?.readingDirection) {
-            KomgaReadingDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
-            KomgaReadingDirection.RIGHT_TO_LEFT -> RIGHT_TO_LEFT
-            else -> settingsRepository.getPagedReaderReadingDirection().first()
+        autoDirection.value = settingsRepository.getPagedReaderAutoDirection().first()
+        readingDirection.value = if (autoDirection.value) {
+            val currentSeries = readerState.series.value
+            val fromMetadata = when (currentSeries?.metadata?.readingDirection) {
+                KomgaReadingDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
+                KomgaReadingDirection.RIGHT_TO_LEFT -> RIGHT_TO_LEFT
+                else -> null
+            }
+            fromMetadata
+                ?: currentSeries?.id?.let { id ->
+                    seriesReaderOverridesRepository.getReadingDirection(id)?.let {
+                        runCatching { PagedReadingDirection.valueOf(it) }.getOrNull()
+                    }
+                }
+                ?: settingsRepository.getPagedReaderReadingDirection().first()
+        } else {
+            settingsRepository.getPagedReaderReadingDirection().first()
         }
         fullPageDisplayMode.value = settingsRepository.getPanelsFullPageDisplayMode().first()
         tapToZoom.value = settingsRepository.getPanelReaderTapToZoom().first()
@@ -271,7 +286,21 @@ class PanelsReaderState(
 
     fun onReadingDirectionChange(readingDirection: PagedReadingDirection) {
         this.readingDirection.value = readingDirection
-        stateScope.launch { settingsRepository.putPagedReaderReadingDirection(readingDirection) }
+        stateScope.launch {
+            if (autoDirection.value) {
+                readerState.series.value?.id?.let { seriesId ->
+                    seriesReaderOverridesRepository.putReadingDirection(seriesId, readingDirection.name)
+                }
+                settingsRepository.putPagedReaderReadingDirection(readingDirection)
+            } else {
+                settingsRepository.putPagedReaderReadingDirection(readingDirection)
+            }
+        }
+    }
+
+    fun onAutoDirectionChange(enabled: Boolean) {
+        this.autoDirection.value = enabled
+        stateScope.launch { settingsRepository.putPagedReaderAutoDirection(enabled) }
     }
 
     fun onFullPageDisplayModeChange(mode: PanelsFullPageDisplayMode) {

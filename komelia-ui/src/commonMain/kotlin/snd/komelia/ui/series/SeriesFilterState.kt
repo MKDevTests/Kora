@@ -51,6 +51,10 @@ data class SeriesFilter(
     val languages: List<String> = emptyList(),
     val complete: Completion = Completion.ANY,
     val oneshot: Format = Format.ANY,
+    // Single-letter prefix filter (A-Z, "#" for digit-starting titles, null = no filter).
+    // Server-side via SeriesConditionBuilder.titleSort { beginsWith(letter) } — fast
+    // and accurate; uses Komga's indexed titleSort column.
+    val letterFilter: String? = null,
 ) {
 
     companion object {
@@ -58,6 +62,19 @@ data class SeriesFilter(
     }
 
     fun addConditionTo(builder: SeriesConditionBuilder) {
+        // Letter filter: narrow to series whose titleSort starts with a given
+        // letter (or any digit for "#"). titleSort is Komga's indexed
+        // sort-friendly title column, so the lookup is fast and case-correct.
+        when (val letter = letterFilter) {
+            null -> {}
+            "#" -> builder.anyOf {
+                ('0'..'9').forEach { d ->
+                    titleSort { beginsWith(d.toString()) }
+                }
+            }
+            else -> builder.titleSort { beginsWith(letter) }
+        }
+
         if (publicationStatus.isNotEmpty()) {
             builder.anyOf {
                 publicationStatus.forEach { seriesStatus { isEqualTo(it) } }
@@ -232,6 +249,11 @@ class SeriesFilterState(
 
     fun onSearchTermChange(searchTerm: String) {
         mutableFilterState.update { current -> current.copy(searchTerm = searchTerm) }
+        checkIfAllDefault()
+    }
+
+    fun onLetterFilterChange(letter: String?) {
+        mutableFilterState.update { current -> current.copy(letterFilter = letter) }
         checkIfAllDefault()
     }
 

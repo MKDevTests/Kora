@@ -7,6 +7,7 @@ import snd.komelia.fonts.UserFontsRepository
 import snd.komelia.homefilters.HomeScreenFilterRepository
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
 import snd.komelia.offline.OfflineModule
+import snd.komelia.reader.SeriesReaderOverridesRepository
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.EpubReaderSettingsRepository
 import snd.komelia.settings.ImageReaderSettingsRepository
@@ -41,4 +42,5 @@ data class AppRepositories(
     val homeScreenFilterRepository: HomeScreenFilterRepository,
     val librarySeriesFiltersRepository: LibrarySeriesFiltersRepository,
     val transcriptionSettingsRepository: TranscriptionSettingsRepository,
+    val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
 )

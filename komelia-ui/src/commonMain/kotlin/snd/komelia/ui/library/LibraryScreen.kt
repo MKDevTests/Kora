@@ -357,6 +357,17 @@ class LibraryScreen(
             onDispose { seriesTabState.stopKomgaEventHandler() }
         }
 
+        val currentLetter = seriesTabState.filterState.state.collectAsState().value.letterFilter
+        val combinedBeforeContent: @Composable () -> Unit = {
+            Column {
+                beforeContent()
+                LetterFilterBar(
+                    selected = currentLetter,
+                    onLetterClick = seriesTabState.filterState::onLetterFilterChange,
+                )
+            }
+        }
+
         when (val state = seriesTabState.state.collectAsState().value) {
             is Error -> ErrorContent(
                 message = state.exception.message ?: "Unknown Error",
@@ -388,7 +399,7 @@ class LibraryScreen(
                     onPageChange = seriesTabState::onPageChange,
 
                     minSize = seriesTabState.cardWidth.collectAsState().value,
-                    beforeContent = beforeContent
+                    beforeContent = combinedBeforeContent
                 )
             }
         }

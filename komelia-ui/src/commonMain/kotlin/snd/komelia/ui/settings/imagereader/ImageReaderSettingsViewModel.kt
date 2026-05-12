@@ -71,6 +71,7 @@ class ImageReaderSettingsViewModel(
     val volumeKeysNavigation = MutableStateFlow(false)
     val keepReaderScreenOn = MutableStateFlow(false)
     val imageCacheSizeLimitMb = MutableStateFlow(1024L)
+    val pagedReaderAutoDirection = MutableStateFlow(true)
     val availableUpsamplingModes = availableUpsamplingModes()
     val availableDownsamplingKernels = availableReduceKernels()
 
@@ -84,6 +85,7 @@ class ImageReaderSettingsViewModel(
         volumeKeysNavigation.value = settingsRepository.getVolumeKeysNavigation().first()
         keepReaderScreenOn.value = commonSettingsRepository.getKeepReaderScreenOn().first()
         imageCacheSizeLimitMb.value = settingsRepository.getImageCacheSizeLimitMb().first()
+        pagedReaderAutoDirection.value = settingsRepository.getPagedReaderAutoDirection().first()
         onnxRuntimeSettingsState.initialize()
         ncnnSettingsState.initialize()
         rapidOcrSettingsState.initialize()
@@ -122,6 +124,11 @@ class ImageReaderSettingsViewModel(
     fun onImageCacheSizeLimitMbChange(size: Long) {
         imageCacheSizeLimitMb.value = size
         screenModelScope.launch { settingsRepository.putImageCacheSizeLimitMb(size) }
+    }
+
+    fun onPagedReaderAutoDirectionChange(enabled: Boolean) {
+        pagedReaderAutoDirection.value = enabled
+        screenModelScope.launch { settingsRepository.putPagedReaderAutoDirection(enabled) }
     }
 
     fun onClearImageCache() {

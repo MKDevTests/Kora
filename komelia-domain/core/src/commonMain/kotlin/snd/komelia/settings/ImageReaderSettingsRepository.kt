@@ -118,4 +118,7 @@ interface ImageReaderSettingsRepository {
 
     fun getPagedReaderSplitDoublePages(): Flow<Boolean>
     suspend fun putPagedReaderSplitDoublePages(enabled: Boolean)
+
+    fun getPagedReaderAutoDirection(): Flow<Boolean>
+    suspend fun putPagedReaderAutoDirection(enabled: Boolean)
 }

@@ -28,6 +28,9 @@ class ImageReaderSettingsScreen : Screen {
                 imageCacheSizeLimitMb = vm.imageCacheSizeLimitMb.collectAsState().value,
                 onImageCacheSizeLimitMbChange = vm::onImageCacheSizeLimitMbChange,
 
+                pagedReaderAutoDirection = vm.pagedReaderAutoDirection.collectAsState().value,
+                onPagedReaderAutoDirectionChange = vm::onPagedReaderAutoDirectionChange,
+
                 onCacheClear = vm::onClearImageCache,
                 onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
                 ncnnSettingsState = vm.ncnnSettingsState,

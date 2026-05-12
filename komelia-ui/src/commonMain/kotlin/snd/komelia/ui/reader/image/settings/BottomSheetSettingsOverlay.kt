@@ -539,6 +539,7 @@ private fun PagedModeSettings(
     val tapToZoom = pageState.tapToZoom.collectAsState().value
     val adaptiveBackground = pageState.adaptiveBackground.collectAsState().value
     val splitDoublePages = pageState.splitDoublePages.collectAsState().value
+    val autoDirection = pageState.autoDirection.collectAsState().value
     Column {
 
         Text(strings.scaleType)
@@ -589,6 +590,12 @@ private fun PagedModeSettings(
                 label = { Text(strings.forReadingDirection(PagedReadingDirection.LEFT_TO_RIGHT)) }
             )
         }
+        SwitchWithLabel(
+            checked = autoDirection,
+            onCheckedChange = pageState::onAutoDirectionChange,
+            label = { Text("Auto-detect direction (use series metadata)") },
+            contentPadding = PaddingValues(horizontal = 10.dp),
+        )
 
         val layout = pageState.layout.collectAsState().value
         Text(strings.layout)

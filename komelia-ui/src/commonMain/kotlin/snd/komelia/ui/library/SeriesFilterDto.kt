@@ -32,6 +32,7 @@ data class SeriesFilterDto(
     val languages: List<String> = emptyList(),
     val complete: SeriesFilterState.Completion = SeriesFilterState.Completion.ANY,
     val oneshot: SeriesFilterState.Format = SeriesFilterState.Format.ANY,
+    val letterFilter: String? = null,
 ) {
     fun toDomain(): SeriesFilter = SeriesFilter(
         isChanged = true,
@@ -52,6 +53,7 @@ data class SeriesFilterDto(
         languages = languages,
         complete = complete,
         oneshot = oneshot,
+        letterFilter = letterFilter,
     )
 
     companion object {
@@ -73,6 +75,7 @@ data class SeriesFilterDto(
             languages = filter.languages,
             complete = filter.complete,
             oneshot = filter.oneshot,
+            letterFilter = filter.letterFilter,
         )
     }
 }

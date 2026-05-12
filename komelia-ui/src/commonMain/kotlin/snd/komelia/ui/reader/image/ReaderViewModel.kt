@@ -32,6 +32,7 @@ import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaReadListApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.onnxruntime.OnnxRuntime
+import snd.komelia.reader.SeriesReaderOverridesRepository
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.image.ReadingDirection
@@ -84,6 +85,7 @@ class ReaderViewModel(
     private val ocrService: snd.komelia.image.OcrService,
     val colorCorrectionIsActive: Flow<Boolean>,
     onBookChange: () -> Unit = {},
+    private val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
 ) : ScreenModel {
     val screenScaleState = ScreenScaleState()
     private val pageChangeFlow = MutableSharedFlow<Unit>(
@@ -143,6 +145,7 @@ class ReaderViewModel(
         pageChangeFlow = pageChangeFlow,
         screenScaleState = screenScaleState,
         onBookChange = onBookChange,
+        seriesReaderOverridesRepository = seriesReaderOverridesRepository,
     )
     val panelsReaderState = panelDetector?.let { panelDetector ->
         if (!panelDetector.isAvailable.value) null
@@ -156,7 +159,8 @@ class ReaderViewModel(
                 appStrings = appStrings,
                 pageChangeFlow = pageChangeFlow,
                 screenScaleState = screenScaleState,
-                onnxRuntimeRfDetr = panelDetector
+                onnxRuntimeRfDetr = panelDetector,
+                seriesReaderOverridesRepository = seriesReaderOverridesRepository,
             )
     }
     val continuousReaderState = ContinuousReaderState(

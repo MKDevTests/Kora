@@ -231,6 +231,8 @@ class LibrarySeriesTabState(
             filter.addConditionTo(this)
         }
 
+        // Letter filter is applied by SeriesFilter.addConditionTo above
+        // via titleSort.beginsWith — accurate, indexed, server-side.
         return seriesApi.getSeriesList(
             conditionBuilder = condition,
             fulltextSearch = filter.searchTerm.ifBlank { null },

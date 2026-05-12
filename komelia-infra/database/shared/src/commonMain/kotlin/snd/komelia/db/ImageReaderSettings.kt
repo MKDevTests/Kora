@@ -57,6 +57,7 @@ data class ImageReaderSettings(
     val rapidOcrModelsUrl: String = RAPID_OCR_MODELS_DEFAULT_URL,
     val imageCacheSizeLimitMb: Long = 1024L,
     val pagedSplitDoublePages: Boolean = false,
+    val pagedReaderAutoDirection: Boolean = true,
 ) {
     companion object {
         const val PANEL_DETECTION_DEFAULT_ORIGINAL_URL =

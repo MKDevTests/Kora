@@ -214,6 +214,7 @@ class DesktopAppModule(
                     )
                 )
             },
+            seriesReaderOverridesRepository = snd.komelia.db.reader.ExposedSeriesReaderOverridesRepository(databases.app),
         )
     }
 

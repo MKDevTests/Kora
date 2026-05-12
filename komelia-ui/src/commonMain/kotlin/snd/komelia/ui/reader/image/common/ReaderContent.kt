@@ -362,7 +362,7 @@ fun ReaderContent(
                     val allUpscaleActivities by ncnnSettingsState.globalUpscaleActivities.collectAsState()
                     ReaderTopBar(
                         seriesTitle = book?.seriesTitle ?: "",
-                        bookTitle = book?.metadata?.title ?: "",
+                        bookNumber = book?.number ?: 0,
                         seriesBookCount = totalBooks,
                         onBack = onExit,
                         upscaleActivities = allUpscaleActivities,

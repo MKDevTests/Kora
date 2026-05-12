@@ -294,4 +294,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putPagedReaderSplitDoublePages(enabled: Boolean) {
         wrapper.transform { it.copy(pagedSplitDoublePages = enabled) }
     }
+
+    override fun getPagedReaderAutoDirection(): Flow<Boolean> {
+        return wrapper.mapState { it.pagedReaderAutoDirection }
+    }
+
+    override suspend fun putPagedReaderAutoDirection(enabled: Boolean) {
+        wrapper.transform { it.copy(pagedReaderAutoDirection = enabled) }
+    }
 }

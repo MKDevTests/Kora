@@ -69,6 +69,7 @@ class PagedReaderState(
     private val pageChangeFlow: MutableSharedFlow<Unit>,
     val screenScaleState: ScreenScaleState,
     private val onBookChange: () -> Unit = {},
+    private val seriesReaderOverridesRepository: snd.komelia.reader.SeriesReaderOverridesRepository,
 ) {
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -102,16 +103,33 @@ class PagedReaderState(
     val tapToZoom = MutableStateFlow(true)
     val adaptiveBackground = MutableStateFlow(false)
     val splitDoublePages = MutableStateFlow(false)
+    val autoDirection = MutableStateFlow(true)
 
     val pageNavigationEvents = MutableSharedFlow<PageNavigationEvent>(extraBufferCapacity = 1)
 
     suspend fun initialize() {
         layout.value = settingsRepository.getPagedReaderDisplayLayout().first()
         scaleType.value = settingsRepository.getPagedReaderScaleType().first()
-        readingDirection.value = when (readerState.series.value?.metadata?.readingDirection) {
-            KomgaReadingDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
-            KomgaReadingDirection.RIGHT_TO_LEFT -> RIGHT_TO_LEFT
-            else -> settingsRepository.getPagedReaderReadingDirection().first()
+        autoDirection.value = settingsRepository.getPagedReaderAutoDirection().first()
+        readingDirection.value = if (autoDirection.value) {
+            // Auto resolution chain: server metadata → local per-series override
+            //   → global user setting (= history) → LTR (data class default).
+            val currentSeries = readerState.series.value
+            val fromMetadata = when (currentSeries?.metadata?.readingDirection) {
+                KomgaReadingDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
+                KomgaReadingDirection.RIGHT_TO_LEFT -> RIGHT_TO_LEFT
+                else -> null
+            }
+            fromMetadata
+                ?: currentSeries?.id?.let { id ->
+                    seriesReaderOverridesRepository.getReadingDirection(id)?.let {
+                        runCatching { PagedReadingDirection.valueOf(it) }.getOrNull()
+                    }
+                }
+                ?: settingsRepository.getPagedReaderReadingDirection().first()
+        } else {
+            // Manual: use the user's global setting only.
+            settingsRepository.getPagedReaderReadingDirection().first()
         }
         tapToZoom.value = settingsRepository.getPagedReaderTapToZoom().first()
         adaptiveBackground.value = settingsRepository.getPagedReaderAdaptiveBackground().first()
@@ -654,13 +672,31 @@ class PagedReaderState(
     fun onReadingDirectionChange(readingDirection: PagedReadingDirection) {
         this.readingDirection.value = readingDirection
         screenScaleState.setScrollOrientation(Orientation.Horizontal, readingDirection == RIGHT_TO_LEFT)
-        stateScope.launch { settingsRepository.putPagedReaderReadingDirection(readingDirection) }
+        stateScope.launch {
+            if (autoDirection.value) {
+                // Auto ON: save per-series locally so the choice survives reopens
+                // of the same series, AND update the global setting so unknown
+                // series get this as the new default. Never touches the server.
+                readerState.series.value?.id?.let { seriesId ->
+                    seriesReaderOverridesRepository.putReadingDirection(seriesId, readingDirection.name)
+                }
+                settingsRepository.putPagedReaderReadingDirection(readingDirection)
+            } else {
+                // Auto OFF: only the global setting tracks the choice.
+                settingsRepository.putPagedReaderReadingDirection(readingDirection)
+            }
+        }
 
         // If split landscape pages is on, the LEFT/RIGHT order depends on
         // reading direction, so the spread map must be rebuilt.
         if (splitDoublePages.value && layout.value == SINGLE_PAGE) {
             rebuildSpreadsKeepingPosition()
         }
+    }
+
+    fun onAutoDirectionChange(enabled: Boolean) {
+        this.autoDirection.value = enabled
+        stateScope.launch { settingsRepository.putPagedReaderAutoDirection(enabled) }
     }
 
     fun onTapToZoomChange(enabled: Boolean) {

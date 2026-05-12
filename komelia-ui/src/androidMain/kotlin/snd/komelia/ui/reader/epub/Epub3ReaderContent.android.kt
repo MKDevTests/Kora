@@ -253,7 +253,7 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                         val book by epub3State.book.collectAsState()
                         ReaderTopBar(
                             seriesTitle = book?.seriesTitle ?: "",
-                            bookTitle = book?.metadata?.title ?: "",
+                            bookNumber = book?.number ?: 0,
                             onBack = { epub3State.closeWebview() },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )

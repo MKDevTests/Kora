@@ -459,6 +459,13 @@ private fun ColumnScope.PagedReaderSettingsContent(
         val tapToZoom = pageState.tapToZoom.collectAsState().value
         val adaptiveBackground = pageState.adaptiveBackground.collectAsState().value
         val splitDoublePages = pageState.splitDoublePages.collectAsState().value
+        val autoDirection = pageState.autoDirection.collectAsState().value
+        SwitchWithLabel(
+            checked = autoDirection,
+            onCheckedChange = pageState::onAutoDirectionChange,
+            label = { Text("Auto-detect direction (use series metadata)") },
+            contentPadding = PaddingValues(horizontal = 10.dp)
+        )
         SwitchWithLabel(
             checked = tapToZoom,
             onCheckedChange = pageState::onTapToZoomChange,
