@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.komga.api.model.KomeliaBook
+import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
 import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.common.KomgaPageRequest
@@ -35,7 +37,16 @@ class SearchViewModel(
     private val bookApi: KomgaBookApi,
     private val appNotifications: AppNotifications,
     private val libraries: StateFlow<List<KomgaLibrary>>,
+    private val settingsRepository: CommonSettingsRepository,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
+
+    /**
+     * Whether to append Lucene fuzzy syntax (~1) to query terms. Loaded from
+     * settings in [initialize], persisted via [onFuzzyEnabledChange]. Drives
+     * the [toFuzzyQuery] transform and the search bar's "≈ Fuzzy" chip.
+     */
+    var fuzzyEnabled by mutableStateOf(true)
+        private set
 
     var seriesResults by mutableStateOf<List<KomgaSeries>>(emptyList())
         private set
@@ -63,6 +74,15 @@ class SearchViewModel(
         reload()
     }
 
+    fun onFuzzyEnabledChange(enabled: Boolean) {
+        if (fuzzyEnabled == enabled) return
+        fuzzyEnabled = enabled
+        screenModelScope.launch {
+            settingsRepository.putSearchFuzzyEnabled(enabled)
+        }
+        reload()
+    }
+
     private var userSelectedTab by mutableStateOf(SearchResultsTab.SERIES)
     var currentTab by mutableStateOf(SearchResultsTab.SERIES)
         private set
@@ -70,6 +90,7 @@ class SearchViewModel(
     suspend fun initialize(initialQuery: String?) {
         if (state.value != LoadState.Uninitialized && initialQuery == query) return
         mutableState.value = LoadState.Loading
+        fuzzyEnabled = settingsRepository.getSearchFuzzyEnabled().first()
         initialQuery?.let { query = it }
         loadSearchResults()
 
@@ -115,13 +136,14 @@ class SearchViewModel(
     private suspend fun loadSeriesPage(pageNumber: Int) {
         appNotifications.runCatchingToNotifications {
             val libId = selectedLibraryId
+            val fuzzy = query.toFuzzyQuery()
             val search = if (libId != null) {
                 KomgaSeriesSearch(
                     condition = allOfSeries { library { isEqualTo(libId) } }.toSeriesCondition(),
-                    fullTextSearch = query,
+                    fullTextSearch = fuzzy,
                 )
             } else {
-                KomgaSeriesSearch(fullTextSearch = query)
+                KomgaSeriesSearch(fullTextSearch = fuzzy)
             }
             val page = seriesApi.getSeriesList(
                 search,
@@ -149,13 +171,14 @@ class SearchViewModel(
     private suspend fun loadBooksPage(pageNumber: Int) {
         appNotifications.runCatchingToNotifications {
             val libId = selectedLibraryId
+            val fuzzy = query.toFuzzyQuery()
             val search = if (libId != null) {
                 KomgaBookSearch(
                     condition = allOfBooks { library { isEqualTo(libId) } }.toBookCondition(),
-                    fullTextSearch = query,
+                    fullTextSearch = fuzzy,
                 )
             } else {
-                KomgaBookSearch(fullTextSearch = query)
+                KomgaBookSearch(fullTextSearch = fuzzy)
             }
             val page = bookApi.getBookList(
                 search,
@@ -180,6 +203,34 @@ class SearchViewModel(
     enum class SearchResultsTab {
         SERIES,
         BOOKS,
+    }
+
+    /**
+     * Append Lucene fuzzy syntax (~1 = Levenshtein distance 1) to each query
+     * term long enough to tolerate a typo without producing noise. Lets
+     * "narito" match "Naruto", "darogon" match "dragon", etc.
+     *
+     * Komga backs full-text search with Lucene (Hibernate Search 6), which
+     * understands ~N natively, so the fuzziness is evaluated server-side and
+     * doesn't widen what we have to fetch.
+     *
+     * Conservative rules to avoid degrading "exact" searches:
+     *  - Empty / blank query → returned as-is (Komga interprets as "list all").
+     *  - Already contains Lucene operators (~, ^, *, ?, quotes, +/-, : etc.)
+     *    → assume the user knows what they're typing and pass through.
+     *  - Terms shorter than 4 chars → no fuzziness (a 3-char ~1 matches
+     *    almost everything and slows Komga down).
+     */
+    private fun String.toFuzzyQuery(): String {
+        if (!fuzzyEnabled) return this
+        val trimmed = trim()
+        if (trimmed.isEmpty()) return trimmed
+        if (trimmed.any { it in "\"+-*?~^()[]{}:\\/" }) return trimmed
+        return trimmed
+            .split(Regex("\\s+"))
+            .joinToString(" ") { term ->
+                if (term.length >= 4) "$term~1" else term
+            }
     }
 }
 

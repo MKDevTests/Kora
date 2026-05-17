@@ -250,4 +250,11 @@ class SettingsRepositoryWrapper(
     override suspend fun putLastHighlightColor(color: Int) {
         wrapper.transform { it.copy(lastHighlightColor = color) }
     }
+
+    override fun getSearchFuzzyEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.searchFuzzyEnabled }.distinctUntilChanged()
+
+    override suspend fun putSearchFuzzyEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(searchFuzzyEnabled = enabled) }
+    }
 }

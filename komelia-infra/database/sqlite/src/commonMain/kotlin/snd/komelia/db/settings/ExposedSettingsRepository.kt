@@ -60,6 +60,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[cardCornerRadius] = settings.cardCornerRadius
                 it[useFloatingNavigationBar] = settings.useFloatingNavigationBar
                 it[lastHighlightColor] = settings.lastHighlightColor
+                it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
             }
         }
     }
@@ -103,6 +104,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             cardCornerRadius = get(AppSettingsTable.cardCornerRadius),
             useFloatingNavigationBar = get(AppSettingsTable.useFloatingNavigationBar),
             lastHighlightColor = get(AppSettingsTable.lastHighlightColor),
+            searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
         )
     }
 }

@@ -65,6 +65,11 @@ class AppMigrations : MigrationResourcesProvider() {
         "V56__paged_auto_skip_blank_pages.sql",
         "V57__paged_auto_detect_webtoon.sql",
         "V58__continuous_reader_stop_at_end.sql",
+        // V59 was burned by an abandoned feat/webtoon-snap-panels branch that
+        // some users installed for testing. Their Flyway schema_history has
+        // V59 with a different checksum, so reusing it here would crash on
+        // startup with FlywayValidateException. Skip V59 forever.
+        "V60__search_fuzzy_enabled.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

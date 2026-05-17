@@ -106,4 +106,7 @@ interface CommonSettingsRepository {
 
     fun getLastHighlightColor(): Flow<Int>
     suspend fun putLastHighlightColor(color: Int)
+
+    fun getSearchFuzzyEnabled(): Flow<Boolean>
+    suspend fun putSearchFuzzyEnabled(enabled: Boolean)
 }

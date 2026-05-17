@@ -349,14 +349,27 @@ fun BottomSheetSettingsOverlay(
                     onReturnBook = onBackPress,
                     onReturnSeries = {
                         book?.let {
-                            ReaderNavigationIntent.pending.value = ReaderExitDestination.Series(it.seriesId)
-                            onBackPress()
+                            // Push current progress synchronously before
+                            // navigating: the navigation intent makes the
+                            // SeriesScreen fetch its data immediately and
+                            // would race the async dispose flush, leaving
+                            // the user staring at stale progress.
+                            coroutineScope.launch {
+                                commonReaderState.flushProgressNow()
+                                ReaderNavigationIntent.pending.value =
+                                    ReaderExitDestination.Series(it.seriesId)
+                                onBackPress()
+                            }
                         }
                     },
                     onReturnLibrary = {
                         book?.let {
-                            ReaderNavigationIntent.pending.value = ReaderExitDestination.Library(it.libraryId)
-                            onBackPress()
+                            coroutineScope.launch {
+                                commonReaderState.flushProgressNow()
+                                ReaderNavigationIntent.pending.value =
+                                    ReaderExitDestination.Library(it.libraryId)
+                                onBackPress()
+                            }
                         }
                     },
                 )

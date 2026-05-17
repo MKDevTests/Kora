@@ -716,6 +716,25 @@ class ReaderState(
         previewLoadScope.cancel()
     }
 
+    /**
+     * Synchronously push the current read-progress to Komga and wait for the
+     * server to acknowledge it before returning. Used by the in-reader
+     * "return to series" / "return to library" exit buttons: those buttons
+     * post a navigation intent that causes the SeriesScreen / LibraryScreen
+     * to be pushed immediately on the inner navigator while the reader pops
+     * on the outer one. The destination screen then fetches its data from
+     * Komga; without an awaited push, the fetch races the async flush from
+     * onDispose and frequently wins, showing stale progress.
+     *
+     * Safe to call multiple times — it's just an HTTP PUT with the current
+     * page; idempotent on the server side.
+     */
+    suspend fun flushProgressNow() {
+        if (!markReadProgress) return
+        if (booksState.value == null) return
+        runCatching { updateCacheAndPush() }
+    }
+
     private suspend fun initialSync() {
         val currentBook = booksState.value?.currentBook ?: return
         val r2Prog = bookApi.getReadiumProgression(currentBook.id)

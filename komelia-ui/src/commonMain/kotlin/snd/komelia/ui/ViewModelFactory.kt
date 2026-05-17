@@ -413,6 +413,7 @@ class ViewModelFactory(
         bookApi = komgaApi.bookApi,
         appNotifications = dependencies.appNotifications,
         libraries = dependencies.komgaSharedState.libraries,
+        settingsRepository = appRepositories.settingsRepository,
     )
 
 

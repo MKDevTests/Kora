@@ -73,6 +73,8 @@ class SearchScreen(
                                     libraries = libraries,
                                     selectedLibraryId = vm.selectedLibraryId,
                                     onSelectedLibraryChange = vm::onSelectedLibraryChange,
+                                    fuzzyEnabled = vm.fuzzyEnabled,
+                                    onFuzzyEnabledChange = vm::onFuzzyEnabledChange,
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
                                     when (state) {
@@ -117,6 +119,8 @@ class SearchScreen(
                     libraries = libraries,
                     selectedLibraryId = vm.selectedLibraryId,
                     onSelectedLibraryChange = vm::onSelectedLibraryChange,
+                    fuzzyEnabled = vm.fuzzyEnabled,
+                    onFuzzyEnabledChange = vm::onFuzzyEnabledChange,
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     when (state) {

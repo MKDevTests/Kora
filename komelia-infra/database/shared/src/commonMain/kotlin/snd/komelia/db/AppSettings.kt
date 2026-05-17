@@ -45,4 +45,10 @@ data class AppSettings(
     val useFloatingNavigationBar: Boolean = false,
     /** Null means use default yellow (0xFFFFEB3B.toInt()). */
     val lastHighlightColor: Int? = null,
+    /**
+     * When true the global search bar appends Lucene fuzzy syntax (~1) to
+     * query terms ≥ 4 chars so typos are tolerated. User-toggleable in the
+     * search screen.
+     */
+    val searchFuzzyEnabled: Boolean = true,
 )

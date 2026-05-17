@@ -86,6 +86,8 @@ fun SearchBarWithResults(
     libraries: List<KomgaLibrary> = emptyList(),
     selectedLibraryId: KomgaLibraryId? = null,
     onSelectedLibraryChange: (KomgaLibraryId?) -> Unit = {},
+    fuzzyEnabled: Boolean = true,
+    onFuzzyEnabledChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -129,12 +131,12 @@ fun SearchBarWithResults(
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
 
-        if (libraries.size > 1) {
-            androidx.compose.foundation.lazy.LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        androidx.compose.foundation.lazy.LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (libraries.size > 1) {
                 item {
                     androidx.compose.material3.FilterChip(
                         selected = selectedLibraryId == null,
@@ -150,6 +152,16 @@ fun SearchBarWithResults(
                         label = { Text(lib.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     )
                 }
+            }
+            // Fuzzy-search toggle. Kept in the same row as the library filters
+            // because it's a "search modifier" too — the user is unlikely to
+            // toggle it often enough to deserve a separate UI surface.
+            item {
+                androidx.compose.material3.FilterChip(
+                    selected = fuzzyEnabled,
+                    onClick = { onFuzzyEnabledChange(!fuzzyEnabled) },
+                    label = { Text("≈ Fuzzy") },
+                )
             }
         }
 
