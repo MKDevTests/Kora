@@ -207,30 +207,33 @@ class SearchViewModel(
 
     /**
      * Append Lucene fuzzy syntax (~1 = Levenshtein distance 1) to each query
-     * term long enough to tolerate a typo without producing noise. Lets
-     * "narito" match "Naruto", "darogon" match "dragon", etc.
+     * term so typos are tolerated. Lets "narito" match "Naruto", "darogon"
+     * match "dragon", etc.
      *
-     * Komga backs full-text search with Lucene (Hibernate Search 6), which
-     * understands ~N natively, so the fuzziness is evaluated server-side and
-     * doesn't widen what we have to fetch.
+     * Komga's full-text search is Lucene-backed (Hibernate Search 6), so the
+     * fuzziness is evaluated server-side and doesn't widen what we fetch.
      *
-     * Conservative rules to avoid degrading "exact" searches:
-     *  - Empty / blank query → returned as-is (Komga interprets as "list all").
-     *  - Already contains Lucene operators (~, ^, *, ?, quotes, +/-, : etc.)
-     *    → assume the user knows what they're typing and pass through.
-     *  - Terms shorter than 4 chars → no fuzziness (a 3-char ~1 matches
-     *    almost everything and slows Komga down).
+     * Pass-through (raw query, no fuzzy syntax) when:
+     *  - Empty / blank.
+     *  - The query already contains Lucene operators (~, ^, *, ?, quotes,
+     *    +/-, : etc.) — assume the user knows what they're typing.
+     *  - ANY term is shorter than 4 characters. Komga relies on its own
+     *    prefix-expansion magic for short / partial terms (e.g. "star w"
+     *    matches "Star Wars" because "w" is treated as a prefix of "wars"),
+     *    but mixing Lucene ~N syntax with that magic disables it: "star~1 w"
+     *    finds nothing because Komga now treats "w" as an exact term. Drop
+     *    fuzziness entirely whenever the query has any short term — the
+     *    user is likely mid-typing or using a known abbreviation and exact
+     *    prefix is what they want.
      */
     private fun String.toFuzzyQuery(): String {
         if (!fuzzyEnabled) return this
         val trimmed = trim()
         if (trimmed.isEmpty()) return trimmed
         if (trimmed.any { it in "\"+-*?~^()[]{}:\\/" }) return trimmed
-        return trimmed
-            .split(Regex("\\s+"))
-            .joinToString(" ") { term ->
-                if (term.length >= 4) "$term~1" else term
-            }
+        val terms = trimmed.split(Regex("\\s+"))
+        if (terms.any { it.length < 4 }) return trimmed
+        return terms.joinToString(" ") { "$it~1" }
     }
 }
 
