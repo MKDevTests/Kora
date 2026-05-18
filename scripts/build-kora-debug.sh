@@ -70,15 +70,35 @@ if grep -qi microsoft /proc/version 2>/dev/null; then
 fi
 
 if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
-    if "$ADB" get-state >/dev/null 2>&1; then
-        echo "==> Installing on connected device"
-        "$ADB" install -r "$APK"
-        echo "==> Done. Launch with:"
-        echo "    adb shell monkey -p io.github.mkdevtests.kora.debug -c android.intent.category.LAUNCHER 1"
-    else
-        echo "No device connected. Install manually with:"
-        echo "    adb install -r $APK"
-    fi
+    # Wake the (Windows) adb server. In WSL the first call from a fresh
+    # shell often races the daemon and reports "no device" even when one
+    # is plugged in. start-server is idempotent.
+    "$ADB" start-server >/dev/null 2>&1 || true
+
+    # Parse `adb devices` so we can tell apart "no device", "offline",
+    # and "unauthorized" (plugged in but the user hasn't tapped Allow).
+    STATE="$("$ADB" devices 2>/dev/null | awk 'NR>1 && NF>=2 {print $2; exit}')"
+    case "$STATE" in
+        device)
+            echo "==> Installing on connected device"
+            "$ADB" install -r "$APK"
+            echo "==> Done. Launch with:"
+            echo "    adb shell monkey -p io.github.mkdevtests.kora.debug -c android.intent.category.LAUNCHER 1"
+            ;;
+        unauthorized)
+            echo "Device is plugged in but unauthorized." >&2
+            echo "  Tap 'Allow USB debugging' on the tablet, then re-run. APK is ready: $APK" >&2
+            exit 1
+            ;;
+        offline)
+            echo "Device is offline. Unplug/replug the cable, then re-run. APK is ready: $APK" >&2
+            exit 1
+            ;;
+        *)
+            echo "No device connected. Install manually with:"
+            echo "    adb install -r $APK"
+            ;;
+    esac
 else
     echo "adb not in PATH. Install manually with:"
     echo "    /path/to/adb install -r $APK"
