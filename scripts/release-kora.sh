@@ -65,9 +65,15 @@ if [[ "$CURRENT_BRANCH" != "myversion" ]]; then
     exit 1
 fi
 
-if ! git diff --quiet || ! git diff --cached --quiet; then
+# In WSL on a /mnt/c repo, git often reports every text file as modified
+# because of CRLF/LF discrepancies between the Windows checkout and the
+# WSL git config. Submodules can also report internal-content changes (`m`
+# in git status short) that don't matter for releasing. Ignore both so we
+# only block on actual content changes the user staged or made locally.
+if ! git diff --quiet --ignore-cr-at-eol --ignore-submodules=all \
+   || ! git diff --cached --quiet --ignore-cr-at-eol --ignore-submodules=all; then
     echo "ERROR: working tree has uncommitted changes. Commit or stash them first." >&2
-    git status --short >&2
+    git -c core.fileMode=false status --short --ignore-submodules=all >&2
     exit 1
 fi
 
