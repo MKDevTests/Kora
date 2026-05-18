@@ -100,9 +100,20 @@ fun BoxScope.PagedReaderContent(
     // LaunchedEffect call to onPageChange(0) wedges the model at spread
     // index 0. Result: opening an in-progress book sometimes resets it to
     // page 1 on first tap. Empty spreads is the unambiguous "initial setup
-    // not done yet" marker.
+    // not done yet" marker — combined with onNewBookLoaded setting spreads
+    // LAST (after currentSpreadIndex), once we get past this gate the
+    // StateFlow .value for currentSpreadIndex is guaranteed to be the
+    // resumed position.
     if (spreads.isEmpty()) return
     val currentSpreadIndex = pagedReaderState.currentSpreadIndex.collectAsState().value
+    // For rememberPagerState's initialPage we read the StateFlow .value
+    // directly rather than the collectAsState snapshot. The StateFlow getter
+    // is synchronous and returns the latest published value; the collectAsState
+    // mutableStateOf is fed by a separate coroutine and can briefly lag
+    // behind, especially right after onNewBookLoaded fires its sequence of
+    // state writes. A lagged 0 here would create a pager that opens at page
+    // 1 even though the model says spread X.
+    val initialSpreadIndex = remember { pagedReaderState.currentSpreadIndex.value }
     val layout = pagedReaderState.layout.collectAsState().value
     val layoutOffset = pagedReaderState.layoutOffset.collectAsState().value
     val tapToZoom = pagedReaderState.tapToZoom.collectAsState().value
@@ -132,7 +143,7 @@ fun BoxScope.PagedReaderContent(
     val currentContainerSize = screenScaleState.areaSize.collectAsState().value
 
     val pagerState = rememberPagerState(
-        initialPage = currentSpreadIndex,
+        initialPage = initialSpreadIndex,
         pageCount = { spreads.size }
     )
 

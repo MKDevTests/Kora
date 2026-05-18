@@ -292,18 +292,28 @@ class PagedReaderState(
     }
 
     private fun onNewBookLoaded(bookState: BookState) {
-        val pageSpreads = buildSpreadMap(bookState.currentBookPages, layout.value)
-        this.pageSpreads.value = pageSpreads
-
-        val newSpreadIndex = pageSpreads.indexOfFirst { spread ->
+        val newSpreads = buildSpreadMap(bookState.currentBookPages, layout.value)
+        val newSpreadIndex = newSpreads.indexOfFirst { spread ->
             spread.any { it.pageNumber == readerState.readProgressPage.value }
         }.coerceAtLeast(0)
 
+        // ORDER MATTERS. Compose's collectAsState collectors for pageSpreads
+        // and currentSpreadIndex run on independent coroutines — recomposition
+        // can observe one updated and the other not yet, intermediate values
+        // visible between the two writes. We rely on "pageSpreads non-empty"
+        // as the gate for PagedReaderContent rendering (early-return when
+        // empty), so we have to make sure currentSpreadIndex is set FIRST and
+        // pageSpreads is set LAST. Otherwise rememberPagerState captures the
+        // still-default 0 for initialPage and a follow-up onPageChange(0)
+        // wedges the model at spread 0 — the "open in-progress book, tap once,
+        // lose your place" bug.
         currentSpread.value = PageSpread(
-            pages = pageSpreads[newSpreadIndex].map { Page(it, null) },
+            pages = newSpreads[newSpreadIndex].map { Page(it, null) },
         )
         currentSpreadIndex.value = newSpreadIndex
         requestedSpreadIndex = newSpreadIndex
+        // Set spreads LAST — this is the recomposition trigger downstream.
+        this.pageSpreads.value = newSpreads
 
         jumpToPage(newSpreadIndex)
     }
