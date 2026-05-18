@@ -501,6 +501,12 @@ class ViewModelFactory(
         return snd.komelia.ui.settings.backup.BackupSettingsViewModel(dependencies.backupService)
     }
 
+    fun getNavigationSettingsViewModel(): snd.komelia.ui.settings.navigation.NavigationSettingsViewModel {
+        return snd.komelia.ui.settings.navigation.NavigationSettingsViewModel(
+            appRepositories.settingsRepository
+        )
+    }
+
     fun getSettingsUpdatesViewModel(): AppUpdatesViewModel {
         return AppUpdatesViewModel(
             releases = releases,

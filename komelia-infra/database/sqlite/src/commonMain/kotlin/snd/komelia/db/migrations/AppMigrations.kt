@@ -70,6 +70,7 @@ class AppMigrations : MigrationResourcesProvider() {
         // V59 with a different checksum, so reusing it here would crash on
         // startup with FlywayValidateException. Skip V59 forever.
         "V60__search_fuzzy_enabled.sql",
+        "V61__navigation_settings.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

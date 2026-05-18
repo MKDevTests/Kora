@@ -134,6 +134,18 @@ class MainScreen(
             }
             LaunchedEffect(Unit) {
                 vm.initialize(navigator)
+                // Respect the user's startup-screen preference. Default
+                // (Home) is already on the navigator stack, so we only
+                // intercept the "Last library" case. There may be a one-
+                // frame flash of Home before replaceAll runs — acceptable
+                // for v1, this only happens at cold start.
+                val pref = vm.startupScreen.value
+                if (pref == snd.komelia.settings.model.StartupScreen.LAST_LIBRARY) {
+                    val lastLibId = vm.lastSelectedLibraryId.value
+                    if (navigator.lastItem is HomeScreen) {
+                        navigator.replaceAll(snd.komelia.ui.library.LibraryScreen(lastLibId))
+                    }
+                }
             }
 
             val keyEvents: SharedFlow<KeyEvent> = LocalKeyEvents.current

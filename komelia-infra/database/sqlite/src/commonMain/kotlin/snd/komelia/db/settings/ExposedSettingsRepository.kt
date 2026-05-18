@@ -61,6 +61,8 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[useFloatingNavigationBar] = settings.useFloatingNavigationBar
                 it[lastHighlightColor] = settings.lastHighlightColor
                 it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
+                it[libraryDropdownInTitle] = settings.libraryDropdownInTitle
+                it[startupScreen] = settings.startupScreen.name
             }
         }
     }
@@ -105,6 +107,10 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             useFloatingNavigationBar = get(AppSettingsTable.useFloatingNavigationBar),
             lastHighlightColor = get(AppSettingsTable.lastHighlightColor),
             searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
+            libraryDropdownInTitle = get(AppSettingsTable.libraryDropdownInTitle),
+            startupScreen = runCatching {
+                snd.komelia.settings.model.StartupScreen.valueOf(get(AppSettingsTable.startupScreen))
+            }.getOrDefault(snd.komelia.settings.model.StartupScreen.HOME),
         )
     }
 }

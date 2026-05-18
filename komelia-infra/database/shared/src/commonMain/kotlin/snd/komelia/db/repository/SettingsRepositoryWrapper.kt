@@ -8,6 +8,7 @@ import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.StartupScreen
 import snd.komga.client.library.KomgaLibraryId
 import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
@@ -256,5 +257,19 @@ class SettingsRepositoryWrapper(
 
     override suspend fun putSearchFuzzyEnabled(enabled: Boolean) {
         wrapper.transform { it.copy(searchFuzzyEnabled = enabled) }
+    }
+
+    override fun getLibraryDropdownInTitle(): Flow<Boolean> =
+        wrapper.state.map { it.libraryDropdownInTitle }.distinctUntilChanged()
+
+    override suspend fun putLibraryDropdownInTitle(enabled: Boolean) {
+        wrapper.transform { it.copy(libraryDropdownInTitle = enabled) }
+    }
+
+    override fun getStartupScreen(): Flow<StartupScreen> =
+        wrapper.state.map { it.startupScreen }.distinctUntilChanged()
+
+    override suspend fun putStartupScreen(screen: StartupScreen) {
+        wrapper.transform { it.copy(startupScreen = screen) }
     }
 }

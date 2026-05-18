@@ -3,6 +3,7 @@ package snd.komelia.db
 import kotlinx.serialization.Serializable
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.StartupScreen
 import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
 
@@ -51,4 +52,15 @@ data class AppSettings(
      * search screen.
      */
     val searchFuzzyEnabled: Boolean = true,
+
+    /**
+     * When true the big page title at the top of Home / Library screens
+     * becomes a dropdown that lists Home + every library for one-tap
+     * switching. When false the title is plain text (historical behaviour);
+     * users keep the side drawer (☰) for library switching.
+     */
+    val libraryDropdownInTitle: Boolean = true,
+
+    /** Which screen the app navigates to on cold start. */
+    val startupScreen: StartupScreen = StartupScreen.HOME,
 )

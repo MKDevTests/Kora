@@ -45,6 +45,8 @@ object AppSettingsTable : Table("AppSettings") {
     val useFloatingNavigationBar = bool("use_floating_navigation_bar").default(false)
     val lastHighlightColor = integer("last_highlight_color").nullable()
     val searchFuzzyEnabled = bool("search_fuzzy_enabled").default(true)
+    val libraryDropdownInTitle = bool("library_dropdown_in_title").default(true)
+    val startupScreen = text("startup_screen").default("HOME")
 
     override val primaryKey = PrimaryKey(version)
 }

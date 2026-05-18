@@ -26,6 +26,7 @@ import snd.komelia.ui.settings.analysis.MediaAnalysisScreen
 import snd.komelia.ui.settings.announcements.AnnouncementsScreen
 import snd.komelia.ui.settings.appearance.AppSettingsScreen
 import snd.komelia.ui.settings.backup.BackupSettingsScreen
+import snd.komelia.ui.settings.navigation.NavigationSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
 import snd.komelia.ui.settings.epub.EpubReaderSettingsScreen
@@ -70,6 +71,12 @@ fun SettingsNavigationMenu(
                 label = "Appearance",
                 onClick = { onNavigation(AppSettingsScreen()) },
                 isSelected = currentScreen is AppSettingsScreen,
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsListItem(
+                label = "Navigation",
+                onClick = { onNavigation(NavigationSettingsScreen()) },
+                isSelected = currentScreen is NavigationSettingsScreen,
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsListItem(

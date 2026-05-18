@@ -145,23 +145,29 @@ private fun HomeHeaderSection() {
     val notoSerif = FontFamily(Font(Res.font.NotoSerif_Bold, FontWeight.Bold))
     val mainScreenVm = snd.komelia.ui.LocalMainScreenViewModel.current
     val libraries = mainScreenVm.libraries.collectAsState().value
+    val showDropdown = mainScreenVm.libraryDropdownInTitle.collectAsState().value
+    val titleStyle = MaterialTheme.typography.headlineLarge.copy(
+        fontFamily = notoSerif,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = (-0.5).sp,
+    )
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 12.dp),
     ) {
-        snd.komelia.ui.common.components.LibraryTitleSelector(
-            label = "Home",
-            titleStyle = MaterialTheme.typography.headlineLarge.copy(
-                fontFamily = notoSerif,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.5).sp,
-            ),
-            libraries = libraries,
-            currentLibraryId = null, // on Home, no library is "current"
-            onPickHome = { /* already on Home — no-op */ },
-            onPickLibrary = { libId -> mainScreenVm.navigateToLibrary(libId) },
-        )
+        if (showDropdown) {
+            snd.komelia.ui.common.components.LibraryTitleSelector(
+                label = "Home",
+                titleStyle = titleStyle,
+                libraries = libraries,
+                currentLibraryId = null,
+                onPickHome = { /* already on Home — no-op */ },
+                onPickLibrary = { libId -> mainScreenVm.navigateToLibrary(libId) },
+            )
+        } else {
+            Text("Home", style = titleStyle)
+        }
     }
 }
 

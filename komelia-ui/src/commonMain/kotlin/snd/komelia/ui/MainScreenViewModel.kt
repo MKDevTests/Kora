@@ -20,6 +20,7 @@ import snd.komelia.offline.settings.OfflineSettingsRepository
 import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.StartupScreen
 import snd.komelia.ui.Theme
 import snd.komelia.ui.book.BookScreen
 import snd.komelia.ui.collection.CollectionScreen
@@ -58,6 +59,14 @@ class MainScreenViewModel(
     val isOffline = offlineSettingsRepository.getOfflineMode().stateIn(screenModelScope, SharingStarted.Eagerly, false)
     val lastSelectedLibraryId = settingsRepository.getLastSelectedLibraryId()
         .stateIn(screenModelScope, SharingStarted.Eagerly, null)
+
+    /** When true, the big page title acts as a library-switcher dropdown. */
+    val libraryDropdownInTitle = settingsRepository.getLibraryDropdownInTitle()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, true)
+
+    /** Which screen to land on at cold start. Consumed once by MainScreen.Content(). */
+    val startupScreen = settingsRepository.getStartupScreen()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, StartupScreen.HOME)
 
     private val navigatorFlow = MutableStateFlow<Navigator?>(null)
     private val navigator

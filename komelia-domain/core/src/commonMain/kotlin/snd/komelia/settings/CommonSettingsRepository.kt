@@ -3,6 +3,7 @@ package snd.komelia.settings
 import kotlinx.coroutines.flow.Flow
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.StartupScreen
 import snd.komga.client.library.KomgaLibraryId
 import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
@@ -109,4 +110,16 @@ interface CommonSettingsRepository {
 
     fun getSearchFuzzyEnabled(): Flow<Boolean>
     suspend fun putSearchFuzzyEnabled(enabled: Boolean)
+
+    /**
+     * Whether the big page title at the top of Home/Library screens is a
+     * dropdown library switcher. When false the title is plain text and
+     * users use the side drawer (☰) for library switching.
+     */
+    fun getLibraryDropdownInTitle(): Flow<Boolean>
+    suspend fun putLibraryDropdownInTitle(enabled: Boolean)
+
+    /** Which screen the app navigates to on cold start. */
+    fun getStartupScreen(): Flow<StartupScreen>
+    suspend fun putStartupScreen(screen: StartupScreen)
 }
