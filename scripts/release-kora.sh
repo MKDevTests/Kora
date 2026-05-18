@@ -77,6 +77,21 @@ if ! git diff --quiet --ignore-cr-at-eol --ignore-submodules=all \
     exit 1
 fi
 
+# WSL: prefer Windows gh.exe so we reuse the auth/config the user already
+# set up on Windows, instead of requiring a separate apt install in WSL.
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    for candidate in \
+        "/mnt/c/Program Files/GitHub CLI/gh.exe" \
+        "/mnt/c/Users/$USER/AppData/Local/Programs/GitHub CLI/gh.exe" \
+        "$HOME/AppData/Local/Programs/GitHub CLI/gh.exe"; do
+        if [[ -x "$candidate" ]]; then
+            gh() { "$candidate" "$@"; }
+            export -f gh
+            break
+        fi
+    done
+fi
+
 if ! command -v gh >/dev/null 2>&1; then
     echo "ERROR: GitHub CLI (gh) not found. Install: https://cli.github.com/" >&2
     exit 1
