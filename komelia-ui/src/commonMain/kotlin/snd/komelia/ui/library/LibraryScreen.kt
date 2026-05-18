@@ -574,14 +574,20 @@ private fun LibraryHeaderSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                library?.name ?: "All Libraries",
-                style = MaterialTheme.typography.headlineLarge.copy(
+            val mainScreenVm = snd.komelia.ui.LocalMainScreenViewModel.current
+            val libraries = mainScreenVm.libraries.collectAsState().value
+            snd.komelia.ui.common.components.LibraryTitleSelector(
+                label = library?.name ?: "All Libraries",
+                titleStyle = MaterialTheme.typography.headlineLarge.copy(
                     fontFamily = notoSerif,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
                 ),
-                modifier = Modifier.weight(1f)
+                libraries = libraries,
+                currentLibraryId = library?.id,
+                onPickHome = { mainScreenVm.navigateToHome() },
+                onPickLibrary = { libId -> mainScreenVm.navigateToLibrary(libId) },
+                modifier = Modifier.weight(1f),
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {

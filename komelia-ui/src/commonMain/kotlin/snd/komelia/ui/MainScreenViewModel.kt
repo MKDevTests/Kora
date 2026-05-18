@@ -100,6 +100,26 @@ class MainScreenViewModel(
         }
     }
 
+    /**
+     * Switch to a specific library via the title dropdown. Different from
+     * [navigateToLibrary] (no-arg) which short-circuits if you're already
+     * on a library screen — useless when you want to switch from library A
+     * to library B from the dropdown.
+     */
+    fun navigateToLibrary(libraryId: snd.komga.client.library.KomgaLibraryId) {
+        val last = navigator.lastItem
+        if (last is LibraryScreen && last.libraryId == libraryId) return
+        navigator.replaceAll(LibraryScreen(libraryId))
+        screenModelScope.launch { settingsRepository.putLastSelectedLibraryId(libraryId) }
+    }
+
+    /** Switch to the Home screen from the title dropdown. No-op if already on Home. */
+    fun navigateToHome() {
+        if (navigator.lastItem !is HomeScreen) {
+            navigator.replaceAll(HomeScreen())
+        }
+    }
+
     fun getLibraryActions(): LibraryMenuActions {
         return LibraryMenuActions(libraryApi, appNotifications, taskEmitter, screenModelScope)
     }
