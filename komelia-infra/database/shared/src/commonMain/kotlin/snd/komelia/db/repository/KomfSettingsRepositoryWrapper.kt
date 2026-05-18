@@ -6,7 +6,7 @@ import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.settings.KomfSettingsRepository
 
 class KomfSettingsRepositoryWrapper(
-    private val wrapper: SettingsStateWrapper<KomfSettings>,
+    val wrapper: SettingsStateWrapper<KomfSettings>,
 ) : KomfSettingsRepository {
 
     override fun getKomfEnabled(): Flow<Boolean> {

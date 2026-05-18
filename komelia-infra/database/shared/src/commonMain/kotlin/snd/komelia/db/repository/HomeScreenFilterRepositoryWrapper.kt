@@ -6,7 +6,7 @@ import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilterRepository
 
 class HomeScreenFilterRepositoryWrapper(
-    private val wrapper: SettingsStateWrapper<List<HomeScreenFilter>>,
+    val wrapper: SettingsStateWrapper<List<HomeScreenFilter>>,
 ) : HomeScreenFilterRepository {
 
     override fun getFilters(): Flow<List<HomeScreenFilter>> {

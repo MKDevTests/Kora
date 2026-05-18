@@ -7,7 +7,7 @@ import snd.komelia.settings.TranscriptionSettingsRepository
 import snd.komelia.settings.model.TranscriptionSettings as DomainTranscriptionSettings
 
 class TranscriptionSettingsRepositoryWrapper(
-    private val wrapper: SettingsStateWrapper<TranscriptionSettings>
+    val wrapper: SettingsStateWrapper<TranscriptionSettings>
 ) : TranscriptionSettingsRepository {
 
     override fun getSettings(): Flow<DomainTranscriptionSettings> {

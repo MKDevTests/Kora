@@ -8,6 +8,7 @@ import snd.komelia.AppRepositories
 import snd.komelia.AppWindowState
 import snd.komelia.KomgaAuthenticationState
 import snd.komelia.ManagedKomgaEvents
+import snd.komelia.backup.BackupService
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.KomeliaImageDecoder
 import snd.komelia.image.KomeliaPanelDetector
@@ -32,6 +33,7 @@ import snd.komelia.sync.ReaderSyncService
 data class DependencyContainer(
     val appStrings: StateFlow<AppStrings>,
     val appRepositories: AppRepositories,
+    val backupService: BackupService,
     val readerSyncService: ReaderSyncService,
     val komgaApi: StateFlow<KomgaApi>,
 

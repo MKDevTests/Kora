@@ -15,4 +15,10 @@ interface SeriesReaderOverridesRepository {
     suspend fun getReadingDirection(seriesId: KomgaSeriesId): String?
     suspend fun putReadingDirection(seriesId: KomgaSeriesId, direction: String)
     suspend fun delete(seriesId: KomgaSeriesId)
+
+    /** Snapshot of every persisted override. Used by backup/restore. */
+    suspend fun getAll(): Map<KomgaSeriesId, String>
+
+    /** Drops every override. Used before a backup import. */
+    suspend fun deleteAll()
 }

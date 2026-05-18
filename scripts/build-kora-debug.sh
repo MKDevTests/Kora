@@ -58,17 +58,24 @@ APK="komelia-app/build/outputs/apk/debug/kora-app-debug.apk"
 
 echo "==> APK ready: $APK ($(du -h "$APK" | cut -f1))"
 
-# WSL's apt-installed adb runs its own server and can't see USB devices.
-# Prefer Windows adb when we're in WSL.
-ADB=adb
+# In WSL, adb interop with Windows USB devices is unreliable: adb.exe
+# invoked from WSL doesn't see the device the Windows-side adb server
+# sees. Several workarounds have been tried (start-server, parsing
+# `adb devices`, etc.) and none of them stick. Print the install
+# command for the user to paste in PowerShell and exit cleanly. The
+# user is expected to run install from PS where adb works natively.
 if grep -qi microsoft /proc/version 2>/dev/null; then
-    for candidate in \
-        /mnt/c/Users/mathi/AppData/Local/Android/Sdk/platform-tools/adb.exe \
-        "$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe"; do
-        [[ -x "$candidate" ]] && ADB="$candidate" && break
-    done
+    WIN_APK="$(wslpath -w "$(realpath "$APK")" 2>/dev/null || echo "$APK")"
+    echo ""
+    echo "==> WSL detected. Open PowerShell and run:"
+    echo "    adb install -r \"$WIN_APK\""
+    echo ""
+    echo "Then launch with:"
+    echo "    adb shell monkey -p io.github.mkdevtests.kora.debug -c android.intent.category.LAUNCHER 1"
+    exit 0
 fi
 
+ADB=adb
 if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
     # Wake the (Windows) adb server. In WSL the first call from a fresh
     # shell often races the daemon and reports "no device" even when one

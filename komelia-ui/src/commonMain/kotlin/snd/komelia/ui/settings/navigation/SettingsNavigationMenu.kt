@@ -25,6 +25,7 @@ import snd.komelia.ui.settings.account.AccountSettingsScreen
 import snd.komelia.ui.settings.analysis.MediaAnalysisScreen
 import snd.komelia.ui.settings.announcements.AnnouncementsScreen
 import snd.komelia.ui.settings.appearance.AppSettingsScreen
+import snd.komelia.ui.settings.backup.BackupSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
 import snd.komelia.ui.settings.epub.EpubReaderSettingsScreen
@@ -112,6 +113,12 @@ fun SettingsNavigationMenu(
                 label = "Offline Mode",
                 onClick = { onNavigation(OfflineSettingsScreen()) },
                 isSelected = currentScreen is OfflineSettingsScreen,
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsListItem(
+                label = "Backup & Restore",
+                onClick = { onNavigation(BackupSettingsScreen()) },
+                isSelected = currentScreen is BackupSettingsScreen,
             )
         }
 

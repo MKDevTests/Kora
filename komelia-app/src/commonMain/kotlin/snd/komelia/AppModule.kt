@@ -38,6 +38,7 @@ import snd.komelia.api.RemoteSeriesApi
 import snd.komelia.api.RemoteSettingsApi
 import snd.komelia.api.RemoteTaskApi
 import snd.komelia.api.RemoteUserApi
+import snd.komelia.backup.BackupService
 import snd.komelia.http.RememberMePersistingCookieStore
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.KomeliaImageDecoder
@@ -240,6 +241,7 @@ abstract class AppModule(
         return DependencyContainer(
             appStrings = MutableStateFlow(EnStrings),
             appRepositories = appRepositories,
+            backupService = createBackupService(appRepositories),
             readerSyncService = readerSyncService,
 
             komgaApi = komgaApi,
@@ -399,6 +401,14 @@ abstract class AppModule(
 
     protected abstract suspend fun createAppRepositories(): AppRepositories
     protected abstract suspend fun createOfflineRepositories(): OfflineRepositories
+
+    /**
+     * Build the platform-specific [BackupService]. Android reaches into the
+     * wrapper classes to snapshot in-memory state; other platforms may
+     * return a no-op implementation if the feature is unsupported there.
+     */
+    protected abstract fun createBackupService(repositories: AppRepositories): BackupService
+
     protected abstract fun createKtorClient(): HttpClient
     protected abstract fun createKtorClientWithoutCache(): HttpClient
 

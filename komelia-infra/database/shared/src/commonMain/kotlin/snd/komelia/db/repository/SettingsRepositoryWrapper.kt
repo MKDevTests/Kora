@@ -13,7 +13,7 @@ import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
 
 class SettingsRepositoryWrapper(
-    private val wrapper: SettingsStateWrapper<AppSettings>,
+    val wrapper: SettingsStateWrapper<AppSettings>,
 ) : CommonSettingsRepository {
 
     override fun getServerUrl(): Flow<String> {

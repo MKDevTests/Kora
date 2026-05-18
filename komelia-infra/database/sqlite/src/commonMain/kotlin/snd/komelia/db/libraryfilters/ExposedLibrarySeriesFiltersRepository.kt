@@ -2,6 +2,7 @@ package snd.komelia.db.libraryfilters
 
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -36,5 +37,18 @@ class ExposedLibrarySeriesFiltersRepository(
         transaction {
             LibrarySeriesFiltersTable.deleteWhere { LibrarySeriesFiltersTable.libraryId eq libraryId.value }
         }
+    }
+
+    override suspend fun getAll(): Map<KomgaLibraryId, String> {
+        return transaction {
+            LibrarySeriesFiltersTable.selectAll()
+                .associate {
+                    KomgaLibraryId(it[LibrarySeriesFiltersTable.libraryId]) to it[LibrarySeriesFiltersTable.filterJson]
+                }
+        }
+    }
+
+    override suspend fun deleteAll() {
+        transaction { LibrarySeriesFiltersTable.deleteAll() }
     }
 }

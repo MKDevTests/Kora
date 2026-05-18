@@ -375,6 +375,17 @@ class DesktopAppModule(
         val path = AppDirectories.readerCachePath
         return Path(if (serverId != null) path.resolve("server_$serverId").toString() else path.toString())
     }
+
+    // Backup/restore is wired for Android only in v1. Desktop returns a stub
+    // that surfaces a friendly error instead of throwing.
+    override fun createBackupService(repositories: AppRepositories): snd.komelia.backup.BackupService {
+        return object : snd.komelia.backup.BackupService {
+            override suspend fun exportToJson(): String = ""
+            override suspend fun importFromJson(json: String): snd.komelia.backup.ImportResult =
+                snd.komelia.backup.ImportResult.Failure("Backup is not supported on this platform")
+        }
+    }
+
 override fun createOfflineModule(
     repositories: OfflineRepositories,
     onlineUser: StateFlow<KomgaUser?>,

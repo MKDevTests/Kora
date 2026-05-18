@@ -19,6 +19,8 @@ import kotlinx.io.files.Path
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import io.github.snd_r.komelia.infra.ncnn.NcnnSharedLibraries
+import snd.komelia.backup.BackupService
+import snd.komelia.backup.DefaultBackupService
 import snd.komelia.db.AppSettings
 import snd.komelia.db.EpubReaderSettings
 import snd.komelia.db.ExposedTransactionTemplate
@@ -404,6 +406,20 @@ class AndroidAppModule(
             scope = initScope,
         )
     }
+
+    override fun createBackupService(repositories: AppRepositories): BackupService {
+        return DefaultBackupService(
+            appSettings = (repositories.settingsRepository as SettingsRepositoryWrapper).wrapper,
+            imageReader = (repositories.imageReaderSettingsRepository as ReaderSettingsRepositoryWrapper).wrapper,
+            epubReader = (repositories.epubReaderSettingsRepository as EpubReaderSettingsRepositoryWrapper).wrapper,
+            komf = (repositories.komfSettingsRepository as KomfSettingsRepositoryWrapper).wrapper,
+            transcription = (repositories.transcriptionSettingsRepository as TranscriptionSettingsRepositoryWrapper).wrapper,
+            homeFilters = (repositories.homeScreenFilterRepository as HomeScreenFilterRepositoryWrapper).wrapper,
+            librarySeriesFilters = repositories.librarySeriesFiltersRepository,
+            seriesReaderOverrides = repositories.seriesReaderOverridesRepository,
+        )
+    }
+
 override fun createOfflineModule(
     repositories: OfflineRepositories,
     onlineUser: StateFlow<KomgaUser?>,

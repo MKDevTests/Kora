@@ -13,4 +13,10 @@ interface LibrarySeriesFiltersRepository {
     suspend fun get(libraryId: KomgaLibraryId): String?
     suspend fun put(libraryId: KomgaLibraryId, json: String)
     suspend fun delete(libraryId: KomgaLibraryId)
+
+    /** Snapshot of every persisted entry. Used by backup/restore. */
+    suspend fun getAll(): Map<KomgaLibraryId, String>
+
+    /** Drops every entry. Used before a backup import. */
+    suspend fun deleteAll()
 }

@@ -1,5 +1,8 @@
 package snd.komelia.settings.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class TranscriptionEngineType { ML_KIT, WHISPER }
 
 data class TranscriptionSettings(

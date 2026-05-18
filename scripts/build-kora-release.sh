@@ -138,14 +138,22 @@ echo "==> APK ready: $SIGNED ($(du -h "$SIGNED" | cut -f1))"
 REL_PKG=io.github.mkdevtests.kora
 DEBUG_PKG=io.github.mkdevtests.kora.debug
 
-# Wake up the (Windows) adb server. In WSL the first call from a fresh
-# shell often races the daemon start and `adb get-state` reports "no device"
-# even when one is plugged in. start-server is idempotent.
-adb start-server >/dev/null 2>&1 || true
+# In WSL, adb interop with Windows USB devices is unreliable: adb.exe
+# invoked from WSL doesn't see the device the Windows-side adb server
+# sees. Print the install command and exit; user runs it from PowerShell.
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    WIN_APK="$(wslpath -w "$(realpath "$SIGNED")" 2>/dev/null || echo "$SIGNED")"
+    echo ""
+    echo "==> WSL detected. Open PowerShell and run:"
+    echo "    adb install -r -d \"$WIN_APK\""
+    echo ""
+    echo "(-d allows in-place downgrade if the installed version is higher;"
+    echo " it preserves app data. Drop -d if you're installing a higher version)"
+    exit 0
+fi
 
-# Parse `adb devices` rather than relying on `get-state` so we can tell
-# apart "no device", "device offline", and "unauthorized" (the device is
-# plugged in but the user hasn't tapped Allow on the tablet yet).
+# Native Linux/macOS path below: try adb directly.
+adb start-server >/dev/null 2>&1 || true
 DEVICES_LINE="$(adb devices 2>/dev/null | awk 'NR>1 && NF>=2 {print $2; exit}')"
 case "$DEVICES_LINE" in
     device)

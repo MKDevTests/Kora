@@ -20,7 +20,7 @@ import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.ReaderType
 
 class ReaderSettingsRepositoryWrapper(
-    private val wrapper: SettingsStateWrapper<ImageReaderSettings>,
+    val wrapper: SettingsStateWrapper<ImageReaderSettings>,
 ) : ImageReaderSettingsRepository {
 
     override fun getReaderType(): Flow<ReaderType> {

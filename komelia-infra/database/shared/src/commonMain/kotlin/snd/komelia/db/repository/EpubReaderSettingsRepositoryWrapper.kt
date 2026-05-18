@@ -10,7 +10,7 @@ import snd.komelia.settings.model.EpubReaderType
 import snd.komelia.settings.model.TtsuReaderSettings
 
 class EpubReaderSettingsRepositoryWrapper(
-    private val wrapper: SettingsStateWrapper<EpubReaderSettings>
+    val wrapper: SettingsStateWrapper<EpubReaderSettings>
 ) : EpubReaderSettingsRepository {
 
     override fun getReaderType(): Flow<EpubReaderType> {

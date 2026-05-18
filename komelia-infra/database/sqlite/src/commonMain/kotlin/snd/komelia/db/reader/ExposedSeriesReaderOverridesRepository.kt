@@ -2,6 +2,7 @@ package snd.komelia.db.reader
 
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -38,5 +39,18 @@ class ExposedSeriesReaderOverridesRepository(
                 SeriesReaderOverridesTable.seriesId eq seriesId.value
             }
         }
+    }
+
+    override suspend fun getAll(): Map<KomgaSeriesId, String> {
+        return transaction {
+            SeriesReaderOverridesTable.selectAll()
+                .associate {
+                    KomgaSeriesId(it[SeriesReaderOverridesTable.seriesId]) to it[SeriesReaderOverridesTable.readingDirection]
+                }
+        }
+    }
+
+    override suspend fun deleteAll() {
+        transaction { SeriesReaderOverridesTable.deleteAll() }
     }
 }
