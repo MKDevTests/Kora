@@ -8,12 +8,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
-// Point at MKDevTests/Sipurra (the Kora fork) rather than the upstream
+// Point at MKDevTests/Kora (this fork) rather than the upstream
 // eserero/Sipurra. Upstream releases ship the original Komelia/Sipurra
 // APK, which would clobber every Kora-specific feature on update. The
 // scripts/release-kora.sh helper publishes tagged releases here that
 // the in-app auto-updater can safely consume.
-private const val komeliaBaseUrl = "https://api.github.com/repos/MKDevTests/Sipurra"
+private const val komeliaBaseUrl = "https://api.github.com/repos/MKDevTests/Kora"
 private const val onnxRuntimeBaseUrl = "https://api.github.com/repos/microsoft/onnxruntime"
 
 class UpdateClient(
