@@ -138,13 +138,36 @@ echo "==> APK ready: $SIGNED ($(du -h "$SIGNED" | cut -f1))"
 REL_PKG=io.github.mkdevtests.kora
 DEBUG_PKG=io.github.mkdevtests.kora.debug
 
-if ! adb get-state >/dev/null 2>&1; then
-    echo "No device connected. Install manually:"
-    echo "    adb install -r $SIGNED"
-    exit 0
-fi
+# Wake up the (Windows) adb server. In WSL the first call from a fresh
+# shell often races the daemon start and `adb get-state` reports "no device"
+# even when one is plugged in. start-server is idempotent.
+adb start-server >/dev/null 2>&1 || true
 
-echo "==> Installing on connected device"
+# Parse `adb devices` rather than relying on `get-state` so we can tell
+# apart "no device", "device offline", and "unauthorized" (the device is
+# plugged in but the user hasn't tapped Allow on the tablet yet).
+DEVICES_LINE="$(adb devices 2>/dev/null | awk 'NR>1 && NF>=2 {print $2; exit}')"
+case "$DEVICES_LINE" in
+    device)
+        echo "==> Installing on connected device"
+        ;;
+    unauthorized)
+        echo "Device is plugged in but unauthorized." >&2
+        echo "  Tap 'Allow USB debugging' on the tablet (check 'Always allow' to skip next time)," >&2
+        echo "  then re-run. APK is ready: $SIGNED" >&2
+        exit 1
+        ;;
+    offline)
+        echo "Device is offline. Unplug/replug the cable, then re-run. APK is ready: $SIGNED" >&2
+        exit 1
+        ;;
+    *)
+        echo "No device connected. Install manually:"
+        echo "    adb install -r $SIGNED"
+        exit 0
+        ;;
+esac
+
 if ! adb install -r "$SIGNED" 2>&1; then
     echo "Install failed (signature mismatch?). To force-replace:"
     echo "    adb uninstall $REL_PKG && adb install $SIGNED"
