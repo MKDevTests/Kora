@@ -507,6 +507,23 @@ class ViewModelFactory(
         )
     }
 
+    fun getReadingStatsViewModel(): snd.komelia.ui.stats.ReadingStatsViewModel {
+        return snd.komelia.ui.stats.ReadingStatsViewModel(createReadingStatsService())
+    }
+
+    /**
+     * Factory for the [snd.komelia.stats.ReadingStatsService]. Exposed
+     * separately so the Home card (which can't use Voyager's
+     * `rememberScreenModel` since it isn't a Screen) can instantiate the
+     * service directly via `remember { factory.createReadingStatsService() }`.
+     */
+    fun createReadingStatsService(): snd.komelia.stats.ReadingStatsService {
+        return snd.komelia.stats.ReadingStatsService(
+            readingEvents = appRepositories.readingEventsRepository,
+            komgaApi = dependencies.komgaApi,
+        )
+    }
+
     fun getSettingsUpdatesViewModel(): AppUpdatesViewModel {
         return AppUpdatesViewModel(
             releases = releases,

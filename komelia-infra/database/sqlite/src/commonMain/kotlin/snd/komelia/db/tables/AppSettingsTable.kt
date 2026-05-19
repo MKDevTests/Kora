@@ -47,6 +47,8 @@ object AppSettingsTable : Table("AppSettings") {
     val searchFuzzyEnabled = bool("search_fuzzy_enabled").default(true)
     val libraryDropdownInTitle = bool("library_dropdown_in_title").default(true)
     val startupScreen = text("startup_screen").default("HOME")
+    val statsEnabled = bool("stats_enabled").default(true)
+    val statsInBottomNav = bool("stats_in_bottom_nav").default(false)
 
     override val primaryKey = PrimaryKey(version)
 }

@@ -71,6 +71,7 @@ class AppMigrations : MigrationResourcesProvider() {
         // startup with FlywayValidateException. Skip V59 forever.
         "V60__search_fuzzy_enabled.sql",
         "V61__navigation_settings.sql",
+        "V62__reading_stats.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

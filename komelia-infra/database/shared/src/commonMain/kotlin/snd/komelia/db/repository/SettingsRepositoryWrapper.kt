@@ -272,4 +272,18 @@ class SettingsRepositoryWrapper(
     override suspend fun putStartupScreen(screen: StartupScreen) {
         wrapper.transform { it.copy(startupScreen = screen) }
     }
+
+    override fun getStatsEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.statsEnabled }.distinctUntilChanged()
+
+    override suspend fun putStatsEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(statsEnabled = enabled) }
+    }
+
+    override fun getStatsInBottomNav(): Flow<Boolean> =
+        wrapper.state.map { it.statsInBottomNav }.distinctUntilChanged()
+
+    override suspend fun putStatsInBottomNav(enabled: Boolean) {
+        wrapper.transform { it.copy(statsInBottomNav = enabled) }
+    }
 }

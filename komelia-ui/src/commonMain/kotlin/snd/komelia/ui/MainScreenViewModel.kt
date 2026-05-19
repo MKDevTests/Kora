@@ -68,6 +68,25 @@ class MainScreenViewModel(
     val startupScreen = settingsRepository.getStartupScreen()
         .stateIn(screenModelScope, SharingStarted.Eagerly, StartupScreen.HOME)
 
+    /**
+     * Master switch for the Reading Stats feature. Controls whether the
+     * Home card and (combined with [showStatsInBottomNav]) the bottom-nav
+     * button render at all.
+     */
+    val statsMasterEnabled: StateFlow<Boolean> = settingsRepository.getStatsEnabled()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, true)
+
+    /**
+     * True when the bottom navigation bar should expose a dedicated
+     * Reading Stats button. Both the master `statsEnabled` toggle and the
+     * `statsInBottomNav` opt-in must be set for the button to appear.
+     */
+    val showStatsInBottomNav: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
+        settingsRepository.getStatsEnabled(),
+        settingsRepository.getStatsInBottomNav(),
+    ) { enabled, inNav -> enabled && inNav }
+        .stateIn(screenModelScope, SharingStarted.Eagerly, false)
+
     private val navigatorFlow = MutableStateFlow<Navigator?>(null)
     private val navigator
         get() = navigatorFlow.value ?: error("main screen navigator is not initialized")

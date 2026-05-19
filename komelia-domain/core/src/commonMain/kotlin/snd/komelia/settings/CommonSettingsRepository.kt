@@ -122,4 +122,19 @@ interface CommonSettingsRepository {
     /** Which screen the app navigates to on cold start. */
     fun getStartupScreen(): Flow<StartupScreen>
     suspend fun putStartupScreen(screen: StartupScreen)
+
+    /**
+     * Master switch for the Reading Stats feature. When false, the stats
+     * page is unreachable, the Home card is hidden, and the completion
+     * event tracker stops logging.
+     */
+    fun getStatsEnabled(): Flow<Boolean>
+    suspend fun putStatsEnabled(enabled: Boolean)
+
+    /**
+     * Whether the Stats page should be reachable from a dedicated entry
+     * in the bottom navigation bar. Independent from [getStatsEnabled].
+     */
+    fun getStatsInBottomNav(): Flow<Boolean>
+    suspend fun putStatsInBottomNav(enabled: Boolean)
 }

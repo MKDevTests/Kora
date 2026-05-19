@@ -1,4 +1,4 @@
-package snd.komelia.ui.settings.navigation
+package snd.komelia.ui.stats
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -11,28 +11,22 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
 
-class NavigationSettingsScreen : Screen {
+class ReadingStatsScreen : Screen {
 
     @Composable
     override fun Content() {
         val viewModelFactory = LocalViewModelFactory.current
-        val vm = rememberScreenModel { viewModelFactory.getNavigationSettingsViewModel() }
+        val vm = rememberScreenModel { viewModelFactory.getReadingStatsViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
         val state = vm.state.collectAsState()
 
-        SettingsScreenContainer("Navigation") {
+        SettingsScreenContainer("My Reading Stats") {
             when (val result = state.value) {
                 is LoadState.Error -> Text("${result::class.simpleName}: ${result.exception.message}")
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
-                is LoadState.Success -> NavigationSettingsContent(
-                    libraryDropdownInTitle = vm.libraryDropdownInTitle,
-                    onLibraryDropdownInTitleChange = vm::onLibraryDropdownInTitleChange,
-                    startupScreen = vm.startupScreen,
-                    onStartupScreenChange = vm::onStartupScreenChange,
-                    statsEnabled = vm.statsEnabled,
-                    onStatsEnabledChange = vm::onStatsEnabledChange,
-                    statsInBottomNav = vm.statsInBottomNav,
-                    onStatsInBottomNavChange = vm::onStatsInBottomNavChange,
+                is LoadState.Success -> ReadingStatsContent(
+                    stats = result.value,
+                    onRefresh = vm::refresh,
                 )
             }
         }

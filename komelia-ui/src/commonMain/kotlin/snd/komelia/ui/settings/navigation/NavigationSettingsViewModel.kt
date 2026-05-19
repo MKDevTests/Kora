@@ -28,12 +28,18 @@ class NavigationSettingsViewModel(
         private set
     var startupScreen by mutableStateOf(StartupScreen.HOME)
         private set
+    var statsEnabled by mutableStateOf(true)
+        private set
+    var statsInBottomNav by mutableStateOf(false)
+        private set
 
     suspend fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
         mutableState.value = LoadState.Loading
         libraryDropdownInTitle = settingsRepository.getLibraryDropdownInTitle().first()
         startupScreen = settingsRepository.getStartupScreen().first()
+        statsEnabled = settingsRepository.getStatsEnabled().first()
+        statsInBottomNav = settingsRepository.getStatsInBottomNav().first()
         mutableState.value = LoadState.Success(Unit)
     }
 
@@ -45,5 +51,15 @@ class NavigationSettingsViewModel(
     fun onStartupScreenChange(screen: StartupScreen) {
         startupScreen = screen
         screenModelScope.launch { settingsRepository.putStartupScreen(screen) }
+    }
+
+    fun onStatsEnabledChange(enabled: Boolean) {
+        statsEnabled = enabled
+        screenModelScope.launch { settingsRepository.putStatsEnabled(enabled) }
+    }
+
+    fun onStatsInBottomNavChange(enabled: Boolean) {
+        statsInBottomNav = enabled
+        screenModelScope.launch { settingsRepository.putStatsInBottomNav(enabled) }
     }
 }

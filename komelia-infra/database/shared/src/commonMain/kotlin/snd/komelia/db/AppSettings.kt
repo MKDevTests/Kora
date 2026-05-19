@@ -63,4 +63,20 @@ data class AppSettings(
 
     /** Which screen the app navigates to on cold start. */
     val startupScreen: StartupScreen = StartupScreen.HOME,
+
+    /**
+     * Master switch for the Reading Stats feature. When false, the stats
+     * page is unreachable, the Home card hides and the bottom-nav button
+     * (if enabled) disappears. Completion-event logging stops too so we
+     * don't accumulate data the user doesn't want.
+     */
+    val statsEnabled: Boolean = true,
+
+    /**
+     * When true the Stats page gets a dedicated entry in the bottom
+     * navigation bar (next to Home / Search / Library). When false the
+     * page is still reachable via the Home card. Default off to keep the
+     * historical nav layout for existing users.
+     */
+    val statsInBottomNav: Boolean = false,
 )

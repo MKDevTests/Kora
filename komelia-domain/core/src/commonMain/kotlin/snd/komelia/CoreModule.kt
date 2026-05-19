@@ -14,6 +14,7 @@ import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.settings.KomfSettingsRepository
 import snd.komelia.settings.SecretsRepository
 import snd.komelia.settings.TranscriptionSettingsRepository
+import snd.komelia.stats.ReadingEventsRepository
 
 import snd.komelia.sync.ReaderSyncService
 
@@ -43,4 +44,5 @@ data class AppRepositories(
     val librarySeriesFiltersRepository: LibrarySeriesFiltersRepository,
     val transcriptionSettingsRepository: TranscriptionSettingsRepository,
     val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
+    val readingEventsRepository: ReadingEventsRepository,
 )

@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalLibrary
 import androidx.compose.material.icons.rounded.Search
@@ -480,6 +481,17 @@ class MainScreen(
                     isSelected = navigator.lastItem is SearchScreen,
                     accentColor = accentColor
                 )
+                if (vm.showStatsInBottomNav.collectAsState().value) {
+                    FloatingToolbarButton(
+                        icon = Icons.Rounded.BarChart,
+                        onClick = {
+                            if (navigator.lastItem !is snd.komelia.ui.stats.ReadingStatsScreen)
+                                navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
+                        },
+                        isSelected = navigator.lastItem is snd.komelia.ui.stats.ReadingStatsScreen,
+                        accentColor = accentColor
+                    )
+                }
                 FloatingToolbarButton(
                     icon = Icons.Rounded.Settings,
                     onClick = {
@@ -555,6 +567,19 @@ class MainScreen(
                 label = { Text("Search") },
                 colors = itemColors
             )
+            if (vm.showStatsInBottomNav.collectAsState().value) {
+                NavigationBarItem(
+                    alwaysShowLabel = true,
+                    selected = navigator.lastItem is snd.komelia.ui.stats.ReadingStatsScreen,
+                    onClick = {
+                        if (navigator.lastItem !is snd.komelia.ui.stats.ReadingStatsScreen)
+                            navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
+                    },
+                    icon = { Icon(Icons.Rounded.BarChart, null) },
+                    label = { Text("Stats") },
+                    colors = itemColors
+                )
+            }
             NavigationBarItem(
                 alwaysShowLabel = true,
                 selected = navigator.lastItem is MobileSettingsScreen || navigator.lastItem is SettingsScreen,
@@ -607,6 +632,19 @@ class MainScreen(
                         isSelected = navigator.lastItem is SearchScreen,
                         modifier = Modifier.weight(1f)
                     )
+
+                    if (vm.showStatsInBottomNav.collectAsState().value) {
+                        CompactNavButton(
+                            text = "Stats",
+                            icon = Icons.Rounded.BarChart,
+                            onClick = {
+                                if (navigator.lastItem !is snd.komelia.ui.stats.ReadingStatsScreen)
+                                    navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
+                            },
+                            isSelected = navigator.lastItem is snd.komelia.ui.stats.ReadingStatsScreen,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
                     CompactNavButton(
                         text = "Settings",

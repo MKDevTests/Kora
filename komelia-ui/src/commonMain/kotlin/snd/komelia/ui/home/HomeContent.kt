@@ -97,6 +97,7 @@ fun HomeContent(
             topContent = {
                 Column {
                     HomeHeaderSection()
+                    snd.komelia.ui.stats.HomeStatsCard()
                     Toolbar(
                         filters = filters,
                         currentFilterNumber = activeFilterNumber,

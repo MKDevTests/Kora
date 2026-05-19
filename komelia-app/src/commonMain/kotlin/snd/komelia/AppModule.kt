@@ -62,6 +62,7 @@ import snd.komelia.offline.OfflineRepositories
 import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
+import snd.komelia.stats.withStatsTracking
 import snd.komelia.ui.DependencyContainer
 import snd.komelia.ui.strings.EnStrings
 import snd.komelia.updates.AppUpdater
@@ -154,21 +155,36 @@ abstract class AppModule(
         offlineModuleRef = offlineModuleInstance
         val offlineModule: OfflineDependencies = offlineModuleInstance.initDependencies()
 
+        // Toggle gating the Reading Stats completion-event log. Read once at
+        // module init and exposed as a StateFlow so the decorators below can
+        // poll synchronously without re-collecting on every `markReadProgress`.
+        val statsEnabledFlow = appRepositories.settingsRepository
+            .getStatsEnabled()
+            .stateIn(initScope)
+
         val komgaApi = isOffline.map { offline ->
-            if (offline) offlineModule.komgaApi
+            val source = if (offline) offlineModule.komgaApi
             else createRemoteApi(
                 komgaClientFactory = komgaClientFactory,
                 offlineRepositories = offlineRepositories,
                 offlineEvents = offlineModule.komgaEvents
             )
+            source.withStatsTracking(
+                readingEvents = appRepositories.readingEventsRepository,
+                statsEnabled = statsEnabledFlow,
+            )
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
-            if (offline) offlineModule.komgaApi
+            val source = if (offline) offlineModule.komgaApi
             else createRemoteApi(
                 komgaClientFactory = komgaClientFactoryNoCache,
                 offlineRepositories = offlineRepositories,
                 offlineEvents = offlineModule.komgaEvents
+            )
+            source.withStatsTracking(
+                readingEvents = appRepositories.readingEventsRepository,
+                statsEnabled = statsEnabledFlow,
             )
         }.stateIn(initScope)
 
@@ -210,7 +226,10 @@ abstract class AppModule(
             )
         } else null
 
-        val localFileApiProvider = createLocalFileApiProvider()
+        val localFileApiProvider = createLocalFileApiProvider()?.withStatsTracking(
+            readingEvents = appRepositories.readingEventsRepository,
+            statsEnabled = statsEnabledFlow,
+        )
 
         val coil = createCoil(
             komgaApi = komgaApi,

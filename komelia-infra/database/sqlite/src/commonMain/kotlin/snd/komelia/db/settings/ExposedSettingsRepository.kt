@@ -63,6 +63,8 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
                 it[libraryDropdownInTitle] = settings.libraryDropdownInTitle
                 it[startupScreen] = settings.startupScreen.name
+                it[statsEnabled] = settings.statsEnabled
+                it[statsInBottomNav] = settings.statsInBottomNav
             }
         }
     }
@@ -111,6 +113,8 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             startupScreen = runCatching {
                 snd.komelia.settings.model.StartupScreen.valueOf(get(AppSettingsTable.startupScreen))
             }.getOrDefault(snd.komelia.settings.model.StartupScreen.HOME),
+            statsEnabled = get(AppSettingsTable.statsEnabled),
+            statsInBottomNav = get(AppSettingsTable.statsInBottomNav),
         )
     }
 }

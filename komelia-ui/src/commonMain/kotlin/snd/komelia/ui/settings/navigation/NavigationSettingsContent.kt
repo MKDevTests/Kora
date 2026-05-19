@@ -23,6 +23,10 @@ fun NavigationSettingsContent(
     onLibraryDropdownInTitleChange: (Boolean) -> Unit,
     startupScreen: StartupScreen,
     onStartupScreenChange: (StartupScreen) -> Unit,
+    statsEnabled: Boolean,
+    onStatsEnabledChange: (Boolean) -> Unit,
+    statsInBottomNav: Boolean,
+    onStatsInBottomNavChange: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -76,6 +80,46 @@ fun NavigationSettingsContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp, top = 4.dp),
+            )
+        }
+
+        Spacer(Modifier.size(4.dp))
+
+        // Reading Stats master switch -----------------------------------
+        Column {
+            SwitchWithLabel(
+                label = { Text("Reading stats") },
+                checked = statsEnabled,
+                onCheckedChange = onStatsEnabledChange,
+            )
+            Text(
+                text = "Tracks book completions and shows your reading " +
+                    "activity (books finished, streak, monthly chart). " +
+                    "When off, no events are logged and the stats surface " +
+                    "is hidden. Lifetime counters always come straight from " +
+                    "your Komga server; time-bounded counters start at zero " +
+                    "from the moment you enable this.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+
+        // Stats in bottom nav ------------------------------------------
+        Column {
+            SwitchWithLabel(
+                label = { Text("Show stats in bottom navigation") },
+                checked = statsInBottomNav,
+                onCheckedChange = onStatsInBottomNavChange,
+                enabled = statsEnabled,
+            )
+            Text(
+                text = "Adds a dedicated stats button to the bottom navigation " +
+                    "bar (next to Home / Search / Library). When off, the stats " +
+                    "page is still reachable from the Home screen card.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
             )
         }
     }
