@@ -5,8 +5,8 @@
 # Run from the repo root in WSL or Git Bash.
 # Requires: gradlew, JDK 17, Android SDK at $ANDROID_HOME or local.properties.
 #
-# Refuses to build from `main` or `myversion` — feature work belongs on a
-# dedicated branch. Use `scripts/build-kora-release.sh` to ship `myversion`.
+# Refuses to build from `main` — feature work belongs on a dedicated branch.
+# Use `scripts/build-kora-release.sh` to ship `main`.
 
 set -e
 
@@ -15,11 +15,11 @@ cd "$REPO_ROOT"
 
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 case "$CURRENT_BRANCH" in
-    main|myversion)
-        echo "ERROR: refusing to build from '$CURRENT_BRANCH'."
+    main)
+        echo "ERROR: refusing to build from 'main'."
         echo "  Debug builds must come from a feature branch. Either:"
         echo "    - check out a feature branch, or"
-        echo "    - use scripts/build-kora-release.sh to ship myversion."
+        echo "    - use scripts/build-kora-release.sh to ship main."
         exit 1
         ;;
     "")

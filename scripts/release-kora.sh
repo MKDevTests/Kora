@@ -7,7 +7,7 @@
 #   2. Bump AppVersion.current in komelia-domain/.../AppVersion.kt.
 #   3. Build a signed release APK (delegates to build-kora-release.sh; the
 #      version baked into the APK now matches the tag).
-#   4. Commit the version bump on the current branch (must be myversion).
+#   4. Commit the version bump on the current branch (must be main).
 #   5. Tag the commit with v<version>.
 #   6. Push the branch + tag to origin.
 #   7. Create a GitHub release on MKDevTests/Kora with the signed APK
@@ -26,7 +26,7 @@
 #                      $EDITOR for the notes.
 #
 # Requirements:
-#   - Must be on branch 'myversion' with a clean working tree.
+#   - Must be on branch 'main' with a clean working tree.
 #   - GitHub CLI (gh) installed and authenticated to push to MKDevTests/Kora.
 #   - Same Android SDK / debug.keystore setup that build-kora-release.sh
 #     already depends on.
@@ -59,9 +59,9 @@ IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
 # ----- preconditions -----
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
-if [[ "$CURRENT_BRANCH" != "myversion" ]]; then
-    echo "ERROR: must be on 'myversion' branch (currently on '$CURRENT_BRANCH')." >&2
-    echo "  Check out the xenodochial worktree (or 'git checkout myversion') and re-run." >&2
+if [[ "$CURRENT_BRANCH" != "main" ]]; then
+    echo "ERROR: must be on 'main' branch (currently on '$CURRENT_BRANCH')." >&2
+    echo "  Run 'git checkout main' and re-run." >&2
     exit 1
 fi
 
@@ -181,8 +181,8 @@ git commit -m "chore(release): $TAG"
 git tag -a "$TAG" -m "Kora $TAG"
 
 # ----- push branch + tag -----
-echo "==> Pushing myversion and $TAG to origin"
-git push origin myversion
+echo "==> Pushing main and $TAG to origin"
+git push origin main
 git push origin "$TAG"
 
 # Disarm the rollback trap — past the point of clean recovery now (commit
