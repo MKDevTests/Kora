@@ -1,6 +1,18 @@
-# Sipurra - Komga media client
+# Kora - Komga media client
 
-## What's New in this Fork
+Kora is an Android client for [Komga](https://komga.org) media servers. It is a fork of [Sipurra](https://github.com/eserero/Sipurra) — itself a fork of [Komelia](https://github.com/Snd-R/Komelia) — and inherits every feature both upstreams already provide. This README documents that full inherited feature set; the section right below lists what **Kora itself adds on top of Sipurra**.
+
+## What's New in Kora (on top of Sipurra)
+
+*   **Backup & Restore**: One-tap JSON export and import of app settings, library filters and series reader overrides. Handy for device migration, fresh installs, or rolling back tweaks.
+*   **Library switcher in page title**: tap the "Home" / library-name title at the top of the screen to open a dropdown listing every library for one-tap switching. Configurable via Settings → Navigation.
+*   **Configurable startup screen**: choose between "Home" and "last opened library" when launching the app (Settings → Navigation).
+*   **Reader fixes**: paged-reader resume position on quick taps, blank-page crash when crop-borders is on, webtoon auto-detection routing to vertical continuous, hard-stop at end of book in continuous mode, half-tag duplicate-key crash, and several smaller polish fixes.
+*   **Search fixes**: gracefully drop fuzzy syntax when any query term is too short, avoiding empty results on short keywords.
+*   **Quick-read buttons** on the series detail screen.
+
+## What Kora Inherits from Sipurra
+
 Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on improving the Android experience. It contains all the good in Komelia and adding many new featurs:
 *  Completly revamped UX 
 *  **Multi-Server Support**: Support for adding and switching between multiple Komga server accounts.
@@ -150,10 +162,9 @@ Sipurra is a fork of [Komelia](https://github.com/Snd-R/Komelia) focused on impr
 
 ### Downloads:
 
-- Latest prebuilt release is available at https://github.com/Snd-R/Komelia/releases
-- Google Play Store https://play.google.com/store/apps/details?id=io.github.snd_r.komelia
-- F-Droid https://f-droid.org/packages/io.github.snd_r.komelia/
-- AUR package https://aur.archlinux.org/packages/komelia
+- **Kora releases (this fork)**: https://github.com/MKDevTests/Kora/releases — signed Android APK, picked up automatically by the in-app updater.
+- Sipurra (upstream, Android): https://github.com/eserero/Sipurra/releases
+- Komelia (original, all platforms): https://github.com/Snd-R/Komelia/releases — also distributed on Google Play, F-Droid and AUR (different package IDs, separate install from Kora).
 
 ## Screenshots
 
