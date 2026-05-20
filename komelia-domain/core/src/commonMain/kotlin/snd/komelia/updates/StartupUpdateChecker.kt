@@ -39,7 +39,16 @@ class StartupUpdateChecker(
             settings.putLastCheckedReleaseVersion(latest.version)
 
             if (AppVersion.current >= latest.version) return null
-            if (settings.getDismissedVersion().first() == AppVersion.current) return null
+            // Skip when the user has explicitly dismissed THIS LATEST
+            // version. Previous code compared against `AppVersion.current`
+            // which silently swallowed every "next" update after an
+            // accept (onUpdate used to write dismissedVersion to the
+            // accepted release, so after an in-app update the user was
+            // permanently dismissed against the version they were now
+            // running — and the next release never surfaced). The fix
+            // is to compare to `latest.version`: only the version the
+            // user genuinely told us "no thanks" about gets skipped.
+            if (settings.getDismissedVersion().first() == latest.version) return null
 
             return latest
         } catch (e: Exception) {
@@ -49,12 +58,16 @@ class StartupUpdateChecker(
     }
 
     suspend fun onUpdate(release: AppRelease) {
+        // No-op on dismissedVersion. Accepting an update is the
+        // opposite of dismissing it — the previous behaviour of writing
+        // dismissedVersion = release.version here was the root cause
+        // of "I accepted v1.0.3, now v1.0.4 never notifies me". Only
+        // onUpdateDismiss touches dismissedVersion now.
         updater.updateTo(release)
             ?.conflate()
             ?.onCompletion { downloadProgress.value = null }
             ?.onEach { downloadProgress.value = it }
             ?.launchIn(updateScope)
-        settings.putDismissedVersion(release.version)
     }
 
     fun onUpdateCancel() {
