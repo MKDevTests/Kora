@@ -37,6 +37,33 @@ TAG="v$VERSION"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# ----- preparation: side-effecting steps preflight relies on -----
+# gradlew is needed by ensure_jni_libs (SQLite extraction). On WSL on
+# /mnt/c, gradlew is checked out with Windows CRLF and bash refuses to
+# exec it. Same idempotent fix as build-kora-debug.sh.
+if head -1 ./gradlew 2>/dev/null | grep -q $'\r'; then
+    if command -v dos2unix >/dev/null 2>&1; then
+        dos2unix -q ./gradlew
+    else
+        sed -i 's/\r$//' ./gradlew
+    fi
+    chmod +x ./gradlew
+fi
+
+# Restore JNI libs from cache (or extract SQLite from JAR) if they're
+# missing. This makes preflight runnable on a brand-new worktree: the
+# libs land first, then the JNI check below confirms it. ensure_jni_libs
+# exits non-zero with clear instructions when the libvips cache is empty;
+# we let it propagate up so preflight reports the missing libs cleanly.
+if [[ -f scripts/_ensure_jni_libs.sh ]]; then
+    # Temporarily relax `set -e` — if ensure_jni_libs fails we still want
+    # the JNI presence checks below to run and report the situation.
+    set +e
+    . scripts/_ensure_jni_libs.sh
+    ensure_jni_libs
+    set -e
+fi
+
 PROBLEMS=0
 fail() { echo "  ✗ $1"; PROBLEMS=$((PROBLEMS+1)); }
 pass() { echo "  ✓ $1"; }
@@ -108,8 +135,8 @@ fi
 APP_VERSION_KT="komelia-domain/core/src/commonMain/kotlin/snd/komelia/updates/AppVersion.kt"
 VERSIONS_TOML="gradle/libs.versions.toml"
 KT_VERSION="$(grep -oE "AppVersion\([0-9]+, [0-9]+, [0-9]+\)" "$APP_VERSION_KT" 2>/dev/null \
-    | sed -E 's/AppVersion\(([0-9]+), ([0-9]+), ([0-9]+)\)/\1.\2.\3/' | head -1)"
-TOML_VERSION="$(grep -E '^app-version' "$VERSIONS_TOML" 2>/dev/null | sed -E 's/.*"(.*)"/\1/' | head -1)"
+    | sed -E 's/AppVersion\(([0-9]+), ([0-9]+), ([0-9]+)\)/\1.\2.\3/' | head -1 | tr -d '\r')"
+TOML_VERSION="$(grep -E '^app-version' "$VERSIONS_TOML" 2>/dev/null | sed -E 's/.*"(.*)"/\1/' | head -1 | tr -d '\r')"
 if [[ -n "$KT_VERSION" && -n "$TOML_VERSION" && "$KT_VERSION" == "$TOML_VERSION" ]]; then
     pass "AppVersion.kt ($KT_VERSION) matches libs.versions.toml ($TOML_VERSION)"
 else
