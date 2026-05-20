@@ -39,6 +39,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -94,6 +96,7 @@ import snd.komelia.ui.LocalUseNewLibraryUI2
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.ReloadableScreen
 import snd.komelia.ui.collection.CollectionScreen
+import snd.komelia.ui.common.ContinueReadingFab
 import snd.komelia.ui.common.components.AppFilterChipDefaults
 import snd.komelia.ui.common.components.AppSuggestionChipDefaults
 import snd.komelia.ui.common.components.ErrorContent
@@ -308,6 +311,37 @@ class LibraryScreen(
                             LocalFloatingToolbarPadding provides barHeight + statusBarHeight,
                             LocalHazeState provides screenHazeState,
                         ) {
+                            // Wire the Continue-reading FAB into the
+                            // MainScreen far-right slot so it sits
+                            // immediately to the right of the filter
+                            // button (which is in the regular right slot)
+                            // and on the same horizontal line as the
+                            // floating nav island. Same slot mechanism as
+                            // HomeScreen — keeps the bottom row layout
+                            // consistent across screens.
+                            val fabFarRight = snd.komelia.ui.LocalFloatingActionButtonFarRight.current
+                            DisposableEffect(libraryId) {
+                                fabFarRight.value = this@LibraryScreen to {
+                                    ContinueReadingFab(
+                                        bookApi = vm.bookApi,
+                                        libraryId = libraryId,
+                                        onOpenBook = { book ->
+                                            navigator.parent?.push(
+                                                readerScreen(
+                                                    book = book,
+                                                    markReadProgress = true,
+                                                    onExit = { },
+                                                )
+                                            )
+                                        },
+                                    )
+                                }
+                                onDispose {
+                                    if (fabFarRight.value?.first == this@LibraryScreen) {
+                                        fabFarRight.value = null
+                                    }
+                                }
+                            }
                             Box(Modifier.fillMaxSize()) {
                                 Box(
                                     Modifier

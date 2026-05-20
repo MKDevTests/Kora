@@ -22,11 +22,13 @@ import snd.komelia.homefilters.SeriesHomeScreenFilter
 import snd.komelia.komga.api.KomgaCollectionsApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.ui.home.edit.SeriesMatchConditionState.SeriesConditionType
+import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.common.KomgaSort.Direction.ASC
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.KomgaSearchCondition
+import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesSearch
 
@@ -73,6 +75,15 @@ class SeriesFilterEditState(
                     initial = initial,
                     initialSeries = initialSeries
                 )
+
+                is SeriesHomeScreenFilter.AlmostFinished -> SeriesAlmostFinishedFilterState(
+                    seriesApi = seriesApi,
+                    appNotifications = appNotifications,
+                    coroutineScope = coroutineScope,
+                    options = options,
+                    initial = initial,
+                    initialSeries = initialSeries,
+                )
             }
         } ?: SeriesCustomFilterState(
             seriesApi = seriesApi,
@@ -95,6 +106,7 @@ class SeriesFilterEditState(
             is SeriesCustomFilterState -> FilterType.Custom
             is SeriesRecentlyAddedFilterState -> FilterType.RecentlyAdded
             is SeriesRecentlyUpdatedFilterState -> FilterType.RecentlyUpdated
+            is SeriesAlmostFinishedFilterState -> FilterType.AlmostFinished
         }
     }.stateIn(coroutineScope, SharingStarted.Eagerly, FilterType.Custom)
 
@@ -122,6 +134,14 @@ class SeriesFilterEditState(
                 label = label.value,
                 pageSize = editState.pageSize.value
             )
+
+            is SeriesAlmostFinishedFilterState -> SeriesHomeScreenFilter.AlmostFinished(
+                order = order,
+                label = label.value,
+                pageSize = editState.pageSize.value,
+                progressThresholdPercent = editState.progressThresholdPercent.value,
+                excludedLibraryIds = editState.excludedLibraryIds.value,
+            )
         }
     }
 
@@ -145,11 +165,20 @@ class SeriesFilterEditState(
             FilterType.RecentlyUpdated -> SeriesRecentlyUpdatedFilterState(
                 seriesApi, appNotifications, coroutineScope, null, null
             )
+
+            FilterType.AlmostFinished -> SeriesAlmostFinishedFilterState(
+                seriesApi = seriesApi,
+                appNotifications = appNotifications,
+                coroutineScope = coroutineScope,
+                options = options,
+                initial = null,
+                initialSeries = null,
+            )
         }
     }
 
 
-    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated }
+    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished }
 }
 
 sealed interface SeriesFilterStateType {
@@ -193,6 +222,96 @@ class SeriesRecentlyAddedFilterState(
                 deleted = false,
                 pageRequest = page
             ).content
+        }.getOrDefault(emptyList())
+    }
+
+    fun close() {
+        coroutineScope.cancel()
+    }
+}
+
+/**
+ * Edit-side counterpart of [SeriesHomeScreenFilter.AlmostFinished].
+ * Mirrors the pattern of RecentlyAdded/RecentlyUpdated plus an
+ * [excludedLibraryIds] knob (user toggles "Divers"-style libraries to
+ * hide from the shelf). The preview computation duplicates the
+ * HomeViewModel resolver (fetch IN_PROGRESS pool, exclude libraries
+ * server-side, filter ratio client-side) — intentional, matches how
+ * the other built-in states each carry their own preview fetch.
+ */
+class SeriesAlmostFinishedFilterState(
+    private val seriesApi: KomgaSeriesApi,
+    private val appNotifications: AppNotifications,
+    private val coroutineScope: CoroutineScope,
+    /**
+     * Filter-builder options bag — read here only for the library list,
+     * which the editor uses to render the "exclude libraries" chip
+     * picker. Threaded through from the parent SeriesFilterEditState so
+     * the libraries stay in sync as they load from the referential API.
+     */
+    val options: StateFlow<FilterSuggestionOptions>,
+    initial: SeriesHomeScreenFilter.AlmostFinished?,
+    initialSeries: List<KomgaSeries>?,
+) : SeriesFilterStateType {
+    val pageSize = MutableStateFlow(initial?.pageSize ?: 20)
+    val progressThresholdPercent = MutableStateFlow(initial?.progressThresholdPercent ?: 80)
+    val excludedLibraryIds = MutableStateFlow(initial?.excludedLibraryIds ?: emptyList())
+    override val series = MutableStateFlow(initialSeries ?: emptyList())
+
+    init {
+        val combined = combine(
+            pageSize,
+            progressThresholdPercent,
+            excludedLibraryIds,
+        ) { size, threshold, excluded -> Triple(size, threshold, excluded) }
+
+        val dropped = if (initial != null) combined.drop(1) else combined
+        dropped.onEach { (size, threshold, excluded) ->
+            series.value = fetchAlmostFinished(size, threshold, excluded)
+        }.launchIn(coroutineScope)
+    }
+
+    fun onPageSizeChange(value: Int) {
+        this.pageSize.value = value
+    }
+
+    fun onThresholdChange(percent: Int) {
+        this.progressThresholdPercent.value = percent.coerceIn(1, 99)
+    }
+
+    fun onExcludedLibrariesChange(ids: List<String>) {
+        this.excludedLibraryIds.value = ids
+    }
+
+    private suspend fun fetchAlmostFinished(
+        size: Int,
+        thresholdPercent: Int,
+        excludedIds: List<String>,
+    ): List<KomgaSeries> {
+        return appNotifications.runCatchingToNotifications {
+            val poolSize = (size * 5).coerceAtMost(100)
+            val pool = seriesApi.getSeriesList(
+                search = KomgaSeriesSearch(
+                    allOfSeries {
+                        readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                        excludedIds.forEach { libId ->
+                            library { isNotEqualTo(KomgaLibraryId(libId)) }
+                        }
+                    }.toSeriesCondition()
+                ),
+                pageRequest = KomgaPageRequest(size = poolSize),
+            ).content
+            val threshold = thresholdPercent / 100f
+            pool
+                .mapNotNull { s ->
+                    val total = s.booksCount
+                    if (total <= 0) return@mapNotNull null
+                    val ratio = s.booksReadCount.toFloat() / total
+                    if (ratio < threshold) null else s to ratio
+                }
+                .sortedByDescending { it.second }
+                .take(size)
+                .map { it.first }
         }.getOrDefault(emptyList())
     }
 

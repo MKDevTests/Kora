@@ -24,11 +24,13 @@ import snd.komelia.komga.api.KomgaReadListApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komga.client.book.KomgaBookSearch
+import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.common.KomgaSort.Direction.ASC
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.KomgaSearchCondition
+import snd.komga.client.search.allOfBooks
 
 class BookFilterEditState(
     private val bookApi: KomgaBookApi,
@@ -65,6 +67,15 @@ class BookFilterEditState(
                     initial = initial,
                     initialBooks = initialBooks,
                 )
+
+                is BooksHomeScreenFilter.ForgottenBooks -> BookForgottenFilterState(
+                    bookApi = bookApi,
+                    appNotifications = appNotifications,
+                    coroutineScope = coroutineScope,
+                    options = options,
+                    initial = initial,
+                    initialBooks = initialBooks,
+                )
             }
         } ?: BookCustomFilterState(
             seriesApi = seriesApi,
@@ -87,6 +98,7 @@ class BookFilterEditState(
         when (it) {
             is BookCustomFilterState -> FilterType.Custom
             is BookOnDeckFilterState -> FilterType.OnDeck
+            is BookForgottenFilterState -> FilterType.Forgotten
         }
     }.stateIn(coroutineScope, SharingStarted.Eagerly, FilterType.Custom)
 
@@ -107,6 +119,13 @@ class BookFilterEditState(
                 order = order,
                 label = label.value,
                 pageSize = editState.pageSize.value
+            )
+
+            is BookForgottenFilterState -> BooksHomeScreenFilter.ForgottenBooks(
+                order = order,
+                label = label.value,
+                pageSize = editState.pageSize.value,
+                excludedLibraryIds = editState.excludedLibraryIds.value,
             )
         }
     }
@@ -132,14 +151,87 @@ class BookFilterEditState(
                 initial = null,
                 initialBooks = null
             )
+
+            FilterType.Forgotten -> BookForgottenFilterState(
+                bookApi = bookApi,
+                appNotifications = appNotifications,
+                coroutineScope = coroutineScope,
+                options = options,
+                initial = null,
+                initialBooks = null,
+            )
         }
     }
 
-    enum class FilterType { Custom, OnDeck }
+    enum class FilterType { Custom, OnDeck, Forgotten }
 }
 
 sealed interface BookFilterStateType {
     val books: StateFlow<List<KomeliaBook>>
+}
+
+/**
+ * Edit-side counterpart of [BooksHomeScreenFilter.ForgottenBooks].
+ * Mirrors [BookOnDeckFilterState] plus an [excludedLibraryIds] knob:
+ * the preview query is the IN_PROGRESS-sorted-ASC-by-readDate fetch
+ * that the runtime resolver in HomeViewModel uses for the actual
+ * shelf. Library exclusions go server-side via the search DSL.
+ */
+class BookForgottenFilterState(
+    private val bookApi: KomgaBookApi,
+    private val appNotifications: AppNotifications,
+    private val coroutineScope: CoroutineScope,
+    /**
+     * Filter-builder options bag — used only to expose the library
+     * list for the "exclude libraries" chip picker. Threaded through
+     * from the parent BookFilterEditState.
+     */
+    val options: StateFlow<FilterSuggestionOptions>,
+    initial: BooksHomeScreenFilter.ForgottenBooks?,
+    initialBooks: List<KomeliaBook>?,
+) : BookFilterStateType {
+    val pageSize = MutableStateFlow(initial?.pageSize ?: 20)
+    val excludedLibraryIds = MutableStateFlow(initial?.excludedLibraryIds ?: emptyList())
+    override val books = MutableStateFlow(initialBooks ?: emptyList())
+
+    init {
+        val combined = combine(pageSize, excludedLibraryIds) { size, excluded -> size to excluded }
+        val dropped = if (initial != null) combined.drop(1) else combined
+        dropped.onEach { (size, excluded) ->
+            books.value = fetchForgottenBooks(size, excluded)
+        }.launchIn(coroutineScope)
+    }
+
+    fun onPageSizeChange(value: Int) {
+        this.pageSize.value = value
+    }
+
+    fun onExcludedLibrariesChange(ids: List<String>) {
+        this.excludedLibraryIds.value = ids
+    }
+
+    private suspend fun fetchForgottenBooks(size: Int, excludedIds: List<String>): List<KomeliaBook> {
+        return appNotifications.runCatchingToNotifications {
+            bookApi.getBookList(
+                search = KomgaBookSearch(
+                    allOfBooks {
+                        readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                        excludedIds.forEach { libId ->
+                            library { isNotEqualTo(KomgaLibraryId(libId)) }
+                        }
+                    }.toBookCondition()
+                ),
+                pageRequest = KomgaPageRequest(
+                    size = size,
+                    sort = KomgaSort.KomgaBooksSort.byReadDate(ASC),
+                ),
+            ).content
+        }.getOrDefault(emptyList())
+    }
+
+    fun close() {
+        coroutineScope.cancel()
+    }
 }
 
 class BookOnDeckFilterState(

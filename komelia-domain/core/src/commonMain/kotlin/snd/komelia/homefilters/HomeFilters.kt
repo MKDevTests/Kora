@@ -101,6 +101,35 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     ) : SeriesHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
     }
+
+    /**
+     * Series the user is close to finishing — at least
+     * [progressThresholdPercent]% of the books are READ.
+     *
+     * Komga's API does not expose a server-side filter on the
+     * "books-read / total" ratio. The resolver in HomeViewModel
+     * fetches a wider pool of IN_PROGRESS series (page size scaled
+     * up) and filters client-side. Volume stays manageable because
+     * IN_PROGRESS << lifetime catalog.
+     */
+    @Serializable
+    @SerialName("io.github.snd_r.komelia.ui.home.SeriesHomeScreenFilter.AlmostFinished")
+    data class AlmostFinished(
+        override val order: Int,
+        override val label: String,
+        val pageSize: Int,
+        /** Percentage of books read above which a series qualifies. 80 = 80%. */
+        val progressThresholdPercent: Int = 80,
+        /**
+         * Library IDs (as raw strings — KomgaLibraryId isn't @Serializable
+         * itself, we wrap at resolve time) whose series should be hidden
+         * from this shelf. Empty = include everything. Use to exclude
+         * "Divers" / dumping-ground libraries that would noise the shelf.
+         */
+        val excludedLibraryIds: List<String> = emptyList(),
+    ) : SeriesHomeScreenFilter {
+        override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
+    }
 }
 
 @Serializable
@@ -125,6 +154,34 @@ sealed interface BooksHomeScreenFilter : HomeScreenFilter {
         val filter: KomgaSearchCondition.BookCondition? = null,
         val textSearch: String? = null,
         val pageRequest: KomgaPageRequest? = null,
+    ) : BooksHomeScreenFilter {
+        override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
+    }
+
+    /**
+     * Books the user started but hasn't touched in a while — the
+     * mirror image of "Keep reading". Same query (IN_PROGRESS) but
+     * sorted by read date ASCENDING so the most stale items come
+     * first. Surfaces book-shaped reminders without needing a
+     * notification.
+     *
+     * Built-in (rather than asking users to clone Keep-reading and
+     * flip the sort) because it's a recurring ask and a one-tap
+     * "Add" experience is much friendlier than walking through the
+     * generic CustomFilter editor.
+     */
+    @Serializable
+    @SerialName("io.github.snd_r.komelia.ui.home.BooksHomeScreenFilter.ForgottenBooks")
+    data class ForgottenBooks(
+        override val order: Int,
+        override val label: String,
+        val pageSize: Int,
+        /**
+         * Library IDs (as raw strings) whose books should be hidden
+         * from this shelf. Empty = include everything. Use to exclude
+         * "Divers" / dumping-ground libraries.
+         */
+        val excludedLibraryIds: List<String> = emptyList(),
     ) : BooksHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
     }

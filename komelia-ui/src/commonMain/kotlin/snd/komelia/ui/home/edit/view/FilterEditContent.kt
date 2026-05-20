@@ -67,9 +67,11 @@ import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.home.edit.BookCustomFilterState
 import snd.komelia.ui.home.edit.BookFilterEditState
+import snd.komelia.ui.home.edit.BookForgottenFilterState
 import snd.komelia.ui.home.edit.BookOnDeckFilterState
 import snd.komelia.ui.home.edit.FilterEditState
 import snd.komelia.ui.home.edit.FilterEditViewModel
+import snd.komelia.ui.home.edit.SeriesAlmostFinishedFilterState
 import snd.komelia.ui.home.edit.SeriesCustomFilterState
 import snd.komelia.ui.home.edit.SeriesFilterEditState
 import snd.komelia.ui.home.edit.SeriesRecentlyAddedFilterState
@@ -351,6 +353,17 @@ private fun BookFilterEditContent(state: BookFilterEditState) {
                 pageSize = filter.pageSize.collectAsState().value,
                 onPageSizeChange = filter::onPageSizeChange
             )
+            is BookForgottenFilterState -> {
+                PageSizeSettingsContent(
+                    pageSize = filter.pageSize.collectAsState().value,
+                    onPageSizeChange = filter::onPageSizeChange,
+                )
+                ExcludedLibrariesContent(
+                    libraries = filter.options.collectAsState().value.libraries,
+                    excludedIds = filter.excludedLibraryIds.collectAsState().value,
+                    onExcludedChange = filter::onExcludedLibrariesChange,
+                )
+            }
         }
 
         val books = state.books.collectAsState().value
@@ -388,6 +401,22 @@ private fun SeriesFilterEditContent(state: SeriesFilterEditState) {
                 pageSize = filter.pageSize.collectAsState().value,
                 onPageSizeChange = filter::onPageSizeChange
             )
+
+            is SeriesAlmostFinishedFilterState -> {
+                PageSizeSettingsContent(
+                    pageSize = filter.pageSize.collectAsState().value,
+                    onPageSizeChange = filter::onPageSizeChange,
+                )
+                AlmostFinishedThresholdContent(
+                    thresholdPercent = filter.progressThresholdPercent.collectAsState().value,
+                    onThresholdChange = filter::onThresholdChange,
+                )
+                ExcludedLibrariesContent(
+                    libraries = filter.options.collectAsState().value.libraries,
+                    excludedIds = filter.excludedLibraryIds.collectAsState().value,
+                    onExcludedChange = filter::onExcludedLibrariesChange,
+                )
+            }
         }
 
         val books = state.series.collectAsState().value

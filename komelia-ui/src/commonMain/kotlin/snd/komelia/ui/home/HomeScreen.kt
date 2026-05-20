@@ -45,6 +45,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.ReloadableScreen
 import snd.komelia.ui.topbar.NewTopAppBar
 import snd.komelia.ui.book.bookScreen
+import snd.komelia.ui.common.ContinueReadingFab
 import snd.komelia.ui.common.FloatingFAB
 import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.home.edit.FilterEditScreen
@@ -134,8 +135,28 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
 
                         }
 
+                        // Two FABs in the bottom row, side-by-side:
+                        //   [nav-island] [Edit] [Continue]
+                        //
+                        // Edit goes into the regular right slot (existing
+                        // behaviour). Continue goes into the new far-right
+                        // slot so the layout in MainScreen places it
+                        // immediately to the right of Edit on the same
+                        // horizontal line as the floating nav island.
+                        val openContinueBook: (snd.komelia.komga.api.model.KomeliaBook) -> Unit = { book ->
+                            navigator.parent?.push(
+                                readerScreen(
+                                    book = book,
+                                    markReadProgress = true,
+                                    onExit = { lastReadBook ->
+                                        if (lastReadBook.id != book.id) vm.reload()
+                                    },
+                                )
+                            )
+                        }
                         val useFloatingNavigationBar = LocalUseFloatingNavigationBar.current
                         val fab = LocalFloatingActionButton.current
+                        val fabFarRight = snd.komelia.ui.LocalFloatingActionButtonFarRight.current
                         if (useFloatingNavigationBar) {
                             DisposableEffect(Unit) {
                                 fab.value = this@HomeScreen to {
@@ -145,27 +166,48 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                         accentColor = accentColor,
                                     )
                                 }
+                                fabFarRight.value = this@HomeScreen to {
+                                    ContinueReadingFab(
+                                        bookApi = vm.bookApi,
+                                        libraryId = null,
+                                        accentColor = accentColor,
+                                        onOpenBook = openContinueBook,
+                                    )
+                                }
                                 onDispose {
-                                    if (fab.value?.first == this@HomeScreen) {
-                                        fab.value = null
-                                    }
+                                    if (fab.value?.first == this@HomeScreen) fab.value = null
+                                    if (fabFarRight.value?.first == this@HomeScreen) fabFarRight.value = null
                                 }
                             }
                         } else {
+                            // Floating nav bar disabled → no slot mechanism.
+                            // Put both FABs in a Row anchored to the bottom-
+                            // right corner, Continue on the right (corner).
                             val extraBottomPadding = LocalTransparentNavBarPadding.current
-                            FloatingActionButton(
-                                onClick = { navigator.replaceAll(FilterEditScreen(vm.currentFilters.value)) },
-                                containerColor = accentColor ?: MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = if (accentColor != null) {
-                                    if (accentColor.luminance() > 0.5f) Color.Black else Color.White
-                                } else MaterialTheme.colorScheme.onPrimaryContainer,
-                                shape = RoundedCornerShape(16.dp),
+                            androidx.compose.foundation.layout.Row(
+                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .then(if (extraBottomPadding == 0.dp) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier)
                                     .padding(bottom = 16.dp + extraBottomPadding, end = 16.dp)
                             ) {
-                                Icon(Icons.Rounded.Edit, null)
+                                FloatingActionButton(
+                                    onClick = { navigator.replaceAll(FilterEditScreen(vm.currentFilters.value)) },
+                                    containerColor = accentColor ?: MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = if (accentColor != null) {
+                                        if (accentColor.luminance() > 0.5f) Color.Black else Color.White
+                                    } else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    shape = RoundedCornerShape(16.dp),
+                                ) {
+                                    Icon(Icons.Rounded.Edit, null)
+                                }
+                                ContinueReadingFab(
+                                    bookApi = vm.bookApi,
+                                    libraryId = null,
+                                    accentColor = accentColor,
+                                    onOpenBook = openContinueBook,
+                                )
                             }
                         }
                     }

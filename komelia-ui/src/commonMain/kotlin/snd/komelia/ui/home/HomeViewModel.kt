@@ -33,7 +33,11 @@ import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komga.client.book.KomgaBookSearch
+import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.KomgaSort
+import snd.komga.client.search.allOfBooks
+import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeriesSearch
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.sse.KomgaEvent.BookEvent
@@ -45,7 +49,7 @@ private val logger = KotlinLogging.logger { }
 
 class HomeViewModel(
     private val seriesApi: KomgaSeriesApi,
-    private val bookApi: KomgaBookApi,
+    val bookApi: KomgaBookApi,
     private val appNotifications: AppNotifications,
     private val komgaEvents: SharedFlow<KomgaEvent>,
     private val filterRepository: HomeScreenFilterRepository,
@@ -135,6 +139,68 @@ class HomeViewModel(
                     series = series,
                     filter = filter
                 )
+            }
+
+            is BooksHomeScreenFilter.ForgottenBooks -> {
+                // Mirror of "Keep reading": same IN_PROGRESS query, but
+                // sorted ASCENDING by read date so the oldest activity
+                // surfaces first. The label is what the user named the
+                // shelf in the home config — defaults to "Forgotten".
+                //
+                // Library exclusions are applied server-side via repeated
+                // `library { isNotEqualTo(...) }` AND-ed conditions —
+                // cheaper than fetching everything and filtering in
+                // Kotlin.
+                val excludedIds = filter.excludedLibraryIds
+                val books = bookApi.getBookList(
+                    search = KomgaBookSearch(
+                        allOfBooks {
+                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                            excludedIds.forEach { libId ->
+                                library { isNotEqualTo(snd.komga.client.library.KomgaLibraryId(libId)) }
+                            }
+                        }.toBookCondition()
+                    ),
+                    pageRequest = KomgaPageRequest(
+                        sort = KomgaSort.KomgaBooksSort.byReadDate(KomgaSort.Direction.ASC),
+                        size = filter.pageSize,
+                    ),
+                ).content
+                BookFilterData(books, filter)
+            }
+
+            is SeriesHomeScreenFilter.AlmostFinished -> {
+                // Komga doesn't expose a server-side filter on the
+                // booksRead / total ratio. Pull a wider window of
+                // IN_PROGRESS series and filter client-side. Cap the
+                // window at 5x the requested pageSize so big libraries
+                // don't pull thousands of series for a 20-item shelf.
+                // Library exclusions go server-side via the search DSL.
+                val excludedIds = filter.excludedLibraryIds
+                val poolSize = (filter.pageSize * 5).coerceAtMost(100)
+                val pool = seriesApi.getSeriesList(
+                    search = KomgaSeriesSearch(
+                        allOfSeries {
+                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                            excludedIds.forEach { libId ->
+                                library { isNotEqualTo(snd.komga.client.library.KomgaLibraryId(libId)) }
+                            }
+                        }.toSeriesCondition()
+                    ),
+                    pageRequest = KomgaPageRequest(size = poolSize),
+                ).content
+                val threshold = filter.progressThresholdPercent / 100f
+                val almost = pool
+                    .mapNotNull { series ->
+                        val total = series.booksCount
+                        if (total <= 0) return@mapNotNull null
+                        val ratio = series.booksReadCount.toFloat() / total
+                        if (ratio < threshold) null else series to ratio
+                    }
+                    .sortedByDescending { it.second }
+                    .take(filter.pageSize)
+                    .map { it.first }
+                SeriesFilterData(series = almost, filter = filter)
             }
         }
 

@@ -68,6 +68,14 @@ val LocalRawStatusBarHeight = staticCompositionLocalOf { 0.dp }
 val LocalRawNavBarHeight = staticCompositionLocalOf { 0.dp }
 val LocalFloatingActionButton = staticCompositionLocalOf<MutableState<Pair<Any, @Composable () -> Unit>?>> { error("Not provided") }
 val LocalFloatingActionButtonLeft = staticCompositionLocalOf<MutableState<Pair<Any, @Composable () -> Unit>?>> { error("Not provided") }
+/**
+ * Additional FAB slot rendered to the *right* of [LocalFloatingActionButton]
+ * in the floating-nav layout. Used by the Continue-reading FAB so it
+ * sits on the same horizontal line as the nav island and the
+ * Edit/filter button, never above them. Order across the bottom row:
+ *   [fab-left] [nav-island] [fab] [fab-far-right]
+ */
+val LocalFloatingActionButtonFarRight = staticCompositionLocalOf<MutableState<Pair<Any, @Composable () -> Unit>?>> { error("Not provided") }
 // When transparent bars mode is active and content extends behind the nav bar,
 // scrollable content should add this as bottom padding so items remain reachable.
 val LocalTransparentNavBarPadding = compositionLocalOf { 0.dp }

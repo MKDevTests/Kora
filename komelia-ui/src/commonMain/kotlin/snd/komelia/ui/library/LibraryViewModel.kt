@@ -56,7 +56,7 @@ class LibraryViewModel(
     private val collectionApi: KomgaCollectionsApi,
     private val readListsApi: KomgaReadListApi,
     private val taskEmitter: OfflineTaskEmitter,
-    private val bookApi: KomgaBookApi,
+    val bookApi: KomgaBookApi,
     seriesApi: KomgaSeriesApi,
     referentialApi: KomgaReferentialApi,
 

@@ -726,6 +726,43 @@ fun <T> PageSettingsContent(
 
 }
 
+/**
+ * Multi-select chip picker for "exclude these libraries" used by the
+ * Forgotten / AlmostFinished built-in shelves. Renders nothing when
+ * [libraries] is empty (e.g. user has 0 or 1 library — exclusion is
+ * meaningless then). Each chip toggles its library in/out of
+ * [excludedIds]; selected = "excluded from shelf".
+ */
+@Composable
+fun ExcludedLibrariesContent(
+    libraries: List<snd.komga.client.library.KomgaLibrary>,
+    excludedIds: List<String>,
+    onExcludedChange: (List<String>) -> Unit,
+) {
+    if (libraries.size <= 1) return
+    Text(
+        text = "Hide books from these libraries:",
+        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+    )
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        libraries.forEach { lib ->
+            val excluded = lib.id.value in excludedIds
+            androidx.compose.material3.FilterChip(
+                selected = excluded,
+                onClick = {
+                    val updated = if (excluded) {
+                        excludedIds.filter { it != lib.id.value }
+                    } else {
+                        excludedIds + lib.id.value
+                    }
+                    onExcludedChange(updated)
+                },
+                label = { Text(lib.name) },
+            )
+        }
+    }
+}
+
 @Composable
 fun PageSizeSettingsContent(pageSize: Int, onPageSizeChange: (Int) -> Unit) {
     var pageSizeText by remember { mutableStateOf(pageSize.toString()) }
@@ -746,4 +783,31 @@ fun PageSizeSettingsContent(pageSize: Int, onPageSizeChange: (Int) -> Unit) {
         modifier = Modifier.width(70.dp),
     )
 
+}
+
+/**
+ * Editor for the AlmostFinished filter's progress threshold. The
+ * input expresses a percentage (1–99); a series qualifies when its
+ * booksReadCount / total ratio meets or exceeds this. Mirrors
+ * [PageSizeSettingsContent]'s minimal TextField style so the
+ * editor row stays visually consistent.
+ */
+@Composable
+fun AlmostFinishedThresholdContent(thresholdPercent: Int, onThresholdChange: (Int) -> Unit) {
+    var text by remember { mutableStateOf(thresholdPercent.toString()) }
+    TextField(
+        value = text,
+        onValueChange = { newText ->
+            if (newText.isBlank()) {
+                text = ""
+            } else if (newText.length <= 3) {
+                newText.toIntOrNull()?.let { n ->
+                    text = newText
+                    onThresholdChange(n.coerceIn(1, 99))
+                }
+            }
+        },
+        label = { Text("≥ %") },
+        modifier = Modifier.width(80.dp),
+    )
 }
