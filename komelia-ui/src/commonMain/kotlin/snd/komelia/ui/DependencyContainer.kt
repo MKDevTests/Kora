@@ -20,6 +20,7 @@ import snd.komelia.komga.api.KomgaApi
 import snd.komelia.komga.api.LocalFileApiProvider
 import snd.komelia.offline.OfflineDependencies
 import snd.komelia.onnxruntime.OnnxRuntime
+import snd.komelia.stats.BookCompletionEvents
 import snd.komelia.ui.strings.AppStrings
 import snd.komelia.updates.AppUpdater
 import snd.komelia.updates.OnnxModelDownloader
@@ -45,6 +46,7 @@ data class DependencyContainer(
     val komgaEvents: ManagedKomgaEvents,
     val appUpdater: AppUpdater?,
     val releaseNotesService: ReleaseNotesService,
+    val bookCompletionEvents: BookCompletionEvents,
 
     val coilContext: PlatformContext,
     val coilImageLoader: ImageLoader,

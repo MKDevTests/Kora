@@ -78,12 +78,24 @@ fun SeriesImageCard(
     val hideParentheses = LocalHideParenthesesInNames.current
     val title = if (hideParentheses) series.metadata.title.removeParentheses() else series.metadata.title
 
+    // Hoisted menu state so long-press anywhere on the card AND the
+    // hover-only MoreVert button can both open the same actions menu.
+    // Long-press takes priority over selection: when seriesMenuActions
+    // is provided, long-press shows the menu (with Rate / Mark read /
+    // Download / etc.). Selection is still reachable via the hover
+    // overlay's radio button on desktop.
+    var isMenuExpanded by remember { mutableStateOf(false) }
+    val longClick: (() -> Unit)? = when {
+        seriesMenuActions != null -> { -> isMenuExpanded = true }
+        else -> onSeriesSelect
+    }
+
     LibraryItemCard(
         modifier = modifier,
         title = title,
         isUnavailable = series.deleted || libraryIsDeleted,
         onClick = onSeriesClick,
-        onLongClick = onSeriesSelect,
+        onLongClick = longClick,
         image = {
             SeriesThumbnail(
                 series.id,
@@ -97,6 +109,8 @@ fun SeriesImageCard(
                 onSeriesSelect = onSeriesSelect,
                 isSelected = isSelected,
                 seriesActions = seriesMenuActions,
+                isMenuExpanded = isMenuExpanded,
+                onMenuExpandedChange = { isMenuExpanded = it },
             ) {
                 SeriesImageBadges(series = series, isDownloaded = isDownloaded)
             }
@@ -152,12 +166,13 @@ private fun SeriesCardHoverOverlay(
     isSelected: Boolean,
     onSeriesSelect: (() -> Unit)?,
     seriesActions: SeriesMenuActions?,
+    isMenuExpanded: Boolean,
+    onMenuExpandedChange: (Boolean) -> Unit,
     content: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered = interactionSource.collectIsHoveredAsState()
-    var isActionsMenuExpanded by remember { mutableStateOf(false) }
-    val showOverlay = derivedStateOf { isHovered.value || isActionsMenuExpanded || isSelected }
+    val showOverlay = derivedStateOf { isHovered.value || isMenuExpanded || isSelected }
     val border = if (showOverlay.value) overlayBorderModifier() else Modifier
 
     Box(
@@ -188,7 +203,7 @@ private fun SeriesCardHoverOverlay(
 
                         Box {
                             IconButton(
-                                onClick = { isActionsMenuExpanded = true },
+                                onClick = { onMenuExpandedChange(true) },
                                 colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface)
                             ) {
                                 Icon(Icons.Rounded.MoreVert, contentDescription = null)
@@ -197,13 +212,39 @@ private fun SeriesCardHoverOverlay(
                             SeriesActionsMenu(
                                 series = series,
                                 actions = seriesActions,
-                                expanded = isActionsMenuExpanded,
+                                expanded = isMenuExpanded,
                                 showEditOption = true,
                                 showDownloadOption = true,
-                                onDismissRequest = { isActionsMenuExpanded = false },
+                                onDismissRequest = { onMenuExpandedChange(false) },
                             )
                         }
                     }
+                }
+            }
+        } else if (isMenuExpanded && seriesActions != null) {
+            // Long-press path on touch: the hover overlay is hidden (no
+            // hover, no selection), but the user has just triggered the
+            // menu. Render the menu standalone at the bottom-right of
+            // the card so it lines up with where the MoreVert button
+            // would be — preserves the menu's anchor point regardless
+            // of how it was opened.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
+                Box {
+                    // Invisible anchor — DropdownMenu attaches to its
+                    // parent Box, which sits at BottomEnd.
+                    Spacer(Modifier)
+                    SeriesActionsMenu(
+                        series = series,
+                        actions = seriesActions,
+                        expanded = isMenuExpanded,
+                        showEditOption = true,
+                        showDownloadOption = true,
+                        onDismissRequest = { onMenuExpandedChange(false) },
+                    )
                 }
             }
         }

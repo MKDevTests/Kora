@@ -394,6 +394,8 @@ fun Series(
                         modifier = Modifier,
                     )
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                    SeriesRatingRow(seriesId = series.id)
+                    HorizontalDivider(Modifier.padding(vertical = 10.dp))
                     SeriesSummary(
                         seriesSummary = series.metadata.summary,
                         bookSummary = series.booksMetadata.summary,

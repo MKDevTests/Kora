@@ -162,6 +162,12 @@ abstract class AppModule(
             .getStatsEnabled()
             .stateIn(initScope)
 
+        // Single in-process broadcast of book completions used by the
+        // "Just finished?" modal. Shared between every wrapped KomgaApi
+        // (online / no-cache / offline / local-file) so all completion
+        // paths converge to the same listener at the UI layer.
+        val bookCompletionEvents = snd.komelia.stats.BookCompletionEvents()
+
         val komgaApi = isOffline.map { offline ->
             val source = if (offline) offlineModule.komgaApi
             else createRemoteApi(
@@ -172,6 +178,7 @@ abstract class AppModule(
             source.withStatsTracking(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
+                completionEvents = bookCompletionEvents,
             )
         }.stateIn(initScope)
 
@@ -185,6 +192,7 @@ abstract class AppModule(
             source.withStatsTracking(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
+                completionEvents = bookCompletionEvents,
             )
         }.stateIn(initScope)
 
@@ -229,6 +237,7 @@ abstract class AppModule(
         val localFileApiProvider = createLocalFileApiProvider()?.withStatsTracking(
             readingEvents = appRepositories.readingEventsRepository,
             statsEnabled = statsEnabledFlow,
+            completionEvents = bookCompletionEvents,
         )
 
         val coil = createCoil(
@@ -274,6 +283,7 @@ abstract class AppModule(
                 updateClient = updateClient,
                 settingsRepository = appRepositories.settingsRepository,
             ),
+            bookCompletionEvents = bookCompletionEvents,
 
             coilContext = androidContext,
             coilImageLoader = coil,

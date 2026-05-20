@@ -19,9 +19,10 @@ import snd.komga.client.book.KomgaBookId
 fun KomgaApi.withStatsTracking(
     readingEvents: ReadingEventsRepository,
     statsEnabled: StateFlow<Boolean>,
+    completionEvents: BookCompletionEvents,
 ): KomgaApi {
     val originalBookApi = bookApi
-    val trackedBookApi = StatsTrackingBookApi(originalBookApi, readingEvents, statsEnabled)
+    val trackedBookApi = StatsTrackingBookApi(originalBookApi, readingEvents, statsEnabled, completionEvents)
     return object : KomgaApi by this {
         override val bookApi: KomgaBookApi = trackedBookApi
     }
@@ -36,9 +37,10 @@ fun KomgaApi.withStatsTracking(
 fun LocalFileApiProvider.withStatsTracking(
     readingEvents: ReadingEventsRepository,
     statsEnabled: StateFlow<Boolean>,
+    completionEvents: BookCompletionEvents,
 ): LocalFileApiProvider = object : LocalFileApiProvider by this {
     override fun getApiForBook(bookId: KomgaBookId): KomgaBookApi? =
         this@withStatsTracking.getApiForBook(bookId)?.let {
-            StatsTrackingBookApi(it, readingEvents, statsEnabled)
+            StatsTrackingBookApi(it, readingEvents, statsEnabled, completionEvents)
         }
 }

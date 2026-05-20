@@ -52,6 +52,7 @@ class StatsTrackingBookApi(
     private val delegate: KomgaBookApi,
     private val readingEvents: ReadingEventsRepository,
     private val statsEnabled: StateFlow<Boolean>,
+    private val completionEvents: BookCompletionEvents,
     private val clock: Clock = Clock.System,
 ) : KomgaBookApi by delegate {
 
@@ -77,6 +78,15 @@ class StatsTrackingBookApi(
     }
 
     private suspend fun recordCompletion(bookId: KomgaBookId) {
+        // Always broadcast UI completion events — even when stats
+        // logging is disabled, the "Just finished?" modal is a
+        // separate user-facing concern that should still fire.
+        try {
+            completionEvents.publish(bookId)
+        } catch (e: Throwable) {
+            logger.debug(e) { "Failed to publish completion event for $bookId" }
+        }
+
         if (!statsEnabled.value) return
         try {
             readingEvents.record(

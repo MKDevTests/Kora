@@ -1,8 +1,14 @@
 package snd.komelia.ui.common.menus
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.automirrored.rounded.LabelOff
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
@@ -13,6 +19,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ViewQuilt
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import snd.komelia.ui.common.components.AnimatedDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,8 +31,13 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import snd.komelia.ui.LocalSeriesRatingsRepository
+import snd.komelia.ui.common.components.RatingStars
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotification
@@ -158,6 +170,41 @@ fun SeriesActionsMenu(
         expanded = showDropdown.value,
         onDismissRequest = onDismissRequest
     ) {
+        // Rate row at the top — read+write of the local SeriesRatingsRepository.
+        // Inline stars rather than "open a separate picker" so the user can
+        // assign/edit a rating in one tap without nested dialogs. Tapping the
+        // current top star clears the rating (delegated to RatingStars).
+        val ratingsRepo = LocalSeriesRatingsRepository.current
+        val ratingScope = rememberCoroutineScope()
+        val currentRating = remember(series.id) { ratingsRepo.observe(series.id) }
+            .collectAsState(initial = null).value
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text("Rate", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.weight(1f))
+            RatingStars(
+                rating = currentRating?.stars ?: 0,
+                size = 22.dp,
+                onRatingChange = { newStars ->
+                    ratingScope.launch {
+                        if (newStars == 0) ratingsRepo.delete(series.id)
+                        else ratingsRepo.put(series.id, newStars)
+                    }
+                },
+            )
+        }
+        HorizontalDivider()
+
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
                 text = { Text("Analyze", style = MaterialTheme.typography.labelLarge) },

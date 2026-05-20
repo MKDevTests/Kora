@@ -478,9 +478,15 @@ fun ImmersiveSeriesContent(
                     }
                 }
 
-                // Summary — full width
+                // Rating + Summary — full width. Rating sits above the
+                // summary so it's reachable without scrolling past book
+                // descriptions. Same widget as the classic series view.
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        snd.komelia.ui.series.view.SeriesRatingRow(seriesId = series.id)
+                        androidx.compose.material3.HorizontalDivider(
+                            Modifier.padding(vertical = 10.dp)
+                        )
                         SeriesSummary(
                             seriesSummary = series.metadata.summary,
                             bookSummary = series.booksMetadata.summary,

@@ -55,6 +55,8 @@ class MainScreenViewModel(
     private val settingsRepository: CommonSettingsRepository,
     private val taskEmitter: OfflineTaskEmitter,
     private val releaseNotesService: ReleaseNotesService,
+    private val bookCompletionEvents: snd.komelia.stats.BookCompletionEvents,
+    private val komgaApiFlow: StateFlow<snd.komelia.komga.api.KomgaApi>,
     val searchBarState: SearchBarState,
     val notificationsState: NotificationsState,
     val libraries: StateFlow<List<KomgaLibrary>>,
@@ -106,9 +108,40 @@ class MainScreenViewModel(
      */
     val releaseNotesToShow: MutableStateFlow<AppRelease?> = MutableStateFlow(null)
 
+    /**
+     * "Just finished?" modal data. Populated by the [bookCompletionEvents]
+     * collector below — each completion event triggers a bookId → seriesId
+     * resolution and stuffs the result here. Cleared on user dismiss.
+     */
+    val justFinishedData: MutableStateFlow<snd.komelia.ui.dialogs.justfinished.JustFinishedBookData?> =
+        MutableStateFlow(null)
+
     init {
         screenModelScope.launch { startEventListener() }
         screenModelScope.launch { checkReleaseNotes() }
+        screenModelScope.launch { collectBookCompletions() }
+    }
+
+    private suspend fun collectBookCompletions() {
+        bookCompletionEvents.events.collect { bookId ->
+            // Look up the book to enrich the modal with series context.
+            // Best-effort: if the lookup fails (offline, deleted, race),
+            // skip the modal silently. The user reading the book just
+            // shouldn't see a half-rendered dialog over nothing.
+            val resolved = runCatching {
+                val book = komgaApiFlow.value.bookApi.getOne(bookId)
+                snd.komelia.ui.dialogs.justfinished.JustFinishedBookData(
+                    seriesId = book.seriesId,
+                    seriesTitle = book.seriesTitle,
+                    bookTitle = book.metadata.title,
+                )
+            }.getOrNull() ?: return@collect
+            justFinishedData.value = resolved
+        }
+    }
+
+    fun dismissJustFinished() {
+        justFinishedData.value = null
     }
 
     private suspend fun checkReleaseNotes() {

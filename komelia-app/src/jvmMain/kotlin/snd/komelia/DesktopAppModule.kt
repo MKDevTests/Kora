@@ -216,6 +216,7 @@ class DesktopAppModule(
             },
             seriesReaderOverridesRepository = snd.komelia.db.reader.ExposedSeriesReaderOverridesRepository(databases.app),
             readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app),
+            seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app),
         )
     }
 

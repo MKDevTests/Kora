@@ -28,6 +28,16 @@ import snd.komga.client.sse.KomgaEvent
 val LocalViewModelFactory = compositionLocalOf<ViewModelFactory> { error("ViewModel factory is not set") }
 val LocalMainScreenViewModel = compositionLocalOf<MainScreenViewModel> { error("MainScreenViewModel is not set") }
 
+/**
+ * Local read/write access to the user's per-series star ratings.
+ * Provided once at MainView so any composable (series detail, action
+ * menus, just-finished modal…) can read or update ratings without
+ * threading the repository through ViewModels.
+ */
+val LocalSeriesRatingsRepository = compositionLocalOf<snd.komelia.ratings.SeriesRatingsRepository> {
+    error("SeriesRatingsRepository is not set")
+}
+
 val LocalToaster = compositionLocalOf<ToasterState> { error("Toaster is not set") }
 val LocalKomgaEvents = compositionLocalOf<SharedFlow<KomgaEvent>> { error("Komga events are not set") }
 val LocalKomfIntegration = compositionLocalOf { flowOf(false) }

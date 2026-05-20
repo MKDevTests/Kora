@@ -208,6 +208,7 @@ fun MainView(
             CompositionLocalProvider(
                 LocalViewModelFactory provides viewModelFactory,
                 LocalToaster provides notificationToaster,
+                LocalSeriesRatingsRepository provides dependencies.appRepositories.seriesRatingsRepository,
                 LocalKomgaEvents provides dependencies.komgaEvents.events,
                 LocalKomfIntegration provides dependencies.appRepositories.komfSettingsRepository.getKomfEnabled(),
                 LocalKeyEvents provides keyEvents,
