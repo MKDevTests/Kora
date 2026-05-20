@@ -65,6 +65,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[startupScreen] = settings.startupScreen.name
                 it[statsEnabled] = settings.statsEnabled
                 it[statsInBottomNav] = settings.statsInBottomNav
+                it[lastSeenReleaseNotesVersion] = settings.lastSeenReleaseNotesVersion
             }
         }
     }
@@ -115,6 +116,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             }.getOrDefault(snd.komelia.settings.model.StartupScreen.HOME),
             statsEnabled = get(AppSettingsTable.statsEnabled),
             statsInBottomNav = get(AppSettingsTable.statsInBottomNav),
+            lastSeenReleaseNotesVersion = get(AppSettingsTable.lastSeenReleaseNotesVersion),
         )
     }
 }

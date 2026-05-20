@@ -270,6 +270,10 @@ abstract class AppModule(
             komgaSharedState = komgaSharedState,
             komgaEvents = komgaEvents,
             appUpdater = createAppUpdater(updateClient),
+            releaseNotesService = snd.komelia.updates.ReleaseNotesService(
+                updateClient = updateClient,
+                settingsRepository = appRepositories.settingsRepository,
+            ),
 
             coilContext = androidContext,
             coilImageLoader = coil,

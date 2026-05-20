@@ -57,6 +57,13 @@ fi
 TAG="v$VERSION"
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
+# ----- preflight: catch the recurring footguns before we touch any files -----
+# preflight.sh covers branch + clean tree + tag uniqueness + JNI libs +
+# migration index registration + version-file consistency. We still keep
+# the two existing belt-and-braces checks below (branch + working tree)
+# because they emit slightly more user-friendly recovery hints.
+"$(dirname "$0")/preflight.sh" "$VERSION"
+
 # ----- preconditions -----
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 if [[ "$CURRENT_BRANCH" != "main" ]]; then

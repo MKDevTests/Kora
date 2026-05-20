@@ -31,6 +31,16 @@ class UpdateClient(
         return ktor.get("$komeliaBaseUrl/releases/latest").body()
     }
 
+    /**
+     * Fetch a single release by its tag name (e.g. "v1.0.3"). Used by
+     * the "What's new" modal to look up the notes for the *currently
+     * running* version so we can show them on first launch after an
+     * upgrade.
+     */
+    suspend fun getKomeliaReleaseByTag(tagName: String): GithubRelease {
+        return ktor.get("$komeliaBaseUrl/releases/tags/$tagName").body()
+    }
+
     suspend fun getOnnxRuntimeRelease(tagName: String): GithubRelease {
         return ktor.get("$onnxRuntimeBaseUrl/releases/tags/$tagName").body()
     }

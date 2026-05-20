@@ -286,4 +286,11 @@ class SettingsRepositoryWrapper(
     override suspend fun putStatsInBottomNav(enabled: Boolean) {
         wrapper.transform { it.copy(statsInBottomNav = enabled) }
     }
+
+    override fun getLastSeenReleaseNotesVersion(): Flow<String?> =
+        wrapper.state.map { it.lastSeenReleaseNotesVersion }.distinctUntilChanged()
+
+    override suspend fun putLastSeenReleaseNotesVersion(version: String) {
+        wrapper.transform { it.copy(lastSeenReleaseNotesVersion = version) }
+    }
 }

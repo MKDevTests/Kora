@@ -132,6 +132,19 @@ class MainScreen(
                     MOBILE -> MobileLayout(navigator, vm)
                     DESKTOP, WEB_KOMF -> DesktopLayout(navigator, vm)
                 }
+
+                // "What's new" modal — overlays on top of the current
+                // layout. The VM populates `releaseNotesToShow` lazily on
+                // first launch after an upgrade (see init { } there). If
+                // we're on the same version as last-seen, or GitHub
+                // couldn't be reached, this stays null and nothing renders.
+                val releaseNotes = vm.releaseNotesToShow.collectAsState().value
+                if (releaseNotes != null) {
+                    snd.komelia.ui.dialogs.release.ReleaseNotesDialog(
+                        release = releaseNotes,
+                        onDismiss = { vm.dismissReleaseNotes(save = true) },
+                    )
+                }
             }
             LaunchedEffect(Unit) {
                 vm.initialize(navigator)

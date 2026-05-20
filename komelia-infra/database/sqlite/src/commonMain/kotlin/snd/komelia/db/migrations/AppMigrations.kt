@@ -72,6 +72,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V60__search_fuzzy_enabled.sql",
         "V61__navigation_settings.sql",
         "V62__reading_stats.sql",
+        "V63__release_notes_seen.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

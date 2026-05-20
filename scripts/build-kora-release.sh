@@ -107,6 +107,12 @@ if [[ $CLEAN == 1 ]]; then
     "$GRADLEW" :komelia-app:clean
 fi
 
+# Guarantee native JNI libs are in place before invoking Gradle. Without
+# this, the APK builds fine but crashes at runtime with UnsatisfiedLinkError
+# for libsqlitejdbc.so or libvips.so. See scripts/_ensure_jni_libs.sh.
+. "$(dirname "$0")/_ensure_jni_libs.sh"
+ensure_jni_libs
+
 echo "==> Building Kora release APK"
 "$GRADLEW" :komelia-app:assembleRelease
 

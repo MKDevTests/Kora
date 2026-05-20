@@ -25,6 +25,7 @@ import snd.komelia.updates.AppUpdater
 import snd.komelia.updates.OnnxModelDownloader
 import snd.komelia.updates.OnnxRuntimeInstaller
 import snd.komelia.updates.RapidOcrModelDownloader
+import snd.komelia.updates.ReleaseNotesService
 import snd.komelia.updates.WhisperModelDownloader
 import snd.komf.client.KomfClientFactory
 
@@ -43,6 +44,7 @@ data class DependencyContainer(
     val komgaSharedState: KomgaAuthenticationState,
     val komgaEvents: ManagedKomgaEvents,
     val appUpdater: AppUpdater?,
+    val releaseNotesService: ReleaseNotesService,
 
     val coilContext: PlatformContext,
     val coilImageLoader: ImageLoader,

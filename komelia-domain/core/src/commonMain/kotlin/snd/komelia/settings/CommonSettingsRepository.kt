@@ -137,4 +137,12 @@ interface CommonSettingsRepository {
      */
     fun getStatsInBottomNav(): Flow<Boolean>
     suspend fun putStatsInBottomNav(enabled: Boolean)
+
+    /**
+     * App version (e.g. "1.0.3") for which the user has already
+     * acknowledged the "What's new" release-notes modal. Null means
+     * never seen — the modal will show on the next launch.
+     */
+    fun getLastSeenReleaseNotesVersion(): Flow<String?>
+    suspend fun putLastSeenReleaseNotesVersion(version: String)
 }

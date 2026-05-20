@@ -79,4 +79,11 @@ data class AppSettings(
      * historical nav layout for existing users.
      */
     val statsInBottomNav: Boolean = false,
+
+    /**
+     * App version (e.g. "1.0.3") for which the user has already
+     * acknowledged the release-notes "What's new" modal. Null means
+     * never seen, so the modal will show on the next launch.
+     */
+    val lastSeenReleaseNotesVersion: String? = null,
 )

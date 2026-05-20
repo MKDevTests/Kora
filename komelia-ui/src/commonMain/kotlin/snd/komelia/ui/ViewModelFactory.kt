@@ -186,6 +186,7 @@ class ViewModelFactory(
             offlineSettingsRepository = dependencies.offlineDependencies.repositories.offlineSettingsRepository,
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
+            releaseNotesService = dependencies.releaseNotesService,
         )
     }
 

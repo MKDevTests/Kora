@@ -22,6 +22,9 @@ import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.StartupScreen
 import snd.komelia.ui.Theme
+import snd.komelia.updates.AppRelease
+import snd.komelia.updates.AppVersion
+import snd.komelia.updates.ReleaseNotesService
 import snd.komelia.ui.book.BookScreen
 import snd.komelia.ui.collection.CollectionScreen
 import snd.komelia.ui.common.menus.LibraryMenuActions
@@ -51,6 +54,7 @@ class MainScreenViewModel(
     private val offlineSettingsRepository: OfflineSettingsRepository,
     private val settingsRepository: CommonSettingsRepository,
     private val taskEmitter: OfflineTaskEmitter,
+    private val releaseNotesService: ReleaseNotesService,
     val searchBarState: SearchBarState,
     val notificationsState: NotificationsState,
     val libraries: StateFlow<List<KomgaLibrary>>,
@@ -95,8 +99,34 @@ class MainScreenViewModel(
         this.navigatorFlow.value = navigator
     }
 
+    /**
+     * Release-notes ("What's new") modal. The dialog is open iff this
+     * flow holds a non-null [AppRelease]. Populated lazily on first
+     * launch — see [checkReleaseNotes].
+     */
+    val releaseNotesToShow: MutableStateFlow<AppRelease?> = MutableStateFlow(null)
+
     init {
         screenModelScope.launch { startEventListener() }
+        screenModelScope.launch { checkReleaseNotes() }
+    }
+
+    private suspend fun checkReleaseNotes() {
+        releaseNotesToShow.value = releaseNotesService.fetchIfUnseen(AppVersion.current)
+    }
+
+    /**
+     * Called from the dialog. Closes the modal and (if [save] is true,
+     * which it always is from the "Got it" button) records the current
+     * version as acknowledged so the modal doesn't re-appear next launch.
+     */
+    fun dismissReleaseNotes(save: Boolean = true) {
+        releaseNotesToShow.value = null
+        if (save) {
+            screenModelScope.launch {
+                releaseNotesService.markSeen(AppVersion.current)
+            }
+        }
     }
 
     val komgaTaskQueueStatus = MutableStateFlow<TaskQueueStatus?>(null)

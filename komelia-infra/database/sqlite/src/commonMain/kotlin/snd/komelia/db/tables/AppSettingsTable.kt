@@ -49,6 +49,7 @@ object AppSettingsTable : Table("AppSettings") {
     val startupScreen = text("startup_screen").default("HOME")
     val statsEnabled = bool("stats_enabled").default(true)
     val statsInBottomNav = bool("stats_in_bottom_nav").default(false)
+    val lastSeenReleaseNotesVersion = text("last_seen_release_notes_version").nullable()
 
     override val primaryKey = PrimaryKey(version)
 }
