@@ -41,4 +41,21 @@ data class BackupSections(
     @SerialName("home_screen_filters") val homeScreenFilters: List<HomeScreenFilter>? = null,
     @SerialName("library_series_filters") val librarySeriesFilters: Map<String, String>? = null,
     @SerialName("series_reader_overrides") val seriesReaderOverrides: Map<String, String>? = null,
+    @SerialName("series_ratings") val seriesRatings: List<RatingExport>? = null,
+)
+
+/**
+ * Wire-format DTO for a single user rating. We do not put the domain
+ * [snd.komelia.ratings.SeriesRating] here directly: it's not @Serializable,
+ * embeds [kotlin.time.Instant] which is awkward over JSON, and we want the
+ * backup file to stay stable even if the domain type evolves.
+ *
+ * [ratedAt] is epoch milliseconds (matches the SQLite column) so the
+ * original timestamp survives round-trips unchanged.
+ */
+@Serializable
+data class RatingExport(
+    @SerialName("series_id") val seriesId: String,
+    val stars: Int,
+    @SerialName("rated_at") val ratedAt: Long,
 )

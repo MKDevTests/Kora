@@ -9,7 +9,9 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
 import snd.komelia.db.ExposedRepository
@@ -78,6 +80,40 @@ class ExposedSeriesRatingsRepository(
                 .limit(limit)
                 .map { it.toModel() }
         }
+    }
+
+    override suspend fun listAll(): List<SeriesRating> {
+        return transaction {
+            SeriesRatingsTable
+                .selectAll()
+                .map { it.toModel() }
+        }
+    }
+
+    override suspend fun replaceAll(ratings: List<SeriesRating>) {
+        ratings.forEach {
+            require(it.stars in 1..5) { "stars must be 1..5, got ${it.stars}" }
+        }
+        // Snapshot existing ids *before* the wipe so observers of removed
+        // ratings get notified too — not just the ones we're restoring.
+        // Both the delete and the inserts happen in a single transaction
+        // so a crash mid-loop can't leave the table half-empty.
+        val toEmit: Set<KomgaSeriesId> = transaction {
+            val previousIds = SeriesRatingsTable
+                .selectAll()
+                .map { KomgaSeriesId(it[SeriesRatingsTable.seriesId]) }
+                .toSet()
+            SeriesRatingsTable.deleteAll()
+            ratings.forEach { rating ->
+                SeriesRatingsTable.insert {
+                    it[seriesId] = rating.seriesId.value
+                    it[stars] = rating.stars
+                    it[ratedAt] = rating.ratedAt.toEpochMilliseconds()
+                }
+            }
+            previousIds + ratings.map { it.seriesId }
+        }
+        toEmit.forEach { writeEvents.emit(it) }
     }
 
     private fun org.jetbrains.exposed.v1.core.ResultRow.toModel(): SeriesRating {

@@ -9,11 +9,14 @@ import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
+import snd.komelia.ratings.SeriesRating
+import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
 import snd.komelia.updates.AppVersion
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesId
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Default implementation that reaches each [SettingsStateWrapper] directly to
@@ -33,6 +36,7 @@ class DefaultBackupService(
     private val homeFilters: SettingsStateWrapper<List<HomeScreenFilter>>,
     private val librarySeriesFilters: LibrarySeriesFiltersRepository,
     private val seriesReaderOverrides: SeriesReaderOverridesRepository,
+    private val seriesRatings: SeriesRatingsRepository,
 ) : BackupService {
 
     private val json = Json {
@@ -55,6 +59,13 @@ class DefaultBackupService(
         val home = homeFilters.state.value
         val libFilters = librarySeriesFilters.getAll().mapKeys { (id, _) -> id.value }
         val seriesOverrides = seriesReaderOverrides.getAll().mapKeys { (id, _) -> id.value }
+        val ratings = seriesRatings.listAll().map { rating ->
+            RatingExport(
+                seriesId = rating.seriesId.value,
+                stars = rating.stars,
+                ratedAt = rating.ratedAt.toEpochMilliseconds(),
+            )
+        }
 
         val bundle = BackupBundle(
             schemaVersion = BACKUP_SCHEMA_VERSION,
@@ -69,6 +80,7 @@ class DefaultBackupService(
                 homeScreenFilters = home,
                 librarySeriesFilters = libFilters,
                 seriesReaderOverrides = seriesOverrides,
+                seriesRatings = ratings,
             )
         )
         return json.encodeToString(BackupBundle.serializer(), bundle)
@@ -174,6 +186,23 @@ class DefaultBackupService(
                 }
                 restored.add("Series reader overrides (${incoming.size} entries)")
             }.onFailure { return ImportResult.Failure("Failed to restore Series reader overrides: ${it.message}") }
+        }
+
+        sections.seriesRatings?.let { incoming ->
+            runCatching {
+                // replaceAll is transactional and preserves each row's
+                // original ratedAt — that's why we use it instead of
+                // looping put() which would stamp every entry with now().
+                val models = incoming.map { dto ->
+                    SeriesRating(
+                        seriesId = KomgaSeriesId(dto.seriesId),
+                        stars = dto.stars,
+                        ratedAt = Instant.fromEpochMilliseconds(dto.ratedAt),
+                    )
+                }
+                seriesRatings.replaceAll(models)
+                restored.add("Series ratings (${incoming.size} entries)")
+            }.onFailure { return ImportResult.Failure("Failed to restore Series ratings: ${it.message}") }
         }
 
         return ImportResult.Success(restored)

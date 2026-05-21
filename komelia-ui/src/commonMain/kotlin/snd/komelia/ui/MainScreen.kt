@@ -145,19 +145,6 @@ class MainScreen(
                         onDismiss = { vm.dismissReleaseNotes(save = true) },
                     )
                 }
-
-                // "Just finished?" modal — fires when a book reaches
-                // 100% during a reader session. MainScreenViewModel
-                // resolves the book → series context off-thread and
-                // stuffs the result here, so the dialog gets pre-baked
-                // data (no API call inside the composable).
-                val justFinished = vm.justFinishedData.collectAsState().value
-                if (justFinished != null) {
-                    snd.komelia.ui.dialogs.justfinished.JustFinishedDialog(
-                        data = justFinished,
-                        onDismiss = { vm.dismissJustFinished() },
-                    )
-                }
             }
             LaunchedEffect(Unit) {
                 vm.initialize(navigator)

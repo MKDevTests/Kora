@@ -187,8 +187,6 @@ class ViewModelFactory(
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             releaseNotesService = dependencies.releaseNotesService,
-            bookCompletionEvents = dependencies.bookCompletionEvents,
-            komgaApiFlow = dependencies.komgaApi,
         )
     }
 

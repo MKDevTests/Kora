@@ -419,6 +419,7 @@ class AndroidAppModule(
             homeFilters = (repositories.homeScreenFilterRepository as HomeScreenFilterRepositoryWrapper).wrapper,
             librarySeriesFilters = repositories.librarySeriesFiltersRepository,
             seriesReaderOverrides = repositories.seriesReaderOverridesRepository,
+            seriesRatings = repositories.seriesRatingsRepository,
         )
     }
 
