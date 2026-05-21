@@ -57,6 +57,14 @@ fi
 TAG="v$VERSION"
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
+# versionCode bumped in lockstep with semver — computed so there's no separate
+# counter to maintain. Layout: MAJOR*10000 + MINOR*100 + PATCH.
+#   1.0.9 -> 10009     2.0.0 -> 20000     room for 99 patches per minor.
+# Monotonically increasing as long as semver itself is — the previous hardcoded
+# value (24) is below any computed value here, so updates from older Kora
+# installs keep working.
+VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+
 # ----- preflight: catch the recurring footguns before we touch any files -----
 # preflight.sh covers branch + clean tree + tag uniqueness + JNI libs +
 # migration index registration + version-file consistency. We still keep
@@ -123,10 +131,11 @@ fi
 # ----- targets -----
 VERSIONS_TOML="gradle/libs.versions.toml"
 APP_VERSION_KT="komelia-domain/core/src/commonMain/kotlin/snd/komelia/updates/AppVersion.kt"
+BUILD_GRADLE_KTS="komelia-app/build.gradle.kts"
 SIGNED_APK="komelia-app/build/outputs/apk/release/kora-app-release-signed.apk"
 RELEASE_APK="komelia-app/build/outputs/apk/release/kora-$VERSION.apk"
 
-for f in "$VERSIONS_TOML" "$APP_VERSION_KT"; do
+for f in "$VERSIONS_TOML" "$APP_VERSION_KT" "$BUILD_GRADLE_KTS"; do
     [[ -f "$f" ]] || { echo "ERROR: $f not found. Repo layout changed?" >&2; exit 1; }
 done
 
@@ -136,7 +145,7 @@ done
 rollback() {
     local msg="${1:-Aborting}"
     echo "==> $msg — rolling back version bump" >&2
-    git checkout -- "$VERSIONS_TOML" "$APP_VERSION_KT" 2>/dev/null || true
+    git checkout -- "$VERSIONS_TOML" "$APP_VERSION_KT" "$BUILD_GRADLE_KTS" 2>/dev/null || true
     git tag -d "$TAG" 2>/dev/null || true
 }
 trap 'rollback "Script failed"' ERR
@@ -160,30 +169,97 @@ fi
 sed -i.bak -E "s/val current = AppVersion\([0-9]+, [0-9]+, [0-9]+\)/val current = AppVersion($MAJOR, $MINOR, $PATCH)/" "$APP_VERSION_KT"
 rm -f "$APP_VERSION_KT.bak"
 
-echo "    $VERSIONS_TOML  -> app-version = \"$VERSION\""
-echo "    $APP_VERSION_KT -> AppVersion($MAJOR, $MINOR, $PATCH)"
+# komelia-app/build.gradle.kts: versionCode = N
+if ! grep -qE '^[[:space:]]*versionCode = [0-9]+' "$BUILD_GRADLE_KTS"; then
+    echo "ERROR: 'versionCode = N' line not found in $BUILD_GRADLE_KTS" >&2
+    exit 1
+fi
+sed -i.bak -E "s/^([[:space:]]*)versionCode = [0-9]+/\1versionCode = $VERSION_CODE/" "$BUILD_GRADLE_KTS"
+rm -f "$BUILD_GRADLE_KTS.bak"
+
+echo "    $VERSIONS_TOML    -> app-version = \"$VERSION\""
+echo "    $APP_VERSION_KT   -> AppVersion($MAJOR, $MINOR, $PATCH)"
+echo "    $BUILD_GRADLE_KTS -> versionCode = $VERSION_CODE"
 
 # ----- build signed APK -----
 echo "==> Building signed release APK"
 # build-kora-release.sh tries to install on the connected device at the end.
 # We don't care about install for the release flow — only that the SIGNED
 # APK ends up on disk. So ignore its exit code and verify the file.
+#
+# `trap ERR` triggers regardless of `set -e` state, so we must disarm it
+# explicitly here — otherwise a transient non-zero command inside the build
+# script kicks off `rollback` while THIS script keeps running, and we end up
+# copying a stale APK from a previous build to kora-<ver>.apk. (This is what
+# burned the v1.0.8 release: shipped versionName=1.0.7 inside kora-1.0.8.apk.)
+trap - ERR
 set +e
 ./scripts/build-kora-release.sh
 BUILD_RC=$?
 set -e
+trap 'rollback "Script failed"' ERR
 
 if [[ ! -f "$SIGNED_APK" ]]; then
     echo "ERROR: signed APK was not produced at $SIGNED_APK (build script exit=$BUILD_RC)" >&2
     exit 1
 fi
 
+# Sanity-check the APK's actual versionName/versionCode match what we just
+# bumped — defense in depth against the stale-APK bug above. If aapt2 isn't
+# available we warn and continue (don't block release flow on a missing SDK
+# tool), but a mismatch is always fatal.
+verify_apk_version() {
+    local apk="$1"
+    local aapt2=""
+    local candidate
+
+    # Linux/WSL: $ANDROID_HOME/build-tools/<latest>/aapt2 first.
+    if [[ -n "${ANDROID_HOME:-}" ]]; then
+        candidate="$(ls -1 "$ANDROID_HOME/build-tools"/*/aapt2 2>/dev/null | sort -V | tail -n 1)"
+        [[ -x "$candidate" ]] && aapt2="$candidate"
+    fi
+
+    # Windows-side SDK reachable from WSL: pick the newest aapt2.exe.
+    if [[ -z "$aapt2" ]]; then
+        candidate="$(ls -1 "/mnt/c/Users/mathi/AppData/Local/Android/Sdk/build-tools"/*/aapt2.exe 2>/dev/null | sort -V | tail -n 1)"
+        [[ -x "$candidate" ]] && aapt2="$candidate"
+    fi
+
+    if [[ -z "$aapt2" ]]; then
+        echo "    WARNING: aapt2 not found, skipping versionName/versionCode check on $apk" >&2
+        return 0
+    fi
+
+    local badging
+    badging="$("$aapt2" dump badging "$apk" 2>/dev/null)" || {
+        echo "    WARNING: 'aapt2 dump badging' failed on $apk, skipping check" >&2
+        return 0
+    }
+
+    local apk_version_name apk_version_code
+    apk_version_name="$(echo "$badging" | sed -nE "s/.*versionName='([^']+)'.*/\1/p" | head -n 1)"
+    apk_version_code="$(echo "$badging" | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -n 1)"
+
+    if [[ "$apk_version_name" != "$VERSION" ]]; then
+        echo "ERROR: APK versionName='$apk_version_name' but expected '$VERSION'." >&2
+        echo "  Likely a stale APK from a previous build. Aborting before upload." >&2
+        return 1
+    fi
+    if [[ "$apk_version_code" != "$VERSION_CODE" ]]; then
+        echo "ERROR: APK versionCode='$apk_version_code' but expected '$VERSION_CODE'." >&2
+        return 1
+    fi
+    echo "    APK verified: versionName=$apk_version_name versionCode=$apk_version_code"
+}
+
+verify_apk_version "$SIGNED_APK"
+
 cp "$SIGNED_APK" "$RELEASE_APK"
 echo "==> Release APK ready: $RELEASE_APK ($(du -h "$RELEASE_APK" | cut -f1))"
 
 # ----- commit + tag -----
 echo "==> Committing and tagging $TAG"
-git add "$VERSIONS_TOML" "$APP_VERSION_KT"
+git add "$VERSIONS_TOML" "$APP_VERSION_KT" "$BUILD_GRADLE_KTS"
 git commit -m "chore(release): $TAG"
 git tag -a "$TAG" -m "Kora $TAG"
 
