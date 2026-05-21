@@ -7,6 +7,7 @@ import snd.komelia.db.AppSettings
 import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.settings.model.StartupScreen
 import snd.komga.client.library.KomgaLibraryId
@@ -293,4 +294,54 @@ class SettingsRepositoryWrapper(
     override suspend fun putLastSeenReleaseNotesVersion(version: String) {
         wrapper.transform { it.copy(lastSeenReleaseNotesVersion = version) }
     }
+
+    override fun getAutobackupEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.autobackupEnabled }.distinctUntilChanged()
+
+    override suspend fun putAutobackupEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(autobackupEnabled = enabled) }
+    }
+
+    override fun getAutobackupFolderUri(): Flow<String?> =
+        wrapper.state.map { it.autobackupFolderUri }.distinctUntilChanged()
+
+    override suspend fun putAutobackupFolderUri(uri: String?) {
+        wrapper.transform { it.copy(autobackupFolderUri = uri) }
+    }
+
+    override fun getAutobackupFrequency(): Flow<AutobackupFrequency> =
+        wrapper.state.map { it.autobackupFrequency }.distinctUntilChanged()
+
+    override suspend fun putAutobackupFrequency(frequency: AutobackupFrequency) {
+        wrapper.transform { it.copy(autobackupFrequency = frequency) }
+    }
+
+    override fun getAutobackupMaxKeep(): Flow<Int> =
+        wrapper.state.map { it.autobackupMaxKeep }.distinctUntilChanged()
+
+    override suspend fun putAutobackupMaxKeep(maxKeep: Int) {
+        wrapper.transform { it.copy(autobackupMaxKeep = maxKeep.coerceIn(1, 10)) }
+    }
+
+    override fun getAutobackupLastSuccessAt(): Flow<Instant?> =
+        wrapper.state.map { it.autobackupLastSuccessAt }.distinctUntilChanged()
+
+    override suspend fun putAutobackupLastSuccessAt(timestamp: Instant?) {
+        wrapper.transform { it.copy(autobackupLastSuccessAt = timestamp) }
+    }
+
+    override fun getAutobackupLastFailureAt(): Flow<Instant?> =
+        wrapper.state.map { it.autobackupLastFailureAt }.distinctUntilChanged()
+
+    override suspend fun putAutobackupLastFailure(timestamp: Instant?, message: String?) {
+        wrapper.transform {
+            it.copy(
+                autobackupLastFailureAt = timestamp,
+                autobackupLastFailureMessage = message,
+            )
+        }
+    }
+
+    override fun getAutobackupLastFailureMessage(): Flow<String?> =
+        wrapper.state.map { it.autobackupLastFailureMessage }.distinctUntilChanged()
 }

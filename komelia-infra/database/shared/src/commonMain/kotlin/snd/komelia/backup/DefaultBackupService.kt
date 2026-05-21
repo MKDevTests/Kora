@@ -118,6 +118,16 @@ class DefaultBackupService(
                         updateLastCheckedReleaseVersion = current.updateLastCheckedReleaseVersion,
                         updateDismissedVersion = current.updateDismissedVersion,
                         lastSelectedLibraryId = current.lastSelectedLibraryId,
+                        // Autobackup is device-local: the SAF tree URI from another
+                        // device would point at nothing here. Keep the user's
+                        // own settings + recorded state.
+                        autobackupEnabled = current.autobackupEnabled,
+                        autobackupFolderUri = current.autobackupFolderUri,
+                        autobackupFrequency = current.autobackupFrequency,
+                        autobackupMaxKeep = current.autobackupMaxKeep,
+                        autobackupLastSuccessAt = current.autobackupLastSuccessAt,
+                        autobackupLastFailureAt = current.autobackupLastFailureAt,
+                        autobackupLastFailureMessage = current.autobackupLastFailureMessage,
                     )
                 }
                 restored.add("App settings")
@@ -217,6 +227,13 @@ class DefaultBackupService(
             updateLastCheckedReleaseVersion = defaults.updateLastCheckedReleaseVersion,
             updateDismissedVersion = defaults.updateDismissedVersion,
             lastSelectedLibraryId = defaults.lastSelectedLibraryId,
+            autobackupEnabled = defaults.autobackupEnabled,
+            autobackupFolderUri = defaults.autobackupFolderUri,
+            autobackupFrequency = defaults.autobackupFrequency,
+            autobackupMaxKeep = defaults.autobackupMaxKeep,
+            autobackupLastSuccessAt = defaults.autobackupLastSuccessAt,
+            autobackupLastFailureAt = defaults.autobackupLastFailureAt,
+            autobackupLastFailureMessage = defaults.autobackupLastFailureMessage,
         )
     }
 }

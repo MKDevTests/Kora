@@ -11,10 +11,13 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -438,6 +441,34 @@ override fun createOfflineModule(
         komgaClientFactory = komgaClientFactory,
         context = this.context,
     )
+}
+
+override fun createRunAutobackupNow(): () -> Unit = {
+    snd.komelia.autobackup.AutobackupScheduler.triggerImmediate(context.applicationContext)
+}
+
+override fun createPersistableFolderUriExtractor(): (io.github.vinceglb.filekit.PlatformFile) -> String? = { file ->
+    (file.androidFile as? io.github.vinceglb.filekit.AndroidFile.UriWrapper)?.uri?.toString()
+}
+
+override fun createWidgetBookToOpenFlow(
+    komgaApi: kotlinx.coroutines.flow.StateFlow<snd.komelia.komga.api.KomgaApi>,
+): kotlinx.coroutines.flow.SharedFlow<snd.komelia.komga.api.model.KomeliaBook> {
+    val out = kotlinx.coroutines.flow.MutableSharedFlow<snd.komelia.komga.api.model.KomeliaBook>(
+        extraBufferCapacity = 4,
+    )
+    initScope.launch {
+        openBookFromWidgetFlow.collect { bookIdString ->
+            runCatching {
+                komgaApi.value.bookApi.getOne(snd.komga.client.book.KomgaBookId(bookIdString))
+            }
+                .onSuccess { book -> out.emit(book) }
+                .onFailure {
+                    logger.warn(it) { "Could not fetch widget-tapped book $bookIdString" }
+                }
+        }
+    }
+    return out.asSharedFlow()
 }
 
 override suspend fun close() {

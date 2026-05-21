@@ -49,6 +49,14 @@ private val sessionManager = MutableStateFlow<ServerSessionManager?>(null)
 private val _incomingFileUriFlow = MutableSharedFlow<String>(replay = 1)
 val incomingFileUriFlow: SharedFlow<String> = _incomingFileUriFlow.asSharedFlow()
 
+/**
+ * Carries `bookId` strings extracted from "Next book up" widget taps.
+ * Replay=1 so the flow buffers the request that landed before the
+ * consumer (MainContent) is composed — typical cold-start scenario.
+ */
+private val _openBookFromWidgetFlow = MutableSharedFlow<String>(replay = 1)
+val openBookFromWidgetFlow: SharedFlow<String> = _openBookFromWidgetFlow.asSharedFlow()
+
 class MainActivity : AppCompatActivity() {
 
     private val keyEvents = MutableSharedFlow<KeyEvent>(extraBufferCapacity = Int.MAX_VALUE)
@@ -127,6 +135,10 @@ class MainActivity : AppCompatActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             intent.data?.toString()?.let { _incomingFileUriFlow.tryEmit(it) }
+        }
+        if (intent?.action == snd.komelia.widget.widgetActionOpenBook) {
+            intent.getStringExtra(snd.komelia.widget.widgetExtraBookId)
+                ?.let { _openBookFromWidgetFlow.tryEmit(it) }
         }
     }
 }

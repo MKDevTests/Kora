@@ -13,6 +13,7 @@ androix-documentfile = "1.1.0"
 androidx-window = "1.5.1"
 androidx-palette = "1.0.0"
 androidx-workManager = "2.11.2"
+androidx-glance = "1.1.1"
 
 cache4k = "0.14.0"
 coil = "3.4.0"
@@ -67,6 +68,8 @@ androidx-window = { module = "androidx.window:window", version.ref = "androidx-w
 androidx-palette = { module = "androidx.palette:palette-ktx", version.ref = "androidx-palette" }
 androidx-workManager = { module = "androidx.work:work-runtime", version.ref = "androidx-workManager" }
 androidx-workManager-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "androidx-workManager" }
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "androidx-glance" }
+androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "androidx-glance" }
 android-desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version = "2.1.5" }
 
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }

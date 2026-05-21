@@ -252,7 +252,12 @@ fun MainView(
                 LocalUseFloatingNavigationBar provides useFloatingNavigationBar,
             ) {
                 key(currentServerProfile?.id) {
-                    MainContent(platformType, dependencies.komgaSharedState, dependencies.localFileApiProvider)
+                    MainContent(
+                        platformType = platformType,
+                        komgaSharedState = dependencies.komgaSharedState,
+                        localFileApiProvider = dependencies.localFileApiProvider,
+                        widgetBookToOpenFlow = dependencies.widgetBookToOpenFlow,
+                    )
                 }
 
                 AppNotifications(dependencies.appNotifications, theme)
@@ -273,6 +278,7 @@ private fun MainContent(
     platformType: PlatformType,
     komgaSharedState: KomgaAuthenticationState,
     localFileApiProvider: LocalFileApiProvider? = null,
+    widgetBookToOpenFlow: kotlinx.coroutines.flow.SharedFlow<snd.komelia.komga.api.model.KomeliaBook>? = null,
 ) {
     val loginScreen = remember(platformType) {
         when (platformType) {
@@ -321,6 +327,23 @@ private fun MainContent(
 
                 LaunchedEffect(localFileApiProvider) {
                     localFileApiProvider?.processedBooksFlow?.collect { book ->
+                        snapshotFlow { canProceed }.filter { it }.first()
+                        navigator.popUntilRoot()
+                        navigator.push(
+                            readerScreen(
+                                book = book,
+                                markReadProgress = true,
+                                bookSiblingsContext = BookSiblingsContext.Series(),
+                            )
+                        )
+                    }
+                }
+
+                // Home-screen widget tap → book already resolved by the
+                // androidMain provider. Same push-to-reader pattern as
+                // the local-file intent path above.
+                LaunchedEffect(widgetBookToOpenFlow) {
+                    widgetBookToOpenFlow?.collect { book ->
                         snapshotFlow { canProceed }.filter { it }.first()
                         navigator.popUntilRoot()
                         navigator.push(

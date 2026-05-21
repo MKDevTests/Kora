@@ -85,6 +85,18 @@
                 android:name="snd.komelia.updates.PackageInstallerStatusReceiver"
                 android:exported="false"/>
 
+        <receiver
+                android:name="snd.komelia.widget.NextBookWidgetReceiver"
+                android:exported="false"
+                android:label="@string/next_book_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.appwidget.provider"
+                    android:resource="@xml/next_book_widget_info" />
+        </receiver>
+
         <service
                 android:name="com.storyteller.reader.PlaybackService"
                 android:foregroundServiceType="mediaPlayback"

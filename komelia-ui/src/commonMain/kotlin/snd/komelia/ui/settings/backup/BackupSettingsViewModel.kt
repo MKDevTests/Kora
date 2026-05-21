@@ -2,9 +2,12 @@ package snd.komelia.ui.settings.backup
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -13,7 +16,10 @@ import kotlinx.serialization.json.Json
 import snd.komelia.backup.BackupBundle
 import snd.komelia.backup.BackupService
 import snd.komelia.backup.ImportResult
+import snd.komelia.settings.CommonSettingsRepository
+import snd.komelia.settings.model.AutobackupFrequency
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * State machine for the Backup & Restore settings screen. The screen flow is:
@@ -21,15 +27,42 @@ import kotlin.time.Clock
  *  - Idle -> PreImportConfirm -> (file pick) -> ImportPreview -> Importing -> Done
  * Any failure transitions to [BackupUiState.Error], which the user dismisses
  * back to [BackupUiState.Idle].
+ *
+ * The autobackup section is independent of the export/import state machine —
+ * it simply reflects [CommonSettingsRepository] and forwards toggle/folder
+ * changes back to it. Side effects (folder picker, "Backup now") are wired
+ * via the [runAutobackupNow] and [extractFolderUri] callbacks supplied by
+ * the platform-specific module.
  */
 class BackupSettingsViewModel(
     private val backupService: BackupService,
+    private val settingsRepository: CommonSettingsRepository,
+    private val runAutobackupNow: () -> Unit,
+    private val extractFolderUri: (PlatformFile) -> String?,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val state: StateFlow<BackupUiState> = _state.asStateFlow()
 
     private val parseJson = Json { ignoreUnknownKeys = true; classDiscriminator = "type" }
+
+    val autobackupEnabled: StateFlow<Boolean> = settingsRepository.getAutobackupEnabled()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, false)
+    val autobackupFolderUri: StateFlow<String?> = settingsRepository.getAutobackupFolderUri()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, null)
+    val autobackupFrequency: StateFlow<AutobackupFrequency> = settingsRepository.getAutobackupFrequency()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, AutobackupFrequency.DAILY)
+    val autobackupMaxKeep: StateFlow<Int> = settingsRepository.getAutobackupMaxKeep()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, 3)
+    val autobackupLastSuccessAt: StateFlow<Instant?> = settingsRepository.getAutobackupLastSuccessAt()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, null)
+    val autobackupLastFailureAt: StateFlow<Instant?> = settingsRepository.getAutobackupLastFailureAt()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, null)
+    val autobackupLastFailureMessage: StateFlow<String?> = settingsRepository.getAutobackupLastFailureMessage()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, null)
+
+    private val _pendingFolderPick = MutableStateFlow<FolderPickIntent?>(null)
+    val pendingFolderPick: StateFlow<FolderPickIntent?> = _pendingFolderPick.asStateFlow()
 
     /** Export button — generates JSON and surfaces it for the save dialog. */
     fun onExportClick() {
@@ -113,6 +146,57 @@ class BackupSettingsViewModel(
         _state.value = BackupUiState.Error("Could not read backup file: $reason")
     }
 
+    fun onAutobackupToggle(enabled: Boolean) {
+        screenModelScope.launch {
+            if (!enabled) {
+                settingsRepository.putAutobackupEnabled(false)
+                return@launch
+            }
+            val currentUri = autobackupFolderUri.value
+            if (currentUri.isNullOrBlank()) {
+                _pendingFolderPick.value = FolderPickIntent.ENABLE_AFTER
+            } else {
+                settingsRepository.putAutobackupEnabled(true)
+                runAutobackupNow()
+            }
+        }
+    }
+
+    fun onChangeFolderClick() {
+        _pendingFolderPick.value = FolderPickIntent.JUST_CHANGE
+    }
+
+    fun onFolderPicked(file: PlatformFile?) {
+        val intent = _pendingFolderPick.value ?: return
+        _pendingFolderPick.value = null
+        if (file == null) return
+        val uri = extractFolderUri(file)
+        if (uri.isNullOrBlank()) {
+            _state.value = BackupUiState.Error("Couldn't get a persistable URI for that folder")
+            return
+        }
+        screenModelScope.launch {
+            settingsRepository.putAutobackupFolderUri(uri)
+            if (intent == FolderPickIntent.ENABLE_AFTER) {
+                settingsRepository.putAutobackupEnabled(true)
+                runAutobackupNow()
+            }
+        }
+    }
+
+    fun onFrequencyChange(frequency: AutobackupFrequency) {
+        screenModelScope.launch { settingsRepository.putAutobackupFrequency(frequency) }
+    }
+
+    fun onMaxKeepChange(maxKeep: Int) {
+        screenModelScope.launch { settingsRepository.putAutobackupMaxKeep(maxKeep) }
+    }
+
+    fun onRunNowClick() {
+        if (autobackupFolderUri.value.isNullOrBlank()) return
+        runAutobackupNow()
+    }
+
     private fun describeSections(bundle: BackupBundle): List<String> {
         val s = bundle.sections
         val out = mutableListOf<String>()
@@ -137,6 +221,14 @@ class BackupSettingsViewModel(
         }
         return "kora-backup-$stamp"
     }
+}
+
+/** Why the user is being shown the folder picker right now. */
+enum class FolderPickIntent {
+    /** Toggle was flipped on with no folder set — pick + enable + run. */
+    ENABLE_AFTER,
+    /** "Change folder" button while already enabled — just persist the new URI. */
+    JUST_CHANGE,
 }
 
 sealed interface BackupUiState {

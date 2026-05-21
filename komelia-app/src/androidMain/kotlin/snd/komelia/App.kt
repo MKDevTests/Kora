@@ -6,19 +6,27 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import ch.qos.logback.classic.LoggerContext
+import snd.komelia.autobackup.AutobackupScheduler
+import snd.komelia.autobackup.autobackupFailureChannelId
 import snd.komelia.offline.sync.downloadChannelId
+import snd.komelia.widget.WidgetRefresher
 import snd.komelia.ui.DependencyContainer
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 val dependencies = MutableStateFlow<DependencyContainer?>(null)
 class App : Application() {
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         initLogging()
@@ -26,6 +34,30 @@ class App : Application() {
         saveLogcatSnapshot()
         setupNotificationChannels()
         initWorkManager()
+        startAutobackupScheduler()
+        startWidgetRefresher()
+    }
+
+    private fun startAutobackupScheduler() {
+        appScope.launch {
+            dependencies.filterNotNull().collectLatest { container ->
+                AutobackupScheduler.observe(
+                    context = applicationContext,
+                    settings = container.appRepositories.settingsRepository,
+                )
+            }
+        }
+    }
+
+    private fun startWidgetRefresher() {
+        appScope.launch {
+            dependencies.filterNotNull().collectLatest { container ->
+                WidgetRefresher(
+                    context = applicationContext,
+                    events = container.bookCompletionEvents,
+                ).start()
+            }
+        }
     }
 
     private fun initLogging() {
@@ -59,6 +91,12 @@ class App : Application() {
                     .Builder(downloadChannelId, IMPORTANCE_LOW)
                     .setName("downloads")
                     .setShowBadge(false)
+                    .build(),
+                NotificationChannelCompat
+                    .Builder(autobackupFailureChannelId, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                    .setName("Autobackup failures")
+                    .setDescription("Shown when an automatic settings backup cannot be written.")
+                    .setShowBadge(true)
                     .build()
             )
         )
@@ -67,7 +105,7 @@ class App : Application() {
     private fun initWorkManager() {
         val config = Configuration.Builder()
             .setMinimumLoggingLevel(android.util.Log.DEBUG)
-            .setWorkerFactory(MyWorkerFactory(dependencies.filterNotNull().map { it.offlineDependencies }))
+            .setWorkerFactory(MyWorkerFactory(dependencies.filterNotNull()))
             .setWorkerCoroutineContext(Dispatchers.IO)
             .build()
         WorkManager.initialize(this, config)

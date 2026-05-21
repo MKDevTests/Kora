@@ -2,6 +2,7 @@ package snd.komelia.ui
 
 import coil3.ImageLoader
 import coil3.PlatformContext
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.flow.StateFlow
 import snd.komelia.AppNotifications
 import snd.komelia.AppRepositories
@@ -18,6 +19,9 @@ import snd.komelia.image.processing.BlankPageDetector
 import snd.komelia.image.processing.ColorCorrectionStep
 import snd.komelia.komga.api.KomgaApi
 import snd.komelia.komga.api.LocalFileApiProvider
+import kotlinx.coroutines.flow.SharedFlow
+import snd.komelia.komga.api.model.KomeliaBook
+import snd.komelia.nextbook.NextBookService
 import snd.komelia.offline.OfflineDependencies
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.stats.BookCompletionEvents
@@ -69,8 +73,29 @@ data class DependencyContainer(
     val panelDetector: KomeliaPanelDetector?,
 
     val offlineDependencies: OfflineDependencies,
+    val nextBookService: NextBookService,
+    /**
+     * Stream of books to open in the reader, emitted by the home-screen
+     * widget's tap handler after fetching the [KomeliaBook] from the
+     * server. Null on platforms without the widget.
+     */
+    val widgetBookToOpenFlow: SharedFlow<KomeliaBook>? = null,
     val onBookChange: () -> Unit = {},
     val onEpubCacheClear: () -> Unit = {},
     val localFileApiProvider: LocalFileApiProvider? = null,
+    /**
+     * Fires a one-shot autobackup run, used by the settings "Backup now"
+     * button and by the first-run feedback right after the user toggles
+     * the feature on. Defaults to a no-op so non-Android platforms (where
+     * the autobackup section is hidden anyway) compile cleanly.
+     */
+    val runAutobackupNow: () -> Unit = {},
+    /**
+     * Pulls a persistable folder URI out of a [PlatformFile] returned by
+     * the storage permission dialog. Android wraps a SAF tree URI; other
+     * platforms don't expose persistable URIs the same way, so the
+     * default returns null.
+     */
+    val extractPersistableFolderUri: (PlatformFile) -> String? = { null },
 )
 

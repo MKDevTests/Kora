@@ -310,9 +310,13 @@ abstract class AppModule(
             upscaler = upscaler,
             panelDetector = panelDetector,
             offlineDependencies = offlineModule,
+            nextBookService = snd.komelia.nextbook.NextBookService(komgaApi),
+            widgetBookToOpenFlow = createWidgetBookToOpenFlow(komgaApi),
             onBookChange = createOnBookChange(),
             onEpubCacheClear = createOnEpubCacheClear(),
             localFileApiProvider = localFileApiProvider,
+            runAutobackupNow = createRunAutobackupNow(),
+            extractPersistableFolderUri = createPersistableFolderUriExtractor(),
         )
     }
 
@@ -321,6 +325,19 @@ abstract class AppModule(
     protected open fun createOnEpubCacheClear(): () -> Unit = {}
 
     protected open fun createLocalFileApiProvider(): LocalFileApiProvider? = null
+
+    protected open fun createRunAutobackupNow(): () -> Unit = {}
+
+    protected open fun createPersistableFolderUriExtractor(): (io.github.vinceglb.filekit.PlatformFile) -> String? = { null }
+
+    /**
+     * Resolves "open this book" requests from the home-screen widget into
+     * a stream of [snd.komelia.komga.api.model.KomeliaBook]s ready to be
+     * pushed onto the reader. Null on platforms without the widget.
+     */
+    protected open fun createWidgetBookToOpenFlow(
+        komgaApi: StateFlow<snd.komelia.komga.api.KomgaApi>,
+    ): SharedFlow<snd.komelia.komga.api.model.KomeliaBook>? = null
 
     protected open suspend fun beforeInit() = Unit
 

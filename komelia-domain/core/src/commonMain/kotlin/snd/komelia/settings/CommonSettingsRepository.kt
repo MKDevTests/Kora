@@ -2,6 +2,7 @@ package snd.komelia.settings
 
 import kotlinx.coroutines.flow.Flow
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.settings.model.StartupScreen
 import snd.komga.client.library.KomgaLibraryId
@@ -145,4 +146,24 @@ interface CommonSettingsRepository {
      */
     fun getLastSeenReleaseNotesVersion(): Flow<String?>
     suspend fun putLastSeenReleaseNotesVersion(version: String)
+
+    fun getAutobackupEnabled(): Flow<Boolean>
+    suspend fun putAutobackupEnabled(enabled: Boolean)
+
+    fun getAutobackupFolderUri(): Flow<String?>
+    suspend fun putAutobackupFolderUri(uri: String?)
+
+    fun getAutobackupFrequency(): Flow<AutobackupFrequency>
+    suspend fun putAutobackupFrequency(frequency: AutobackupFrequency)
+
+    fun getAutobackupMaxKeep(): Flow<Int>
+    suspend fun putAutobackupMaxKeep(maxKeep: Int)
+
+    fun getAutobackupLastSuccessAt(): Flow<Instant?>
+    suspend fun putAutobackupLastSuccessAt(timestamp: Instant?)
+
+    fun getAutobackupLastFailureAt(): Flow<Instant?>
+    suspend fun putAutobackupLastFailure(timestamp: Instant?, message: String?)
+
+    fun getAutobackupLastFailureMessage(): Flow<String?>
 }

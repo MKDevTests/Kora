@@ -1,6 +1,7 @@
 package snd.komelia.ui.settings.backup
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,13 +12,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,20 +45,32 @@ import io.github.vinceglb.filekit.dialogs.openFileSaver
 import io.github.vinceglb.filekit.readString
 import io.github.vinceglb.filekit.writeString
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import snd.komelia.settings.model.AutobackupFrequency
+import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.dialogs.ConfirmationDialog
+import snd.komelia.ui.dialogs.permissions.StoragePermissionRequestDialog
+import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.settings.SettingsScreenContainer
+import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 /**
  * Backup & Restore settings screen.
  *
  * Two buttons: Export (writes a JSON file via SAF) and Import (reads a JSON
  * file via SAF and applies it). Import is gated by a double confirmation
- * (overwrite warning → file pick → section preview) because it is destructive.
+ * (overwrite warning -> file pick -> section preview) because it is destructive.
  *
- * Uses FileKit's suspend dialog API rather than the launcher pattern so we
- * don't have to thread DialogSettings through and so the flow reads top to
- * bottom in a single LaunchedEffect / coroutine.
+ * Below those, on mobile only, an Autobackup section: toggle, folder picker,
+ * frequency picker, max-keep slider, manual "Backup now" button, and a status
+ * row showing the last success / last failure.
  */
 class BackupSettingsScreen : Screen {
 
@@ -60,6 +80,7 @@ class BackupSettingsScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getBackupSettingsViewModel() }
         val state by vm.state.collectAsState()
         val coroutineScope = rememberCoroutineScope()
+        val showAutobackup = LocalPlatform.current == PlatformType.MOBILE
 
         // When the VM transitions to ExportReady, drive the system save dialog
         // and write the JSON to whatever the user picks.
@@ -92,7 +113,7 @@ class BackupSettingsScreen : Screen {
             ) {
                 Text(
                     text = "Save a copy of your settings, home filters, library filters " +
-                        "and per-series reader overrides to a JSON file — or restore a " +
+                        "and per-series reader overrides to a JSON file - or restore a " +
                         "previous backup.",
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -148,6 +169,11 @@ class BackupSettingsScreen : Screen {
                     )
                     else -> Unit
                 }
+
+                if (showAutobackup) {
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    AutobackupSection(vm)
+                }
             }
         }
 
@@ -200,7 +226,193 @@ class BackupSettingsScreen : Screen {
                 onDialogDismiss = vm::onCancel,
             )
         }
+
+        // Folder picker. StoragePermissionRequestDialog drives
+        // ACTION_OPEN_DOCUMENT_TREE on Android and takes persistable URI
+        // permission before returning the wrapped PlatformFile.
+        val pendingPick by vm.pendingFolderPick.collectAsState()
+        if (pendingPick != null) {
+            StoragePermissionRequestDialog(onComplete = { vm.onFolderPicked(it) })
+        }
     }
+}
+
+@Composable
+private fun AutobackupSection(vm: BackupSettingsViewModel) {
+    val enabled by vm.autobackupEnabled.collectAsState()
+    val folderUri by vm.autobackupFolderUri.collectAsState()
+    val frequency by vm.autobackupFrequency.collectAsState()
+    val maxKeep by vm.autobackupMaxKeep.collectAsState()
+    val lastSuccess by vm.autobackupLastSuccessAt.collectAsState()
+    val lastFailure by vm.autobackupLastFailureAt.collectAsState()
+    val lastFailureMsg by vm.autobackupLastFailureMessage.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Automatic backups", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Periodically write the same backup file to a folder of your choice. " +
+                "Older copies are pruned automatically.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Enable automatic backups", modifier = Modifier.weight(1f))
+            Switch(checked = enabled, onCheckedChange = { vm.onAutobackupToggle(it) })
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Backup folder",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = folderUri?.let(::describeFolderUri) ?: "No folder chosen yet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(onClick = { vm.onChangeFolderClick() }) {
+                Text(if (folderUri == null) "Choose…" else "Change…")
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Frequency", style = MaterialTheme.typography.bodyMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AutobackupFrequency.entries.forEach { option ->
+                    FilterChip(
+                        selected = option == frequency,
+                        onClick = { vm.onFrequencyChange(option) },
+                        label = { Text(option.label()) },
+                    )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "Keep up to $maxKeep ${if (maxKeep == 1) "copy" else "copies"}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = maxKeep.toFloat(),
+                onValueChange = { vm.onMaxKeepChange(it.roundToInt()) },
+                valueRange = 1f..10f,
+                steps = 8, // 1..10 inclusive = 10 stops, steps = stops - 2
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Button(
+                enabled = folderUri != null,
+                onClick = { vm.onRunNowClick() },
+            ) {
+                Icon(Icons.Default.PlayArrow, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Backup now")
+            }
+        }
+
+        AutobackupStatusRow(
+            lastSuccess = lastSuccess,
+            lastFailure = lastFailure,
+            lastFailureMessage = lastFailureMsg,
+        )
+    }
+}
+
+@Composable
+private fun AutobackupStatusRow(
+    lastSuccess: Instant?,
+    lastFailure: Instant?,
+    lastFailureMessage: String?,
+) {
+    val failureIsNewer = lastFailure != null &&
+        (lastSuccess == null || lastFailure > lastSuccess)
+
+    if (failureIsNewer && lastFailure != null) {
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Last attempt failed — ${describeRelativeTime(lastFailure)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (!lastFailureMessage.isNullOrBlank()) {
+                    Text(
+                        text = lastFailureMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    if (lastSuccess != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+        ) {
+            Text(
+                text = "Last backup: ${describeRelativeTime(lastSuccess)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun AutobackupFrequency.label(): String = when (this) {
+    AutobackupFrequency.DAILY -> "Daily"
+    AutobackupFrequency.WEEKLY -> "Weekly"
+    AutobackupFrequency.FORTNIGHTLY -> "Every 15 days"
+}
+
+private fun describeFolderUri(uri: String): String {
+    // SAF tree URIs look like
+    // content://com.android.externalstorage.documents/tree/primary%3ABackup
+    // Pull the last decoded segment as a friendly label.
+    val decoded = uri.substringAfterLast("/").let {
+        runCatching {
+            java.net.URLDecoder.decode(it, "UTF-8")
+        }.getOrDefault(it)
+    }
+    return decoded.substringAfter(":", decoded).ifBlank { uri }
+}
+
+private fun describeRelativeTime(instant: Instant): String {
+    val now = Clock.System.now()
+    val diff = now - instant
+    if (diff < 1.minutes) return "just now"
+    if (diff < 60.minutes) return "${diff.inWholeMinutes} min ago"
+    if (diff < 24.hours) return "${diff.inWholeHours} h ago"
+    if (diff < 7.days) {
+        val days = diff.inWholeDays
+        return if (days == 1L) "1 day ago" else "$days days ago"
+    }
+    val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    fun pad(v: Int) = v.toString().padStart(2, '0')
+    return "${dt.year}-${pad(dt.monthNumber)}-${pad(dt.dayOfMonth)}"
 }
 
 @Composable

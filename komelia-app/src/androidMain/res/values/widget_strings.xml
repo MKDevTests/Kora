@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_book_widget_description">Affiche les 3 prochains livres à reprendre dans Kora.</string>
+    <string name="next_book_widget_label">Kora — Next book up</string>
+</resources>

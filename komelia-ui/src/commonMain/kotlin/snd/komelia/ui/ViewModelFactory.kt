@@ -499,7 +499,12 @@ class ViewModelFactory(
     }
 
     fun getBackupSettingsViewModel(): snd.komelia.ui.settings.backup.BackupSettingsViewModel {
-        return snd.komelia.ui.settings.backup.BackupSettingsViewModel(dependencies.backupService)
+        return snd.komelia.ui.settings.backup.BackupSettingsViewModel(
+            backupService = dependencies.backupService,
+            settingsRepository = dependencies.appRepositories.settingsRepository,
+            runAutobackupNow = dependencies.runAutobackupNow,
+            extractFolderUri = dependencies.extractPersistableFolderUri,
+        )
     }
 
     fun getNavigationSettingsViewModel(): snd.komelia.ui.settings.navigation.NavigationSettingsViewModel {

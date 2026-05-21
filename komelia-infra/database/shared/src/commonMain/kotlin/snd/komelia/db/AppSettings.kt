@@ -2,6 +2,7 @@ package snd.komelia.db
 
 import kotlinx.serialization.Serializable
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.settings.model.StartupScreen
 import snd.komelia.updates.AppVersion
@@ -86,4 +87,38 @@ data class AppSettings(
      * never seen, so the modal will show on the next launch.
      */
     val lastSeenReleaseNotesVersion: String? = null,
+
+    /**
+     * Master switch for the autobackup feature. Off by default — the
+     * user must explicitly opt in (and pick a folder) before the
+     * periodic worker is scheduled.
+     */
+    val autobackupEnabled: Boolean = false,
+
+    /**
+     * SAF tree URI (`content://…`) the user picked via
+     * `ACTION_OPEN_DOCUMENT_TREE`. The matching permission is granted
+     * via `takePersistableUriPermission` and survives reboot. Null when
+     * the user hasn't picked a folder yet.
+     */
+    val autobackupFolderUri: String? = null,
+
+    /** How often the periodic worker fires. */
+    val autobackupFrequency: AutobackupFrequency = AutobackupFrequency.DAILY,
+
+    /**
+     * How many `kora-autobackup-*.json` files to keep in the chosen
+     * folder. Older ones get pruned by the worker after each write.
+     * Clamped to 1..10 at the UI layer; default 3.
+     */
+    val autobackupMaxKeep: Int = 3,
+
+    /** Timestamp of the most recent successful run, for the settings UI. */
+    val autobackupLastSuccessAt: Instant? = null,
+
+    /** Timestamp of the most recent failure, for the settings UI. */
+    val autobackupLastFailureAt: Instant? = null,
+
+    /** Human-readable cause of the most recent failure. */
+    val autobackupLastFailureMessage: String? = null,
 )
