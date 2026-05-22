@@ -68,6 +68,7 @@ kotlin {
             implementation(libs.androidx.documentfile)
             implementation(libs.androidx.glance.appwidget)
             implementation(libs.androidx.glance.material3)
+            implementation(libs.androidx.lifecycle.process)
             implementation(projects.komeliaInfra.database.sqlite)
             implementation(projects.komeliaInfra.ncnnUpscaler)
             implementation(libs.filekit.core)

@@ -14,6 +14,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -199,6 +200,15 @@ private fun WidgetHeader() {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
             ),
+        )
+        // Push the refresh icon to the trailing edge of the header.
+        Spacer(GlanceModifier.defaultWeight())
+        Image(
+            provider = ImageProvider(android.R.drawable.ic_popup_sync),
+            contentDescription = "Refresh",
+            modifier = GlanceModifier
+                .size(20.dp)
+                .clickable(actionRunCallback<RefreshNextBookWidgetAction>()),
         )
     }
 }

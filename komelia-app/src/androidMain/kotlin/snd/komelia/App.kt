@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +39,25 @@ class App : Application() {
         initWorkManager()
         startAutobackupScheduler()
         startWidgetRefresher()
+        observeAppBackgroundForWidgetRefresh()
+    }
+
+    /**
+     * Refresh the "Next book up" widget whenever the whole app goes to
+     * background (last activity stops, no successor within ~700ms).
+     * Catches the common path where the user reads a few pages without
+     * finishing a book — [snd.komelia.stats.BookCompletionEvents] wouldn't
+     * fire, but onStop will, so the widget reflects the latest server
+     * state by the time the user looks at the launcher.
+     */
+    private fun observeAppBackgroundForWidgetRefresh() {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                appScope.launch {
+                    snd.komelia.widget.WidgetRefresher.refreshAll(applicationContext)
+                }
+            }
+        })
     }
 
     private fun startAutobackupScheduler() {
