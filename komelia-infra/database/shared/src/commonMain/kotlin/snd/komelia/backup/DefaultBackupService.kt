@@ -1,6 +1,5 @@
 package snd.komelia.backup
 
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import snd.komelia.db.AppSettings
@@ -24,9 +23,17 @@ import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
 import snd.komga.client.user.ROLE_ADMIN
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-private val logger = KotlinLogging.logger {}
+/**
+ * Rolling window kept in the per-user `reading_events` export. Events older
+ * than this are summed into [UserSection.pagesReadLifetimeCarryover] so the
+ * bundle stays bounded (~50 KB for a year of completions) instead of
+ * accreting for the device's lifetime. 365 days covers every time-windowed
+ * stats query (last 7/30 days, streak, monthly chart).
+ */
+private val eventHistoryWindow = 365.days
 
 /**
  * Default implementation that reaches each [SettingsStateWrapper] directly to
@@ -89,11 +96,36 @@ class DefaultBackupService(
         val ratingsByUser = foldNullsInto(seriesRatings.listAllByUser(), currentUid)
         val eventsByUser = foldNullsInto(readingEvents.listAllByUser(), currentUid)
 
+        // Bound the per-user `reading_events` slice to the last 365 days.
+        // Older events are summed into a per-user scalar (`carryover`) and
+        // re-imported as a single LIFETIME_CARRYOVER sentinel row, so the
+        // pages-lifetime stat survives a device-to-device backup-restore
+        // without us shipping years of per-book history in every file.
+        // See the matching import branch below.
+        val cutoffMs = (Clock.System.now() - eventHistoryWindow).toEpochMilliseconds()
+
         val allUserIds = (ratingsByUser.keys + eventsByUser.keys).filterNotNull().toSet()
         val userSections = allUserIds.associate { uid ->
+            val allEvents = eventsByUser[uid].orEmpty()
+            // Separate COMPLETED rows by age + drain any existing carryover
+            // rows already in the DB (so re-export after a previous import
+            // doesn't lose the inherited carryover).
+            val recent = mutableListOf<ReadingEvent>()
+            var carryover: Long = 0
+            for (event in allEvents) {
+                when {
+                    event.type == ReadingEvent.Type.LIFETIME_CARRYOVER ->
+                        carryover += (event.pageCount ?: 0).toLong()
+                    event.timestamp.toEpochMilliseconds() >= cutoffMs ->
+                        recent += event
+                    else ->
+                        carryover += (event.pageCount ?: 0).toLong()
+                }
+            }
             uid.value to UserSection(
                 seriesRatings = ratingsByUser[uid].orEmpty().map { it.toRatingExport() },
-                readingEvents = eventsByUser[uid].orEmpty().map { it.toReadingEventExport() },
+                readingEvents = recent.map { it.toReadingEventExport() },
+                pagesReadLifetimeCarryover = carryover,
             )
         }
 
@@ -304,6 +336,10 @@ class DefaultBackupService(
                     }
                     seriesRatings.replaceAllForUser(sectionUid, ratings)
                     readingEvents.upsertAllForUser(sectionUid, events)
+                    // Mirror the export-side trim: persist the scalar
+                    // carryover so the lifetime pages-read total includes
+                    // events that were too old to ship in this bundle.
+                    readingEvents.upsertLifetimeCarryover(sectionUid, section.pagesReadLifetimeCarryover)
                     val who = if (isOwn) "your data" else "data for ${userIdStr.shortIdHint()}"
                     restored.add("User section ($who, ${ratings.size} ratings + ${events.size} events)")
                 }.onFailure {

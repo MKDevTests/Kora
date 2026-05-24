@@ -27,5 +27,15 @@ data class ReadingEvent(
     enum class Type {
         /** The user finished reading a book (any code path). */
         COMPLETED,
+
+        /**
+         * Sentinel row carrying the aggregate pages-read total from events
+         * older than the backup's rolling window (v1.0.10+). One per user:
+         * `bookId = "_carryover_<userId>"`, `timestamp = 0`, `pageCount =
+         * accumulated pages from trimmed events`. Excluded from all
+         * time-windowed and per-type stat queries (they filter on
+         * `COMPLETED`), included only in the lifetime pages sum.
+         */
+        LIFETIME_CARRYOVER,
     }
 }

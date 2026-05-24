@@ -110,6 +110,41 @@ class ExposedReadingEventsRepository(
         return events.size
     }
 
+    override suspend fun sumPagesLifetimeCarryover(): Long {
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .where { ReadingEventsTable.eventType eq ReadingEvent.Type.LIFETIME_CARRYOVER.name }
+                .sumOf { (it[ReadingEventsTable.pageCount] ?: 0).toLong() }
+        }
+    }
+
+    override suspend fun upsertLifetimeCarryover(userId: KomgaUserId, pages: Long) {
+        // Sentinel row uniqueness: bookId encodes the user so the current
+        // PK (book_id, event_type) gives one carryover row per user
+        // without changing the PK shape.
+        val bookId = "_carryover_${userId.value}"
+        transaction {
+            if (pages <= 0L) {
+                ReadingEventsTable.deleteWhere {
+                    ReadingEventsTable.bookId.eq(bookId)
+                        .and(ReadingEventsTable.eventType.eq(ReadingEvent.Type.LIFETIME_CARRYOVER.name))
+                }
+                return@transaction
+            }
+            ReadingEventsTable.upsert {
+                it[ReadingEventsTable.bookId] = bookId
+                it[ReadingEventsTable.eventType] = ReadingEvent.Type.LIFETIME_CARRYOVER.name
+                it[ReadingEventsTable.timestamp] = 0L
+                // pageCount is INTEGER (32-bit) in the schema. Long fits up
+                // to ~2B pages — comfortably above any realistic lifetime
+                // sum. Truncate to Int with a guard for paranoia.
+                it[ReadingEventsTable.pageCount] = pages.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                it[ReadingEventsTable.komgaUserId] = userId.value
+            }
+        }
+    }
+
     override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long {
         return transaction {
             ReadingEventsTable

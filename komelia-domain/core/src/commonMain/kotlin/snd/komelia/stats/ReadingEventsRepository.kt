@@ -84,4 +84,25 @@ interface ReadingEventsRepository {
      * snapshot is a no-op.
      */
     suspend fun upsertAllForUser(userId: snd.komga.client.user.KomgaUserId, events: List<ReadingEvent>): Int
+
+    /**
+     * Aggregate pages-read total carried forward from events older than the
+     * backup's rolling window. Stored as one sentinel row per user (type
+     * [ReadingEvent.Type.LIFETIME_CARRYOVER], `bookId = "_carryover_<userId>"`).
+     * Returns the device-wide sum across every user — caller adds to
+     * `sumPagesLifetime(COMPLETED)` to get the accurate lifetime total
+     * including carryover.
+     */
+    suspend fun sumPagesLifetimeCarryover(): Long
+
+    /**
+     * Upsert this user's [ReadingEvent.Type.LIFETIME_CARRYOVER] sentinel row.
+     * Called from the backup importer; also used internally by the exporter
+     * to re-roll the carryover after trimming the current event log.
+     * Passing 0 deletes the sentinel row.
+     */
+    suspend fun upsertLifetimeCarryover(
+        userId: snd.komga.client.user.KomgaUserId,
+        pages: Long,
+    )
 }

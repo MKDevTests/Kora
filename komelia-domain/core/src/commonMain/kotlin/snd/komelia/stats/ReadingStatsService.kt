@@ -51,7 +51,12 @@ class ReadingStatsService(
         val booksLast30 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days)
         val pagesLast7 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days)
         val pagesLast30 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days)
-        val pagesLifetime = readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED)
+        // Lifetime = pages from COMPLETED events still in the local log +
+        // pages carried over from older events trimmed by past backup
+        // exports (LIFETIME_CARRYOVER sentinel rows). Without the carryover
+        // term the total would silently reset after a 365-day cliff.
+        val pagesLifetime = readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED) +
+            readingEvents.sumPagesLifetimeCarryover()
         val streak = computeStreak(now)
         val monthly = computeMonthlyHistory(now)
 

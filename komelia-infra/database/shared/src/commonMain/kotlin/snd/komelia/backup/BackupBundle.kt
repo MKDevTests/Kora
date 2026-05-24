@@ -107,4 +107,13 @@ data class ReadingEventExport(
 data class UserSection(
     @SerialName("series_ratings") val seriesRatings: List<RatingExport> = emptyList(),
     @SerialName("reading_events") val readingEvents: List<ReadingEventExport> = emptyList(),
+    /**
+     * Aggregate pages-read total for events trimmed out of [readingEvents]
+     * by the rolling backup window (default: 365 days). On import this is
+     * stored as a sentinel `LIFETIME_CARRYOVER` event so the stats screen's
+     * lifetime total survives device-to-device migration without us
+     * shipping years of per-book history in every backup file.
+     */
+    @SerialName("pages_read_lifetime_carryover")
+    val pagesReadLifetimeCarryover: Long = 0,
 )
