@@ -23,6 +23,16 @@ data class ReadingStats(
     val lifetimeSeriesFinished: Int,
     val librariesExplored: Int,
 
+    /**
+     * Pages-read totals (v1.0.10+). Computed from SUM(reading_events.page_count)
+     * over the matching time window. Events recorded before v1.0.10 have a
+     * null page_count and contribute 0; the UI surfaces a subtle hint that
+     * the totals only count completions since the upgrade.
+     */
+    val pagesReadLast7Days: Long = 0,
+    val pagesReadLast30Days: Long = 0,
+    val pagesReadLifetime: Long = 0,
+
     /** 12 entries, oldest → newest, zero-filled. Used for the bar chart. */
     val monthlyHistory: List<MonthBucket>,
     /** Up to 5 most recently active series. */

@@ -49,6 +49,9 @@ class ReadingStatsService(
 
         val booksLast7 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days)
         val booksLast30 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days)
+        val pagesLast7 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days)
+        val pagesLast30 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days)
+        val pagesLifetime = readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED)
         val streak = computeStreak(now)
         val monthly = computeMonthlyHistory(now)
 
@@ -64,6 +67,9 @@ class ReadingStatsService(
             lifetimeBooksFinished = lifetimeBooks,
             lifetimeSeriesFinished = lifetimeSeries,
             librariesExplored = librariesExplored,
+            pagesReadLast7Days = pagesLast7,
+            pagesReadLast30Days = pagesLast30,
+            pagesReadLifetime = pagesLifetime,
             monthlyHistory = monthly,
             recentSeries = recent,
             achievements = computeAchievements(

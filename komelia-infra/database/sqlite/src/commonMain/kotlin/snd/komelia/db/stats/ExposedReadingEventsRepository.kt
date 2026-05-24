@@ -36,13 +36,44 @@ class ExposedReadingEventsRepository(
     database: Database,
 ) : ExposedRepository(database), ReadingEventsRepository {
 
-    override suspend fun record(bookId: KomgaBookId, type: ReadingEvent.Type, at: Instant) {
+    override suspend fun record(
+        bookId: KomgaBookId,
+        type: ReadingEvent.Type,
+        at: Instant,
+        pageCount: Int?,
+    ) {
         transaction {
             ReadingEventsTable.insertIgnore {
                 it[ReadingEventsTable.bookId] = bookId.value
                 it[ReadingEventsTable.eventType] = type.name
                 it[ReadingEventsTable.timestamp] = at.toEpochMilliseconds()
+                it[ReadingEventsTable.pageCount] = pageCount
             }
+        }
+    }
+
+    override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long {
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .where {
+                    ReadingEventsTable.eventType.eq(type.name)
+                        .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds()))
+                }
+                // Aggregate in Kotlin rather than via Exposed's Sum<Int?>: the
+                // event volume is tiny (a few completions per day), and this
+                // avoids Exposed-version-specific aggregator wiring while
+                // keeping NULL → 0 semantics explicit.
+                .sumOf { (it[ReadingEventsTable.pageCount] ?: 0).toLong() }
+        }
+    }
+
+    override suspend fun sumPagesLifetime(type: ReadingEvent.Type): Long {
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .where { ReadingEventsTable.eventType eq type.name }
+                .sumOf { (it[ReadingEventsTable.pageCount] ?: 0).toLong() }
         }
     }
 

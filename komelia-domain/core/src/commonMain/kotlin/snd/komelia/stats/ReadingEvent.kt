@@ -16,6 +16,13 @@ data class ReadingEvent(
     val bookId: KomgaBookId,
     val type: Type,
     val timestamp: Instant,
+    /**
+     * Page count of the book at the moment the event was recorded.
+     * Null for rows inserted before v1.0.10 (no backfill — Komga doesn't
+     * timestamp historical completions) and for the rare case where the
+     * book's media metadata couldn't be fetched at record time.
+     */
+    val pageCount: Int? = null,
 ) {
     enum class Type {
         /** The user finished reading a book (any code path). */

@@ -88,11 +88,23 @@ class StatsTrackingBookApi(
         }
 
         if (!statsEnabled.value) return
+
+        // Resolve the book's page count so the pages-read stats (v1.0.10+)
+        // can sum SUM(page_count) without re-hitting Komga per query. Most
+        // completion paths already have the book in cache (image reader
+        // finishing, list-mark-as-read after a row tap), so this is usually
+        // free. On miss (offline reader with stale metadata, server
+        // unreachable mid-action), we store null and SUM treats it as 0.
+        val pageCount = runCatching { delegate.getOne(bookId).media.pagesCount }
+            .onFailure { logger.debug(it) { "Could not fetch pageCount for $bookId; recording without it" } }
+            .getOrNull()
+
         try {
             readingEvents.record(
                 bookId = bookId,
                 type = ReadingEvent.Type.COMPLETED,
                 at = clock.now(),
+                pageCount = pageCount,
             )
         } catch (e: Throwable) {
             logger.warn(e) { "Failed to record COMPLETED event for $bookId; stats may be inaccurate" }

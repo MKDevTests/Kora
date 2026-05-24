@@ -78,6 +78,21 @@ fun ReadingStatsContent(
                 hint = "books finished", modifier = Modifier.weight(1f))
         }
 
+        // --- Pages read (v1.0.10+) -----------------------------------------
+        // Only counts books completed since the v1.0.10 upgrade — events
+        // recorded before then have no page_count attached. We show the
+        // hint as a small note under the section header so the totals
+        // aren't misread as lifetime-since-Kora-install.
+        SectionHeader(title = "Pages read", subtitle = "since v1.0.10")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard(label = "This week", value = formatPages(stats.pagesReadLast7Days),
+                hint = "pages", modifier = Modifier.weight(1f))
+            StatCard(label = "This month", value = formatPages(stats.pagesReadLast30Days),
+                hint = "pages", modifier = Modifier.weight(1f))
+            StatCard(label = "Total", value = formatPages(stats.pagesReadLifetime),
+                hint = "pages", modifier = Modifier.weight(1f))
+        }
+
         // --- Monthly chart -------------------------------------------------
         SectionHeader(title = "Last 12 months", onRefresh = onRefresh)
         MonthlyHistoryChart(buckets = stats.monthlyHistory)
@@ -139,22 +154,54 @@ private fun StatCard(
 }
 
 @Composable
-private fun SectionHeader(title: String, onRefresh: (() -> Unit)? = null) {
+private fun SectionHeader(
+    title: String,
+    subtitle: String? = null,
+    onRefresh: (() -> Unit)? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         if (onRefresh != null) {
             IconButton(onClick = onRefresh) {
                 Icon(Icons.Default.Refresh, contentDescription = "Refresh")
             }
         }
+    }
+}
+
+/**
+ * Compact formatter for pages-read totals: keeps short numbers readable
+ * ("1234" → "1,234") and switches to compact unit notation above 10k
+ * ("12345" → "12.3k", "1234567" → "1.2M") so the StatCard's headline
+ * style doesn't overflow on three-tile rows.
+ */
+private fun formatPages(pages: Long): String = when {
+    pages < 10_000 ->
+        // Insert thousands separator: "1234" -> "1,234"
+        pages.toString().reversed().chunked(3).joinToString(",").reversed()
+    pages < 1_000_000 -> {
+        val k = pages / 1000.0
+        if (k == k.toLong().toDouble()) "${k.toLong()}k" else "%.1fk".format(k)
+    }
+    else -> {
+        val m = pages / 1_000_000.0
+        if (m == m.toLong().toDouble()) "${m.toLong()}M" else "%.1fM".format(m)
     }
 }
 

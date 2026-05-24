@@ -17,11 +17,29 @@ import kotlin.time.Instant
  */
 interface ReadingEventsRepository {
 
-    /** Idempotent insert. No-op if an event for (bookId, type) already exists. */
-    suspend fun record(bookId: KomgaBookId, type: ReadingEvent.Type, at: Instant)
+    /**
+     * Idempotent insert. No-op if an event for (bookId, type) already exists.
+     * [pageCount] is the book's page count at completion time; pass null when
+     * unavailable (e.g. offline reader with missing metadata).
+     */
+    suspend fun record(
+        bookId: KomgaBookId,
+        type: ReadingEvent.Type,
+        at: Instant,
+        pageCount: Int? = null,
+    )
 
     /** Count of events of [type] whose timestamp is >= [since]. */
     suspend fun countSince(type: ReadingEvent.Type, since: Instant): Int
+
+    /**
+     * Sum of [ReadingEvent.pageCount] for events of [type] whose timestamp
+     * is >= [since]. Rows with a null pageCount contribute 0.
+     */
+    suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long
+
+    /** Lifetime sum of [ReadingEvent.pageCount] for events of [type]. */
+    suspend fun sumPagesLifetime(type: ReadingEvent.Type): Long
 
     /** Distinct local calendar dates with at least one event of [type], newest first, capped. */
     suspend fun distinctDates(type: ReadingEvent.Type, limit: Int): List<String>
