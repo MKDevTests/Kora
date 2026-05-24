@@ -13,6 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.upsert
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.tables.ReadingEventsTable
 import snd.komelia.stats.ReadingEvent
@@ -73,6 +74,40 @@ class ExposedReadingEventsRepository(
                 it[ReadingEventsTable.komgaUserId] = userId.value
             }
         }
+    }
+
+    override suspend fun listAllByUser(): Map<KomgaUserId?, List<ReadingEvent>> {
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .map { row ->
+                    val userIdValue = row[ReadingEventsTable.komgaUserId]
+                    val key: KomgaUserId? = userIdValue?.let { KomgaUserId(it) }
+                    key to ReadingEvent(
+                        bookId = KomgaBookId(row[ReadingEventsTable.bookId]),
+                        type = ReadingEvent.Type.valueOf(row[ReadingEventsTable.eventType]),
+                        timestamp = Instant.fromEpochMilliseconds(row[ReadingEventsTable.timestamp]),
+                        pageCount = row[ReadingEventsTable.pageCount],
+                    )
+                }
+                .groupBy({ it.first }, { it.second })
+        }
+    }
+
+    override suspend fun upsertAllForUser(userId: KomgaUserId, events: List<ReadingEvent>): Int {
+        if (events.isEmpty()) return 0
+        transaction {
+            events.forEach { event ->
+                ReadingEventsTable.upsert {
+                    it[ReadingEventsTable.bookId] = event.bookId.value
+                    it[ReadingEventsTable.eventType] = event.type.name
+                    it[ReadingEventsTable.timestamp] = event.timestamp.toEpochMilliseconds()
+                    it[ReadingEventsTable.pageCount] = event.pageCount
+                    it[ReadingEventsTable.komgaUserId] = userId.value
+                }
+            }
+        }
+        return events.size
     }
 
     override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long {

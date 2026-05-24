@@ -67,4 +67,21 @@ interface ReadingEventsRepository {
      * authentication after a user upgrades from a pre-v1.0.10 install.
      */
     suspend fun backfillNullUserIds(userId: snd.komga.client.user.KomgaUserId): Int
+
+    /**
+     * Snapshot every event grouped by its `komga_user_id`. Used by the
+     * backup exporter to build per-user sections. The NULL key holds rows
+     * recorded before the user-id scoping landed (legacy v1.0.3..v1.0.9)
+     * that the backfill job hasn't tagged yet — callers typically fold
+     * them into the current user's section.
+     */
+    suspend fun listAllByUser(): Map<snd.komga.client.user.KomgaUserId?, List<ReadingEvent>>
+
+    /**
+     * Insert / replace a batch of events tagged with [userId]. Used by the
+     * backup importer for both same-user restore and admin-gated shadow
+     * restore. Idempotent on (book_id, event_type) — re-importing the same
+     * snapshot is a no-op.
+     */
+    suspend fun upsertAllForUser(userId: snd.komga.client.user.KomgaUserId, events: List<ReadingEvent>): Int
 }

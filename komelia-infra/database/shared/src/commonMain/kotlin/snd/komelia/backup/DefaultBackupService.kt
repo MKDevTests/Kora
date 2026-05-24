@@ -1,5 +1,7 @@
 package snd.komelia.backup
 
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import snd.komelia.db.AppSettings
 import snd.komelia.db.EpubReaderSettings
@@ -12,11 +14,19 @@ import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
 import snd.komelia.ratings.SeriesRating
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
+import snd.komelia.stats.ReadingEvent
+import snd.komelia.stats.ReadingEventsRepository
 import snd.komelia.updates.AppVersion
+import snd.komga.client.book.KomgaBookId
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.user.KomgaUser
+import snd.komga.client.user.KomgaUserId
+import snd.komga.client.user.ROLE_ADMIN
 import kotlin.time.Clock
 import kotlin.time.Instant
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Default implementation that reaches each [SettingsStateWrapper] directly to
@@ -37,6 +47,16 @@ class DefaultBackupService(
     private val librarySeriesFilters: LibrarySeriesFiltersRepository,
     private val seriesReaderOverrides: SeriesReaderOverridesRepository,
     private val seriesRatings: SeriesRatingsRepository,
+    private val readingEvents: ReadingEventsRepository,
+    /**
+     * Polled on each export/import call. On export, drives the per-user
+     * sections + folds any legacy NULL-tagged rows into the current user's
+     * section. On import, gates cross-user restore: own section restores
+     * freely; foreign sections require the current user to be a Komga
+     * admin (`KomgaUser.roleAdmin()`), otherwise they're silently skipped
+     * and reported in [ImportResult.Success.sectionsSkipped].
+     */
+    private val currentUser: StateFlow<KomgaUser?>,
 ) : BackupService {
 
     private val json = Json {
@@ -59,13 +79,32 @@ class DefaultBackupService(
         val home = homeFilters.state.value
         val libFilters = librarySeriesFilters.getAll().mapKeys { (id, _) -> id.value }
         val seriesOverrides = seriesReaderOverrides.getAll().mapKeys { (id, _) -> id.value }
-        val ratings = seriesRatings.listAll().map { rating ->
-            RatingExport(
-                seriesId = rating.seriesId.value,
-                stars = rating.stars,
-                ratedAt = rating.ratedAt.toEpochMilliseconds(),
+
+        // -- Per-user sections (v2 schema) --------------------------------
+        // Fold any rows tagged with NULL `komga_user_id` (legacy data not
+        // yet picked up by UserScopeBackfillJob) into the current user's
+        // section. If no one is signed in we drop them silently — they
+        // stay local and the next session will tag + export them.
+        val currentUid = currentUser.value?.id
+        val ratingsByUser = foldNullsInto(seriesRatings.listAllByUser(), currentUid)
+        val eventsByUser = foldNullsInto(readingEvents.listAllByUser(), currentUid)
+
+        val allUserIds = (ratingsByUser.keys + eventsByUser.keys).filterNotNull().toSet()
+        val userSections = allUserIds.associate { uid ->
+            uid.value to UserSection(
+                seriesRatings = ratingsByUser[uid].orEmpty().map { it.toRatingExport() },
+                readingEvents = eventsByUser[uid].orEmpty().map { it.toReadingEventExport() },
             )
         }
+
+        // Top-level legacy `seriesRatings` is still written so v1 readers
+        // (Kora ≤ 1.0.9) can ingest their own backups even after we ship
+        // v2. We write only the current user's ratings — v1 had no concept
+        // of multi-user, and shipping someone else's ratings to a v1
+        // reader would silently overwrite the user's own.
+        val legacyRatings = currentUid
+            ?.let { ratingsByUser[it].orEmpty() }
+            ?.map { it.toRatingExport() }
 
         val bundle = BackupBundle(
             schemaVersion = BACKUP_SCHEMA_VERSION,
@@ -80,11 +119,44 @@ class DefaultBackupService(
                 homeScreenFilters = home,
                 librarySeriesFilters = libFilters,
                 seriesReaderOverrides = seriesOverrides,
-                seriesRatings = ratings,
+                seriesRatings = legacyRatings,
+                userSections = userSections,
             )
         )
         return json.encodeToString(BackupBundle.serializer(), bundle)
     }
+
+    /**
+     * Merges the NULL-tagged slice of [byUser] into [foldInto]'s entry, or
+     * returns [byUser] unchanged when [foldInto] is null. Used so a
+     * just-installed v1.0.10 user — whose backfill job may not have run
+     * yet — still exports their pre-upgrade events under their own
+     * account section.
+     */
+    private fun <T> foldNullsInto(
+        byUser: Map<KomgaUserId?, List<T>>,
+        foldInto: KomgaUserId?,
+    ): Map<KomgaUserId?, List<T>> {
+        val nulls = byUser[null].orEmpty()
+        if (foldInto == null || nulls.isEmpty()) return byUser
+        val mutable = byUser.toMutableMap()
+        mutable.remove(null)
+        mutable[foldInto] = (mutable[foldInto].orEmpty()) + nulls
+        return mutable
+    }
+
+    private fun SeriesRating.toRatingExport() = RatingExport(
+        seriesId = seriesId.value,
+        stars = stars,
+        ratedAt = ratedAt.toEpochMilliseconds(),
+    )
+
+    private fun ReadingEvent.toReadingEventExport() = ReadingEventExport(
+        bookId = bookId.value,
+        eventType = type.name,
+        timestamp = timestamp.toEpochMilliseconds(),
+        pageCount = pageCount,
+    )
 
     override suspend fun importFromJson(jsonString: String): ImportResult {
         val bundle = try {
@@ -93,18 +165,18 @@ class DefaultBackupService(
             return ImportResult.Failure("Not a valid Kora backup file (${e.message ?: e::class.simpleName})")
         }
 
-        if (bundle.schemaVersion != BACKUP_SCHEMA_VERSION) {
+        // Forward-read older bundles (v1 backups exported by Kora 1.0.7..1.0.9
+        // still import on 1.0.10+). Newer-than-known bundles are rejected
+        // because we can't safely guess what new sections mean.
+        if (bundle.schemaVersion > BACKUP_SCHEMA_VERSION) {
             return ImportResult.Failure(
-                if (bundle.schemaVersion > BACKUP_SCHEMA_VERSION) {
-                    "Backup was created by a newer version of Kora (schema v${bundle.schemaVersion})"
-                } else {
-                    "Backup uses an older schema (v${bundle.schemaVersion}) that is no longer supported"
-                }
+                "Backup was created by a newer version of Kora (schema v${bundle.schemaVersion})"
             )
         }
 
         val sections = bundle.sections
         val restored = mutableListOf<String>()
+        val skipped = mutableListOf<String>()
 
         // App settings: preserve current volatile fields so we don't blow
         // away the user's active session/server when importing.
@@ -198,25 +270,84 @@ class DefaultBackupService(
             }.onFailure { return ImportResult.Failure("Failed to restore Series reader overrides: ${it.message}") }
         }
 
-        sections.seriesRatings?.let { incoming ->
-            runCatching {
-                // replaceAll is transactional and preserves each row's
-                // original ratedAt — that's why we use it instead of
-                // looping put() which would stamp every entry with now().
-                val models = incoming.map { dto ->
-                    SeriesRating(
-                        seriesId = KomgaSeriesId(dto.seriesId),
-                        stars = dto.stars,
-                        ratedAt = Instant.fromEpochMilliseconds(dto.ratedAt),
+        // -- v2 per-user sections --------------------------------------
+        // Each section is either "your own" (restore freely) or "someone
+        // else's" (requires Komga admin; otherwise silently skipped).
+        // See ImportResult.Success.sectionsSkipped for the report path.
+        val user = currentUser.value
+        val isAdmin = user?.roles?.contains(ROLE_ADMIN) == true
+        val currentUid = user?.id
+
+        sections.userSections?.let { incoming ->
+            for ((userIdStr, section) in incoming) {
+                val sectionUid = KomgaUserId(userIdStr)
+                val isOwn = sectionUid == currentUid
+                if (!isOwn && !isAdmin) {
+                    skipped.add("Data for user ${userIdStr.shortIdHint()} (Komga admin required to shadow-restore)")
+                    continue
+                }
+                runCatching {
+                    val ratings = section.seriesRatings.map { dto ->
+                        SeriesRating(
+                            seriesId = KomgaSeriesId(dto.seriesId),
+                            stars = dto.stars,
+                            ratedAt = Instant.fromEpochMilliseconds(dto.ratedAt),
+                        )
+                    }
+                    val events = section.readingEvents.map { dto ->
+                        ReadingEvent(
+                            bookId = KomgaBookId(dto.bookId),
+                            type = ReadingEvent.Type.valueOf(dto.eventType),
+                            timestamp = Instant.fromEpochMilliseconds(dto.timestamp),
+                            pageCount = dto.pageCount,
+                        )
+                    }
+                    seriesRatings.replaceAllForUser(sectionUid, ratings)
+                    readingEvents.upsertAllForUser(sectionUid, events)
+                    val who = if (isOwn) "your data" else "data for ${userIdStr.shortIdHint()}"
+                    restored.add("User section ($who, ${ratings.size} ratings + ${events.size} events)")
+                }.onFailure {
+                    return ImportResult.Failure(
+                        "Failed to restore user section ${userIdStr.shortIdHint()}: ${it.message}"
                     )
                 }
-                seriesRatings.replaceAll(models)
-                restored.add("Series ratings (${incoming.size} entries)")
-            }.onFailure { return ImportResult.Failure("Failed to restore Series ratings: ${it.message}") }
+            }
         }
 
-        return ImportResult.Success(restored)
+        // -- v1 legacy ratings fallback --------------------------------
+        // Only applied when there are no v2 userSections (otherwise the v2
+        // branch above already handled current-user ratings — we'd be
+        // double-applying). Treat the top-level ratings as belonging to
+        // whoever is signed in now.
+        if (sections.userSections.isNullOrEmpty() && !sections.seriesRatings.isNullOrEmpty()) {
+            if (currentUid == null) {
+                skipped.add("Legacy ratings (${sections.seriesRatings.size}) — sign in first to attribute them")
+            } else {
+                runCatching {
+                    val models = sections.seriesRatings.map { dto ->
+                        SeriesRating(
+                            seriesId = KomgaSeriesId(dto.seriesId),
+                            stars = dto.stars,
+                            ratedAt = Instant.fromEpochMilliseconds(dto.ratedAt),
+                        )
+                    }
+                    seriesRatings.replaceAllForUser(currentUid, models)
+                    restored.add("Series ratings (legacy v1, ${models.size} entries)")
+                }.onFailure {
+                    return ImportResult.Failure("Failed to restore legacy ratings: ${it.message}")
+                }
+            }
+        }
+
+        return ImportResult.Success(restored, skipped)
     }
+
+    /**
+     * Render a Komga user UUID as a short prefix for log lines and the
+     * success/skipped dialog. Avoids dumping the full UUID into a tooltip
+     * that nobody can read.
+     */
+    private fun String.shortIdHint(): String = take(8) + "…"
 
     /** Strips transient/server-coupled fields so the export is portable. */
     private fun AppSettings.sanitizedForExport(): AppSettings = AppSettings().let { defaults ->

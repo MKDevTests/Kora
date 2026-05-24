@@ -50,4 +50,19 @@ interface SeriesRatingsRepository {
      * See [snd.komelia.UserScopeBackfillJob].
      */
     suspend fun backfillNullUserIds(userId: snd.komga.client.user.KomgaUserId): Int
+
+    /**
+     * Snapshot every rating grouped by its `komga_user_id`. NULL key holds
+     * legacy rows not yet backfilled — callers typically fold them into
+     * the current user's section before export.
+     */
+    suspend fun listAllByUser(): Map<snd.komga.client.user.KomgaUserId?, List<SeriesRating>>
+
+    /**
+     * Atomically wipe and re-insert the slice belonging to [userId],
+     * leaving other users' rows untouched. Used by the backup importer
+     * for both same-user restore and admin-gated shadow restore.
+     * Observers of removed and inserted series ids are notified.
+     */
+    suspend fun replaceAllForUser(userId: snd.komga.client.user.KomgaUserId, ratings: List<SeriesRating>)
 }

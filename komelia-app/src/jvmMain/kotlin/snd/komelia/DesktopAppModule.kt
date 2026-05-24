@@ -382,7 +382,10 @@ class DesktopAppModule(
 
     // Backup/restore is wired for Android only in v1. Desktop returns a stub
     // that surfaces a friendly error instead of throwing.
-    override fun createBackupService(repositories: AppRepositories): snd.komelia.backup.BackupService {
+    override fun createBackupService(
+        repositories: AppRepositories,
+        currentUser: kotlinx.coroutines.flow.StateFlow<snd.komga.client.user.KomgaUser?>,
+    ): snd.komelia.backup.BackupService {
         return object : snd.komelia.backup.BackupService {
             override suspend fun exportToJson(): String = ""
             override suspend fun importFromJson(json: String): snd.komelia.backup.ImportResult =

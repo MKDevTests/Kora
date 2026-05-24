@@ -414,7 +414,10 @@ class AndroidAppModule(
         )
     }
 
-    override fun createBackupService(repositories: AppRepositories): BackupService {
+    override fun createBackupService(
+        repositories: AppRepositories,
+        currentUser: kotlinx.coroutines.flow.StateFlow<snd.komga.client.user.KomgaUser?>,
+    ): BackupService {
         return DefaultBackupService(
             appSettings = (repositories.settingsRepository as SettingsRepositoryWrapper).wrapper,
             imageReader = (repositories.imageReaderSettingsRepository as ReaderSettingsRepositoryWrapper).wrapper,
@@ -425,6 +428,8 @@ class AndroidAppModule(
             librarySeriesFilters = repositories.librarySeriesFiltersRepository,
             seriesReaderOverrides = repositories.seriesReaderOverridesRepository,
             seriesRatings = repositories.seriesRatingsRepository,
+            readingEvents = repositories.readingEventsRepository,
+            currentUser = currentUser,
         )
     }
 

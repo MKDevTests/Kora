@@ -140,6 +140,45 @@ class ExposedSeriesRatingsRepository(
         }
     }
 
+    override suspend fun listAllByUser(): Map<KomgaUserId?, List<SeriesRating>> {
+        return transaction {
+            SeriesRatingsTable
+                .selectAll()
+                .map { row ->
+                    val userIdValue = row[SeriesRatingsTable.komgaUserId]
+                    val key: KomgaUserId? = userIdValue?.let { KomgaUserId(it) }
+                    key to row.toModel()
+                }
+                .groupBy({ it.first }, { it.second })
+        }
+    }
+
+    override suspend fun replaceAllForUser(userId: KomgaUserId, ratings: List<SeriesRating>) {
+        ratings.forEach {
+            require(it.stars in 1..5) { "stars must be 1..5, got ${it.stars}" }
+        }
+        // Snapshot the user's existing slice so observers get notified for
+        // rows we remove as well as the ones we (re-)insert.
+        val toEmit: Set<KomgaSeriesId> = transaction {
+            val previousIds = SeriesRatingsTable
+                .selectAll()
+                .where { SeriesRatingsTable.komgaUserId.eq(userId.value) }
+                .map { KomgaSeriesId(it[SeriesRatingsTable.seriesId]) }
+                .toSet()
+            SeriesRatingsTable.deleteWhere { SeriesRatingsTable.komgaUserId.eq(userId.value) }
+            ratings.forEach { rating ->
+                SeriesRatingsTable.insert {
+                    it[seriesId] = rating.seriesId.value
+                    it[stars] = rating.stars
+                    it[ratedAt] = rating.ratedAt.toEpochMilliseconds()
+                    it[komgaUserId] = userId.value
+                }
+            }
+            previousIds + ratings.map { it.seriesId }
+        }
+        toEmit.forEach { writeEvents.emit(it) }
+    }
+
     private fun org.jetbrains.exposed.v1.core.ResultRow.toModel(): SeriesRating {
         return SeriesRating(
             seriesId = KomgaSeriesId(get(SeriesRatingsTable.seriesId)),

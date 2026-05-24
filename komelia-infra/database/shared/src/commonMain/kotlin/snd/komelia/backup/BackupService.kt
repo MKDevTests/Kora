@@ -19,8 +19,17 @@ interface BackupService {
 }
 
 sealed interface ImportResult {
-    /** [sectionsRestored] is a human-readable list of what was applied. */
-    data class Success(val sectionsRestored: List<String>) : ImportResult
+    /**
+     * @param sectionsRestored human-readable list of what was applied.
+     * @param sectionsSkipped human-readable list of sections that were
+     *   intentionally not applied — e.g. per-user sections for a foreign
+     *   account when the current user is not Komga admin. The dialog
+     *   surfaces these so the user knows nothing went silently missing.
+     */
+    data class Success(
+        val sectionsRestored: List<String>,
+        val sectionsSkipped: List<String> = emptyList(),
+    ) : ImportResult
 
     /** [reason] is a single-sentence end-user message. */
     data class Failure(val reason: String) : ImportResult
