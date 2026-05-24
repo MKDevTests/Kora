@@ -152,7 +152,9 @@ class DesktopAppModule(
     }
 
 
-    override suspend fun createAppRepositories(): AppRepositories {
+    override suspend fun createAppRepositories(
+        currentUserId: kotlinx.coroutines.flow.StateFlow<snd.komga.client.user.KomgaUserId?>,
+    ): AppRepositories {
         return AppRepositories(
             settingsRepository = ExposedSettingsRepository(databases.app).let { repository ->
                 SettingsRepositoryWrapper(
@@ -215,8 +217,8 @@ class DesktopAppModule(
                 )
             },
             seriesReaderOverridesRepository = snd.komelia.db.reader.ExposedSeriesReaderOverridesRepository(databases.app),
-            readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app),
-            seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app),
+            readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app, currentUserId),
+            seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app, currentUserId),
         )
     }
 

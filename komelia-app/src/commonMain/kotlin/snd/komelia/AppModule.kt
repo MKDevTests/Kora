@@ -16,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -94,7 +95,15 @@ abstract class AppModule(
 
     suspend fun initDependencies(): DependencyContainer {
         beforeInit()
-        val appRepositories = createAppRepositories()
+
+        // Hoisted up so the repos that need to tag rows with the current
+        // user's id (reading_events, series_ratings) can read .value at
+        // every write. The flow is populated below once currentUserFlow
+        // is wired (around the auth section), and re-evaluates whenever
+        // the user signs in / out.
+        val currentUserIdFlow = MutableStateFlow<snd.komga.client.user.KomgaUserId?>(null)
+
+        val appRepositories = createAppRepositories(currentUserIdFlow)
         val offlineRepositories = createOfflineRepositories()
         val ktor = createKtorClient()
         val ktorWithoutCache = createKtorClientWithoutCache()
@@ -141,6 +150,22 @@ abstract class AppModule(
         val isOffline = offlineRepositories.offlineSettingsRepository.getOfflineMode().stateIn(initScope)
         val currentUserFlow = MutableStateFlow<KomgaUser?>(null)
         val currentServerUrl = appRepositories.settingsRepository.getServerUrl().stateIn(initScope)
+
+        // Wire the user-id flow that user-tagged repos read at write time.
+        // Collector lifecycle: tied to initScope, so it survives for the
+        // app lifetime and re-fires on sign-in / sign-out. Backfill of
+        // legacy (pre-v1.0.10) NULL rows happens once on first non-null
+        // emission via UserScopeBackfillJob below.
+        initScope.launch {
+            currentUserFlow.collect { user -> currentUserIdFlow.value = user?.id }
+        }
+        initScope.launch {
+            UserScopeBackfillJob(
+                readingEvents = appRepositories.readingEventsRepository,
+                seriesRatings = appRepositories.seriesRatingsRepository,
+                currentUserId = currentUserIdFlow,
+            ).run()
+        }
 
         val androidContext = createCoilContext()
         val offlineModuleInstance = createOfflineModule(
@@ -449,7 +474,14 @@ abstract class AppModule(
     }
 
 
-    protected abstract suspend fun createAppRepositories(): AppRepositories
+    /**
+     * @param currentUserId polled by user-tagged repositories (reading_events,
+     *   series_ratings) at write time. The platform module just forwards this
+     *   into the repo constructors that need it.
+     */
+    protected abstract suspend fun createAppRepositories(
+        currentUserId: StateFlow<snd.komga.client.user.KomgaUserId?>,
+    ): AppRepositories
     protected abstract suspend fun createOfflineRepositories(): OfflineRepositories
 
     /**

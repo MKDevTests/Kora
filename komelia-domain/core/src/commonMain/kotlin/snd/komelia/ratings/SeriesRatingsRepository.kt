@@ -43,4 +43,11 @@ interface SeriesRatingsRepository {
      * after the transaction commits.
      */
     suspend fun replaceAll(ratings: List<SeriesRating>)
+
+    /**
+     * One-shot post-upgrade tagging: tag every row whose `komga_user_id` is
+     * NULL with [userId]. Returns the number of rows updated. Idempotent.
+     * See [snd.komelia.UserScopeBackfillJob].
+     */
+    suspend fun backfillNullUserIds(userId: snd.komga.client.user.KomgaUserId): Int
 }

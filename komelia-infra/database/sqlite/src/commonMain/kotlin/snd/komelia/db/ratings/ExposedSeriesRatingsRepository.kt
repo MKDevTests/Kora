@@ -2,28 +2,38 @@ package snd.komelia.db.ratings
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.tables.SeriesRatingsTable
 import snd.komelia.ratings.SeriesRating
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.user.KomgaUserId
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 class ExposedSeriesRatingsRepository(
     database: Database,
+    /**
+     * Current Komga user id, polled at write time so each upsert is tagged
+     * with whoever is signed in right now. Null when no authenticated
+     * session yet — backfilled by [snd.komelia.UserScopeBackfillJob].
+     */
+    private val currentUserId: StateFlow<KomgaUserId?>,
 ) : ExposedRepository(database), SeriesRatingsRepository {
 
     /**
@@ -52,11 +62,13 @@ class ExposedSeriesRatingsRepository(
 
     override suspend fun put(seriesId: KomgaSeriesId, stars: Int) {
         require(stars in 1..5) { "stars must be 1..5, got $stars" }
+        val userId = currentUserId.value?.value
         transaction {
             SeriesRatingsTable.upsert {
                 it[SeriesRatingsTable.seriesId] = seriesId.value
                 it[SeriesRatingsTable.stars] = stars
                 it[ratedAt] = Clock.System.now().toEpochMilliseconds()
+                it[komgaUserId] = userId
             }
         }
         writeEvents.emit(seriesId)
@@ -98,6 +110,7 @@ class ExposedSeriesRatingsRepository(
         // ratings get notified too — not just the ones we're restoring.
         // Both the delete and the inserts happen in a single transaction
         // so a crash mid-loop can't leave the table half-empty.
+        val userId = currentUserId.value?.value
         val toEmit: Set<KomgaSeriesId> = transaction {
             val previousIds = SeriesRatingsTable
                 .selectAll()
@@ -109,11 +122,22 @@ class ExposedSeriesRatingsRepository(
                     it[seriesId] = rating.seriesId.value
                     it[stars] = rating.stars
                     it[ratedAt] = rating.ratedAt.toEpochMilliseconds()
+                    it[komgaUserId] = userId
                 }
             }
             previousIds + ratings.map { it.seriesId }
         }
         toEmit.forEach { writeEvents.emit(it) }
+    }
+
+    override suspend fun backfillNullUserIds(userId: KomgaUserId): Int {
+        return transaction {
+            SeriesRatingsTable.update(
+                where = { SeriesRatingsTable.komgaUserId.isNull() },
+            ) {
+                it[SeriesRatingsTable.komgaUserId] = userId.value
+            }
+        }
     }
 
     private fun org.jetbrains.exposed.v1.core.ResultRow.toModel(): SeriesRating {

@@ -157,7 +157,9 @@ class AndroidAppModule(
     }
 
 
-    override suspend fun createAppRepositories(): AppRepositories {
+    override suspend fun createAppRepositories(
+        currentUserId: kotlinx.coroutines.flow.StateFlow<snd.komga.client.user.KomgaUserId?>,
+    ): AppRepositories {
         val datastore = DataStoreFactory.create(
             serializer = AppSettingsSerializer,
             produceFile = { context.dataStoreFile(if (serverId != null) "server_${serverId}_settings.pb" else "settings.pb") },
@@ -226,8 +228,8 @@ class AndroidAppModule(
                 )
             },
             seriesReaderOverridesRepository = snd.komelia.db.reader.ExposedSeriesReaderOverridesRepository(databases.app),
-            readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app),
-            seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app),
+            readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app, currentUserId),
+            seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app, currentUserId),
         )
     }
 

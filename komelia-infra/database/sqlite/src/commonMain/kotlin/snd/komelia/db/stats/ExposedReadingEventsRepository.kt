@@ -1,20 +1,24 @@
 package snd.komelia.db.stats
 
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.tables.ReadingEventsTable
 import snd.komelia.stats.ReadingEvent
 import snd.komelia.stats.ReadingEventsRepository
 import snd.komga.client.book.KomgaBookId
+import snd.komga.client.user.KomgaUserId
 import kotlin.time.Instant
 
 /**
@@ -34,6 +38,13 @@ import kotlin.time.Instant
  */
 class ExposedReadingEventsRepository(
     database: Database,
+    /**
+     * Current Komga user id, polled at write time so each new event row
+     * is tagged with whoever is signed in right now. Null when no
+     * authenticated session yet — those rows are tagged later by
+     * [snd.komelia.UserScopeBackfillJob] on the first successful auth.
+     */
+    private val currentUserId: StateFlow<KomgaUserId?>,
 ) : ExposedRepository(database), ReadingEventsRepository {
 
     override suspend fun record(
@@ -42,12 +53,24 @@ class ExposedReadingEventsRepository(
         at: Instant,
         pageCount: Int?,
     ) {
+        val userId = currentUserId.value?.value
         transaction {
             ReadingEventsTable.insertIgnore {
                 it[ReadingEventsTable.bookId] = bookId.value
                 it[ReadingEventsTable.eventType] = type.name
                 it[ReadingEventsTable.timestamp] = at.toEpochMilliseconds()
                 it[ReadingEventsTable.pageCount] = pageCount
+                it[ReadingEventsTable.komgaUserId] = userId
+            }
+        }
+    }
+
+    override suspend fun backfillNullUserIds(userId: KomgaUserId): Int {
+        return transaction {
+            ReadingEventsTable.update(
+                where = { ReadingEventsTable.komgaUserId.isNull() },
+            ) {
+                it[ReadingEventsTable.komgaUserId] = userId.value
             }
         }
     }

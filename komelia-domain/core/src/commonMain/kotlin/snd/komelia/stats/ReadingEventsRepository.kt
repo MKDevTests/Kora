@@ -56,4 +56,15 @@ interface ReadingEventsRepository {
 
     /** Remove every event of [type]. Used by the "clear my reading history" toggle. */
     suspend fun clear(type: ReadingEvent.Type)
+
+    /**
+     * One-shot post-upgrade tagging: tag every row whose `komga_user_id` is
+     * NULL with [userId]. Returns the number of rows updated so callers can
+     * decide whether to log "nothing to backfill". Idempotent — re-running
+     * after success affects 0 rows.
+     *
+     * Called by [snd.komelia.UserScopeBackfillJob] on the first successful
+     * authentication after a user upgrades from a pre-v1.0.10 install.
+     */
+    suspend fun backfillNullUserIds(userId: snd.komga.client.user.KomgaUserId): Int
 }
