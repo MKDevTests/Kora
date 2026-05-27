@@ -54,25 +54,30 @@ private val logger = KotlinLogging.logger { }
  * Process-wide cache of random-sort shelf results. Lives outside
  * [HomeViewModel] so that voyager's [rememberScreenModel] recreating
  * the viewmodel on navigation (Home → Library → Home) doesn't drop
- * the cache and refetch random shelves on every return — the
- * "carousel reshuffles every time I come back" symptom.
+ * the cache and refetch random shelves on every return.
  *
- * Keyed by [HomeScreenFilter] content equality so changing the filter
- * config (label, page size, sort, etc.) naturally produces a cache miss.
+ * Keyed by a stable String derived from the filter (`order + label`)
+ * rather than the [HomeScreenFilter] object itself: KomgaPageRequest /
+ * KomgaSearchCondition come from the external komga-client library and
+ * don't necessarily implement content-based equals(), so two filter
+ * instances loaded from storage at different times can fail to hash as
+ * equal even though the user thinks of them as "the same shelf". The
+ * String key sidesteps that and survives storage round-trips intact.
+ *
  * Cleared only on process restart.
  */
 private object RandomShelfCache {
-    private val cache = mutableMapOf<HomeScreenFilter, Entry>()
+    private val cache = mutableMapOf<String, Entry>()
     private val ttl = 5.minutes
 
-    fun get(filter: HomeScreenFilter): HomeFilterData? {
-        val entry = cache[filter] ?: return null
+    fun get(key: String): HomeFilterData? {
+        val entry = cache[key] ?: return null
         if ((Clock.System.now() - entry.fetchedAt) >= ttl) return null
         return entry.data
     }
 
-    fun put(filter: HomeScreenFilter, data: HomeFilterData) {
-        cache[filter] = Entry(data, Clock.System.now())
+    fun put(key: String, data: HomeFilterData) {
+        cache[key] = Entry(data, Clock.System.now())
     }
 
     private data class Entry(val data: HomeFilterData, val fetchedAt: Instant)
@@ -135,30 +140,40 @@ class HomeViewModel(
         // Event-driven reloads (Komga SSE) and viewmodel recreation on
         // Home/Library navigation both honor the cache; only force=true
         // (manual pull-to-refresh) bypasses it.
-        if (!force && isRandomShelf(filter)) {
-            RandomShelfCache.get(filter)?.let { return it }
+        val cacheKey = filter.randomShelfCacheKey()
+        if (!force && cacheKey != null) {
+            RandomShelfCache.get(cacheKey)?.let { return it }
         }
         val fresh = fetchFilterDataFromServer(filter) ?: return null
-        if (isRandomShelf(filter)) {
-            RandomShelfCache.put(filter, fresh)
+        if (cacheKey != null) {
+            RandomShelfCache.put(cacheKey, fresh)
         }
         return fresh
     }
 
     /**
-     * True when [filter] is a CustomFilter whose sort uses the Komga
-     * `random` property. Detected via the sort's [Any.toString] so we
-     * stay robust across KomgaSort subtype differences (KomgaSeriesSort
-     * vs KomgaBooksSort) and serialization variants — `random` always
-     * surfaces as a substring of the rendered Order.
+     * Returns a stable cache key for random-sort filters, or null when
+     * [filter] isn't randomly sorted (so caching doesn't apply).
+     *
+     * Sort detection goes through [Any.toString] so we stay robust to
+     * KomgaSort subtype differences (KomgaSeriesSort vs KomgaBooksSort)
+     * and serialization variants — `random` always surfaces as a
+     * substring of the rendered Order.
+     *
+     * The key composes the filter's [HomeScreenFilter.order] and
+     * [HomeScreenFilter.label] — both are scalar fields owned by Kora,
+     * so two filter instances loaded from storage at different times
+     * hash to the same key even if their nested KomgaPageRequest /
+     * KomgaSearchCondition instances aren't `equals()`-comparable.
      */
-    private fun isRandomShelf(filter: HomeScreenFilter): Boolean {
-        val sort = when (filter) {
-            is SeriesHomeScreenFilter.CustomFilter -> filter.pageRequest?.sort
-            is BooksHomeScreenFilter.CustomFilter -> filter.pageRequest?.sort
+    private fun HomeScreenFilter.randomShelfCacheKey(): String? {
+        val sort = when (this) {
+            is SeriesHomeScreenFilter.CustomFilter -> pageRequest?.sort
+            is BooksHomeScreenFilter.CustomFilter -> pageRequest?.sort
             else -> null
         }
-        return sort?.toString()?.contains("random", ignoreCase = true) == true
+        if (sort?.toString()?.contains("random", ignoreCase = true) != true) return null
+        return "$order:$label"
     }
 
     private suspend fun fetchFilterDataFromServer(filter: HomeScreenFilter): HomeFilterData? {
