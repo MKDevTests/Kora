@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 import snd.komelia.AppNotifications
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
@@ -64,6 +67,24 @@ class HomeViewModel(
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
 
+    /**
+     * In-memory cache for shelves sorted randomly so they don't reshuffle
+     * on every Komga SSE event (book completed, series updated, etc.) —
+     * those events used to retrigger `load()` and the random sort would
+     * return a fresh permutation, which the user perceived as "the
+     * carousel reshuffles constantly while I'm just browsing".
+     *
+     * Keyed by [HomeScreenFilter] content (data class equality), so two
+     * separate "Discover" shelves don't share the same cache slot. TTL =
+     * [randomShelfTtl]. Forced reloads (manual pull-to-refresh and the
+     * public [reload] entrypoint) bypass the cache; event-driven reloads
+     * honor it.
+     */
+    private val randomShelfCache = mutableMapOf<HomeScreenFilter, CachedShelfEntry>()
+    private val randomShelfTtl = 5.minutes
+
+    private data class CachedShelfEntry(val data: HomeFilterData, val fetchedAt: Instant)
+
     suspend fun initialize() {
         if (state.value !is Uninitialized) return
 
@@ -77,16 +98,18 @@ class HomeViewModel(
         }.launchIn(screenModelScope)
     }
 
+    /** Manual reload entry point (pull-to-refresh, etc.). Bypasses the
+     *  random-shelf cache so the user always gets a fresh permutation. */
     fun reload() {
-        screenModelScope.launch { load() }
+        screenModelScope.launch { load(force = true) }
     }
 
-    private suspend fun load() {
+    private suspend fun load(force: Boolean = false) {
         appNotifications.runCatchingToNotifications {
             mutableState.value = LoadState.Loading
 
             currentFilters.value = filterRepository.getFilters().first()
-                .map { screenModelScope.async { fetchFilterData(it) } }
+                .map { screenModelScope.async { fetchFilterData(it, force) } }
                 .awaitAll()
                 .filterNotNull()
 
@@ -94,7 +117,39 @@ class HomeViewModel(
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 
-    private suspend fun fetchFilterData(filter: HomeScreenFilter): HomeFilterData? {
+    private suspend fun fetchFilterData(filter: HomeScreenFilter, force: Boolean): HomeFilterData? {
+        // Random shelves: serve from cache while fresh (event-driven reloads
+        // get the stable permutation), refetch only on TTL expiry or force.
+        if (!force && isRandomShelf(filter)) {
+            val cached = randomShelfCache[filter]
+            if (cached != null && (Clock.System.now() - cached.fetchedAt) < randomShelfTtl) {
+                return cached.data
+            }
+        }
+        val fresh = fetchFilterDataFromServer(filter) ?: return null
+        if (isRandomShelf(filter)) {
+            randomShelfCache[filter] = CachedShelfEntry(fresh, Clock.System.now())
+        }
+        return fresh
+    }
+
+    /**
+     * True when [filter] is a CustomFilter whose sort uses the Komga
+     * `random` property. Detected via the sort's [Any.toString] so we
+     * stay robust across KomgaSort subtype differences (KomgaSeriesSort
+     * vs KomgaBooksSort) and serialization variants — `random` always
+     * surfaces as a substring of the rendered Order.
+     */
+    private fun isRandomShelf(filter: HomeScreenFilter): Boolean {
+        val sort = when (filter) {
+            is SeriesHomeScreenFilter.CustomFilter -> filter.pageRequest?.sort
+            is BooksHomeScreenFilter.CustomFilter -> filter.pageRequest?.sort
+            else -> null
+        }
+        return sort?.toString()?.contains("random", ignoreCase = true) == true
+    }
+
+    private suspend fun fetchFilterDataFromServer(filter: HomeScreenFilter): HomeFilterData? {
         return when (filter) {
             is BooksHomeScreenFilter.CustomFilter -> {
                 val books = bookApi.getBookList(
