@@ -39,6 +39,8 @@ import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
+import snd.komga.client.common.KomgaSort.KomgaBooksSort
+import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.search.allOfBooks
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeriesSearch
@@ -142,11 +144,19 @@ class HomeViewModel(
         // (manual pull-to-refresh) bypasses it.
         val cacheKey = filter.randomShelfCacheKey()
         if (!force && cacheKey != null) {
-            RandomShelfCache.get(cacheKey)?.let { return it }
+            val cached = RandomShelfCache.get(cacheKey)
+            if (cached != null) {
+                logger.info { "RandomShelfCache HIT for $cacheKey (force=$force)" }
+                return cached
+            }
+            logger.info { "RandomShelfCache MISS for $cacheKey (force=$force)" }
+        } else if (cacheKey != null) {
+            logger.info { "RandomShelfCache BYPASS for $cacheKey (force=true)" }
         }
         val fresh = fetchFilterDataFromServer(filter) ?: return null
         if (cacheKey != null) {
             RandomShelfCache.put(cacheKey, fresh)
+            logger.info { "RandomShelfCache STORED $cacheKey" }
         }
         return fresh
     }
@@ -155,13 +165,14 @@ class HomeViewModel(
      * Returns a stable cache key for random-sort filters, or null when
      * [filter] isn't randomly sorted (so caching doesn't apply).
      *
-     * Sort detection goes through [Any.toString] so we stay robust to
-     * KomgaSort subtype differences (KomgaSeriesSort vs KomgaBooksSort)
-     * and serialization variants — `random` always surfaces as a
-     * substring of the rendered Order.
+     * Detection inspects [KomgaSort.Order.property] directly — the
+     * earlier `.toString().contains("random")` approach didn't work
+     * because KomgaSort's external types don't override toString(),
+     * so the random shelf was never recognized and the cache stayed
+     * empty.
      *
-     * The key composes the filter's [HomeScreenFilter.order] and
-     * [HomeScreenFilter.label] — both are scalar fields owned by Kora,
+     * The key composes [HomeScreenFilter.order] and
+     * [HomeScreenFilter.label]: both are scalar fields owned by Kora,
      * so two filter instances loaded from storage at different times
      * hash to the same key even if their nested KomgaPageRequest /
      * KomgaSearchCondition instances aren't `equals()`-comparable.
@@ -172,7 +183,13 @@ class HomeViewModel(
             is BooksHomeScreenFilter.CustomFilter -> pageRequest?.sort
             else -> null
         }
-        if (sort?.toString()?.contains("random", ignoreCase = true) != true) return null
+        val orders: List<KomgaSort.Order> = when (sort) {
+            is KomgaSeriesSort -> sort.orders
+            is KomgaBooksSort -> sort.orders
+            else -> emptyList()
+        }
+        val isRandom = orders.any { it.property.equals("random", ignoreCase = true) }
+        if (!isRandom) return null
         return "$order:$label"
     }
 
