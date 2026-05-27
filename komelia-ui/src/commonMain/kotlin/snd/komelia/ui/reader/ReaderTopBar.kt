@@ -51,6 +51,12 @@ fun ReaderTopBar(
     bookNumber: Int,
     onBack: () -> Unit,
     seriesBookCount: Int? = null,
+    /**
+     * Per-volume title from `KomgaBookMetadata.title`. Appended to the
+     * book-number label as `5/72 · Le titre du tome`. Default empty
+     * keeps the bare-number rendering for callers that don't pass it.
+     */
+    bookTitle: String = "",
     upscaleActivities: Map<Int, UpscaleStatus> = emptyMap(),
     modifier: Modifier = Modifier,
 ) {
@@ -61,10 +67,11 @@ fun ReaderTopBar(
 
     val hideParentheses = LocalHideParenthesesInNames.current
     val finalSeriesTitle = if (hideParentheses) seriesTitle.removeParentheses() else seriesTitle
-    val finalBookTitle = if (seriesBookCount != null && seriesBookCount > 0)
+    val numberLabel = if (seriesBookCount != null && seriesBookCount > 0)
         "$bookNumber/$seriesBookCount"
     else
         "$bookNumber"
+    val finalBookTitle = if (bookTitle.isBlank()) numberLabel else "$numberLabel · $bookTitle"
 
     val lockScreenRotation = LocalLockScreenRotation.current
     val onLockScreenRotationChange = LocalOnLockScreenRotationChange.current

@@ -254,6 +254,7 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                         ReaderTopBar(
                             seriesTitle = book?.seriesTitle ?: "",
                             bookNumber = book?.number ?: 0,
+                            bookTitle = book?.metadata?.title.orEmpty(),
                             onBack = { epub3State.closeWebview() },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )

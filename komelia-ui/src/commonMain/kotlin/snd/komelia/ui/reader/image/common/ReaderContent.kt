@@ -364,6 +364,7 @@ fun ReaderContent(
                         seriesTitle = book?.seriesTitle ?: "",
                         bookNumber = book?.number ?: 0,
                         seriesBookCount = totalBooks,
+                        bookTitle = book?.metadata?.title.orEmpty(),
                         onBack = onExit,
                         upscaleActivities = allUpscaleActivities,
                         modifier = Modifier.align(Alignment.TopCenter)
