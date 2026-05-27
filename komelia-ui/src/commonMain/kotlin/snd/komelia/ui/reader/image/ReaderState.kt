@@ -183,6 +183,13 @@ class ReaderState(
     val tapNavigationMode = MutableStateFlow(ReaderTapNavigationMode.LEFT_RIGHT)
     val volumeKeysNavigation = MutableStateFlow(false)
     val keepReaderScreenOn = MutableStateFlow(false)
+    /**
+     * Image-reader minimal-UI-while-reading toggle (v1.0.11). Mirrors
+     * the persisted [ImageReaderSettings.keepProgressBarVisibleWhileReading]
+     * loaded at [initialize]. When true, the reader's hidden-controls
+     * state shows a slim bottom strip instead of nothing.
+     */
+    val keepProgressBarVisibleWhileReading = MutableStateFlow(false)
     val pixelDensity = MutableStateFlow<Density?>(null)
 
     val annotations = MutableStateFlow<List<snd.komelia.annotations.BookAnnotation>>(emptyList())
@@ -237,6 +244,8 @@ class ReaderState(
         tapNavigationMode.value = readerSettingsRepository.getReaderTapNavigationMode().first()
         volumeKeysNavigation.value = readerSettingsRepository.getVolumeKeysNavigation().first()
         keepReaderScreenOn.value = commonSettingsRepository.getKeepReaderScreenOn().first()
+        keepProgressBarVisibleWhileReading.value =
+            readerSettingsRepository.getKeepProgressBarVisibleWhileReading().first()
 
         appNotifications.runCatchingToNotifications {
             state.value = LoadState.Loading

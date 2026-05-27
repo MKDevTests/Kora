@@ -66,5 +66,9 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val pagedAutoDetectWebtoon = bool("paged_auto_detect_webtoon").default(false)
     val continuousReaderStopAtEnd = bool("continuous_reader_stop_at_end").default(true)
 
+    /** Minimal-UI-while-reading toggle (v1.0.11). See V67 migration. */
+    val keepProgressBarVisibleWhileReading =
+        bool("keep_progress_bar_visible_while_reading").default(false)
+
     override val primaryKey = PrimaryKey(bookId)
 }

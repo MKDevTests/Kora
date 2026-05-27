@@ -326,4 +326,12 @@ class ReaderSettingsRepositoryWrapper(
     override suspend fun putContinuousReaderStopAtEnd(enabled: Boolean) {
         wrapper.transform { it.copy(continuousReaderStopAtEnd = enabled) }
     }
+
+    override fun getKeepProgressBarVisibleWhileReading(): Flow<Boolean> {
+        return wrapper.mapState { it.keepProgressBarVisibleWhileReading }
+    }
+
+    override suspend fun putKeepProgressBarVisibleWhileReading(enabled: Boolean) {
+        wrapper.transform { it.copy(keepProgressBarVisibleWhileReading = enabled) }
+    }
 }

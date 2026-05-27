@@ -73,8 +73,16 @@ fun BoxScope.SettingsOverlay(
     onBackPress: () -> Unit,
     ohShowHelpDialogChange: (Boolean) -> Unit,
     onNotesClick: () -> Unit = {},
+    /**
+     * Optional minimal-UI-while-reading mode (v1.0.11). When true and
+     * [show] is false, the overlay still renders but the rows below the
+     * progress slider are collapsed out — leaving the user with just the
+     * top bar and the [prev book][progress slider][next book] row. Tap
+     * flips [show] back to true and the rest of the UI slides up.
+     */
+    keepProgressBarVisible: Boolean = false,
 ) {
-    if (!show) return
+    if (!show && !keepProgressBarVisible) return
     val useNewUI2 = LocalUseNewLibraryUI2.current
     val windowWidth = LocalWindowWidth.current
     val platform = LocalPlatform.current
@@ -98,6 +106,7 @@ fun BoxScope.SettingsOverlay(
 
     if (useNewUI2 || ((windowWidth == COMPACT || windowWidth == MEDIUM) && platform != DESKTOP)) {
         BottomSheetSettingsOverlay(
+            expanded = show,
             book = book,
             readerType = readerType,
             onReaderTypeChange = commonReaderState::onReaderTypeChange,

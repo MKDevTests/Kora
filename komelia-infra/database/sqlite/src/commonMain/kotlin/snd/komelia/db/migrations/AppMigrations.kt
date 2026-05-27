@@ -76,6 +76,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V64__series_ratings.sql",
         "V65__reading_events_page_count.sql",
         "V66__user_id_scope.sql",
+        "V67__keep_progress_bar_visible.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

@@ -130,4 +130,12 @@ interface ImageReaderSettingsRepository {
 
     fun getContinuousReaderStopAtEnd(): Flow<Boolean>
     suspend fun putContinuousReaderStopAtEnd(enabled: Boolean)
+
+    /**
+     * Image reader minimal-UI-while-reading toggle (v1.0.11). When true,
+     * the reader's hidden-controls state is replaced by a slim bottom
+     * strip with just the progress slider + prev/next book buttons.
+     */
+    fun getKeepProgressBarVisibleWhileReading(): Flow<Boolean>
+    suspend fun putKeepProgressBarVisibleWhileReading(enabled: Boolean)
 }

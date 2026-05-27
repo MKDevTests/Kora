@@ -61,6 +61,15 @@ data class ImageReaderSettings(
     val pagedAutoSkipBlankPages: Boolean = false,
     val pagedAutoDetectWebtoon: Boolean = false,
     val continuousReaderStopAtEnd: Boolean = true,
+    /**
+     * Minimal-UI-while-reading toggle (v1.0.11). When true, the reader's
+     * "hidden controls" state is replaced by a slim bottom strip showing
+     * only the [prev book] [progress slider] [next book] row plus the top
+     * bar. Tapping reveals the full controls; tap again returns here.
+     * When false: identical to the legacy behavior (controls fully hidden
+     * by default, full UI on tap).
+     */
+    val keepProgressBarVisibleWhileReading: Boolean = false,
 ) {
     companion object {
         const val PANEL_DETECTION_DEFAULT_ORIGINAL_URL =

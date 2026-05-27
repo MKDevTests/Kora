@@ -145,6 +145,14 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheetSettingsOverlay(
+    /**
+     * Drives the v1.0.11 minimal-UI-while-reading layout. When false, the
+     * rows below the progress slider (mode toggles, OCR/upscale buttons,
+     * etc.) animate out and only the [prev book][slider][next book]
+     * strip remains. Defaults to true so non-minimal call sites keep the
+     * legacy full-controls behavior unchanged.
+     */
+    expanded: Boolean = true,
     book: KomeliaBook?,
     readerType: ReaderType,
     onReaderTypeChange: (ReaderType) -> Unit,
@@ -298,6 +306,7 @@ fun BottomSheetSettingsOverlay(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 ImageReaderControlsCardNewUI(
+                    expanded = expanded,
                     pages = pages,
                     currentPageIndex = currentPageIndex,
                     onSliderPageChange = {
@@ -1060,6 +1069,13 @@ internal fun ReaderModeIconButton(
 
 @Composable
 fun ImageReaderControlsCardNewUI(
+    /**
+     * False when in v1.0.11 minimal-UI-while-reading mode — the rows
+     * below the progress slider animate out and only the
+     * [prev book][slider][next book] strip stays visible. Defaults true
+     * so existing call sites keep the legacy full-controls behavior.
+     */
+    expanded: Boolean = true,
     pages: List<PageMetadata>,
     currentPageIndex: Int,
     onSliderPageChange: (Int) -> Unit,
@@ -1167,6 +1183,17 @@ fun ImageReaderControlsCardNewUI(
                         }
                     }
 
+                    // v1.0.11 minimal-UI: hide everything below the progress
+                    // slider when [expanded] is false (keep-progress-bar mode
+                    // with the user not tapping). The hidden content slides
+                    // out toward the bottom and fades; tapping the reader
+                    // flips expanded back to true and the rows slide up.
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    ) {
+                    Column {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1273,6 +1300,8 @@ fun ImageReaderControlsCardNewUI(
                             label = "Return library",
                             onClick = onReturnLibrary,
                         )
+                    }
+                    }
                     }
                 }
             }

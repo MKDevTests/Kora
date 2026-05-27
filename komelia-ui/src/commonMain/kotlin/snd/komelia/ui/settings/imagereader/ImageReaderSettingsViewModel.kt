@@ -75,6 +75,7 @@ class ImageReaderSettingsViewModel(
     val pagedAutoSkipBlankPages = MutableStateFlow(false)
     val pagedAutoDetectWebtoon = MutableStateFlow(false)
     val continuousReaderStopAtEnd = MutableStateFlow(true)
+    val keepProgressBarVisibleWhileReading = MutableStateFlow(false)
     val availableUpsamplingModes = availableUpsamplingModes()
     val availableDownsamplingKernels = availableReduceKernels()
 
@@ -92,6 +93,8 @@ class ImageReaderSettingsViewModel(
         pagedAutoSkipBlankPages.value = settingsRepository.getPagedAutoSkipBlankPages().first()
         pagedAutoDetectWebtoon.value = settingsRepository.getPagedAutoDetectWebtoon().first()
         continuousReaderStopAtEnd.value = settingsRepository.getContinuousReaderStopAtEnd().first()
+        keepProgressBarVisibleWhileReading.value =
+            settingsRepository.getKeepProgressBarVisibleWhileReading().first()
         onnxRuntimeSettingsState.initialize()
         ncnnSettingsState.initialize()
         rapidOcrSettingsState.initialize()
@@ -150,6 +153,11 @@ class ImageReaderSettingsViewModel(
     fun onContinuousReaderStopAtEndChange(enabled: Boolean) {
         continuousReaderStopAtEnd.value = enabled
         screenModelScope.launch { settingsRepository.putContinuousReaderStopAtEnd(enabled) }
+    }
+
+    fun onKeepProgressBarVisibleWhileReadingChange(enabled: Boolean) {
+        keepProgressBarVisibleWhileReading.value = enabled
+        screenModelScope.launch { settingsRepository.putKeepProgressBarVisibleWhileReading(enabled) }
     }
 
     fun onClearImageCache() {

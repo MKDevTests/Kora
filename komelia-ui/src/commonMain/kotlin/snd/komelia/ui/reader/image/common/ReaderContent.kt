@@ -339,8 +339,10 @@ fun ReaderContent(
                     }
                 }
 
+                val keepProgressBarVisible by commonReaderState.keepProgressBarVisibleWhileReading.collectAsState()
                 SettingsOverlay(
                     show = showSettingsMenu,
+                    keepProgressBarVisible = keepProgressBarVisible,
                     commonReaderState = commonReaderState,
                     pagedReaderState = pagedReaderState,
                     continuousReaderState = continuousReaderState,
@@ -355,7 +357,7 @@ fun ReaderContent(
                     onNotesClick = { showComicContentDialog = true },
                 )
 
-                if (showSettingsMenu && useNewUI2) {
+                if ((showSettingsMenu || keepProgressBarVisible) && useNewUI2) {
                     val book = commonReaderState.booksState.collectAsState().value?.currentBook
                     val series = commonReaderState.series.collectAsState().value
                     val totalBooks = series?.metadata?.totalBookCount ?: series?.booksCount
