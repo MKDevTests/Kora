@@ -50,6 +50,34 @@ import snd.komga.client.sse.KomgaEvent.SeriesEvent
 
 private val logger = KotlinLogging.logger { }
 
+/**
+ * Process-wide cache of random-sort shelf results. Lives outside
+ * [HomeViewModel] so that voyager's [rememberScreenModel] recreating
+ * the viewmodel on navigation (Home → Library → Home) doesn't drop
+ * the cache and refetch random shelves on every return — the
+ * "carousel reshuffles every time I come back" symptom.
+ *
+ * Keyed by [HomeScreenFilter] content equality so changing the filter
+ * config (label, page size, sort, etc.) naturally produces a cache miss.
+ * Cleared only on process restart.
+ */
+private object RandomShelfCache {
+    private val cache = mutableMapOf<HomeScreenFilter, Entry>()
+    private val ttl = 5.minutes
+
+    fun get(filter: HomeScreenFilter): HomeFilterData? {
+        val entry = cache[filter] ?: return null
+        if ((Clock.System.now() - entry.fetchedAt) >= ttl) return null
+        return entry.data
+    }
+
+    fun put(filter: HomeScreenFilter, data: HomeFilterData) {
+        cache[filter] = Entry(data, Clock.System.now())
+    }
+
+    private data class Entry(val data: HomeFilterData, val fetchedAt: Instant)
+}
+
 class HomeViewModel(
     private val seriesApi: KomgaSeriesApi,
     val bookApi: KomgaBookApi,
@@ -67,23 +95,8 @@ class HomeViewModel(
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
 
-    /**
-     * In-memory cache for shelves sorted randomly so they don't reshuffle
-     * on every Komga SSE event (book completed, series updated, etc.) —
-     * those events used to retrigger `load()` and the random sort would
-     * return a fresh permutation, which the user perceived as "the
-     * carousel reshuffles constantly while I'm just browsing".
-     *
-     * Keyed by [HomeScreenFilter] content (data class equality), so two
-     * separate "Discover" shelves don't share the same cache slot. TTL =
-     * [randomShelfTtl]. Forced reloads (manual pull-to-refresh and the
-     * public [reload] entrypoint) bypass the cache; event-driven reloads
-     * honor it.
-     */
-    private val randomShelfCache = mutableMapOf<HomeScreenFilter, CachedShelfEntry>()
-    private val randomShelfTtl = 5.minutes
-
-    private data class CachedShelfEntry(val data: HomeFilterData, val fetchedAt: Instant)
+    // Random-shelf cache lives in the file-scope [RandomShelfCache]
+    // object above so it survives viewmodel recreation. See the docs there.
 
     suspend fun initialize() {
         if (state.value !is Uninitialized) return
@@ -118,17 +131,16 @@ class HomeViewModel(
     }
 
     private suspend fun fetchFilterData(filter: HomeScreenFilter, force: Boolean): HomeFilterData? {
-        // Random shelves: serve from cache while fresh (event-driven reloads
-        // get the stable permutation), refetch only on TTL expiry or force.
+        // Random shelves: serve from the process-wide cache while fresh.
+        // Event-driven reloads (Komga SSE) and viewmodel recreation on
+        // Home/Library navigation both honor the cache; only force=true
+        // (manual pull-to-refresh) bypasses it.
         if (!force && isRandomShelf(filter)) {
-            val cached = randomShelfCache[filter]
-            if (cached != null && (Clock.System.now() - cached.fetchedAt) < randomShelfTtl) {
-                return cached.data
-            }
+            RandomShelfCache.get(filter)?.let { return it }
         }
         val fresh = fetchFilterDataFromServer(filter) ?: return null
         if (isRandomShelf(filter)) {
-            randomShelfCache[filter] = CachedShelfEntry(fresh, Clock.System.now())
+            RandomShelfCache.put(filter, fresh)
         }
         return fresh
     }

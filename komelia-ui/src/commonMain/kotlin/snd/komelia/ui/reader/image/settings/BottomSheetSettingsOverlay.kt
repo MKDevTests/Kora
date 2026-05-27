@@ -467,6 +467,10 @@ fun BottomSheetSettingsOverlay(
                                     pagedReaderState = pagedReaderState,
                                     continuousReaderState = continuousReaderState,
                                     panelsReaderState = panelsReaderState,
+                                    keepProgressBarVisible = commonReaderState
+                                        .keepProgressBarVisibleWhileReading.collectAsState().value,
+                                    onKeepProgressBarVisibleChange =
+                                        commonReaderState::onKeepProgressBarVisibleWhileReadingChange,
                                 )
                             }
 
@@ -527,6 +531,8 @@ private fun BottomSheetReadingModeSettings(
     pagedReaderState: PagedReaderState,
     continuousReaderState: ContinuousReaderState,
     panelsReaderState: PanelsReaderState?,
+    keepProgressBarVisible: Boolean,
+    onKeepProgressBarVisibleChange: (Boolean) -> Unit,
 ) {
     Column {
         Text("Reading mode")
@@ -557,6 +563,19 @@ private fun BottomSheetReadingModeSettings(
             PANELS -> if (panelsReaderState != null) PanelsModeSettings(state = panelsReaderState)
             CONTINUOUS -> ContinuousModeSettings(state = continuousReaderState)
         }
+
+        Spacer(Modifier.height(12.dp))
+        snd.komelia.ui.common.components.SwitchWithLabel(
+            checked = keepProgressBarVisible,
+            onCheckedChange = onKeepProgressBarVisibleChange,
+            label = { Text("Always show progress bar while reading") },
+            supportingText = {
+                Text(
+                    "Hide the rest of the controls but keep the slim bottom strip. " +
+                        "Tap the page to reveal the full UI."
+                )
+            },
+        )
     }
 }
 

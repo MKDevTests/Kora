@@ -589,6 +589,13 @@ class ReaderState(
         stateScope.launch { readerSettingsRepository.putFlashOnPageChange(enabled) }
     }
 
+    fun onKeepProgressBarVisibleWhileReadingChange(enabled: Boolean) {
+        keepProgressBarVisibleWhileReading.value = enabled
+        stateScope.launch {
+            readerSettingsRepository.putKeepProgressBarVisibleWhileReading(enabled)
+        }
+    }
+
     fun onFlashDurationChange(duration: Long) {
         flashDuration.value = duration
         stateScope.launch { readerSettingsRepository.putFlashDuration(duration) }

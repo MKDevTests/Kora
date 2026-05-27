@@ -40,11 +40,6 @@ class ImageReaderSettingsScreen : Screen {
                 continuousReaderStopAtEnd = vm.continuousReaderStopAtEnd.collectAsState().value,
                 onContinuousReaderStopAtEndChange = vm::onContinuousReaderStopAtEndChange,
 
-                keepProgressBarVisibleWhileReading =
-                    vm.keepProgressBarVisibleWhileReading.collectAsState().value,
-                onKeepProgressBarVisibleWhileReadingChange =
-                    vm::onKeepProgressBarVisibleWhileReadingChange,
-
                 onCacheClear = vm::onClearImageCache,
                 onnxRuntimeSettingsState = vm.onnxRuntimeSettingsState,
                 ncnnSettingsState = vm.ncnnSettingsState,

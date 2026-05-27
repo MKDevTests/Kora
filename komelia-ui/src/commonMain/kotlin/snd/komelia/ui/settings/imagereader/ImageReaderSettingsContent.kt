@@ -45,9 +45,6 @@ fun ImageReaderSettingsContent(
     continuousReaderStopAtEnd: Boolean,
     onContinuousReaderStopAtEndChange: (Boolean) -> Unit,
 
-    keepProgressBarVisibleWhileReading: Boolean,
-    onKeepProgressBarVisibleWhileReadingChange: (Boolean) -> Unit,
-
     onCacheClear: () -> Unit,
     onnxRuntimeSettingsState: OnnxRuntimeSettingsState,
     ncnnSettingsState: NcnnSettingsState,
@@ -78,14 +75,6 @@ fun ImageReaderSettingsContent(
                 checked = keepReaderScreenOn,
                 onCheckedChange = onKeepReaderScreenOnChange,
                 label = { Text("Keep screen on while reading") },
-            )
-            SwitchWithLabel(
-                checked = keepProgressBarVisibleWhileReading,
-                onCheckedChange = onKeepProgressBarVisibleWhileReadingChange,
-                label = { Text("Always show progress bar while reading") },
-                supportingText = {
-                    Text("Hide the other controls but keep the slim bottom strip. Tap to reveal the full UI.")
-                },
             )
         }
 
