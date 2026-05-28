@@ -49,8 +49,6 @@ data class ReadingStats(
     val dailyHistory7d: List<DayBucket> = emptyList(),
     /** Up to 5 most recently active series. */
     val recentSeries: List<RecentSeriesEntry>,
-    /** Achievement list; each entry includes whether it is unlocked. */
-    val achievements: List<Achievement>,
 ) {
     /** True when there is nothing to display (fresh install, no completions yet). */
     val isEmpty: Boolean
@@ -75,12 +73,4 @@ data class RecentSeriesEntry(
     val seriesId: KomgaSeriesId,
     val seriesTitle: String,
     val lastReadAt: Instant,
-)
-
-data class Achievement(
-    /** Stable identifier (e.g. "books_10", "streak_30") for analytics and i18n. */
-    val id: String,
-    val title: String,
-    val description: String,
-    val earned: Boolean,
 )

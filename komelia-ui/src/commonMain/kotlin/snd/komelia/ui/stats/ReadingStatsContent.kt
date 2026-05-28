@@ -1,6 +1,5 @@
 package snd.komelia.ui.stats
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,9 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
@@ -32,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -42,7 +37,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import snd.komelia.stats.Achievement
 import snd.komelia.stats.MonthBucket
 import snd.komelia.stats.ReadingStats
 import snd.komelia.stats.RecentSeriesEntry
@@ -103,12 +97,6 @@ fun ReadingStatsContent(
         // refetching — all three datasets are computed up-front in
         // ReadingStatsService.compute and stashed on ReadingStats.
         HistorySection(stats = stats, onRefresh = onRefresh)
-
-        // --- Achievements --------------------------------------------------
-        if (stats.achievements.any { it.earned }) {
-            SectionHeader(title = "Achievements")
-            AchievementsRow(achievements = stats.achievements)
-        }
 
         // --- Recent activity ----------------------------------------------
         if (stats.recentSeries.isNotEmpty()) {
@@ -328,43 +316,6 @@ private fun HistoryBarChart(bars: List<Pair<String, Int>>) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AchievementsRow(achievements: List<Achievement>) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
-    ) {
-        items(achievements.filter { it.earned }) { ach ->
-            AchievementChip(ach)
-        }
-    }
-}
-
-@Composable
-private fun AchievementChip(achievement: Achievement) {
-    val container = MaterialTheme.colorScheme.tertiaryContainer
-    val onContainer = MaterialTheme.colorScheme.onTertiaryContainer
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(container)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = achievement.title,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = onContainer,
-        )
-        Text(
-            text = achievement.description,
-            style = MaterialTheme.typography.bodySmall,
-            color = onContainer.copy(alpha = 0.8f),
-        )
     }
 }
 
