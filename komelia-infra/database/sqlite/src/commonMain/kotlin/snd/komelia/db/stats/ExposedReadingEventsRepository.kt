@@ -224,6 +224,26 @@ class ExposedReadingEventsRepository(
         }
     }
 
+    override suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int> {
+        val tz = TimeZone.currentSystemDefault()
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .where {
+                    ReadingEventsTable.eventType.eq(type.name)
+                        .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds()))
+                }
+                .map {
+                    val date = Instant.fromEpochMilliseconds(it[ReadingEventsTable.timestamp])
+                        .toLocalDateTime(tz)
+                        .date
+                    "%04d-%02d-%02d".format(date.year, date.monthNumber, date.dayOfMonth)
+                }
+                .groupingBy { it }
+                .eachCount()
+        }
+    }
+
     override suspend fun lifetimeDistinctBooks(type: ReadingEvent.Type): Int {
         return transaction {
             ReadingEventsTable

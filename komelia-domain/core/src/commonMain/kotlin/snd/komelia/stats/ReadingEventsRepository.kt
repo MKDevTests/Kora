@@ -51,6 +51,14 @@ interface ReadingEventsRepository {
      */
     suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int>
 
+    /**
+     * Bucket counts of [type] grouped by local calendar day ("YYYY-MM-DD"),
+     * from [since] onward. Same no-zero-fill convention as [monthlyBuckets]
+     * — the caller pads the missing days for chart axes that need a fixed
+     * number of bars (e.g. last 7 / 30 days).
+     */
+    suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int>
+
     /** Total number of distinct books ever associated with at least one event of [type]. */
     suspend fun lifetimeDistinctBooks(type: ReadingEvent.Type): Int
 

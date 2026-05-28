@@ -59,6 +59,8 @@ class ReadingStatsService(
             readingEvents.sumPagesLifetimeCarryover()
         val streak = computeStreak(now)
         val monthly = computeMonthlyHistory(now)
+        val daily30 = computeDailyHistory(now, days = 30)
+        val daily7 = computeDailyHistory(now, days = 7)
 
         val lifetimeBooks = fetchLifetimeBooksFinished(api)
         val lifetimeSeries = fetchLifetimeSeriesFinished(api)
@@ -76,6 +78,8 @@ class ReadingStatsService(
             pagesReadLast30Days = pagesLast30,
             pagesReadLifetime = pagesLifetime,
             monthlyHistory = monthly,
+            dailyHistory30d = daily30,
+            dailyHistory7d = daily7,
             recentSeries = recent,
             achievements = computeAchievements(
                 lifetimeBooks = lifetimeBooks,
@@ -136,6 +140,31 @@ class ReadingStatsService(
         val current = now.toLocalDateTime(tz).date
         val labels = generateMonthLabels(current.year, current.monthNumber, count = 12)
         return labels.map { MonthBucket(it, raw[it] ?: 0) }
+    }
+
+    /**
+     * [days] buckets oldest→newest, zero-filled. Pulls the per-day counts
+     * from the event log for the last [days] calendar days (including
+     * today) and zero-fills any missing days so the chart x-axis stays
+     * stable. Used by the 7-day and 30-day chart options (v1.0.12+).
+     */
+    private suspend fun computeDailyHistory(now: Instant, days: Int): List<DayBucket> {
+        require(days > 0) { "days must be positive" }
+        val tz = TimeZone.currentSystemDefault()
+        // `since` covers exactly `days` calendar days back from today —
+        // subtracting `days - 1` keeps today in the window.
+        val raw = readingEvents.dailyBuckets(
+            ReadingEvent.Type.COMPLETED,
+            now - (days - 1).days,
+        )
+
+        val today = now.toLocalDateTime(tz).date
+        val labels = mutableListOf<String>()
+        for (i in (days - 1) downTo 0) {
+            val date = (now - i.days).toLocalDateTime(tz).date
+            labels += "%04d-%02d-%02d".format(date.year, date.monthNumber, date.dayOfMonth)
+        }
+        return labels.map { DayBucket(it, raw[it] ?: 0) }
     }
 
     // --------------------------------------------------------- lifetime API

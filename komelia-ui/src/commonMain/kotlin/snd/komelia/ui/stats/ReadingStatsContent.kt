@@ -20,11 +20,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,9 +98,11 @@ fun ReadingStatsContent(
                 hint = "pages", modifier = Modifier.weight(1f))
         }
 
-        // --- Monthly chart -------------------------------------------------
-        SectionHeader(title = "Last 12 months", onRefresh = onRefresh)
-        MonthlyHistoryChart(buckets = stats.monthlyHistory)
+        // --- History chart with window selector (v1.0.12+) ------------------
+        // The user can switch between 7 days / 30 days / 12 months without
+        // refetching — all three datasets are computed up-front in
+        // ReadingStatsService.compute and stashed on ReadingStats.
+        HistorySection(stats = stats, onRefresh = onRefresh)
 
         // --- Achievements --------------------------------------------------
         if (stats.achievements.any { it.earned }) {
@@ -205,9 +212,45 @@ private fun formatPages(pages: Long): String = when {
     }
 }
 
+private enum class HistoryWindow(val labelText: String) {
+    DAYS_7("7 days"),
+    DAYS_30("30 days"),
+    MONTHS_12("12 months"),
+}
+
 @Composable
-private fun MonthlyHistoryChart(buckets: List<MonthBucket>) {
-    val maxCount = (buckets.maxOfOrNull { it.count } ?: 0).coerceAtLeast(1)
+private fun HistorySection(stats: ReadingStats, onRefresh: () -> Unit) {
+    // Default to 12 months — preserves the pre-v1.0.12 behavior on first
+    // open. State is local-only (no persistence) so a screen leave + return
+    // returns to the default; a deliberate choice to keep the surface
+    // simple and avoid yet another preference.
+    var window by remember { mutableStateOf(HistoryWindow.MONTHS_12) }
+
+    val (title, bars) = when (window) {
+        HistoryWindow.DAYS_7 -> "Last 7 days" to stats.dailyHistory7d.map { it.date to it.count }
+        HistoryWindow.DAYS_30 -> "Last 30 days" to stats.dailyHistory30d.map { it.date to it.count }
+        HistoryWindow.MONTHS_12 -> "Last 12 months" to stats.monthlyHistory.map { it.yearMonth to it.count }
+    }
+
+    SectionHeader(title = title, onRefresh = onRefresh)
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HistoryWindow.entries.forEach { option ->
+            FilterChip(
+                selected = window == option,
+                onClick = { window = option },
+                label = { Text(option.labelText) },
+            )
+        }
+    }
+    HistoryBarChart(bars = bars)
+}
+
+@Composable
+private fun HistoryBarChart(bars: List<Pair<String, Int>>) {
+    val maxCount = (bars.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
     val barColor = MaterialTheme.colorScheme.primary
     val axisColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
 
@@ -220,14 +263,14 @@ private fun MonthlyHistoryChart(buckets: List<MonthBucket>) {
             contentAlignment = Alignment.BottomCenter,
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                val n = buckets.size
+                val n = bars.size
                 if (n == 0) return@Canvas
                 val gap = 6.dp.toPx()
                 val barWidth = ((size.width - gap * (n - 1)) / n).coerceAtLeast(2f)
                 val baselineY = size.height
-                buckets.forEachIndexed { index, bucket ->
-                    val rel = bucket.count.toFloat() / maxCount.toFloat()
-                    val h = (rel * size.height).coerceAtLeast(if (bucket.count == 0) 0f else 2f)
+                bars.forEachIndexed { index, (_, count) ->
+                    val rel = count.toFloat() / maxCount.toFloat()
+                    val h = (rel * size.height).coerceAtLeast(if (count == 0) 0f else 2f)
                     val x = index * (barWidth + gap)
                     drawRoundRect(
                         color = barColor,
@@ -236,7 +279,6 @@ private fun MonthlyHistoryChart(buckets: List<MonthBucket>) {
                         cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
                     )
                 }
-                // baseline
                 drawLine(
                     color = axisColor,
                     start = Offset(0f, baselineY),
@@ -245,17 +287,16 @@ private fun MonthlyHistoryChart(buckets: List<MonthBucket>) {
                 )
             }
         }
-        // Sparse x-axis labels: oldest, middle, latest
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        ) {
-            val labels = when (buckets.size) {
+        // Sparse x-axis labels: first / middle / last only, so daily charts
+        // (30 bars) don't get a crammed strip of 30 labels.
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            val labels = when (bars.size) {
                 0 -> emptyList()
-                in 1..2 -> buckets.map { it.yearMonth }
+                in 1..2 -> bars.map { it.first }
                 else -> listOf(
-                    buckets.first().yearMonth,
-                    buckets[buckets.size / 2].yearMonth,
-                    buckets.last().yearMonth,
+                    bars.first().first,
+                    bars[bars.size / 2].first,
+                    bars.last().first,
                 )
             }
             labels.forEachIndexed { i, label ->

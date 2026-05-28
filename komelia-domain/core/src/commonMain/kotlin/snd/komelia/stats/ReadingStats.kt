@@ -35,6 +35,18 @@ data class ReadingStats(
 
     /** 12 entries, oldest → newest, zero-filled. Used for the bar chart. */
     val monthlyHistory: List<MonthBucket>,
+    /**
+     * Last 30 days of completions, one bucket per local calendar day,
+     * oldest → newest, zero-filled. Used by the chart when the user picks
+     * the "30 days" window (v1.0.12+).
+     */
+    val dailyHistory30d: List<DayBucket> = emptyList(),
+    /**
+     * Last 7 days of completions, one bucket per local calendar day,
+     * oldest → newest, zero-filled. Used by the chart when the user picks
+     * the "7 days" window (v1.0.12+).
+     */
+    val dailyHistory7d: List<DayBucket> = emptyList(),
     /** Up to 5 most recently active series. */
     val recentSeries: List<RecentSeriesEntry>,
     /** Achievement list; each entry includes whether it is unlocked. */
@@ -50,6 +62,12 @@ data class ReadingStats(
 data class MonthBucket(
     /** ISO-like "YYYY-MM" — used both as map key and as chart x-axis label source. */
     val yearMonth: String,
+    val count: Int,
+)
+
+data class DayBucket(
+    /** ISO "YYYY-MM-DD" — used both as map key and as chart x-axis label source. */
+    val date: String,
     val count: Int,
 )
 
