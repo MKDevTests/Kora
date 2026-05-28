@@ -287,6 +287,21 @@ private fun HistoryBarChart(bars: List<Pair<String, Int>>) {
                 )
             }
         }
+        // Per-bar count row. Empty string for zero buckets so the daily
+        // charts (especially 30d with lots of quiet days) don't end up
+        // with a wall of "0"s.
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+            bars.forEach { (_, count) ->
+                Text(
+                    text = if (count == 0) "" else count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
         // Sparse x-axis labels: first / middle / last only, so daily charts
         // (30 bars) don't get a crammed strip of 30 labels.
         Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
