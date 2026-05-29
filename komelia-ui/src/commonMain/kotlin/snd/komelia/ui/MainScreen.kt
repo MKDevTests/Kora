@@ -737,7 +737,7 @@ class MainScreen(
             libraries = vm.libraries.collectAsState().value,
             libraryActions = vm.getLibraryActions(),
             onHomeClick = {
-                navigator.replaceAll(HomeScreen())
+                if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen())
                 if (width != FULL) coroutineScope.launch { vm.navBarState.snapTo(Closed) }
             },
             onLibrariesClick = {

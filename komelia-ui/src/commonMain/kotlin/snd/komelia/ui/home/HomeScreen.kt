@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.chrisbanes.haze.hazeSource
@@ -55,6 +56,12 @@ import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.library.KomgaLibraryId
 
 class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScreen {
+
+    // Stable, distinct key per Home variant (root vs library-rooted). HomeScreen
+    // was the only ReloadableScreen relying on Voyager's default key; two Home
+    // instances sharing it clashed in SaveableStateHolder during replaceAll
+    // transitions ("Key ... was used multiple times").
+    override val key: ScreenKey = "HomeScreen_${libraryId?.value ?: "root"}"
 
     @Composable
     override fun Content() {
