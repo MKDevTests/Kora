@@ -100,6 +100,19 @@ class SearchScreen(
                                             bookTotalPages = vm.bookTotalPages,
                                             onBookPageChange = vm::onBookPageChange,
                                             onBookClick = { navigator.push(bookScreen(it)) },
+
+                                            authorNames = vm.authorNames,
+                                            selectedAuthor = vm.selectedAuthor,
+                                            onAuthorSelected = vm::onAuthorSelected,
+                                            onAuthorCleared = vm::clearSelectedAuthor,
+                                            authorSeriesResults = vm.authorSeriesResults,
+                                            authorSeriesCurrentPage = vm.authorSeriesCurrentPage,
+                                            authorSeriesTotalPages = vm.authorSeriesTotalPages,
+                                            onAuthorSeriesPageChange = vm::onAuthorSeriesPageChange,
+                                            authorBookResults = vm.authorBookResults,
+                                            authorBookCurrentPage = vm.authorBookCurrentPage,
+                                            authorBookTotalPages = vm.authorBookTotalPages,
+                                            onAuthorBookPageChange = vm::onAuthorBookPageChange,
                                         )
                                     }
                                 }
@@ -146,6 +159,19 @@ class SearchScreen(
                             bookTotalPages = vm.bookTotalPages,
                             onBookPageChange = vm::onBookPageChange,
                             onBookClick = { navigator.push(bookScreen(it)) },
+
+                            authorNames = vm.authorNames,
+                            selectedAuthor = vm.selectedAuthor,
+                            onAuthorSelected = vm::onAuthorSelected,
+                            onAuthorCleared = vm::clearSelectedAuthor,
+                            authorSeriesResults = vm.authorSeriesResults,
+                            authorSeriesCurrentPage = vm.authorSeriesCurrentPage,
+                            authorSeriesTotalPages = vm.authorSeriesTotalPages,
+                            onAuthorSeriesPageChange = vm::onAuthorSeriesPageChange,
+                            authorBookResults = vm.authorBookResults,
+                            authorBookCurrentPage = vm.authorBookCurrentPage,
+                            authorBookTotalPages = vm.authorBookTotalPages,
+                            onAuthorBookPageChange = vm::onAuthorBookPageChange,
                         )
                     }
                 }
@@ -179,12 +205,28 @@ class SearchScreen(
                                 bookTotalPages = vm.bookTotalPages,
                                 onBookPageChange = vm::onBookPageChange,
                                 onBookClick = { navigator.push(bookScreen(it)) },
+
+                                authorNames = vm.authorNames,
+                                selectedAuthor = vm.selectedAuthor,
+                                onAuthorSelected = vm::onAuthorSelected,
+                                onAuthorCleared = vm::clearSelectedAuthor,
+                                authorSeriesResults = vm.authorSeriesResults,
+                                authorSeriesCurrentPage = vm.authorSeriesCurrentPage,
+                                authorSeriesTotalPages = vm.authorSeriesTotalPages,
+                                onAuthorSeriesPageChange = vm::onAuthorSeriesPageChange,
+                                authorBookResults = vm.authorBookResults,
+                                authorBookCurrentPage = vm.authorBookCurrentPage,
+                                authorBookTotalPages = vm.authorBookTotalPages,
+                                onAuthorBookPageChange = vm::onAuthorBookPageChange,
                             )
                         }
                     }
                 }
             }
-            BackPressHandler { navigator.pop() }
+            BackPressHandler {
+                if (vm.selectedAuthor != null) vm.clearSelectedAuthor()
+                else navigator.pop()
+            }
         }
     }
 }

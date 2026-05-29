@@ -1,17 +1,27 @@
 package snd.komelia.ui.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
@@ -49,8 +59,26 @@ fun SearchContent(
     seriesTotalPages: Int,
     onSeriesPageChange: (Int) -> Unit,
     onSeriesClick: (KomgaSeries) -> Unit,
+
+    authorNames: List<String>,
+    selectedAuthor: String?,
+    onAuthorSelected: (String) -> Unit,
+    onAuthorCleared: () -> Unit,
+    authorSeriesResults: List<KomgaSeries>,
+    authorSeriesCurrentPage: Int,
+    authorSeriesTotalPages: Int,
+    onAuthorSeriesPageChange: (Int) -> Unit,
+    authorBookResults: List<KomeliaBook>,
+    authorBookCurrentPage: Int,
+    authorBookTotalPages: Int,
+    onAuthorBookPageChange: (Int) -> Unit,
 ) {
-    if (query.isNotBlank() && bookResults.isEmpty() && seriesResults.isEmpty()) {
+    if (query.isNotBlank() &&
+        bookResults.isEmpty() &&
+        seriesResults.isEmpty() &&
+        authorNames.isEmpty() &&
+        selectedAuthor == null
+    ) {
         EmptySearchResults()
         return
     }
@@ -98,12 +126,7 @@ fun SearchContent(
                                 onPageChange = onSeriesPageChange
                             )
                         }
-                        item {
-                            val theme = LocalTheme.current
-                            if (theme.transparentBars) {
-                                Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
-                            }
-                        }
+                        item { TransparentBarSpacer() }
                     }
 
                     SearchResultsTab.BOOKS -> {
@@ -121,11 +144,70 @@ fun SearchContent(
                                 onPageChange = onBookPageChange
                             )
                         }
-                        item {
-                            val theme = LocalTheme.current
-                            if (theme.transparentBars) {
-                                Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
+                        item { TransparentBarSpacer() }
+                    }
+
+                    SearchResultsTab.AUTHORS -> {
+                        if (selectedAuthor == null) {
+                            items(authorNames, key = { it }) { name ->
+                                AuthorListItem(
+                                    name = name,
+                                    onClick = { onAuthorSelected(name) },
+                                    modifier = widthModifier
+                                )
                             }
+                            item { TransparentBarSpacer() }
+                        } else {
+                            item {
+                                AuthorWorksHeader(
+                                    author = selectedAuthor,
+                                    onBack = onAuthorCleared,
+                                    modifier = widthModifier
+                                )
+                            }
+                            if (authorSeriesResults.isNotEmpty()) {
+                                item { AuthorSectionLabel("Series", widthModifier) }
+                                items(authorSeriesResults) { series ->
+                                    SeriesDetailedListCard(
+                                        series = series,
+                                        onClick = { onSeriesClick(series) },
+                                        modifier = widthModifier
+                                    )
+                                }
+                                item {
+                                    Pagination(
+                                        totalPages = authorSeriesTotalPages,
+                                        currentPage = authorSeriesCurrentPage,
+                                        onPageChange = onAuthorSeriesPageChange
+                                    )
+                                }
+                            }
+                            if (authorBookResults.isNotEmpty()) {
+                                item { AuthorSectionLabel("Books", widthModifier) }
+                                items(authorBookResults) { book ->
+                                    BookDetailedListCard(
+                                        book = book,
+                                        onClick = { onBookClick(book) },
+                                        modifier = widthModifier
+                                    )
+                                }
+                                item {
+                                    Pagination(
+                                        totalPages = authorBookTotalPages,
+                                        currentPage = authorBookCurrentPage,
+                                        onPageChange = onAuthorBookPageChange
+                                    )
+                                }
+                            }
+                            if (authorSeriesResults.isEmpty() && authorBookResults.isEmpty()) {
+                                item {
+                                    Text(
+                                        "No works found for this author",
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            }
+                            item { TransparentBarSpacer() }
                         }
                     }
                 }
@@ -134,6 +216,68 @@ fun SearchContent(
 
         VerticalScrollbar(scrollState, Modifier.align(Alignment.TopEnd))
     }
+}
+
+@Composable
+private fun TransparentBarSpacer() {
+    val theme = LocalTheme.current
+    if (theme.transparentBars) {
+        Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
+    }
+}
+
+@Composable
+private fun AuthorListItem(
+    name: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(name, style = MaterialTheme.typography.bodyLarge)
+        }
+        HorizontalDivider()
+    }
+}
+
+@Composable
+private fun AuthorWorksHeader(
+    author: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to authors")
+        }
+        Text(author, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun AuthorSectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    )
 }
 
 @Composable
@@ -158,9 +302,9 @@ fun SearchToolBar(
 ) {
     val tabs = listOfNotNull(
         if (hasSeries) SearchResultsTab.SERIES else null,
-        if (hasBooks) SearchResultsTab.BOOKS else null
+        if (hasBooks) SearchResultsTab.BOOKS else null,
+        SearchResultsTab.AUTHORS,
     )
-    if (tabs.isEmpty()) return
 
     SecondaryTabRow(
         selectedTabIndex = tabs.indexOf(searchType).coerceAtLeast(0),
@@ -178,6 +322,11 @@ fun SearchToolBar(
             modifier = Modifier.heightIn(min = 40.dp),
             text = { Text("Books") },
         )
+        Tab(
+            selected = searchType == SearchResultsTab.AUTHORS,
+            onClick = { onSearchTypeChange(SearchResultsTab.AUTHORS) },
+            modifier = Modifier.heightIn(min = 40.dp),
+            text = { Text("Authors") },
+        )
     }
 }
-

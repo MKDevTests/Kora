@@ -412,6 +412,7 @@ class ViewModelFactory(
     fun getSearchViewModel() = SearchViewModel(
         seriesApi = komgaApi.seriesApi,
         bookApi = komgaApi.bookApi,
+        referentialApi = komgaApi.referentialApi,
         appNotifications = dependencies.appNotifications,
         libraries = dependencies.komgaSharedState.libraries,
         settingsRepository = appRepositories.settingsRepository,

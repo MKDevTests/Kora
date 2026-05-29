@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaBookApi
+import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.settings.CommonSettingsRepository
@@ -26,6 +27,7 @@ import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.search.KomgaSearchCondition
 import snd.komga.client.search.allOfBooks
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
@@ -35,6 +37,7 @@ import snd.komga.client.series.KomgaSeriesSearch
 class SearchViewModel(
     private val seriesApi: KomgaSeriesApi,
     private val bookApi: KomgaBookApi,
+    private val referentialApi: KomgaReferentialApi,
     private val appNotifications: AppNotifications,
     private val libraries: StateFlow<List<KomgaLibrary>>,
     private val settingsRepository: CommonSettingsRepository,
@@ -60,6 +63,28 @@ class SearchViewModel(
     var bookCurrentPage by mutableStateOf(1)
         private set
     var bookTotalPages by mutableStateOf(1)
+        private set
+
+    // Authors tab: list of matching author names (role-agnostic), and the
+    // currently drilled-into author with their series + books.
+    var authorNames by mutableStateOf<List<String>>(emptyList())
+        private set
+
+    var selectedAuthor by mutableStateOf<String?>(null)
+        private set
+
+    var authorSeriesResults by mutableStateOf<List<KomgaSeries>>(emptyList())
+        private set
+    var authorSeriesCurrentPage by mutableStateOf(1)
+        private set
+    var authorSeriesTotalPages by mutableStateOf(1)
+        private set
+
+    var authorBookResults by mutableStateOf<List<KomeliaBook>>(emptyList())
+        private set
+    var authorBookCurrentPage by mutableStateOf(1)
+        private set
+    var authorBookTotalPages by mutableStateOf(1)
         private set
 
     var query by mutableStateOf("")
@@ -101,7 +126,10 @@ class SearchViewModel(
                 else 500
             }
             .distinctUntilChanged()
-            .onEach { loadSearchResults() }
+            .onEach {
+                selectedAuthor = null
+                loadSearchResults()
+            }
             .launchIn(screenModelScope)
         mutableState.value = LoadState.Success(Unit)
     }
@@ -110,6 +138,10 @@ class SearchViewModel(
         screenModelScope.launch {
             mutableState.value = LoadState.Loading
             loadSearchResults()
+            selectedAuthor?.let {
+                loadAuthorSeriesPage(1)
+                loadAuthorBooksPage(1)
+            }
             mutableState.value = LoadState.Success(Unit)
         }
     }
@@ -118,6 +150,7 @@ class SearchViewModel(
         currentTab = userSelectedTab
         loadSeriesPage(1)
         loadBooksPage(1)
+        loadAuthorNames()
         if (seriesResults.isEmpty() && bookResults.isNotEmpty() && currentTab == SearchResultsTab.SERIES) {
             currentTab = SearchResultsTab.BOOKS
         } else if (bookResults.isEmpty() && seriesResults.isNotEmpty() && currentTab == SearchResultsTab.BOOKS) {
@@ -200,9 +233,90 @@ class SearchViewModel(
         this.userSelectedTab = type
     }
 
+    private suspend fun loadAuthorNames() {
+        appNotifications.runCatchingToNotifications {
+            authorNames = referentialApi.getAuthorsNames(query.ifBlank { null })
+        }.onFailure { mutableState.value = LoadState.Error(it) }
+    }
+
+    fun onAuthorSelected(name: String) {
+        selectedAuthor = name
+        screenModelScope.launch {
+            mutableState.value = LoadState.Loading
+            loadAuthorSeriesPage(1)
+            loadAuthorBooksPage(1)
+            mutableState.value = LoadState.Success(Unit)
+        }
+    }
+
+    fun clearSelectedAuthor() {
+        selectedAuthor = null
+    }
+
+    fun onAuthorSeriesPageChange(pageNumber: Int) {
+        screenModelScope.launch {
+            mutableState.value = LoadState.Loading
+            loadAuthorSeriesPage(pageNumber)
+            mutableState.value = LoadState.Success(Unit)
+        }
+    }
+
+    fun onAuthorBookPageChange(pageNumber: Int) {
+        screenModelScope.launch {
+            mutableState.value = LoadState.Loading
+            loadAuthorBooksPage(pageNumber)
+            mutableState.value = LoadState.Success(Unit)
+        }
+    }
+
+    private suspend fun loadAuthorSeriesPage(pageNumber: Int) {
+        val authorName = selectedAuthor ?: return
+        appNotifications.runCatchingToNotifications {
+            val libId = selectedLibraryId
+            val condition = allOfSeries {
+                author { isEqualTo(KomgaSearchCondition.AuthorMatch(authorName, null)) }
+                libId?.let { library { isEqualTo(it) } }
+            }.toSeriesCondition()
+            val page = seriesApi.getSeriesList(
+                KomgaSeriesSearch(condition = condition),
+                KomgaPageRequest(
+                    pageIndex = pageNumber - 1,
+                    size = 10,
+                    sort = KomgaSort.KomgaSeriesSort.byLastModifiedDateDesc()
+                )
+            )
+            authorSeriesCurrentPage = page.number + 1
+            authorSeriesTotalPages = page.totalPages
+            authorSeriesResults = page.content
+        }.onFailure { mutableState.value = LoadState.Error(it) }
+    }
+
+    private suspend fun loadAuthorBooksPage(pageNumber: Int) {
+        val authorName = selectedAuthor ?: return
+        appNotifications.runCatchingToNotifications {
+            val libId = selectedLibraryId
+            val condition = allOfBooks {
+                author { isEqualTo(KomgaSearchCondition.AuthorMatch(authorName, null)) }
+                libId?.let { library { isEqualTo(it) } }
+            }.toBookCondition()
+            val page = bookApi.getBookList(
+                KomgaBookSearch(condition = condition),
+                KomgaPageRequest(
+                    pageIndex = pageNumber - 1,
+                    size = 10,
+                    sort = KomgaSort.KomgaBooksSort.byLastModifiedDateDesc()
+                )
+            )
+            authorBookCurrentPage = page.number + 1
+            authorBookTotalPages = page.totalPages
+            authorBookResults = page.content
+        }.onFailure { mutableState.value = LoadState.Error(it) }
+    }
+
     enum class SearchResultsTab {
         SERIES,
         BOOKS,
+        AUTHORS,
     }
 
     /**
