@@ -1,109 +1,101 @@
-# Building Sipurra APKs
+# Building Kora
 
-## Debug APK
+Kora is an Android-first fork of [Komelia](https://github.com/Snd-R/Komelia) /
+Sipurra. Only **Android** builds are supported here (the desktop/wasm targets are
+inherited from upstream and are not maintained — see `README`).
 
-Already signed with the Android debug keystore — install directly.
+All build/release flows go through the helper scripts in `scripts/`, run from
+**WSL** (bash). Building from PowerShell / Git Bash is discouraged: the release
+APK is signed with a keystore resolved WSL-side, and switching shells mid-cycle
+can pick a different keystore and break in-place installs.
 
-```bash
-./gradlew :komelia-app:assembleDebug
-```
+## Prerequisites
 
-Output: `komelia-app/build/outputs/apk/debug/sipurra-app-debug.apk`
+- **WSL** (Ubuntu) on Windows, or a Linux/macOS shell.
+- **Android SDK** with build-tools (the scripts auto-discover it under
+  `$ANDROID_HOME`, `~/Android/Sdk`, or the Windows-side
+  `…/AppData/Local/Android/Sdk`).
+- **JDK 17** (the Gradle toolchain targets 17).
+- `adb` — on WSL it's invoked from the Windows SDK; USB device access works only
+  through the Windows-side adb server.
 
----
+> **Native libraries (JNI).** `libsqlitejdbc.so`, `libvips` and friends are not
+> committed. The build scripts restore them automatically
+> (`scripts/_ensure_jni_libs.sh`, from `~/.kora-jnilibs-cache/` or the SQLite
+> JAR). A fresh checkout therefore "just works"; you do not extract them by hand.
 
-## Release APK
+## Debug build — KoraDebug
 
-The release build is unsigned. After building, sign it with the debug keystore.
-
-### 1. Build
-
-```bash
-./gradlew :komelia-app:assembleRelease
-```
-
-Output: `komelia-app/build/outputs/apk/release/sipurra-app-release-unsigned.apk`
-
-### 2. Align and sign
-
-```bash
-cd komelia-app/build/outputs/apk/release
-
-~/Android/Sdk/build-tools/35.0.0/zipalign -p -f 4 \
-  sipurra-app-release-unsigned.apk \
-  sipurra-app-release-aligned.apk
-
-~/Android/Sdk/build-tools/35.0.0/apksigner sign \
-  --ks ~/.android/debug.keystore \
-  --ks-pass pass:android \
-  --ks-key-alias androiddebugkey \
-  --key-pass pass:android \
-  --out sipurra-app-release-signed.apk \
-  sipurra-app-release-aligned.apk
-```
-
-Output: `komelia-app/build/outputs/apk/release/sipurra-app-release-signed.apk`
-
----
-
-## If Gradle serves a cached APK after changing assets/images
-
-Force the package step to re-run:
+Fast iteration build, installed as **KoraDebug** (`io.github.mkdevtests.kora.debug`),
+a separate package that coexists with the release Kora.
 
 ```bash
-rm -f komelia-app/build/outputs/apk/release/sipurra-app-release-unsigned.apk
-./gradlew :komelia-app:packageRelease
+bash scripts/build-kora-debug.sh [--clean]
 ```
 
-Then sign as above.
+In WSL the script builds + signs, then prints the `adb install` command to run
+from PowerShell (WSL can't see USB devices directly).
 
----
+## Release build — Kora (local install)
 
-## Installing via ADB
+Builds the **Kora** release APK (`io.github.mkdevtests.kora`) and installs it on a
+connected device.
 
 ```bash
-adb install komelia-app/build/outputs/apk/release/sipurra-app-release-signed.apk
+bash scripts/build-kora-release.sh [--clean] [--migrate]
 ```
 
-If you get "INSTALL_FAILED_UPDATE_INCOMPATIBLE" (signature mismatch with an existing install):
+- The release build is **non-debuggable** and signed (see **Signing** below).
+- `--migrate` copies user data from KoraDebug into Kora after install (via a
+  `run-as` tar pipe). Because `run-as` needs a debuggable target, `--migrate`
+  builds a **debuggable** release (`-PdebuggableRelease`). Without `--migrate`,
+  the build is non-debuggable.
+
+## Cutting a public release
+
+`release-kora.sh` is the single entry point. It bumps the version everywhere,
+builds the signed release APK, commits, tags, pushes, and publishes the GitHub
+release on `MKDevTests/Kora` so the in-app updater can pick it up.
 
 ```bash
-adb uninstall io.github.eserero.sipurra
-adb install komelia-app/build/outputs/apk/release/sipurra-app-release-signed.apk
+bash scripts/release-kora.sh <version> [notes-or-path]
+#   e.g.  bash scripts/release-kora.sh 1.2.0 release_notes_1.2.0.md
 ```
 
----
+- Must be on `main` with a clean tree. The script (and `preflight.sh`) check the
+  branch, tag uniqueness, JNI libs, **migration registration**, and version
+  consistency before touching anything.
+- Do **not** bump `app-version` / `AppVersion.current` / `versionCode`, pre-commit
+  `chore(release):`, or pre-tag — the script does all of that and refuses a state
+  where it was already done.
+- The APK uploaded must end with `.apk` (the auto-updater looks for the first
+  `.apk` asset).
+- A guard refuses to publish a **debuggable** APK.
 
-## Creating a New Release in GitHub
+## Signing
 
-When you are ready to create a new release, follow these steps:
+Signing happens in `build-kora-release.sh` (zipalign + apksigner):
 
-### Part 1: Updates in the Application Codebase
-1. **Update the App Version Name:**
-   In `gradle/libs.versions.toml`, update the `app-version` variable.
-   ```toml
-   app-version = "2.0.0" # Example new version
-   ```
-2. **Update the App Version Code:**
-   In `komelia-app/build.gradle.kts`, increment the `versionCode` (found around line 116).
-   ```kotlin
-   versionCode = 22 # Must be higher than the previous release
-   ```
-3. **Update the Hardcoded Version:**
-   In `komelia-domain/core/src/commonMain/kotlin/snd/komelia/updates/AppVersion.kt`, update `AppVersion.current`.
-   ```kotlin
-   val current = AppVersion(2, 0, 0) // Example new version
-   ```
+- **By default**, the Android **debug keystore** is used. This is the same
+  signature Kora has always shipped with, so updates install over existing
+  installs seamlessly — **no reinstall, no data loss**.
+- To switch to a dedicated **release keystore** (recommended once you go wider),
+  export these before building — nothing is committed:
 
-### Part 2: Building the Artifacts
-Follow the instructions above in **Release APK** to create the release APK:
-- Run `./gradlew :komelia-app:assembleRelease`
-- Align and Sign the APK to produce `sipurra-app-release-signed.apk`.
+  ```bash
+  export KORA_RELEASE_KEYSTORE=~/keys/kora-release.keystore
+  export KORA_RELEASE_KEYSTORE_PASSWORD=********
+  export KORA_RELEASE_KEY_ALIAS=kora          # optional, defaults to "kora"
+  export KORA_RELEASE_KEY_PASSWORD=********    # optional, defaults to store pass
+  ```
 
-### Part 3: Updates in GitHub (Creating the Release)
-1. **Create the Tag:** In your `eserero/Sipurra` repository, create a new tag matching the version you just set in the code (e.g., `2.0.0` or `v2.0.0`).
-   **Note:** Both formats are supported, but it's recommended to stay consistent. The application will automatically remove a leading `v` if present.
-2. **Draft a New Release:** Go to GitHub Releases and draft a new release pointing to the tag you created.
-3. **Upload Assets:** Drag and drop your compiled `sipurra-app-release-signed.apk` (and any desktop artifacts like `.msi` or `.deb` if applicable) into the release assets section. 
-   **CRITICAL:** Ensure the Android file ends with `.apk`. The Android auto-updater specifically looks for `assets.firstOrNull { it.name.endsWith(".apk") }`.
-4. **Publish Release:** Add your release notes and publish. The application will now detect this as the newest update.
+  > ⚠️ Switching keystores changes the app signature. The first release signed
+  > with a new key **cannot update over** installs signed with the old key —
+  > users must export a backup, uninstall, and reinstall once. Plan this for a
+  > clearly-announced version.
+
+## Variants
+
+The Android variant is selected via the Gradle property `snd.android.variant`
+(`STANDALONE` default, `FDROID`, `PLAY`). Only `STANDALONE` enables the in-app
+self-updater.
