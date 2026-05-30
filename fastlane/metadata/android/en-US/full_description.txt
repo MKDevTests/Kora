@@ -1,5 +1,5 @@
-Komelia is a client application for Komga, a media server for your comics, manga, BDs, magazines and eBooks.
+Kora is an Android client for Komga, a media server for your comics, manga, BDs, magazines and eBooks. Kora is a personal, Android-focused fork of Komelia / Sipurra.
 
 Organize your CBZ, CBR, PDF and EPUB files in different libraries, collections or reading lists.
-Manage edit metadata for your series and books.
-Read your books using built-in reader.
+Manage and edit metadata for your series and books.
+Read your books using the built-in reader.

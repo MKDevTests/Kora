@@ -1,10 +1,13 @@
 # Third-Party Components
 
-This document provides a comprehensive list of all third-party libraries, components, submodules, and forks used in the Komelia project.
+This document lists the third-party libraries, components, submodules, and forks used in Kora.
 
 ## Project Origin
-*   **Original Project**: [Komelia](https://github.com/Gaysuist/Komelia)
-*   **This Fork**: Specialized for Android with Material 3 integration, GPU upscaling, and modernized UI.
+Kora is a personal, Android-focused fork of Sipurra, which is itself a fork of Komelia.
+
+*   **Komelia** (upstream): <https://github.com/Snd-R/Komelia>
+*   **Sipurra** (intermediate fork): <https://github.com/eserero/Sipurra>
+*   **Kora** (this project): <https://github.com/MKDevTests/Kora>
 
 ## Kotlin / Gradle Dependencies
 Managed via `gradle/libs.versions.toml`.
