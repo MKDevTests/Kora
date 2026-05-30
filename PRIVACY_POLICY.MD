@@ -1,60 +1,93 @@
-**Privacy Policy**
+# Privacy Policy — Kora
 
-This privacy policy applies to the Komelia app (hereby referred to as "Application") for mobile devices that was created
-by (hereby referred to as "Service Provider") as an Open Source service. This service is intended for use "AS IS".
+Kora is a free, open-source Android client for [Komga](https://komga.org/) media
+servers, distributed as a sideloaded APK. This policy describes what Kora does
+with your data. It is written in plain language; if anything is unclear, please
+open an issue on the project repository (see **Contact** below).
 
-**What information does the Application obtain and how is it used?**
+_Effective date: 2026-05-30._
 
-The Application does not obtain any information when you download and use it. Registration is not required to use the
-Application.
+## Short version
 
-**Does the Application collect precise real time location information of the device?**
+**Kora collects no analytics, no advertising data, and no telemetry, and sends
+nothing to the developer.** It contains no third-party tracking, analytics, or
+crash-reporting services. Everything Kora stores is kept **locally on your
+device**. The only servers Kora talks to are the ones **you** point it at (your
+Komga server) plus, optionally, GitHub (for app updates) and model/metadata
+sources for opt-in features.
 
-This Application does not collect precise information about the location of your mobile device.
+## What Kora stores on your device
 
-**Do third parties see and/or have access to information obtained by the Application?**
+All of the following stays on your device and is never transmitted to the
+developer:
 
-Since the Application does not collect any information, no data is shared with third parties.
+- **Reading data** — reading progress, reading statistics, and per-series
+  ratings you give.
+- **App settings** — reader, display, and feature preferences.
+- **Server configuration** — the address of your Komga server and the
+  credentials needed to connect to it, stored in the app's local storage.
+- **Folder / file access** — the locations (URIs) you grant Kora access to,
+  e.g. an auto-backup folder or files you open from a file manager.
+- **Backups** — JSON backup files you (or the auto-backup feature) export to a
+  folder you choose. These are yours; Kora does not upload them anywhere.
+- **Diagnostic logs** — app logs and a startup logcat snapshot, written to
+  Kora's local storage to help diagnose problems. They stay on the device
+  unless you choose to share them.
+- **Optional on-device processing** — if you enable them, OCR (text recognition)
+  and audio transcription run **locally on your device**.
 
-**What are my opt-out rights?**
+## Network connections Kora makes
 
-You can stop all collection of information by the Application easily by uninstalling it. You may use the standard
-uninstall processes as may be available as part of your mobile device or via the mobile application marketplace or
-network.
+- **Your Komga server** — Kora connects to the server address you configure to
+  authenticate and stream your library. This is your own server; Kora is just a
+  client.
+- **GitHub (optional updates)** — the in-app updater can check
+  `github.com/MKDevTests/Kora` for new releases and download an update APK. This
+  only happens when you check for updates or have automatic checks enabled.
+- **Optional model downloads** — if you enable OCR or AI image upscaling, Kora
+  may download the required model files from their distribution source.
+- **Optional metadata (Komf)** — if you configure a Komf server, Kora contacts
+  it for metadata.
+- **Any other server you explicitly configure.**
 
-**Children**
+Kora makes no network connections beyond these.
 
-The Application is not used to knowingly solicit data from or market to children under the age of 13.
+## Network security note
 
-The Service Provider does not knowingly collect personally identifiable information from children. The Service Provider
-encourages all children to never submit any personally identifiable information through the Application and/or Services.
-The Service Provider encourage parents and legal guardians to monitor their children's Internet usage and to help
-enforce this Policy by instructing their children never to provide personally identifiable information through the
-Application and/or Services without their permission. If you have reason to believe that a child has provided personally
-identifiable information to the Service Provider through the Application and/or Services, please contact the Service
-Provider (snd.scrape@gmail.com) so that they will be able to take the necessary actions. You must also be at least 16
-years of age to consent to the processing of your personally identifiable information in your country (in some countries
-we may allow your parent or guardian to do so on your behalf).
+To support self-hosted Komga servers on a home network, Kora permits plain
+**HTTP** connections and accepts **user-installed / self-signed certificates**.
+This is a deliberate trade-off for LAN / self-hosted use. Connecting to a server
+over an untrusted network (e.g. public Wi-Fi without a VPN) is less secure as a
+result — prefer HTTPS or a VPN/LAN when possible.
 
-**Security**
+## Permissions Kora requests, and why
 
-The Service Provider is concerned about safeguarding the confidentiality of your information. However, since the
-Application does not collect any information, there is no risk of your data being accessed by unauthorized individuals.
+- **Internet** — to connect to your Komga server and (optionally) GitHub.
+- **Notifications** — for update, download, and playback notifications.
+- **Install packages** — used only to install an app update you chose to
+  download through the in-app updater.
+- **Record audio** — used only by the optional audio / transcription features.
+- **Foreground service (media playback)** — used only for audiobook playback.
 
-**Changes**
+The optional features only run, and their permissions are only used, if you
+enable them.
 
-This Privacy Policy may be updated from time to time for any reason. The Service Provider will notify you of any changes
-to their Privacy Policy by updating this page with the new Privacy Policy. You are advised to consult this Privacy
-Policy regularly for any changes, as continued use is deemed approval of all changes.
+## Data retention
 
-This privacy policy is effective as of 2025-10-22
+Everything Kora stores lives on your device until you delete it. Uninstalling
+Kora removes its local data. Any backups you exported are yours to keep or
+delete.
 
-**Your Consent**
+## Children
 
-By using the Application, you are consenting to the processing of your information as set forth in this Privacy Policy
-now and as amended by the Service Provider.
+Kora does not knowingly collect any information from anyone, including children.
 
-**Contact Us**
+## Changes
 
-If you have any questions regarding privacy while using the Application, or have questions about the practices, please
-contact the Service Provider via email at snd.scrape@gmail.com.
+This policy may be updated. Changes will be published by updating this file in
+the project repository.
+
+## Contact
+
+Questions about privacy? Open an issue at
+<https://github.com/MKDevTests/Kora/issues>.
