@@ -249,7 +249,12 @@ verify_apk_version() {
         echo "ERROR: APK versionCode='$apk_version_code' but expected '$VERSION_CODE'." >&2
         return 1
     fi
-    echo "    APK verified: versionName=$apk_version_name versionCode=$apk_version_code"
+    if echo "$badging" | grep -q "application-debuggable"; then
+        echo "ERROR: release APK is DEBUGGABLE — refusing to publish a debuggable public release." >&2
+        echo "  (Did -PdebuggableRelease leak into the release build, or did the release build type regress?)" >&2
+        return 1
+    fi
+    echo "    APK verified: versionName=$apk_version_name versionCode=$apk_version_code (non-debuggable)"
 }
 
 verify_apk_version "$SIGNED_APK"

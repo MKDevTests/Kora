@@ -73,18 +73,35 @@ APKSIGNER="$BUILD_TOOLS/apksigner"
 [[ -f "$ZIPALIGN" ]] || { echo "zipalign not found at $ZIPALIGN"; exit 1; }
 [[ -f "$APKSIGNER" ]] || { echo "apksigner not found at $APKSIGNER"; exit 1; }
 
-# ----- find debug.keystore -----
-KEYSTORE=""
-for candidate in \
-    "$HOME/.android/debug.keystore" \
-    "/mnt/c/Users/mathi/.android/debug.keystore"; do
-    [[ -f "$candidate" ]] && KEYSTORE="$candidate" && break
-done
-[[ -z "$KEYSTORE" ]] && { echo "debug.keystore not found in ~/.android/ or /mnt/c/Users/mathi/.android/"; exit 1; }
+# ----- pick signing keystore -----
+# Real release key when KORA_RELEASE_KEYSTORE is set (export the env vars to
+# switch to the dedicated release key later). Otherwise fall back to the Android
+# debug keystore — the same signature Kora has always shipped with, so the APK
+# installs over existing installs as a normal update: NO reinstall, NO data loss.
+if [[ -n "${KORA_RELEASE_KEYSTORE:-}" ]]; then
+    KEYSTORE="$KORA_RELEASE_KEYSTORE"
+    [[ -f "$KEYSTORE" ]] || { echo "KORA_RELEASE_KEYSTORE points to a missing file: $KEYSTORE"; exit 1; }
+    KS_PASS="${KORA_RELEASE_KEYSTORE_PASSWORD:?KORA_RELEASE_KEYSTORE is set but KORA_RELEASE_KEYSTORE_PASSWORD is not}"
+    KEY_ALIAS="${KORA_RELEASE_KEY_ALIAS:-kora}"
+    KEY_PASS="${KORA_RELEASE_KEY_PASSWORD:-$KS_PASS}"
+    KEYSTORE_KIND="release key (from env)"
+else
+    KEYSTORE=""
+    for candidate in \
+        "$HOME/.android/debug.keystore" \
+        "/mnt/c/Users/mathi/.android/debug.keystore"; do
+        [[ -f "$candidate" ]] && KEYSTORE="$candidate" && break
+    done
+    [[ -z "$KEYSTORE" ]] && { echo "debug.keystore not found in ~/.android/ or /mnt/c/Users/mathi/.android/"; exit 1; }
+    KS_PASS="android"
+    KEY_ALIAS="androiddebugkey"
+    KEY_PASS="android"
+    KEYSTORE_KIND="debug key (current signature, seamless updates)"
+fi
 
 echo "==> SDK: $SDK"
 echo "==> build-tools: $BUILD_TOOLS"
-echo "==> keystore: $KEYSTORE"
+echo "==> keystore: $KEYSTORE — $KEYSTORE_KIND"
 
 # ----- gradle -----
 # In WSL on a /mnt/c repo, gradlew is checked out with Windows CRLF and
@@ -113,8 +130,15 @@ fi
 . "$(dirname "$0")/_ensure_jni_libs.sh"
 ensure_jni_libs
 
+# run-as data migration needs a debuggable build; the default/public build is
+# non-debuggable.
+RELEASE_GRADLE_ARGS=(:komelia-app:assembleRelease)
+if [[ $MIGRATE == 1 ]]; then
+    echo "==> migration requested -> building a DEBUGGABLE release"
+    RELEASE_GRADLE_ARGS+=(-PdebuggableRelease)
+fi
 echo "==> Building Kora release APK"
-"$GRADLEW" :komelia-app:assembleRelease
+"$GRADLEW" "${RELEASE_GRADLE_ARGS[@]}"
 
 UNSIGNED="komelia-app/build/outputs/apk/release/kora-app-release-unsigned.apk"
 ALIGNED="komelia-app/build/outputs/apk/release/kora-app-release-aligned.apk"
@@ -129,12 +153,12 @@ SIGNED="komelia-app/build/outputs/apk/release/kora-app-release-signed.apk"
 echo "==> Aligning"
 "$ZIPALIGN" -p -f 4 "$UNSIGNED" "$ALIGNED"
 
-echo "==> Signing with debug keystore"
+echo "==> Signing ($KEYSTORE_KIND)"
 "$APKSIGNER" sign \
     --ks "$KEYSTORE" \
-    --ks-pass pass:android \
-    --ks-key-alias androiddebugkey \
-    --key-pass pass:android \
+    --ks-pass "pass:$KS_PASS" \
+    --ks-key-alias "$KEY_ALIAS" \
+    --key-pass "pass:$KEY_PASS" \
     --out "$SIGNED" \
     "$ALIGNED"
 
