@@ -6,7 +6,7 @@ import kotlinx.coroutines.ensureActive
 
 class AppMigrations : MigrationResourcesProvider() {
 
-    private val migrations = listOf(
+    internal val migrations = listOf(
         "V1__initial_migration.sql",
         "V2__komga_webui_reader_settings.sql",
         "V3__exposed_migration.sql",

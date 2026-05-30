@@ -47,6 +47,9 @@ kotlin {
             implementation(libs.flyway.core)
             implementation(libs.sqlite.xerial.jdbc)
         }
+        androidUnitTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
 

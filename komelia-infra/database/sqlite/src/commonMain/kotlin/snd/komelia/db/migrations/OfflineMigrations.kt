@@ -6,7 +6,7 @@ import kotlinx.coroutines.ensureActive
 
 class OfflineMigrations : MigrationResourcesProvider() {
 
-    private val migrations = listOf(
+    internal val migrations = listOf(
         "V1__offline_mode.sql",
     )
 

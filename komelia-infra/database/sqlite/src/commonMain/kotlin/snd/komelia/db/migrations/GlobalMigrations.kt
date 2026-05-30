@@ -6,7 +6,7 @@ import kotlinx.coroutines.ensureActive
 
 class GlobalMigrations : MigrationResourcesProvider() {
 
-    private val migrations = listOf(
+    internal val migrations = listOf(
         "V1__initial_migration.sql",
     )
 
