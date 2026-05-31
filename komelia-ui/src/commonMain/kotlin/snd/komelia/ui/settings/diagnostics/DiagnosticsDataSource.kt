@@ -27,6 +27,35 @@ interface DiagnosticsDataSource {
      * Safe: covers freed in the background and re-fetched on demand.
      */
     suspend fun clearImageCache()
+
+    /** Total size of the app log directory + the active size cap. */
+    suspend fun logInfo(): LogInfo
+
+    /** Tail of the app log files for in-app viewing (already trimmed). */
+    suspend fun readRecentLogs(): String
+
+    /** Full log text with secrets redacted, ready to write to a shared file. */
+    suspend fun exportLogs(): String
+
+    /** Persist the log size cap. Takes effect on the next app start. */
+    fun setLogCap(cap: LogSizeCap)
+}
+
+/** App log directory usage + the active size cap. */
+data class LogInfo(
+    val totalBytes: Long,
+    val cap: LogSizeCap,
+)
+
+/** User-selectable total budget for the on-device log files. */
+enum class LogSizeCap(val totalMb: Int) {
+    MB_20(20),
+    MB_50(50),
+    MB_100(100);
+
+    companion object {
+        fun fromMb(mb: Int): LogSizeCap = entries.firstOrNull { it.totalMb == mb } ?: MB_20
+    }
 }
 
 /** Byte sizes of the app's on-disk caches. */
@@ -59,4 +88,8 @@ object EmptyDiagnosticsDataSource : DiagnosticsDataSource {
     override suspend fun offlineUsage() = OfflineUsage(0, "—")
     override suspend fun backgroundTasks() = emptyList<BackgroundTask>()
     override suspend fun clearImageCache() {}
+    override suspend fun logInfo() = LogInfo(0, LogSizeCap.MB_20)
+    override suspend fun readRecentLogs() = ""
+    override suspend fun exportLogs() = ""
+    override fun setLogCap(cap: LogSizeCap) {}
 }

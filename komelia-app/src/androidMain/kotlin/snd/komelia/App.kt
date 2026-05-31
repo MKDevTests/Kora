@@ -85,9 +85,16 @@ class App : Application() {
     private fun initLogging() {
         val logDir = File(getExternalFilesDir(null), "komelia/logs")
         logDir.mkdirs()
+        // Per-file rolling ceiling derived from the user's log-size cap. Read
+        // synchronously from SharedPreferences here — before logback reads the
+        // LOG_MAX_FILE_SIZE property during auto-configuration. Takes effect on
+        // the next app start (logback config is fixed once initialized).
+        val maxFileSize = LogSettings.perFileSize(LogSettings.getCapMb(applicationContext))
         System.setProperty("LOG_DIR", logDir.absolutePath)       // before logback init
+        System.setProperty("LOG_MAX_FILE_SIZE", maxFileSize)     // before logback init
         val lc = LoggerFactory.getILoggerFactory() as LoggerContext
         lc.putProperty("LOG_DIR", logDir.absolutePath)           // belt-and-suspenders
+        lc.putProperty("LOG_MAX_FILE_SIZE", maxFileSize)
     }
 
     private fun saveLogcatSnapshot() {

@@ -20,7 +20,10 @@
             <maxIndex>3</maxIndex>
         </rollingPolicy>
         <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <maxFileSize>5MB</maxFileSize>
+            <!-- Per-file ceiling; total budget = this x (maxIndex + 1).
+                 Set from the user's log-size cap via the LOG_MAX_FILE_SIZE
+                 system property in App.initLogging(); default keeps the old 5MB. -->
+            <maxFileSize>${LOG_MAX_FILE_SIZE:-5mb}</maxFileSize>
         </triggeringPolicy>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%-20thread] %-5level %logger{20} - %msg%n</pattern>

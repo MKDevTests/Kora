@@ -31,6 +31,9 @@ class DiagnosticsViewModel(
     private val _clearing = MutableStateFlow(false)
     val clearing: StateFlow<Boolean> = _clearing.asStateFlow()
 
+    private val _logInfo = MutableStateFlow<LogInfo?>(null)
+    val logInfo: StateFlow<LogInfo?> = _logInfo.asStateFlow()
+
     init {
         if (isSupported) refresh()
     }
@@ -40,8 +43,21 @@ class DiagnosticsViewModel(
             _cache.value = source.cacheUsage()
             _offline.value = source.offlineUsage()
             _tasks.value = source.backgroundTasks()
+            _logInfo.value = source.logInfo()
         }
     }
+
+    /** Persist a new log size cap (applied on next app start) and refresh the readout. */
+    fun setLogCap(cap: LogSizeCap) {
+        source.setLogCap(cap)
+        screenModelScope.launch { _logInfo.value = source.logInfo() }
+    }
+
+    /** Tail of the app logs for the in-app viewer dialog. */
+    suspend fun readRecentLogs(): String = source.readRecentLogs()
+
+    /** Redacted full log text for the SAF export. */
+    suspend fun buildLogExport(): String = source.exportLogs()
 
     fun clearImageCache() {
         if (_clearing.value) return
