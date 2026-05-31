@@ -124,7 +124,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         manifestPlaceholders["appLabel"] = "Kora"
-        versionCode = 10014
+        versionCode = 10015
         versionName = libs.versions.app.version.get()
 
         val enableSelfUpdates = when (androidVariant) {
