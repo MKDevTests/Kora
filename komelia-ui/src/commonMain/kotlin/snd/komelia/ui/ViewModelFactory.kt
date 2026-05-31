@@ -499,6 +499,10 @@ class ViewModelFactory(
         return AppSettingsViewModel(appRepositories.settingsRepository)
     }
 
+    fun getDiagnosticsViewModel(): snd.komelia.ui.settings.diagnostics.DiagnosticsViewModel {
+        return snd.komelia.ui.settings.diagnostics.DiagnosticsViewModel(dependencies.diagnostics)
+    }
+
     fun getBackupSettingsViewModel(): snd.komelia.ui.settings.backup.BackupSettingsViewModel {
         return snd.komelia.ui.settings.backup.BackupSettingsViewModel(
             backupService = dependencies.backupService,

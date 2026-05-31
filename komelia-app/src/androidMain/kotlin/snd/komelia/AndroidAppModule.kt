@@ -405,6 +405,11 @@ class AndroidAppModule(
         return Path(if (serverId != null) path.resolve("server_$serverId").toString() else path.toString())
     }
 
+    override fun createDiagnosticsDataSource(
+        coilImageLoader: coil3.ImageLoader,
+    ): snd.komelia.ui.settings.diagnostics.DiagnosticsDataSource =
+        AndroidDiagnosticsDataSource(context, coilImageLoader)
+
     override fun createLocalFileApiProvider(): LocalFileApiProvider {
         return LocalFileApiProviderImpl(
             context = context,

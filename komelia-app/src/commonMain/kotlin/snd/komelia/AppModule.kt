@@ -342,6 +342,7 @@ abstract class AppModule(
             localFileApiProvider = localFileApiProvider,
             runAutobackupNow = createRunAutobackupNow(),
             extractPersistableFolderUri = createPersistableFolderUriExtractor(),
+            diagnostics = createDiagnosticsDataSource(coil),
         )
     }
 
@@ -352,6 +353,16 @@ abstract class AppModule(
     protected open fun createLocalFileApiProvider(): LocalFileApiProvider? = null
 
     protected open fun createRunAutobackupNow(): () -> Unit = {}
+
+    /**
+     * Platform diagnostics data source for the Diagnostics screen. Defaults to
+     * a no-op; only Android provides a real implementation. [coilImageLoader]
+     * is the shared loader, used to clear the image cache safely.
+     */
+    protected open fun createDiagnosticsDataSource(
+        coilImageLoader: coil3.ImageLoader,
+    ): snd.komelia.ui.settings.diagnostics.DiagnosticsDataSource =
+        snd.komelia.ui.settings.diagnostics.EmptyDiagnosticsDataSource
 
     protected open fun createPersistableFolderUriExtractor(): (io.github.vinceglb.filekit.PlatformFile) -> String? = { null }
 

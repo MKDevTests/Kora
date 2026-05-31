@@ -25,6 +25,8 @@ import snd.komelia.nextbook.NextBookService
 import snd.komelia.offline.OfflineDependencies
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.stats.BookCompletionEvents
+import snd.komelia.ui.settings.diagnostics.DiagnosticsDataSource
+import snd.komelia.ui.settings.diagnostics.EmptyDiagnosticsDataSource
 import snd.komelia.ui.strings.AppStrings
 import snd.komelia.updates.AppUpdater
 import snd.komelia.updates.OnnxModelDownloader
@@ -97,5 +99,11 @@ data class DependencyContainer(
      * default returns null.
      */
     val extractPersistableFolderUri: (PlatformFile) -> String? = { null },
+    /**
+     * Platform diagnostics data (cache sizes, offline storage, background
+     * tasks) for the Diagnostics settings screen. Defaults to a no-op so
+     * non-Android platforms compile and simply hide the v2 sections.
+     */
+    val diagnostics: DiagnosticsDataSource = EmptyDiagnosticsDataSource,
 )
 
