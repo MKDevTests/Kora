@@ -26,6 +26,7 @@ import snd.komelia.ui.settings.analysis.MediaAnalysisScreen
 import snd.komelia.ui.settings.announcements.AnnouncementsScreen
 import snd.komelia.ui.settings.appearance.AppSettingsScreen
 import snd.komelia.ui.settings.backup.BackupSettingsScreen
+import snd.komelia.ui.settings.diagnostics.DiagnosticsScreen
 import snd.komelia.ui.settings.navigation.NavigationSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
@@ -126,6 +127,12 @@ fun SettingsNavigationMenu(
                 label = "Backup & Restore",
                 onClick = { onNavigation(BackupSettingsScreen()) },
                 isSelected = currentScreen is BackupSettingsScreen,
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsListItem(
+                label = "Diagnostics",
+                onClick = { onNavigation(DiagnosticsScreen()) },
+                isSelected = currentScreen is DiagnosticsScreen,
             )
         }
 
