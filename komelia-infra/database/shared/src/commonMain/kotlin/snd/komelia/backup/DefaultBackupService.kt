@@ -190,6 +190,150 @@ class DefaultBackupService(
         pageCount = pageCount,
     )
 
+    /**
+     * Validate + map an imported [RatingExport]. Returns null — caller drops
+     * it and reports the count — when the row is malformed: blank series id,
+     * stars outside 1..5, or a negative timestamp. Shared by [dryRun] and
+     * [importFromJson] so the previewed counts match what is actually applied.
+     */
+    private fun RatingExport.toValidRatingOrNull(): SeriesRating? {
+        if (seriesId.isBlank()) return null
+        if (stars !in 1..5) return null
+        if (ratedAt < 0) return null
+        return SeriesRating(
+            seriesId = KomgaSeriesId(seriesId),
+            stars = stars,
+            ratedAt = Instant.fromEpochMilliseconds(ratedAt),
+        )
+    }
+
+    /**
+     * Validate + map an imported [ReadingEventExport]. Returns null — caller
+     * drops it and reports the count — when the row is malformed: blank book
+     * id, an event type this build doesn't know (replaces the old
+     * [ReadingEvent.Type.valueOf] that threw on unknown values), a negative
+     * timestamp, or a negative page count.
+     */
+    private fun ReadingEventExport.toValidEventOrNull(): ReadingEvent? {
+        if (bookId.isBlank()) return null
+        val parsedType = ReadingEvent.Type.entries.firstOrNull { it.name == eventType } ?: return null
+        if (timestamp < 0) return null
+        if (pageCount != null && pageCount < 0) return null
+        return ReadingEvent(
+            bookId = KomgaBookId(bookId),
+            type = parsedType,
+            timestamp = Instant.fromEpochMilliseconds(timestamp),
+            pageCount = pageCount,
+        )
+    }
+
+    override suspend fun dryRun(jsonString: String): DryRunResult {
+        val bundle = try {
+            json.decodeFromString(BackupBundle.serializer(), jsonString)
+        } catch (e: Exception) {
+            return DryRunResult.Invalid("Not a valid Kora backup file (${e.message ?: e::class.simpleName})")
+        }
+        if (bundle.schemaVersion > BACKUP_SCHEMA_VERSION) {
+            return DryRunResult.Invalid(
+                "Backup was created by a newer version of Kora (schema v${bundle.schemaVersion})"
+            )
+        }
+
+        val s = bundle.sections
+        val plans = mutableListOf<SectionPlan>()
+
+        // Single-object settings sections: overwritten wholesale, no per-row count.
+        if (s.appSettings != null) plans += SectionPlan("App settings", SectionAction.REPLACE)
+        if (s.imageReaderSettings != null) plans += SectionPlan("Image reader settings", SectionAction.REPLACE)
+        if (s.epubReaderSettings != null) plans += SectionPlan("EPUB reader settings", SectionAction.REPLACE)
+        if (s.komfSettings != null) plans += SectionPlan("Komf settings", SectionAction.REPLACE)
+        if (s.transcriptionSettings != null) plans += SectionPlan("Transcription settings", SectionAction.REPLACE)
+
+        // Collection sections: the current set is replaced by the incoming one.
+        s.homeScreenFilters?.let {
+            plans += SectionPlan(
+                "Home filters", SectionAction.REPLACE,
+                currentCount = homeFilters.state.value.size, incomingCount = it.size,
+            )
+        }
+        s.librarySeriesFilters?.let {
+            plans += SectionPlan(
+                "Library filters", SectionAction.REPLACE,
+                currentCount = librarySeriesFilters.getAll().size, incomingCount = it.size,
+            )
+        }
+        s.seriesReaderOverrides?.let {
+            plans += SectionPlan(
+                "Series reader overrides", SectionAction.REPLACE,
+                currentCount = seriesReaderOverrides.getAll().size, incomingCount = it.size,
+            )
+        }
+
+        // Per-user reading data (v2). Foreign sections require Komga admin —
+        // mirrors the gate in importFromJson so the preview never promises a
+        // restore the apply step would skip.
+        val user = currentUser.value
+        val isAdmin = user?.roles?.contains(ROLE_ADMIN) == true
+        val currentUid = user?.id
+
+        if (!s.userSections.isNullOrEmpty()) {
+            val currentRatings = seriesRatings.listAllByUser()
+            val currentEvents = readingEvents.listAllByUser()
+            for ((uidStr, section) in s.userSections) {
+                val sectionUid = KomgaUserId(uidStr)
+                val isOwn = sectionUid == currentUid
+                val who = if (isOwn) "your data" else "user ${uidStr.shortIdHint()}"
+                if (!isOwn && !isAdmin) {
+                    plans += SectionPlan(
+                        "Reading data ($who)", SectionAction.SKIP,
+                        detail = "Komga admin required to shadow-restore",
+                    )
+                    continue
+                }
+                val validRatings = section.seriesRatings.count { it.toValidRatingOrNull() != null }
+                val validEvents = section.readingEvents.count { it.toValidEventOrNull() != null }
+                plans += SectionPlan(
+                    "Ratings ($who)", SectionAction.REPLACE,
+                    currentCount = currentRatings[sectionUid]?.size ?: 0,
+                    incomingCount = validRatings,
+                    invalidCount = section.seriesRatings.size - validRatings,
+                )
+                plans += SectionPlan(
+                    "Reading events ($who)", SectionAction.REPLACE,
+                    currentCount = currentEvents[sectionUid]?.size ?: 0,
+                    incomingCount = validEvents,
+                    invalidCount = section.readingEvents.size - validEvents,
+                )
+            }
+        } else if (!s.seriesRatings.isNullOrEmpty()) {
+            // Legacy v1 ratings — attributed to whoever is signed in now.
+            val valid = s.seriesRatings.count { it.toValidRatingOrNull() != null }
+            val invalid = s.seriesRatings.size - valid
+            if (currentUid == null) {
+                plans += SectionPlan(
+                    "Ratings (legacy v1)", SectionAction.SKIP,
+                    incomingCount = valid, invalidCount = invalid,
+                    detail = "Sign in first to attribute them",
+                )
+            } else {
+                plans += SectionPlan(
+                    "Ratings (legacy v1)", SectionAction.REPLACE,
+                    currentCount = seriesRatings.listAllByUser()[currentUid]?.size ?: 0,
+                    incomingCount = valid, invalidCount = invalid,
+                )
+            }
+        }
+
+        return DryRunResult.Ok(
+            ImportPlan(
+                schemaVersion = bundle.schemaVersion,
+                exportedBy = bundle.exportedBy,
+                exportedAt = bundle.exportedAt,
+                sections = plans,
+            )
+        )
+    }
+
     override suspend fun importFromJson(jsonString: String): ImportResult {
         val bundle = try {
             json.decodeFromString(BackupBundle.serializer(), jsonString)
@@ -319,21 +463,11 @@ class DefaultBackupService(
                     continue
                 }
                 runCatching {
-                    val ratings = section.seriesRatings.map { dto ->
-                        SeriesRating(
-                            seriesId = KomgaSeriesId(dto.seriesId),
-                            stars = dto.stars,
-                            ratedAt = Instant.fromEpochMilliseconds(dto.ratedAt),
-                        )
-                    }
-                    val events = section.readingEvents.map { dto ->
-                        ReadingEvent(
-                            bookId = KomgaBookId(dto.bookId),
-                            type = ReadingEvent.Type.valueOf(dto.eventType),
-                            timestamp = Instant.fromEpochMilliseconds(dto.timestamp),
-                            pageCount = dto.pageCount,
-                        )
-                    }
+                    // Skip-and-report malformed rows (out-of-range stars,
+                    // unknown event type, blank id, …) instead of letting one
+                    // bad row abort the whole section. Counts feed sectionsSkipped.
+                    val ratings = section.seriesRatings.mapNotNull { it.toValidRatingOrNull() }
+                    val events = section.readingEvents.mapNotNull { it.toValidEventOrNull() }
                     seriesRatings.replaceAllForUser(sectionUid, ratings)
                     readingEvents.upsertAllForUser(sectionUid, events)
                     // Mirror the export-side trim: persist the scalar
@@ -342,6 +476,11 @@ class DefaultBackupService(
                     readingEvents.upsertLifetimeCarryover(sectionUid, section.pagesReadLifetimeCarryover)
                     val who = if (isOwn) "your data" else "data for ${userIdStr.shortIdHint()}"
                     restored.add("User section ($who, ${ratings.size} ratings + ${events.size} events)")
+                    val dropped = (section.seriesRatings.size - ratings.size) +
+                        (section.readingEvents.size - events.size)
+                    if (dropped > 0) {
+                        skipped.add("$dropped invalid entr${if (dropped == 1) "y" else "ies"} in $who")
+                    }
                 }.onFailure {
                     return ImportResult.Failure(
                         "Failed to restore user section ${userIdStr.shortIdHint()}: ${it.message}"
@@ -360,15 +499,11 @@ class DefaultBackupService(
                 skipped.add("Legacy ratings (${sections.seriesRatings.size}) — sign in first to attribute them")
             } else {
                 runCatching {
-                    val models = sections.seriesRatings.map { dto ->
-                        SeriesRating(
-                            seriesId = KomgaSeriesId(dto.seriesId),
-                            stars = dto.stars,
-                            ratedAt = Instant.fromEpochMilliseconds(dto.ratedAt),
-                        )
-                    }
+                    val models = sections.seriesRatings.mapNotNull { it.toValidRatingOrNull() }
                     seriesRatings.replaceAllForUser(currentUid, models)
                     restored.add("Series ratings (legacy v1, ${models.size} entries)")
+                    val dropped = sections.seriesRatings.size - models.size
+                    if (dropped > 0) skipped.add("$dropped invalid legacy rating(s)")
                 }.onFailure {
                     return ImportResult.Failure("Failed to restore legacy ratings: ${it.message}")
                 }

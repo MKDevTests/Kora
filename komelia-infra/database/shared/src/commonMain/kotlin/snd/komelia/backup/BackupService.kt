@@ -13,9 +13,20 @@ interface BackupService {
     /**
      * Restore the bundle in [json] over the current settings. Sections
      * absent from the bundle are left alone; sections present overwrite
-     * the current value wholesale.
+     * the current value wholesale. Individual entries that fail validation
+     * are skipped and reported in [ImportResult.Success.sectionsSkipped]
+     * rather than aborting the section.
      */
     suspend fun importFromJson(json: String): ImportResult
+
+    /**
+     * Validate and summarize [json] WITHOUT mutating anything — drives the
+     * import-preview dialog. Returns [DryRunResult.Invalid] for unparseable
+     * or too-new bundles, otherwise [DryRunResult.Ok] with a per-section
+     * plan (replace counts + how many entries would be dropped as invalid).
+     * The plan reflects the same validation [importFromJson] applies.
+     */
+    suspend fun dryRun(jsonString: String): DryRunResult
 }
 
 sealed interface ImportResult {

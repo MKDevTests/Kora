@@ -12,9 +12,9 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.serialization.json.Json
-import snd.komelia.backup.BackupBundle
 import snd.komelia.backup.BackupService
+import snd.komelia.backup.DryRunResult
+import snd.komelia.backup.ImportPlan
 import snd.komelia.backup.ImportResult
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.AutobackupFrequency
@@ -43,8 +43,6 @@ class BackupSettingsViewModel(
 
     private val _state = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val state: StateFlow<BackupUiState> = _state.asStateFlow()
-
-    private val parseJson = Json { ignoreUnknownKeys = true; classDiscriminator = "type" }
 
     val autobackupEnabled: StateFlow<Boolean> = settingsRepository.getAutobackupEnabled()
         .stateIn(screenModelScope, SharingStarted.Eagerly, false)
@@ -95,15 +93,12 @@ class BackupSettingsViewModel(
         // onImportFilePicked once the user selects a file.
     }
 
-    /** File picker callback — parse the bundle, show the section preview. */
+    /** File picker callback — dry-run the bundle, show the chiffré preview. */
     fun onImportFilePicked(content: String) {
         screenModelScope.launch {
-            try {
-                val bundle = parseJson.decodeFromString(BackupBundle.serializer(), content)
-                val summary = describeSections(bundle)
-                _state.value = BackupUiState.ImportPreview(bundle, content, summary)
-            } catch (e: Exception) {
-                _state.value = BackupUiState.Error("Not a valid Kora backup file")
+            when (val dry = backupService.dryRun(content)) {
+                is DryRunResult.Ok -> _state.value = BackupUiState.ImportPreview(dry.plan, content)
+                is DryRunResult.Invalid -> _state.value = BackupUiState.Error(dry.reason)
             }
         }
     }
@@ -197,20 +192,6 @@ class BackupSettingsViewModel(
         runAutobackupNow()
     }
 
-    private fun describeSections(bundle: BackupBundle): List<String> {
-        val s = bundle.sections
-        val out = mutableListOf<String>()
-        if (s.appSettings != null) out += "App settings"
-        if (s.imageReaderSettings != null) out += "Image reader settings"
-        if (s.epubReaderSettings != null) out += "EPUB reader settings"
-        if (s.komfSettings != null) out += "Komf settings"
-        if (s.transcriptionSettings != null) out += "Transcription settings"
-        s.homeScreenFilters?.let { out += "Home filters (${it.size} entries)" }
-        s.librarySeriesFilters?.let { out += "Library filters (${it.size} entries)" }
-        s.seriesReaderOverrides?.let { out += "Series reader overrides (${it.size} entries)" }
-        return out
-    }
-
     private fun suggestedFilename(): String {
         val now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         fun pad(v: Int) = v.toString().padStart(2, '0')
@@ -237,9 +218,8 @@ sealed interface BackupUiState {
     data class ExportReady(val json: String, val suggestedFilename: String) : BackupUiState
     data object PreImportConfirm : BackupUiState
     data class ImportPreview(
-        val bundle: BackupBundle,
+        val plan: ImportPlan,
         val rawJson: String,
-        val summary: List<String>,
     ) : BackupUiState
     data object Importing : BackupUiState
     data class Done(val message: String) : BackupUiState

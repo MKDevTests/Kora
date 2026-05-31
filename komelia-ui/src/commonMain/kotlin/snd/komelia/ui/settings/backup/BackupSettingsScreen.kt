@@ -47,6 +47,8 @@ import io.github.vinceglb.filekit.writeString
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import snd.komelia.backup.SectionAction
+import snd.komelia.backup.SectionPlan
 import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalViewModelFactory
@@ -208,17 +210,22 @@ class BackupSettingsScreen : Screen {
             )
         }
 
-        // Second dialog: show what's in the picked bundle and ask for final apply.
+        // Second dialog: show the chiffré dry-run and ask for final apply.
         val preview = state as? BackupUiState.ImportPreview
         if (preview != null) {
+            val plan = preview.plan
             ConfirmationDialog(
                 title = "Apply backup?",
                 body = buildString {
-                    appendLine("Exported on ${preview.bundle.exportedAt}")
-                    appendLine("By ${preview.bundle.exportedBy}")
+                    appendLine("Exported: ${plan.exportedAt ?: "unknown"}")
+                    appendLine("By: ${plan.exportedBy ?: "unknown"} (schema v${plan.schemaVersion})")
                     appendLine()
-                    appendLine("This backup contains:")
-                    preview.summary.forEach { appendLine(" • $it") }
+                    if (plan.sections.isEmpty()) {
+                        append("This backup has no restorable sections.")
+                    } else {
+                        appendLine("Restoring will:")
+                        plan.sections.forEach { appendLine(" • ${it.describe()}") }
+                    }
                 },
                 buttonConfirm = "Restore",
                 buttonConfirmColor = MaterialTheme.colorScheme.errorContainer,
@@ -386,6 +393,18 @@ private fun AutobackupFrequency.label(): String = when (this) {
     AutobackupFrequency.DAILY -> "Daily"
     AutobackupFrequency.WEEKLY -> "Weekly"
     AutobackupFrequency.FORTNIGHTLY -> "Every 15 days"
+}
+
+/** One-line description of what a section of the dry-run plan will do. */
+private fun SectionPlan.describe(): String {
+    val base = when (action) {
+        SectionAction.SKIP ->
+            "$label — skipped" + (detail?.let { " ($it)" } ?: "")
+        SectionAction.REPLACE ->
+            if (incomingCount == null) "$label — overwrite"
+            else "$label — replace ${currentCount ?: 0} → $incomingCount"
+    }
+    return if (invalidCount > 0) "$base · $invalidCount invalid skipped" else base
 }
 
 private fun describeFolderUri(uri: String): String {
