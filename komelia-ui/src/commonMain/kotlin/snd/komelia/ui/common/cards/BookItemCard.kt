@@ -97,6 +97,15 @@ fun BookImageCard(
     val bookTitle = if (hideParentheses && book.oneshot) book.metadata.title.removeParentheses() else book.metadata.title
     val seriesTitle = if (hideParentheses) book.seriesTitle.removeParentheses() else book.seriesTitle
 
+    // Hoisted so long-press anywhere on the card AND the hover-only MoreVert
+    // button open the same actions menu (parity with SeriesItemCard). Long-press
+    // opens the menu when bookMenuActions is provided; otherwise it selects.
+    var isActionsMenuExpanded by remember { mutableStateOf(false) }
+    val longClick: (() -> Unit)? = when {
+        bookMenuActions != null -> { -> isActionsMenuExpanded = true }
+        else -> onSelect
+    }
+
     LibraryItemCard(
         modifier = modifier,
         title = bookTitle,
@@ -104,7 +113,7 @@ fun BookImageCard(
         secondaryTextTop = true,
         isUnavailable = book.deleted || libraryIsDeleted,
         onClick = onBookClick,
-        onLongClick = onSelect,
+        onLongClick = longClick,
         image = {
             BookThumbnail(
                 book.id,
@@ -120,6 +129,8 @@ fun BookImageCard(
                 onBookReadClick = onBookReadClick,
                 onSelect = onSelect,
                 isSelected = isSelected,
+                isActionsMenuExpanded = isActionsMenuExpanded,
+                onActionsMenuExpand = { isActionsMenuExpanded = it },
             ) {
                 BookImageBadges(
                     book = book,
@@ -267,9 +278,10 @@ private fun BookHoverOverlay(
     onBookReadClick: ((Boolean) -> Unit)?,
     isSelected: Boolean,
     onSelect: (() -> Unit)?,
+    isActionsMenuExpanded: Boolean,
+    onActionsMenuExpand: (Boolean) -> Unit,
     content: @Composable () -> Unit
 ) {
-    var isActionsMenuExpanded by remember { mutableStateOf(false) }
     var isReadButtonExpanded by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered = interactionSource.collectIsHoveredAsState()
@@ -319,7 +331,7 @@ private fun BookHoverOverlay(
                             book = book,
                             bookMenuActions = bookMenuActions,
                             isActionsMenuExpanded = isActionsMenuExpanded,
-                            onActionsMenuExpand = { isActionsMenuExpanded = it }
+                            onActionsMenuExpand = onActionsMenuExpand
                         )
                 }
             }
