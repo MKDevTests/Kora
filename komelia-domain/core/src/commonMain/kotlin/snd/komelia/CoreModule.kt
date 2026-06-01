@@ -6,6 +6,7 @@ import snd.komelia.color.repository.ColorLevelsPresetRepository
 import snd.komelia.fonts.UserFontsRepository
 import snd.komelia.homefilters.HomeScreenFilterRepository
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
+import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.offline.OfflineModule
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
@@ -47,4 +48,5 @@ data class AppRepositories(
     val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
     val readingEventsRepository: ReadingEventsRepository,
     val seriesRatingsRepository: SeriesRatingsRepository,
+    val seriesLinksRepository: SeriesLinksRepository,
 )
