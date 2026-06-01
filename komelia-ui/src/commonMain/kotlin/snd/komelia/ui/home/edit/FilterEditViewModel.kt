@@ -28,6 +28,7 @@ import snd.komelia.ui.home.BookFilterData
 import snd.komelia.ui.home.HomeFilterData
 import snd.komelia.ui.home.SeriesFilterData
 import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.KomgaSort
 import snd.komga.client.library.KomgaLibrary
 
 class FilterEditViewModel(
@@ -169,6 +170,30 @@ class FilterEditViewModel(
                 initialFilter = null,
                 initialBooks = null,
             )
+
+            // One-tap "Discover": a random-sorted *series* shelf — discovering a
+            // series to read, not an individual volume. The user scopes it to a
+            // library via the standard Library condition in the editor. order is
+            // a placeholder — onEditEnd reassigns it by list position.
+            FilterType.Discover -> SeriesFilterEditState(
+                seriesApi = seriesApi,
+                collectionApi = collectionApi,
+                appNotifications = appNotifications,
+                coroutineScope = screenModelScope,
+                options = filterSuggestionOptions,
+                cardWidth = cardWidth,
+                initialFilter = SeriesHomeScreenFilter.CustomFilter(
+                    order = 0,
+                    label = "Discover",
+                    filter = null,
+                    textSearch = null,
+                    pageRequest = KomgaPageRequest(
+                        size = 20,
+                        sort = KomgaSort.KomgaSeriesSort(listOf(KomgaSort.Order("random", KomgaSort.Direction.ASC))),
+                    ),
+                ),
+                initialSeries = null,
+            )
         }
         filters.update { current -> current.plus(newFilter) }
     }
@@ -217,6 +242,6 @@ class FilterEditViewModel(
     }
 
     enum class FilterType {
-        Series, Book
+        Series, Book, Discover
     }
 }
