@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import ch.qos.logback.classic.LoggerContext
+import io.github.snd_r.komelia.BuildConfig
 import snd.komelia.autobackup.AutobackupScheduler
 import snd.komelia.autobackup.autobackupFailureChannelId
 import snd.komelia.offline.sync.downloadChannelId
@@ -90,11 +91,16 @@ class App : Application() {
         // LOG_MAX_FILE_SIZE property during auto-configuration. Takes effect on
         // the next app start (logback config is fixed once initialized).
         val maxFileSize = LogSettings.perFileSize(LogSettings.getCapMb(applicationContext))
+        // Quieter logs in release: DEBUG floods the rolling file (and the
+        // Diagnostics log export) with internals. Debug builds keep DEBUG.
+        val logLevel = if (BuildConfig.DEBUG) "DEBUG" else "INFO"
         System.setProperty("LOG_DIR", logDir.absolutePath)       // before logback init
         System.setProperty("LOG_MAX_FILE_SIZE", maxFileSize)     // before logback init
+        System.setProperty("LOG_LEVEL", logLevel)                // before logback init
         val lc = LoggerFactory.getILoggerFactory() as LoggerContext
         lc.putProperty("LOG_DIR", logDir.absolutePath)           // belt-and-suspenders
         lc.putProperty("LOG_MAX_FILE_SIZE", maxFileSize)
+        lc.putProperty("LOG_LEVEL", logLevel)
     }
 
     private fun saveLogcatSnapshot() {
@@ -133,7 +139,7 @@ class App : Application() {
 
     private fun initWorkManager() {
         val config = Configuration.Builder()
-            .setMinimumLoggingLevel(android.util.Log.DEBUG)
+            .setMinimumLoggingLevel(if (BuildConfig.DEBUG) android.util.Log.DEBUG else android.util.Log.INFO)
             .setWorkerFactory(MyWorkerFactory(dependencies.filterNotNull()))
             .setWorkerCoroutineContext(Dispatchers.IO)
             .build()

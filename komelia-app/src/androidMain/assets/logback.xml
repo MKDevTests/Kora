@@ -30,7 +30,10 @@
         </encoder>
     </appender>
 
-    <root level="DEBUG">
+    <!-- Level set from App.initLogging() via the LOG_LEVEL system property:
+         DEBUG for debug builds, INFO for release. Default INFO is the safe
+         fallback if the property is somehow unset. -->
+    <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="logcat" />
         <appender-ref ref="file" />
     </root>
