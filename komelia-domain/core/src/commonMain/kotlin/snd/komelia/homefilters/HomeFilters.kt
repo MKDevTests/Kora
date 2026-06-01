@@ -63,6 +63,11 @@ sealed interface HomeScreenFilter {
     val order: Int
     val label: String
 
+    /** Whether this shelf is shown on Home. Defaults to true; old persisted
+     *  blobs without the field deserialize as enabled. The editor keeps
+     *  disabled shelves visible (with the toggle off) so they can be re-enabled. */
+    val enabled: Boolean
+
     fun withOrder(newOrder: Int): HomeScreenFilter
 }
 
@@ -75,6 +80,7 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     data class RecentlyAdded(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val pageSize: Int,
     ) : SeriesHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
@@ -85,6 +91,7 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     data class RecentlyUpdated(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val pageSize: Int,
     ) : SeriesHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
@@ -95,6 +102,7 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     data class CustomFilter(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val filter: KomgaSearchCondition.SeriesCondition? = null,
         val textSearch: String? = null,
         val pageRequest: KomgaPageRequest? = null,
@@ -117,6 +125,7 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     data class AlmostFinished(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val pageSize: Int,
         /** Percentage of books read above which a series qualifies. 80 = 80%. */
         val progressThresholdPercent: Int = 80,
@@ -141,6 +150,7 @@ sealed interface BooksHomeScreenFilter : HomeScreenFilter {
     data class OnDeck(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val pageSize: Int,
     ) : BooksHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
@@ -151,6 +161,7 @@ sealed interface BooksHomeScreenFilter : HomeScreenFilter {
     data class CustomFilter(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val filter: KomgaSearchCondition.BookCondition? = null,
         val textSearch: String? = null,
         val pageRequest: KomgaPageRequest? = null,
@@ -175,6 +186,7 @@ sealed interface BooksHomeScreenFilter : HomeScreenFilter {
     data class ForgottenBooks(
         override val order: Int,
         override val label: String,
+        override val enabled: Boolean = true,
         val pageSize: Int,
         /**
          * Library IDs (as raw strings) whose books should be hidden

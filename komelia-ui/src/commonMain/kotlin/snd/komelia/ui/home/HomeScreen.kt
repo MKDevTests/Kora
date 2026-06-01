@@ -116,7 +116,11 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
 
                             else ->
                                 HomeContent(
-                                    filters = vm.currentFilters.collectAsState().value,
+                                    // Render only enabled shelves; the editor still
+                                    // receives the full list (vm.currentFilters) so
+                                    // disabled shelves can be toggled back on.
+                                    filters = vm.currentFilters.collectAsState().value
+                                        .filter { it.filter.enabled },
                                     activeFilterNumber = vm.activeFilterNumber.collectAsState().value,
                                     onFilterChange = vm::onFilterChange,
 

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType.Companion.PrimaryNotEditable
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -293,6 +294,13 @@ private fun ReorderableCollectionItemScope.FilterContent(
                     )
                 }
             }
+
+            val enabled = filterState.enabled.collectAsState().value
+            Switch(
+                checked = enabled,
+                onCheckedChange = { filterState.enabled.value = it },
+                modifier = Modifier.cursorForHand(),
+            )
 
             ElevatedButton(
                 onClick = { showEdit = !showEdit },

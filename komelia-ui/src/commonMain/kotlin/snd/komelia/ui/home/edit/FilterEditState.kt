@@ -5,5 +5,6 @@ import snd.komelia.homefilters.HomeScreenFilter
 
 sealed interface FilterEditState {
     val label: MutableStateFlow<String>
+    val enabled: MutableStateFlow<Boolean>
     fun toFilter(order: Int): HomeScreenFilter
 }

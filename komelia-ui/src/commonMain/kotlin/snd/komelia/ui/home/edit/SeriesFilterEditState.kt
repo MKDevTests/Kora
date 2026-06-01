@@ -45,6 +45,7 @@ class SeriesFilterEditState(
     initialSeries: List<KomgaSeries>?
 ) : FilterEditState {
     override val label = MutableStateFlow(initialFilter?.label ?: "Series Filter")
+    override val enabled = MutableStateFlow(initialFilter?.enabled ?: true)
 
     val filter: MutableStateFlow<SeriesFilterStateType> = MutableStateFlow(
         initialFilter?.let { initial ->
@@ -115,6 +116,7 @@ class SeriesFilterEditState(
             is SeriesCustomFilterState -> SeriesHomeScreenFilter.CustomFilter(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 filter = editState.toSeriesCondition(),
                 textSearch = null,
                 pageRequest = KomgaPageRequest(
@@ -126,18 +128,21 @@ class SeriesFilterEditState(
             is SeriesRecentlyAddedFilterState -> SeriesHomeScreenFilter.RecentlyAdded(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 pageSize = editState.pageSize.value
             )
 
             is SeriesRecentlyUpdatedFilterState -> SeriesHomeScreenFilter.RecentlyUpdated(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 pageSize = editState.pageSize.value
             )
 
             is SeriesAlmostFinishedFilterState -> SeriesHomeScreenFilter.AlmostFinished(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 pageSize = editState.pageSize.value,
                 progressThresholdPercent = editState.progressThresholdPercent.value,
                 excludedLibraryIds = editState.excludedLibraryIds.value,

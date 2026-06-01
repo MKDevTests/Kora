@@ -44,6 +44,7 @@ class BookFilterEditState(
     initialBooks: List<KomeliaBook>?,
 ) : FilterEditState {
     override val label = MutableStateFlow(initialFilter?.label ?: "Book Filter")
+    override val enabled = MutableStateFlow(initialFilter?.enabled ?: true)
 
     val filter: MutableStateFlow<BookFilterStateType> = MutableStateFlow(
         initialFilter?.let { initial ->
@@ -107,6 +108,7 @@ class BookFilterEditState(
             is BookCustomFilterState -> BooksHomeScreenFilter.CustomFilter(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 filter = editState.toBookCondition(),
                 textSearch = null,
                 pageRequest = KomgaPageRequest(
@@ -118,12 +120,14 @@ class BookFilterEditState(
             is BookOnDeckFilterState -> BooksHomeScreenFilter.OnDeck(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 pageSize = editState.pageSize.value
             )
 
             is BookForgottenFilterState -> BooksHomeScreenFilter.ForgottenBooks(
                 order = order,
                 label = label.value,
+                enabled = enabled.value,
                 pageSize = editState.pageSize.value,
                 excludedLibraryIds = editState.excludedLibraryIds.value,
             )

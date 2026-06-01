@@ -128,6 +128,10 @@ class HomeViewModel(
         appNotifications.runCatchingToNotifications {
             mutableState.value = LoadState.Loading
 
+            // Keep the FULL list (enabled + disabled) here: the home-shelf editor
+            // is seeded from currentFilters, so dropping disabled shelves would
+            // make them vanish from the editor and get wiped on the next save.
+            // Disabled shelves are filtered out at render time (see HomeScreen).
             currentFilters.value = filterRepository.getFilters().first()
                 .map { screenModelScope.async { fetchFilterData(it, force) } }
                 .awaitAll()
