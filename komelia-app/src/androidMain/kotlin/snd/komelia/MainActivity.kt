@@ -3,6 +3,7 @@ package snd.komelia
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent as AndroidKeyEvent
@@ -134,11 +135,55 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
-            intent.data?.toString()?.let { _incomingFileUriFlow.tryEmit(it) }
+            intent.data?.let { uri ->
+                persistFileUriPermission(intent, uri)
+                _incomingFileUriFlow.tryEmit(uri.toString())
+            }
         }
         if (intent?.action == snd.komelia.widget.widgetActionOpenBook) {
             intent.getStringExtra(snd.komelia.widget.widgetExtraBookId)
                 ?.let { _openBookFromWidgetFlow.tryEmit(it) }
+        }
+    }
+
+    /**
+     * Persist read access to a file opened via ACTION_VIEW so it survives
+     * process death (e.g. re-reading after the app is killed in the
+     * background). Only possible when the sender granted a *persistable*
+     * permission — many file managers grant a temporary one only, in which
+     * case we keep that temporary grant and move on (no regression).
+     */
+    private fun persistFileUriPermission(intent: Intent, uri: Uri) {
+        if (uri.scheme != "content") return
+        if ((intent.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) == 0) return
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (e: SecurityException) {
+            return // sender didn't actually allow persisting — keep the temporary grant
+        }
+        prunePersistedFileUriPermissions()
+    }
+
+    /**
+     * Keep the number of persisted read-only file grants under the platform
+     * cap by releasing the oldest beyond [maxKept]. Only read-only grants are
+     * touched: the autobackup folder is a read+write tree grant and must be
+     * left alone.
+     */
+    private fun prunePersistedFileUriPermissions(maxKept: Int = 128) {
+        val readOnlyGrants = contentResolver.persistedUriPermissions
+            .filter { it.isReadPermission && !it.isWritePermission }
+            .sortedBy { it.persistedTime } // oldest first
+        if (readOnlyGrants.size <= maxKept) return
+        readOnlyGrants.dropLast(maxKept).forEach { perm ->
+            try {
+                contentResolver.releasePersistableUriPermission(
+                    perm.uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (_: SecurityException) {
+                // already released or not owned — ignore
+            }
         }
     }
 }
