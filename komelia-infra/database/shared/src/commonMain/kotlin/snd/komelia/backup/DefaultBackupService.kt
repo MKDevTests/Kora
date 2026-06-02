@@ -10,6 +10,9 @@ import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
+import snd.komelia.links.SeriesLinksRepository
+import snd.komelia.links.SeriesRelationEdge
+import snd.komelia.links.SeriesRelationType
 import snd.komelia.ratings.SeriesRating
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
@@ -55,6 +58,7 @@ class DefaultBackupService(
     private val seriesReaderOverrides: SeriesReaderOverridesRepository,
     private val seriesRatings: SeriesRatingsRepository,
     private val readingEvents: ReadingEventsRepository,
+    private val seriesLinks: SeriesLinksRepository,
     /**
      * Polled on each export/import call. On export, drives the per-user
      * sections + folds any legacy NULL-tagged rows into the current user's
@@ -86,6 +90,10 @@ class DefaultBackupService(
         val home = homeFilters.state.value
         val libFilters = librarySeriesFilters.getAll().mapKeys { (id, _) -> id.value }
         val seriesOverrides = seriesReaderOverrides.getAll().mapKeys { (id, _) -> id.value }
+        val versionsMap = seriesLinks.getAllVersions().mapKeys { (id, _) -> id.value }
+        val relationsList = seriesLinks.getAllRelations().map {
+            RelationExport(it.from.value, it.to.value, it.type.name)
+        }
 
         // -- Per-user sections (v2 schema) --------------------------------
         // Fold any rows tagged with NULL `komga_user_id` (legacy data not
@@ -153,6 +161,8 @@ class DefaultBackupService(
                 seriesReaderOverrides = seriesOverrides,
                 seriesRatings = legacyRatings,
                 userSections = userSections,
+                seriesVersions = versionsMap,
+                seriesRelations = relationsList,
             )
         )
         return json.encodeToString(BackupBundle.serializer(), bundle)
@@ -227,6 +237,10 @@ class DefaultBackupService(
         )
     }
 
+    /** Parse a stored relation-type name; null (caller drops + reports) if unknown. */
+    private fun parseRelationType(name: String): SeriesRelationType? =
+        SeriesRelationType.entries.firstOrNull { it.name == name }
+
     override suspend fun dryRun(jsonString: String): DryRunResult {
         val bundle = try {
             json.decodeFromString(BackupBundle.serializer(), jsonString)
@@ -266,6 +280,20 @@ class DefaultBackupService(
             plans += SectionPlan(
                 "Series reader overrides", SectionAction.REPLACE,
                 currentCount = seriesReaderOverrides.getAll().size, incomingCount = it.size,
+            )
+        }
+        s.seriesVersions?.let {
+            plans += SectionPlan(
+                "Series versions", SectionAction.REPLACE,
+                currentCount = seriesLinks.getAllVersions().size, incomingCount = it.size,
+            )
+        }
+        s.seriesRelations?.let {
+            val valid = it.count { rel -> parseRelationType(rel.type) != null }
+            plans += SectionPlan(
+                "Series relations", SectionAction.REPLACE,
+                currentCount = seriesLinks.getAllRelations().size,
+                incomingCount = valid, invalidCount = it.size - valid,
             )
         }
 
@@ -444,6 +472,32 @@ class DefaultBackupService(
                 }
                 restored.add("Series reader overrides (${incoming.size} entries)")
             }.onFailure { return ImportResult.Failure("Failed to restore Series reader overrides: ${it.message}") }
+        }
+
+        sections.seriesVersions?.let { incoming ->
+            runCatching {
+                val valid = incoming
+                    .filter { (id, group) -> id.isNotBlank() && group.isNotBlank() }
+                    .mapKeys { (id, _) -> KomgaSeriesId(id) }
+                seriesLinks.replaceAllVersions(valid)
+                restored.add("Series versions (${valid.size} entries)")
+                val dropped = incoming.size - valid.size
+                if (dropped > 0) skipped.add("$dropped invalid series version(s)")
+            }.onFailure { return ImportResult.Failure("Failed to restore series versions: ${it.message}") }
+        }
+
+        sections.seriesRelations?.let { incoming ->
+            runCatching {
+                val valid = incoming.mapNotNull { rel ->
+                    val type = parseRelationType(rel.type) ?: return@mapNotNull null
+                    if (rel.from.isBlank() || rel.to.isBlank()) return@mapNotNull null
+                    SeriesRelationEdge(KomgaSeriesId(rel.from), KomgaSeriesId(rel.to), type)
+                }
+                seriesLinks.replaceAllRelations(valid)
+                restored.add("Series relations (${valid.size} entries)")
+                val dropped = incoming.size - valid.size
+                if (dropped > 0) skipped.add("$dropped invalid series relation(s)")
+            }.onFailure { return ImportResult.Failure("Failed to restore series relations: ${it.message}") }
         }
 
         // -- v2 per-user sections --------------------------------------

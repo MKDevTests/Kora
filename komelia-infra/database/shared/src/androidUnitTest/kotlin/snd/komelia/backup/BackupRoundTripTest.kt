@@ -12,6 +12,10 @@ import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
+import snd.komelia.links.SeriesLinksRepository
+import snd.komelia.links.SeriesRelation
+import snd.komelia.links.SeriesRelationEdge
+import snd.komelia.links.SeriesRelationType
 import snd.komelia.ratings.SeriesRating
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
@@ -66,6 +70,7 @@ class BackupRoundTripTest {
         events: FakeEventsRepo,
         libFilters: FakeLibFiltersRepo,
         overrides: FakeOverridesRepo,
+        links: FakeLinksRepo = FakeLinksRepo(),
     ) = DefaultBackupService(
         appSettings = SettingsStateWrapper(AppSettings()) {},
         imageReader = SettingsStateWrapper(ImageReaderSettings()) {},
@@ -77,6 +82,7 @@ class BackupRoundTripTest {
         seriesReaderOverrides = overrides,
         seriesRatings = ratings,
         readingEvents = events,
+        seriesLinks = links,
         currentUser = MutableStateFlow(testUser),
     )
 
@@ -97,11 +103,17 @@ class BackupRoundTripTest {
         }
         val libFilters = FakeLibFiltersRepo().apply { map[KomgaLibraryId("lib1")] = """{"sort":"name"}""" }
         val overrides = FakeOverridesRepo().apply { map[KomgaSeriesId("s1")] = "LEFT_TO_RIGHT" }
+        val links = FakeLinksRepo().apply {
+            versions[KomgaSeriesId("s1")] = "g1"
+            versions[KomgaSeriesId("s2")] = "g1"
+            relations += SeriesRelationEdge(KomgaSeriesId("s1"), KomgaSeriesId("s3"), SeriesRelationType.SEQUEL)
+            relations += SeriesRelationEdge(KomgaSeriesId("s3"), KomgaSeriesId("s1"), SeriesRelationType.PREQUEL)
+        }
 
-        val export1 = buildService(ratings, events, libFilters, overrides).exportToJson()
+        val export1 = buildService(ratings, events, libFilters, overrides, links).exportToJson()
 
         // Fresh, empty target — exactly the "restore on a clean install" case.
-        val target = buildService(FakeRatingsRepo(), FakeEventsRepo(), FakeLibFiltersRepo(), FakeOverridesRepo())
+        val target = buildService(FakeRatingsRepo(), FakeEventsRepo(), FakeLibFiltersRepo(), FakeOverridesRepo(), FakeLinksRepo())
         assertIs<ImportResult.Success>(target.importFromJson(export1))
         val export2 = target.exportToJson()
 
@@ -259,4 +271,26 @@ private class FakeOverridesRepo : SeriesReaderOverridesRepository {
     override suspend fun delete(seriesId: KomgaSeriesId) {
         map.remove(seriesId)
     }
+}
+
+private class FakeLinksRepo : SeriesLinksRepository {
+    val versions = linkedMapOf<KomgaSeriesId, String>()
+    val relations = mutableListOf<SeriesRelationEdge>()
+
+    override suspend fun getAllVersions(): Map<KomgaSeriesId, String> = versions.toMap()
+    override suspend fun replaceAllVersions(byGroup: Map<KomgaSeriesId, String>) {
+        versions.clear(); versions.putAll(byGroup)
+    }
+
+    override suspend fun getAllRelations(): List<SeriesRelationEdge> = relations.toList()
+    override suspend fun replaceAllRelations(edges: List<SeriesRelationEdge>) {
+        relations.clear(); relations.addAll(edges)
+    }
+
+    override suspend fun versionsOf(seriesId: KomgaSeriesId): List<KomgaSeriesId> = error("unused")
+    override suspend fun linkVersion(a: KomgaSeriesId, b: KomgaSeriesId) = error("unused")
+    override suspend fun unlinkVersion(seriesId: KomgaSeriesId) = error("unused")
+    override suspend fun relationsOf(seriesId: KomgaSeriesId): List<SeriesRelation> = error("unused")
+    override suspend fun linkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) = error("unused")
+    override suspend fun unlinkRelation(a: KomgaSeriesId, b: KomgaSeriesId) = error("unused")
 }

@@ -63,6 +63,25 @@ data class BackupSections(
      * across reinstalls, device transfers and multi-account scenarios.
      */
     @SerialName("user_sections") val userSections: Map<String, UserSection>? = null,
+
+    /**
+     * Local series links (v1.0.18+). [seriesVersions] maps a Komga series id
+     * to its "other versions" group id (symmetric language/edition group).
+     * [seriesRelations] holds typed, bidirectional related-series edges.
+     * Additive, nullable sections — older readers ignore them; older backups
+     * simply lack them.
+     */
+    @SerialName("series_versions") val seriesVersions: Map<String, String>? = null,
+    @SerialName("series_relations") val seriesRelations: List<RelationExport>? = null,
+)
+
+/** Wire-format DTO for one typed series-relation edge. */
+@Serializable
+data class RelationExport(
+    @SerialName("from") val from: String,
+    @SerialName("to") val to: String,
+    /** [snd.komelia.links.SeriesRelationType] name. */
+    @SerialName("type") val type: String,
 )
 
 /**

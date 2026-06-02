@@ -435,6 +435,7 @@ class AndroidAppModule(
             seriesReaderOverrides = repositories.seriesReaderOverridesRepository,
             seriesRatings = repositories.seriesRatingsRepository,
             readingEvents = repositories.readingEventsRepository,
+            seriesLinks = repositories.seriesLinksRepository,
             currentUser = currentUser,
         )
     }
