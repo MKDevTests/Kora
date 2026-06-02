@@ -95,6 +95,7 @@ fun LazyGridScope.SeriesBooksContent(
     onBooksPageSizeChange: (Int) -> Unit,
     onPageChange: (Int) -> Unit,
     onBookSelect: (KomeliaBook) -> Unit,
+    onBookSelectRange: (KomeliaBook) -> Unit,
     booksFilterState: BooksFilterState,
     bookContextMenuActions: BookMenuActions,
     scrollState: LazyGridState,
@@ -123,6 +124,7 @@ fun LazyGridScope.SeriesBooksContent(
             selectionMode = booksState.selectionMode,
             selectedBooks = booksState.selectedBooks,
             onBookSelect = onBookSelect,
+            onBookSelectRange = onBookSelectRange,
             layout = booksState.layout,
         )
 
@@ -179,6 +181,7 @@ private fun LazyGridScope.BooksContent(
     selectionMode: Boolean,
     selectedBooks: List<KomeliaBook>,
     onBookSelect: (KomeliaBook) -> Unit,
+    onBookSelectRange: (KomeliaBook) -> Unit,
     layout: BooksLayout,
 ) {
     if (books.isEmpty()) {
@@ -195,7 +198,8 @@ private fun LazyGridScope.BooksContent(
                     bookMenuActions = if (selectionMode) null else bookMenuActions,
 
                     selectedBooks = selectedBooks,
-                    onBookSelect = onBookSelect,
+                    // Long-press in selection mode range-selects; tap toggles one.
+                    onBookSelect = if (selectionMode) onBookSelectRange else onBookSelect,
                 )
             }
 
@@ -205,7 +209,7 @@ private fun LazyGridScope.BooksContent(
                 onBookReadClick = if (selectionMode) null else onBookReadClick,
                 bookMenuActions = if (selectionMode) null else bookMenuActions,
                 selectedBooks = selectedBooks,
-                onBookSelect = onBookSelect,
+                onBookSelect = if (selectionMode) onBookSelectRange else onBookSelect,
             )
         }
 

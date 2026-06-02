@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.automirrored.rounded.LabelOff
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
@@ -50,6 +51,7 @@ fun BookActionsMenu(
     showDownloadOption: Boolean,
     onDismissRequest: () -> Unit,
     onToggleImmersiveMode: (() -> Unit)? = null,
+    onSelect: (() -> Unit)? = null,
 ) {
     val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
     val isOffline = LocalOfflineMode.current.collectAsState().value
@@ -125,6 +127,16 @@ fun BookActionsMenu(
         expanded = showDropdown.value,
         onDismissRequest = onDismissRequest
     ) {
+        if (onSelect != null) {
+            DropdownMenuItem(
+                text = { Text("Select", style = MaterialTheme.typography.labelLarge) },
+                leadingIcon = { Icon(Icons.Rounded.Checklist, null) },
+                onClick = {
+                    onSelect()
+                    onDismissRequest()
+                }
+            )
+        }
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
                 text = { Text("Analyze", style = MaterialTheme.typography.labelLarge) },

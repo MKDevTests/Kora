@@ -225,6 +225,33 @@ class SeriesBooksState(
         }
     }
 
+    /**
+     * Range-select: add every book between the anchor (the most recently
+     * selected book) and [book] inclusive. Existing selections are kept.
+     * Falls back to a single select when there is no anchor yet.
+     */
+    fun onBookSelectRange(book: KomeliaBook) {
+        val currState = state.value
+        if (currState !is LoadState.Success<BooksData>) return
+        val data = currState.value
+        val books = data.books
+        val selected = data.selectedBooks
+        val anchorId = selected.lastOrNull()?.id
+        val anchorIndex = anchorId?.let { id -> books.indexOfFirst { it.id == id } } ?: -1
+        val targetIndex = books.indexOfFirst { it.id == book.id }
+        if (anchorIndex < 0 || targetIndex < 0) {
+            onBookSelect(book)
+            return
+        }
+        val range = if (anchorIndex <= targetIndex) anchorIndex..targetIndex else targetIndex..anchorIndex
+        val selectedIds = selected.map { it.id }.toSet()
+        val additions = range.map { books[it] }.filter { it.id !in selectedIds }
+        if (additions.isEmpty()) return
+        updateCurrentState { state ->
+            state.copy(selectedBooks = state.selectedBooks + additions, selectionMode = true)
+        }
+    }
+
     fun stopKomgaEventHandler() {
         reloadEventsEnabled.value = false
     }

@@ -194,6 +194,7 @@ fun SeriesContent(
                             onBooksPageSizeChange = booksState::onBookPageSizeChange,
                             onPageChange = booksState::onPageChange,
                             onBookSelect = booksState::onBookSelect,
+                            onBookSelectRange = booksState::onBookSelectRange,
                             booksFilterState = booksState.filterState,
                             bookContextMenuActions = bookMenuActions,
                         )

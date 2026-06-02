@@ -206,6 +206,7 @@ class ViewModelFactory(
         events = dependencies.komgaEvents.events,
         settingsRepository = appRepositories.settingsRepository,
         referentialApi = komgaApi.referentialApi,
+        seriesLinksRepository = appRepositories.seriesLinksRepository,
         defaultTab = defaultTab ?: SeriesTab.BOOKS,
     )
 

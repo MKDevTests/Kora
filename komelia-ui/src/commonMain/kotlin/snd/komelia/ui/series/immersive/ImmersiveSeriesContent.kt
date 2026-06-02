@@ -92,6 +92,7 @@ import snd.komelia.ui.series.SeriesBooksState
 import snd.komelia.ui.series.SeriesBooksState.BooksData
 import snd.komelia.ui.series.SeriesViewModel.SeriesTab
 import snd.komelia.ui.series.view.SeriesBooksContent
+import snd.komelia.ui.series.view.SeriesLinksContent
 import snd.komelia.ui.series.view.SeriesChipTags
 import snd.komelia.ui.series.view.SeriesDescriptionRow
 import snd.komelia.ui.series.view.SeriesSummary
@@ -108,7 +109,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 
-private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS }
+private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS, LINKS }
 
 @Composable
 fun ImmersiveSeriesContent(
@@ -124,6 +125,7 @@ fun ImmersiveSeriesContent(
     onBookClick: (KomeliaBook) -> Unit,
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
     collectionsState: SeriesCollectionsState,
+    linksState: snd.komelia.ui.series.SeriesLinksState,
     onCollectionClick: (KomgaCollection) -> Unit,
     onSeriesClick: (KomgaSeries) -> Unit,
     onBackClick: () -> Unit,
@@ -187,12 +189,13 @@ fun ImmersiveSeriesContent(
             ImmersiveTab.BOOKS -> onTabChange(SeriesTab.BOOKS)
             ImmersiveTab.COLLECTIONS -> onTabChange(SeriesTab.COLLECTIONS)
             ImmersiveTab.TAGS -> Unit
+            ImmersiveTab.LINKS -> Unit
         }
     }
 
     // Keep in sync if something external changes the VM tab
     LaunchedEffect(currentTab) {
-        if (immersiveTab != ImmersiveTab.TAGS) {
+        if (immersiveTab != ImmersiveTab.TAGS && immersiveTab != ImmersiveTab.LINKS) {
             immersiveTab = when (currentTab) {
                 SeriesTab.BOOKS -> ImmersiveTab.BOOKS
                 SeriesTab.COLLECTIONS -> ImmersiveTab.COLLECTIONS
@@ -517,6 +520,7 @@ fun ImmersiveSeriesContent(
                         onBooksPageSizeChange = booksState::onBookPageSizeChange,
                         onPageChange = booksState::onPageChange,
                         onBookSelect = booksState::onBookSelect,
+                        onBookSelectRange = booksState::onBookSelectRange,
                         booksFilterState = booksState.filterState,
                         bookContextMenuActions = bookMenuActions,
                     )
@@ -534,6 +538,10 @@ fun ImmersiveSeriesContent(
                         Box(Modifier.padding(horizontal = 16.dp)) {
                             SeriesChipTags(series = series, onFilterClick = onFilterClick)
                         }
+                    }
+
+                    ImmersiveTab.LINKS -> item(span = { GridItemSpan(maxLineSpan) }) {
+                        SeriesLinksContent(state = linksState, onSeriesClick = onSeriesClick)
                     }
                 }
             }
@@ -578,6 +586,7 @@ private fun SeriesImmersiveTabRow(
         ImmersiveTab.BOOKS -> 0
         ImmersiveTab.COLLECTIONS -> 1
         ImmersiveTab.TAGS -> if (showCollectionsTab) 2 else 1
+        ImmersiveTab.LINKS -> if (showCollectionsTab) 3 else 2
     }
     PrimaryTabRow(
         selectedTabIndex = selectedTabIndex,
@@ -607,6 +616,11 @@ private fun SeriesImmersiveTabRow(
             selected = currentTab == ImmersiveTab.TAGS,
             onClick = { onTabChange(ImmersiveTab.TAGS) },
             text = { Text("Tags") },
+        )
+        Tab(
+            selected = currentTab == ImmersiveTab.LINKS,
+            onClick = { onTabChange(ImmersiveTab.LINKS) },
+            text = { Text("Links") },
         )
     }
 }

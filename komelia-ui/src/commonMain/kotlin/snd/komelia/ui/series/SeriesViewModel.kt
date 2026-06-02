@@ -55,6 +55,7 @@ class SeriesViewModel(
     bookApi: KomgaBookApi,
     collectionApi: KomgaCollectionsApi,
     referentialApi: KomgaReferentialApi,
+    seriesLinksRepository: snd.komelia.links.SeriesLinksRepository,
     settingsRepository: CommonSettingsRepository,
     defaultTab: SeriesTab,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
@@ -91,6 +92,14 @@ class SeriesViewModel(
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
     )
+    val linksState = SeriesLinksState(
+        series = this.series,
+        notifications = notifications,
+        seriesApi = seriesApi,
+        linksRepository = seriesLinksRepository,
+        screenModelScope = screenModelScope,
+        cardWidth = cardWidth,
+    )
 
     suspend fun initialize() {
         if (state.value !is Uninitialized) return
@@ -112,6 +121,7 @@ class SeriesViewModel(
 
         booksState.initialize()
         collectionsState.initialize()
+        linksState.initialize()
         screenModelScope.launch { updateSiblingAvailability() }
         startKomgaEventListener()
 

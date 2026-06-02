@@ -331,7 +331,8 @@ private fun BookHoverOverlay(
                             book = book,
                             bookMenuActions = bookMenuActions,
                             isActionsMenuExpanded = isActionsMenuExpanded,
-                            onActionsMenuExpand = onActionsMenuExpand
+                            onActionsMenuExpand = onActionsMenuExpand,
+                            onSelect = onSelect,
                         )
                 }
             }
@@ -493,7 +494,8 @@ private fun BookMenuActionsDropdown(
     book: KomeliaBook,
     bookMenuActions: BookMenuActions,
     isActionsMenuExpanded: Boolean,
-    onActionsMenuExpand: (Boolean) -> Unit
+    onActionsMenuExpand: (Boolean) -> Unit,
+    onSelect: (() -> Unit)? = null,
 ) {
     Box {
         IconButton(
@@ -510,6 +512,7 @@ private fun BookMenuActionsDropdown(
             showEditOption = true,
             showDownloadOption = true,
             onDismissRequest = { onActionsMenuExpand(false) },
+            onSelect = onSelect,
         )
     }
 }
