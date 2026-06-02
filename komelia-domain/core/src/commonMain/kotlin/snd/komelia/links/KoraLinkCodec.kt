@@ -19,18 +19,24 @@ object KoraLinkCodec {
     private const val MARKER = "kora="
     private const val SERIES_PATH = "/series/"
 
+    // Constant, non-resolving host (RFC 6761 reserved `.invalid` TLD). Komga
+    // validates the link url as a real URL, so it must have a scheme + host —
+    // but it must NOT depend on how the user reaches the server (LAN / Tailscale
+    // / domain). This marker host satisfies both; Kora ignores it and parses the
+    // series id from the path, so the link works whatever the access address.
+    private const val MARKER_HOST = "https://kora.invalid"
+
     /**
      * Build a shareable link: "[target] is [type] of the current series".
      *
-     * The URL is a host-relative hash link (`#/series/<id>?kora=<type>`) — it
-     * carries NO host/IP, so it stays valid whether the server is reached over
-     * LAN, Tailscale, or a domain, and remains clickable in Komga web (resolves
-     * against whatever origin the user is currently on).
+     * A valid absolute URL (Komga validates the field) on a constant marker host
+     * that has no relation to the server's real address — the target series id
+     * lives in the path and is what Kora reads back.
      */
     fun relationLink(target: KomgaSeriesId, type: SeriesRelationType): KomgaWebLink =
         KomgaWebLink(
             type.displayLabel(),
-            "#$SERIES_PATH${target.value}?$MARKER${type.token()}",
+            "$MARKER_HOST$SERIES_PATH${target.value}?$MARKER${type.token()}",
         )
 
     fun isKoraLink(link: KomgaWebLink): Boolean = link.url.contains(MARKER)

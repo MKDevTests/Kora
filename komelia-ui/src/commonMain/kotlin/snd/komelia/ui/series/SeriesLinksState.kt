@@ -38,6 +38,9 @@ import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.series.KomgaSeriesMetadataUpdateRequest
 import snd.komga.client.user.KomgaUser
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Process-wide "a link changed" signal so every open series-Links screen
@@ -323,14 +326,20 @@ class SeriesLinksState(
         val (root, suggestions, edges) = collectFranchise(media)
         val franchise = franchiseTokens(root, current)
         val taken = excludedIds().toMutableSet().apply { current?.id?.value?.let { add(it) } }
+        logger.info { "[AniListLinks] source='${root.displayTitle}' id=${root.id} suggestions=${suggestions.size}" }
         val rows = mutableListOf<AniListSuggestionRow>()
         var ignored = 0
         for (suggestion in suggestions) {
             val match = matchInLibrary(suggestion.node, taken, franchise)
             if (match == null) {
+                logger.info {
+                    "[AniListLinks]  unmatched: '${suggestion.node.displayTitle}' " +
+                        "(${suggestion.suggestedType}, format=${suggestion.node.format})"
+                }
                 ignored++
                 continue
             }
+            logger.info { "[AniListLinks]  matched: '${suggestion.node.displayTitle}' -> '${match.metadata.title}'" }
             taken += match.id.value
             rows += AniListSuggestionRow(
                 anilistId = suggestion.node.id,

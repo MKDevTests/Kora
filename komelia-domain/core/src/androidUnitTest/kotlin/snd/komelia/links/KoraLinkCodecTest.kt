@@ -22,9 +22,9 @@ class KoraLinkCodecTest {
     }
 
     @Test
-    fun urlIsHostRelative() {
+    fun urlIsValidAndHostIndependent() {
         val link = KoraLinkCodec.relationLink(KomgaSeriesId("X1"), SeriesRelationType.SEQUEL)
-        assertEquals("#/series/X1?kora=sequel", link.url)
+        assertEquals("https://kora.invalid/series/X1?kora=sequel", link.url)
     }
 
     @Test
