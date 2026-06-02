@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
 import snd.komelia.anilist.AniListClient
+import snd.komelia.anilist.AniListLinkSuggestion
 import snd.komelia.anilist.AniListMedia
 import snd.komelia.anilist.linkSuggestions
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -243,12 +244,12 @@ class SeriesLinksState(
 
     private suspend fun buildAnalysis(media: AniListMedia, candidates: List<AniListMedia>): AniListAnalysis {
         val current = series.value
-        val full = aniListClient.relations(media.id) ?: media
-        val franchise = franchiseTokens(media, current)
+        val (root, suggestions) = collectFranchise(media)
+        val franchise = franchiseTokens(root, current)
         val taken = excludedIds().toMutableSet().apply { current?.id?.value?.let { add(it) } }
         val rows = mutableListOf<AniListSuggestionRow>()
         var ignored = 0
-        for (suggestion in full.linkSuggestions()) {
+        for (suggestion in suggestions) {
             val match = matchInLibrary(suggestion.node, taken, franchise)
             if (match == null) {
                 ignored++
@@ -263,10 +264,47 @@ class SeriesLinksState(
         }
         return AniListAnalysis(
             sourceCandidates = candidates,
-            sourceMedia = media,
+            sourceMedia = root,
             rows = rows,
             ignoredCount = ignored,
         )
+    }
+
+    /**
+     * Resolve the canonical franchise root and collect its related manga to
+     * depth 2. AniList sometimes ranks a sub-entry (colored / regional edition)
+     * above the main work — that sub-entry's only link is PARENT, so we hop to it
+     * to reach the real spin-off list (fixes e.g. Fairy Tail). Depth 2 also
+     * catches sequels-of-sequels (Gunnm → Last Order → Mars Chronicle). Bounded
+     * by a visited set and a node cap.
+     */
+    private suspend fun collectFranchise(media: AniListMedia): Pair<AniListMedia, List<AniListLinkSuggestion>> {
+        var root = aniListClient.relations(media.id) ?: media
+        val parent = root.relations?.edges
+            ?.firstOrNull { it.relationType == "PARENT" && it.node?.type == "MANGA" }
+            ?.node
+        if (parent != null) root = aniListClient.relations(parent.id) ?: parent
+
+        val collected = LinkedHashMap<Int, AniListLinkSuggestion>()
+        val expanded = mutableSetOf(root.id)
+        var frontier = listOf(root)
+        repeat(2) {
+            val next = mutableListOf<AniListMedia>()
+            for (node in frontier) {
+                val full = if (node.id == root.id) root else (aniListClient.relations(node.id) ?: node)
+                for (suggestion in full.linkSuggestions()) {
+                    val id = suggestion.node.id
+                    if (id == root.id) continue
+                    collected.getOrPut(id) { suggestion }
+                    if (id !in expanded && expanded.size < MAX_FRANCHISE_NODES) {
+                        expanded += id
+                        next += suggestion.node
+                    }
+                }
+            }
+            frontier = next
+        }
+        return root to collected.values.toList()
     }
 
     /**
@@ -346,7 +384,10 @@ class SeriesLinksState(
             val shared = lib.intersect(node)
             if (node.isEmpty() || shared.isEmpty()) return@maxOfOrNull 0.0
             val minSize = minOf(lib.size, node.size)
-            val distinctive = shared.size >= 2 || (minSize == 1 && shared.first().length >= 5)
+            // Accept a single shared token only when it IS the whole library
+            // distinctive title ("Twin", "Boruto", "Mars Chronicle"); reject a
+            // lone common word against a 2+ token library name ("Dead Rock").
+            val distinctive = shared.size >= 2 || lib.size == 1
             if (distinctive) shared.size.toDouble() / minSize else 0.0
         } ?: 0.0
     }
@@ -417,6 +458,9 @@ private const val MIN_MATCH_SCORE = 0.5
 
 /** Stop searching further title variants once a match this strong is found. */
 private const val STRONG_MATCH_SCORE = 0.85
+
+/** Cap on franchise nodes expanded during the depth-2 relation crawl. */
+private const val MAX_FRANCHISE_NODES = 24
 
 /** Lucene query-syntax characters that must not reach Komga's full-text search. */
 private val luceneSpecials = Regex("""[":!+\-*?~^()\[\]{}\\/&|]""")
