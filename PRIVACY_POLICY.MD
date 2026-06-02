@@ -48,6 +48,11 @@ developer:
   may download the required model files from their distribution source.
 - **Optional metadata (Komf)** — if you configure a Komf server, Kora contacts
   it for metadata.
+- **AniList link suggestions (optional, off by default)** — if you enable
+  "AniList link suggestions" (Settings → Navigation) and tap "Analyze with
+  AniList" on a series, Kora sends that series' title to the public AniList API
+  (`graphql.anilist.co`) to look up related series. No account, login, or other
+  personal data is involved, and nothing about you is stored there.
 - **Any other server you explicitly configure.**
 
 Kora makes no network connections beyond these.
