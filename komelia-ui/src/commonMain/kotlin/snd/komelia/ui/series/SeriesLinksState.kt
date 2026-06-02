@@ -332,10 +332,6 @@ class SeriesLinksState(
         for (suggestion in suggestions) {
             val match = matchInLibrary(suggestion.node, taken, franchise)
             if (match == null) {
-                logger.info {
-                    "[AniListLinks]  unmatched: '${suggestion.node.displayTitle}' " +
-                        "(${suggestion.suggestedType}, format=${suggestion.node.format})"
-                }
                 ignored++
                 continue
             }
@@ -441,8 +437,11 @@ class SeriesLinksState(
 
         var best: KomgaSeries? = null
         var bestScore = 0.0
+        var candidatesSearched = 0
         for (query in queries) {
-            for (candidate in search(query)) {
+            val results = search(query)
+            candidatesSearched += results.size
+            for (candidate in results) {
                 if (candidate.id.value in excluded) continue
                 val score = titleMatchScore(nodeTitles, candidate.metadata.title, franchise)
                 if (score > bestScore) {
@@ -452,7 +451,15 @@ class SeriesLinksState(
             }
             if (bestScore >= STRONG_MATCH_SCORE) break
         }
-        return if (bestScore >= MIN_MATCH_SCORE) best else null
+        if (bestScore < MIN_MATCH_SCORE) {
+            logger.info {
+                "[AniListLinks]    no match for '${node.displayTitle}': " +
+                    "best='${best?.metadata?.title ?: "(none)"}' score=${(bestScore * 100).toInt()}% " +
+                    "candidatesSearched=$candidatesSearched"
+            }
+            return null
+        }
+        return best
     }
 
     /** Strip Lucene query syntax so a raw title is safe for Komga full-text search. */
@@ -468,10 +475,14 @@ class SeriesLinksState(
      * "Dead Rock" does not latch onto "Rock Lee" via the common word "rock".
      */
     private fun titleMatchScore(nodeTitles: List<String>, libraryTitle: String, franchise: Set<String>): Double {
-        val lib = (tokenize(libraryTitle) - franchise).ifEmpty { tokenize(libraryTitle) }
+        // Distinctive tokens only (drop the franchise name). A title that is ONLY
+        // the franchise name has no distinctive content → it must not match
+        // anything (otherwise e.g. "To Love-Ru LOVE" would match every sibling on
+        // the shared "to/love" tokens). No fallback to full tokens here.
+        val lib = tokenize(libraryTitle) - franchise
         if (lib.isEmpty()) return 0.0
         return nodeTitles.maxOfOrNull { title ->
-            val node = (tokenize(title) - franchise).ifEmpty { tokenize(title) }
+            val node = tokenize(title) - franchise
             val shared = lib.intersect(node)
             if (node.isEmpty() || shared.isEmpty()) return@maxOfOrNull 0.0
             val minSize = minOf(lib.size, node.size)
