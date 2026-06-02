@@ -328,27 +328,26 @@ class SeriesLinksState(
         val taken = excludedIds().toMutableSet().apply { current?.id?.value?.let { add(it) } }
         logger.info { "[AniListLinks] source='${root.displayTitle}' id=${root.id} suggestions=${suggestions.size}" }
         val rows = mutableListOf<AniListSuggestionRow>()
-        var ignored = 0
         for (suggestion in suggestions) {
             val match = matchInLibrary(suggestion.node, taken, franchise)
-            if (match == null) {
-                ignored++
-                continue
+            if (match != null) {
+                logger.info { "[AniListLinks]  matched: '${suggestion.node.displayTitle}' -> '${match.metadata.title}'" }
+                taken += match.id.value
             }
-            logger.info { "[AniListLinks]  matched: '${suggestion.node.displayTitle}' -> '${match.metadata.title}'" }
-            taken += match.id.value
             rows += AniListSuggestionRow(
                 anilistId = suggestion.node.id,
                 anilistTitle = suggestion.node.displayTitle ?: "?",
                 series = match,
                 type = suggestion.suggestedType,
+                checked = match != null,
             )
         }
+        // Auto-matched first (pre-checked), then unmatched ones to bind manually.
+        rows.sortByDescending { it.series != null }
         return AniListAnalysis(
             sourceCandidates = candidates,
             sourceMedia = root,
             rows = rows,
-            ignoredCount = ignored,
             interEdges = edges,
         )
     }
@@ -513,8 +512,7 @@ class SeriesLinksState(
         val current = analysis ?: return
         analysis = current.copy(
             rows = current.rows.mapIndexed { i, row ->
-                if (i == index) row.copy(series = newSeries, anilistTitle = newSeries.metadata.title, checked = true)
-                else row
+                if (i == index) row.copy(series = newSeries, checked = true) else row
             }
         )
     }
@@ -522,7 +520,7 @@ class SeriesLinksState(
     fun confirmAnalysis() {
         val currentId = series.value?.id ?: return
         val current = analysis ?: return
-        val checked = current.rows.filter { it.checked }
+        val checked = current.rows.filter { it.checked && it.series != null }
         val edges = current.interEdges
         analysis = null
         if (checked.isEmpty()) return
@@ -533,10 +531,10 @@ class SeriesLinksState(
                 // (e.g. 100 Years Quest also links to the spin-offs, not only to
                 // Fairy Tail). Pair type = the AniList-known relation if there is
                 // one, otherwise RELATED. Never touches a series the user didn't pick.
-                val members = (listOf(currentId) + checked.map { it.series.id }).distinctBy { it.value }
+                val members = (listOf(currentId) + checked.map { it.series!!.id }).distinctBy { it.value }
                 val known = HashMap<Pair<String, String>, SeriesRelationType>()
-                checked.forEach { known[currentId.value to it.series.id.value] = it.type }
-                val seriesByAniId = checked.associate { it.anilistId to it.series.id }
+                checked.forEach { known[currentId.value to it.series!!.id.value] = it.type }
+                val seriesByAniId = checked.associate { it.anilistId to it.series!!.id }
                 edges.forEach { edge ->
                     val from = seriesByAniId[edge.fromId]
                     val to = seriesByAniId[edge.toId]
@@ -583,17 +581,20 @@ data class AniListAnalysis(
     val sourceCandidates: List<AniListMedia> = emptyList(),
     val sourceMedia: AniListMedia? = null,
     val rows: List<AniListSuggestionRow> = emptyList(),
-    val ignoredCount: Int = 0,
     val error: String? = null,
     /** AniList-known relations among the franchise nodes, for the chain links. */
     val interEdges: List<FranchiseEdge> = emptyList(),
 )
 
-/** One proposed link: a library series + the auto-detected (editable) type. */
+/**
+ * One proposed link. [series] is null when auto-matching couldn't find it in the
+ * library (e.g. a localized title AniList doesn't know) — the user can bind it
+ * manually via "Pick your series".
+ */
 data class AniListSuggestionRow(
     val anilistId: Int,
     val anilistTitle: String,
-    val series: KomgaSeries,
+    val series: KomgaSeries?,
     val type: SeriesRelationType,
     val checked: Boolean = true,
 )

@@ -347,19 +347,11 @@ private fun AniListAnalysisDialog(
                         }
                     }
 
-                    if (analysis.ignoredCount > 0) {
-                        Text(
-                            "${analysis.ignoredCount} related not shown (not in your library, " +
-                                "anime, or a very different localized title).",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                 }
             }
         },
         confirmButton = {
-            val count = analysis.rows.count { it.checked }
+            val count = analysis.rows.count { it.checked && it.series != null }
             TextButton(onClick = { state.confirmAnalysis() }, enabled = count > 0) {
                 Text(if (count > 0) "Link $count" else "Link")
             }
@@ -388,23 +380,32 @@ private fun AniListRowItem(
     onTypeChange: (SeriesRelationType) -> Unit,
     onCorrect: () -> Unit,
 ) {
+    val matched = row.series != null
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Checkbox(checked = row.checked, onCheckedChange = { onCheckedChange() })
+        if (matched) Checkbox(checked = row.checked, onCheckedChange = { onCheckedChange() })
+        else Spacer(Modifier.width(40.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                row.series.metadata.title,
+                text = row.series?.metadata?.title ?: row.anilistTitle,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
+                color = if (matched) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             TextButton(
                 onClick = onCorrect,
                 contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-            ) { Text("Correct", style = MaterialTheme.typography.bodySmall) }
+            ) {
+                Text(
+                    if (matched) "Change series" else "Pick your series",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
         DropdownChoiceMenu(
             selectedOption = relationTypeOptions.first { it.value == row.type },
