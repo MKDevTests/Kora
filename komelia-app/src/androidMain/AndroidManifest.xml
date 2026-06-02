@@ -15,6 +15,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
+        <!-- Required on API 30+ so SpeechRecognizer.isRecognitionAvailable and
+             the ACTION_RECOGNIZE_SPEECH intent can resolve the speech app. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <application

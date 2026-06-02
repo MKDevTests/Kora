@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +66,7 @@ import snd.komelia.ui.common.cards.BookSimpleImageCard
 import snd.komelia.ui.common.cards.SeriesSimpleImageCard
 import snd.komelia.ui.common.components.NoPaddingTextField
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.ui.platform.rememberVoiceSearchLauncher
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeries
@@ -94,6 +96,10 @@ fun SearchBarWithResults(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val forceShowKeyboard = snd.komelia.ui.platform.rememberForceShowKeyboard()
+    // Voice search: only wired here (the dedicated search tab), not in the
+    // AppBar's ResultsSearchBar. Null when the device has no speech recognizer
+    // (and always null on desktop/web) → the mic icon is hidden.
+    val voiceSearchLauncher = rememberVoiceSearchLauncher(onResult = onQueryChange)
 
     LaunchedEffect(startExpanded) {
         if (startExpanded) {
@@ -121,6 +127,7 @@ fun SearchBarWithResults(
                 onQueryChange = onQueryChange,
                 onDone = {},
                 onDismiss = { onQueryChange("") },
+                onVoiceSearch = voiceSearchLauncher,
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(focusRequester)
@@ -380,6 +387,7 @@ fun SearchTextField(
     onQueryChange: (String) -> Unit,
     onDone: (String) -> Unit,
     onDismiss: () -> Unit = {},
+    onVoiceSearch: (() -> Unit)? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     modifier: Modifier = Modifier,
 ) {
@@ -417,25 +425,45 @@ fun SearchTextField(
                 }
             },
         trailingIcon = {
-            if (query.isNotBlank()) {
-                Icon(
-                    Icons.Filled.Close, null,
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                            onClick = {
-                                focusManager.clearFocus()
-                                onDismiss()
-                            }
-                        ).cursorForHand(),
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-            } else {
-                Icon(
-                    Icons.Filled.Search, null,
-                    modifier = Modifier.cursorForHand()
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Mic sits just left of the magnifying glass; only present when a
+                // launcher was supplied (search tab on a speech-capable device).
+                if (onVoiceSearch != null) {
+                    Icon(
+                        Icons.Filled.Mic,
+                        contentDescription = "Voice search",
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = onVoiceSearch
+                            ).cursorForHand(),
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                if (query.isNotBlank()) {
+                    Icon(
+                        Icons.Filled.Close, null,
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onDismiss()
+                                }
+                            ).cursorForHand(),
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Search, null,
+                        modifier = Modifier.cursorForHand()
+                    )
+                }
             }
         },
 
