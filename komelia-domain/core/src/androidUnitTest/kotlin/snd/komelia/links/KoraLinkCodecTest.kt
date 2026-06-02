@@ -13,7 +13,7 @@ class KoraLinkCodecTest {
     @Test
     fun roundTrip() {
         for (type in SeriesRelationType.entries) {
-            val link = KoraLinkCodec.relationLink("https://komga.example.org", KomgaSeriesId("0ABC"), type)
+            val link = KoraLinkCodec.relationLink(KomgaSeriesId("0ABC"), type)
             assertTrue(KoraLinkCodec.isKoraLink(link), "should be a Kora link for $type")
             val parsed = KoraLinkCodec.parse(link)
             assertEquals(KomgaSeriesId("0ABC"), parsed?.target, "target for $type")
@@ -22,9 +22,9 @@ class KoraLinkCodecTest {
     }
 
     @Test
-    fun trailingSlashInServerUrlIsNormalized() {
-        val link = KoraLinkCodec.relationLink("https://host/", KomgaSeriesId("X1"), SeriesRelationType.SEQUEL)
-        assertEquals("https://host/series/X1?kora=sequel", link.url)
+    fun urlIsHostRelative() {
+        val link = KoraLinkCodec.relationLink(KomgaSeriesId("X1"), SeriesRelationType.SEQUEL)
+        assertEquals("#/series/X1?kora=sequel", link.url)
     }
 
     @Test

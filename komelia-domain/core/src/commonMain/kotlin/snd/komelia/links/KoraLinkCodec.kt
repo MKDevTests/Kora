@@ -19,11 +19,18 @@ object KoraLinkCodec {
     private const val MARKER = "kora="
     private const val SERIES_PATH = "/series/"
 
-    /** Build a shareable link: "[target] is [type] of the current series". */
-    fun relationLink(serverUrl: String, target: KomgaSeriesId, type: SeriesRelationType): KomgaWebLink =
+    /**
+     * Build a shareable link: "[target] is [type] of the current series".
+     *
+     * The URL is a host-relative hash link (`#/series/<id>?kora=<type>`) — it
+     * carries NO host/IP, so it stays valid whether the server is reached over
+     * LAN, Tailscale, or a domain, and remains clickable in Komga web (resolves
+     * against whatever origin the user is currently on).
+     */
+    fun relationLink(target: KomgaSeriesId, type: SeriesRelationType): KomgaWebLink =
         KomgaWebLink(
             type.displayLabel(),
-            "${serverUrl.trimEnd('/')}$SERIES_PATH${target.value}?$MARKER${type.token()}",
+            "#$SERIES_PATH${target.value}?$MARKER${type.token()}",
         )
 
     fun isKoraLink(link: KomgaWebLink): Boolean = link.url.contains(MARKER)

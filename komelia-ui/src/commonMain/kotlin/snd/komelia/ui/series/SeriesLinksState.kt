@@ -153,9 +153,8 @@ class SeriesLinksState(
     }
 
     private suspend fun komgaLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) {
-        val server = settingsRepository.getServerUrl().first()
-        writeKoraLink(on = from, target = to, type = type, server = server)
-        writeKoraLink(on = to, target = from, type = type.inverse(), server = server)
+        writeKoraLink(on = from, target = to, type = type)
+        writeKoraLink(on = to, target = from, type = type.inverse())
     }
 
     private suspend fun komgaUnlinkRelation(from: KomgaSeriesId, to: KomgaSeriesId) {
@@ -163,15 +162,10 @@ class SeriesLinksState(
         removeKoraLink(on = to, target = from)
     }
 
-    private suspend fun writeKoraLink(
-        on: KomgaSeriesId,
-        target: KomgaSeriesId,
-        type: SeriesRelationType,
-        server: String,
-    ) {
+    private suspend fun writeKoraLink(on: KomgaSeriesId, target: KomgaSeriesId, type: SeriesRelationType) {
         val s = seriesApi.getOneSeries(on)
         val kept = s.metadata.links.filterNot { KoraLinkCodec.parse(it)?.target == target }
-        seriesApi.update(on, linksUpdate(s, kept + KoraLinkCodec.relationLink(server, target, type)))
+        seriesApi.update(on, linksUpdate(s, kept + KoraLinkCodec.relationLink(target, type)))
     }
 
     private suspend fun removeKoraLink(on: KomgaSeriesId, target: KomgaSeriesId) {
@@ -514,18 +508,43 @@ class SeriesLinksState(
         if (checked.isEmpty()) return
         screenModelScope.launch {
             notifications.runCatchingToNotifications {
-                // Star: link the analyzed series to each chosen suggestion.
-                checked.forEach { doLinkRelation(currentId, it.series.id, it.type) }
-                // Chain: also persist AniList-known relations BETWEEN the chosen
-                // suggestions (e.g. Last Order ↔ Mars Chronicle) so one analysis
-                // builds the whole franchise order, not just a star. Never touches
-                // a series the user didn't check.
-                val byId = checked.associateBy { it.anilistId }
+                // Full mesh: interconnect the analyzed series AND every chosen
+                // suggestion so the whole franchise is navigable from any member
+                // (e.g. 100 Years Quest also links to the spin-offs, not only to
+                // Fairy Tail). Pair type = the AniList-known relation if there is
+                // one, otherwise RELATED. Never touches a series the user didn't pick.
+                val members = (listOf(currentId) + checked.map { it.series.id }).distinctBy { it.value }
+                val known = HashMap<Pair<String, String>, SeriesRelationType>()
+                checked.forEach { known[currentId.value to it.series.id.value] = it.type }
+                val seriesByAniId = checked.associate { it.anilistId to it.series.id }
                 edges.forEach { edge ->
-                    val from = byId[edge.fromId]?.series?.id
-                    val to = byId[edge.toId]?.series?.id
-                    if (from != null && to != null && from != to) {
-                        doLinkRelation(from, to, edge.type)
+                    val from = seriesByAniId[edge.fromId]
+                    val to = seriesByAniId[edge.toId]
+                    if (from != null && to != null && from.value != to.value) {
+                        known[from.value to to.value] = edge.type
+                    }
+                }
+                fun typeBetween(a: KomgaSeriesId, b: KomgaSeriesId): SeriesRelationType =
+                    known[a.value to b.value]
+                        ?: known[b.value to a.value]?.inverse()
+                        ?: SeriesRelationType.RELATED
+
+                if (shareViaKomga()) {
+                    // One metadata write per member (batched) with all its franchise links.
+                    val memberIds = members.map { it.value }.toSet()
+                    members.forEach { m ->
+                        val s = seriesApi.getOneSeries(m)
+                        val nonKora = s.metadata.links.filterNot { KoraLinkCodec.isKoraLink(it) }
+                        val keptKora = s.metadata.links.filter {
+                            KoraLinkCodec.isKoraLink(it) && KoraLinkCodec.parse(it)?.target?.value !in memberIds
+                        }
+                        val mesh = members.filter { it.value != m.value }
+                            .map { other -> KoraLinkCodec.relationLink(other, typeBetween(m, other)) }
+                        seriesApi.update(m, linksUpdate(s, nonKora + keptKora + mesh))
+                    }
+                } else {
+                    for (i in members.indices) for (j in i + 1 until members.size) {
+                        linksRepository.linkRelation(members[i], members[j], typeBetween(members[i], members[j]))
                     }
                 }
             }
