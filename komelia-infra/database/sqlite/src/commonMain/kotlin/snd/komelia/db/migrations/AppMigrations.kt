@@ -79,6 +79,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V67__keep_progress_bar_visible.sql",
         "V68__series_links.sql",
         "V69__anilist_link_suggestions.sql",
+        "V70__share_links_via_komga.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

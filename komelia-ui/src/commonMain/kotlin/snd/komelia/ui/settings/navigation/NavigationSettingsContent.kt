@@ -29,6 +29,8 @@ fun NavigationSettingsContent(
     onStatsInBottomNavChange: (Boolean) -> Unit,
     aniListLinkSuggestionsEnabled: Boolean,
     onAniListLinkSuggestionsEnabledChange: (Boolean) -> Unit,
+    shareLinksViaKomga: Boolean,
+    onShareLinksViaKomgaChange: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -139,6 +141,24 @@ fun NavigationSettingsContent(
                     "automatically. Off by default: when on, the series title you " +
                     "analyze is sent to the public AniList API (anilist.co). No " +
                     "account or data of yours is stored there.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+
+        // Share series links via Komga (read all, write admin) ----------
+        Column {
+            SwitchWithLabel(
+                label = { Text("Share series links via Komga") },
+                checked = shareLinksViaKomga,
+                onCheckedChange = onShareLinksViaKomgaChange,
+            )
+            Text(
+                text = "Reads shared series relations from the Komga server (visible to " +
+                    "everyone) on top of your private local links. When on, admins publish " +
+                    "their links to the server; non-admins keep writing locally. Off by " +
+                    "default: everything stays local on this device.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp),

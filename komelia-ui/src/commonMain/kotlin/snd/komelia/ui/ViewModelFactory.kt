@@ -208,6 +208,7 @@ class ViewModelFactory(
         referentialApi = komgaApi.referentialApi,
         seriesLinksRepository = appRepositories.seriesLinksRepository,
         aniListClient = dependencies.aniListClient,
+        authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
         defaultTab = defaultTab ?: SeriesTab.BOOKS,
     )
 

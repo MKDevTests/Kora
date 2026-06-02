@@ -267,6 +267,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(aniListLinkSuggestionsEnabled = enabled) }
     }
 
+    override fun getShareLinksViaKomga(): Flow<Boolean> =
+        wrapper.state.map { it.shareLinksViaKomga }.distinctUntilChanged()
+
+    override suspend fun putShareLinksViaKomga(enabled: Boolean) {
+        wrapper.transform { it.copy(shareLinksViaKomga = enabled) }
+    }
+
     override fun getLibraryDropdownInTitle(): Flow<Boolean> =
         wrapper.state.map { it.libraryDropdownInTitle }.distinctUntilChanged()
 

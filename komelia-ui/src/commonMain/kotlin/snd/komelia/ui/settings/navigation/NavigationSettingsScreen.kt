@@ -35,6 +35,8 @@ class NavigationSettingsScreen : Screen {
                     onStatsInBottomNavChange = vm::onStatsInBottomNavChange,
                     aniListLinkSuggestionsEnabled = vm.aniListLinkSuggestionsEnabled,
                     onAniListLinkSuggestionsEnabledChange = vm::onAniListLinkSuggestionsEnabledChange,
+                    shareLinksViaKomga = vm.shareLinksViaKomga,
+                    onShareLinksViaKomgaChange = vm::onShareLinksViaKomgaChange,
                 )
             }
         }

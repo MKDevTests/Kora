@@ -62,6 +62,13 @@ data class AppSettings(
     val aniListLinkSuggestionsEnabled: Boolean = false,
 
     /**
+     * Opt-in: read (everyone) / write (admin only) typed series relations from
+     * the shared Komga `links` field, on top of the private local links. Off by
+     * default → purely local. See series Links tab.
+     */
+    val shareLinksViaKomga: Boolean = false,
+
+    /**
      * When true the big page title at the top of Home / Library screens
      * becomes a dropdown that lists Home + every library for one-tap
      * switching. When false the title is plain text (historical behaviour);

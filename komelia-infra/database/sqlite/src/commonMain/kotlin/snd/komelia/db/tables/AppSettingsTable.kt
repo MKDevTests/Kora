@@ -46,6 +46,7 @@ object AppSettingsTable : Table("AppSettings") {
     val lastHighlightColor = integer("last_highlight_color").nullable()
     val searchFuzzyEnabled = bool("search_fuzzy_enabled").default(true)
     val aniListLinkSuggestionsEnabled = bool("anilist_link_suggestions_enabled").default(false)
+    val shareLinksViaKomga = bool("share_links_via_komga").default(false)
     val libraryDropdownInTitle = bool("library_dropdown_in_title").default(true)
     val startupScreen = text("startup_screen").default("HOME")
     val statsEnabled = bool("stats_enabled").default(true)

@@ -2,6 +2,7 @@ package snd.komelia.ui.series.view
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +45,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.ui.text.style.TextOverflow
 import snd.komelia.anilist.AniListMedia
 import snd.komelia.links.SeriesRelationType
+import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.common.cards.SeriesImageCard
 import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
@@ -76,6 +79,7 @@ fun SeriesLinksContent(
 ) {
     val cardWidth = state.cardWidth.collectAsState().value
     var showAdd by remember { mutableStateOf(false) }
+    val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: false
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -114,7 +118,15 @@ fun SeriesLinksContent(
         }
         relationDisplayOrder.forEach { type ->
             val list = relations[type] ?: return@forEach
-            LinkSection(type.label(), list, cardWidth, onSeriesClick) { state.unlinkRelation(it.id) }
+            LinkSection(
+                title = type.label(),
+                series = list,
+                cardWidth = cardWidth,
+                onSeriesClick = onSeriesClick,
+                sharedIds = state.sharedRelationIds,
+                canUnlinkShared = isAdmin,
+                onUnlink = { state.unlinkRelation(it.id) },
+            )
         }
     }
 
@@ -129,6 +141,8 @@ private fun LinkSection(
     series: List<KomgaSeries>,
     cardWidth: Dp,
     onSeriesClick: (KomgaSeries) -> Unit,
+    sharedIds: Set<String> = emptySet(),
+    canUnlinkShared: Boolean = true,
     onUnlink: (KomgaSeries) -> Unit,
 ) {
     var pendingUnlink by remember { mutableStateOf<KomgaSeries?>(null) }
@@ -137,14 +151,28 @@ private fun LinkSection(
         Text(title, style = MaterialTheme.typography.titleMedium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(series, key = { it.id.value }) { s ->
+                val shared = s.id.value in sharedIds
                 // Tap = open; long-press = ask to unlink (onSeriesSelect is the
-                // long-press hook when no menu actions are supplied).
-                SeriesImageCard(
-                    series = s,
-                    onSeriesClick = { onSeriesClick(s) },
-                    onSeriesSelect = { pendingUnlink = s },
-                    modifier = Modifier.width(cardWidth),
-                )
+                // long-press hook). A shared link can only be unlinked by an admin.
+                Box {
+                    SeriesImageCard(
+                        series = s,
+                        onSeriesClick = { onSeriesClick(s) },
+                        onSeriesSelect = { if (!shared || canUnlinkShared) pendingUnlink = s },
+                        modifier = Modifier.width(cardWidth),
+                    )
+                    if (shared) {
+                        Icon(
+                            Icons.Default.Public,
+                            contentDescription = "Shared on server",
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(4.dp)
+                                .size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
         }
     }

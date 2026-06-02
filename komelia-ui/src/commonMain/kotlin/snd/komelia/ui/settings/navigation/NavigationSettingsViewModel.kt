@@ -34,6 +34,8 @@ class NavigationSettingsViewModel(
         private set
     var aniListLinkSuggestionsEnabled by mutableStateOf(false)
         private set
+    var shareLinksViaKomga by mutableStateOf(false)
+        private set
 
     suspend fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
@@ -43,6 +45,7 @@ class NavigationSettingsViewModel(
         statsEnabled = settingsRepository.getStatsEnabled().first()
         statsInBottomNav = settingsRepository.getStatsInBottomNav().first()
         aniListLinkSuggestionsEnabled = settingsRepository.getAniListLinkSuggestionsEnabled().first()
+        shareLinksViaKomga = settingsRepository.getShareLinksViaKomga().first()
         mutableState.value = LoadState.Success(Unit)
     }
 
@@ -69,5 +72,10 @@ class NavigationSettingsViewModel(
     fun onAniListLinkSuggestionsEnabledChange(enabled: Boolean) {
         aniListLinkSuggestionsEnabled = enabled
         screenModelScope.launch { settingsRepository.putAniListLinkSuggestionsEnabled(enabled) }
+    }
+
+    fun onShareLinksViaKomgaChange(enabled: Boolean) {
+        shareLinksViaKomga = enabled
+        screenModelScope.launch { settingsRepository.putShareLinksViaKomga(enabled) }
     }
 }

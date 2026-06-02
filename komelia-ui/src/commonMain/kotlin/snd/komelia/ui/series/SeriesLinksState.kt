@@ -23,15 +23,21 @@ import snd.komelia.anilist.AniListLinkSuggestion
 import snd.komelia.anilist.AniListMedia
 import snd.komelia.anilist.linkSuggestions
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.links.KoraLinkCodec
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationType
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
 import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.KomgaWebLink
+import snd.komga.client.common.patch
+import snd.komga.client.common.patchLists
 import snd.komga.client.search.KomgaSearchCondition
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.series.KomgaSeriesMetadataUpdateRequest
+import snd.komga.client.user.KomgaUser
 
 /**
  * Process-wide "a link changed" signal so every open series-Links screen
@@ -58,6 +64,7 @@ class SeriesLinksState(
     private val linksRepository: SeriesLinksRepository,
     private val aniListClient: AniListClient,
     private val settingsRepository: CommonSettingsRepository,
+    private val authenticatedUser: StateFlow<KomgaUser?>,
     private val screenModelScope: CoroutineScope,
     val cardWidth: StateFlow<Dp>,
 ) {
@@ -70,6 +77,19 @@ class SeriesLinksState(
     /** Related series grouped by relation type (from this series' perspective). */
     var relations by mutableStateOf<Map<SeriesRelationType, List<KomgaSeries>>>(emptyMap())
         private set
+
+    /** Ids of related series coming from the shared Komga layer (badge + unlink gating). */
+    var sharedRelationIds by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    /** Whether the Komga-shared link layer is active (opt-in). Drives badges in the UI. */
+    val shareLinksEnabled: StateFlow<Boolean> =
+        settingsRepository.getShareLinksViaKomga().stateIn(screenModelScope, SharingStarted.Eagerly, false)
+
+    private fun isAdmin(): Boolean = authenticatedUser.value?.roleAdmin() == true
+
+    /** Writes go to the shared Komga layer only when sharing is on AND the user is admin. */
+    private fun shareViaKomga(): Boolean = shareLinksEnabled.value && isAdmin()
 
     suspend fun initialize() {
         if (mutableState.value != LoadState.Uninitialized) return
@@ -87,9 +107,21 @@ class SeriesLinksState(
             mutableState.value = LoadState.Loading
             val current = series.filterNotNull().first()
             versions = linksRepository.versionsOf(current.id).mapNotNull { resolve(it) }
-            relations = linksRepository.relationsOf(current.id)
-                .groupBy { it.type }
-                .mapValues { (_, rels) -> rels.mapNotNull { resolve(it.series) } }
+
+            val localRelations = linksRepository.relationsOf(current.id)
+            val sharedRelations =
+                if (shareLinksEnabled.value) current.metadata.links.mapNotNull { KoraLinkCodec.parse(it) }
+                else emptyList()
+            sharedRelationIds = sharedRelations.map { it.target.value }.toSet()
+
+            // Merge local + shared by target id (shared type wins on conflict).
+            val byId = LinkedHashMap<String, Pair<KomgaSeriesId, SeriesRelationType>>()
+            localRelations.forEach { byId[it.series.value] = it.series to it.type }
+            sharedRelations.forEach { byId[it.target.value] = it.target to it.type }
+
+            relations = byId.values
+                .mapNotNull { (id, type) -> resolve(id)?.let { type to it } }
+                .groupBy({ it.first }, { it.second })
                 .filterValues { it.isNotEmpty() }
             mutableState.value = LoadState.Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
@@ -99,11 +131,61 @@ class SeriesLinksState(
     private suspend fun resolve(id: KomgaSeriesId): KomgaSeries? =
         runCatching { seriesApi.getOneSeries(id) }.getOrNull()
 
+    // Versions stay local-only for now; only typed relations are shared via Komga.
     fun linkVersion(other: KomgaSeriesId) = act { current -> linksRepository.linkVersion(current, other) }
     fun unlinkVersion(other: KomgaSeriesId) = act { linksRepository.unlinkVersion(other) }
+
     fun linkRelation(other: KomgaSeriesId, type: SeriesRelationType) =
-        act { current -> linksRepository.linkRelation(current, other, type) }
-    fun unlinkRelation(other: KomgaSeriesId) = act { current -> linksRepository.unlinkRelation(current, other) }
+        act { current -> doLinkRelation(current, other, type) }
+
+    fun unlinkRelation(other: KomgaSeriesId) = act { current ->
+        when {
+            other.value !in sharedRelationIds -> linksRepository.unlinkRelation(current, other)
+            isAdmin() -> komgaUnlinkRelation(current, other)
+            else -> error("Only an admin can remove a link shared on the server.")
+        }
+    }
+
+    /** Route a new relation to the shared Komga layer (admin + sharing on) or the local store. */
+    private suspend fun doLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) {
+        if (shareViaKomga()) komgaLinkRelation(from, to, type)
+        else linksRepository.linkRelation(from, to, type)
+    }
+
+    private suspend fun komgaLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) {
+        val server = settingsRepository.getServerUrl().first()
+        writeKoraLink(on = from, target = to, type = type, server = server)
+        writeKoraLink(on = to, target = from, type = type.inverse(), server = server)
+    }
+
+    private suspend fun komgaUnlinkRelation(from: KomgaSeriesId, to: KomgaSeriesId) {
+        removeKoraLink(on = from, target = to)
+        removeKoraLink(on = to, target = from)
+    }
+
+    private suspend fun writeKoraLink(
+        on: KomgaSeriesId,
+        target: KomgaSeriesId,
+        type: SeriesRelationType,
+        server: String,
+    ) {
+        val s = seriesApi.getOneSeries(on)
+        val kept = s.metadata.links.filterNot { KoraLinkCodec.parse(it)?.target == target }
+        seriesApi.update(on, linksUpdate(s, kept + KoraLinkCodec.relationLink(server, target, type)))
+    }
+
+    private suspend fun removeKoraLink(on: KomgaSeriesId, target: KomgaSeriesId) {
+        val s = seriesApi.getOneSeries(on)
+        val newLinks = s.metadata.links.filterNot { KoraLinkCodec.parse(it)?.target == target }
+        if (newLinks.size != s.metadata.links.size) seriesApi.update(on, linksUpdate(s, newLinks))
+    }
+
+    /** Update request that touches ONLY links + linksLock, leaving all else unchanged. */
+    private fun linksUpdate(s: KomgaSeries, newLinks: List<KomgaWebLink>) =
+        KomgaSeriesMetadataUpdateRequest(
+            links = patchLists(s.metadata.links, newLinks),
+            linksLock = patch(s.metadata.linksLock, true),
+        )
 
     private fun act(block: suspend (current: KomgaSeriesId) -> Unit) {
         val current = series.value?.id ?: return
@@ -433,7 +515,7 @@ class SeriesLinksState(
         screenModelScope.launch {
             notifications.runCatchingToNotifications {
                 // Star: link the analyzed series to each chosen suggestion.
-                checked.forEach { linksRepository.linkRelation(currentId, it.series.id, it.type) }
+                checked.forEach { doLinkRelation(currentId, it.series.id, it.type) }
                 // Chain: also persist AniList-known relations BETWEEN the chosen
                 // suggestions (e.g. Last Order ↔ Mars Chronicle) so one analysis
                 // builds the whole franchise order, not just a star. Never touches
@@ -443,7 +525,7 @@ class SeriesLinksState(
                     val from = byId[edge.fromId]?.series?.id
                     val to = byId[edge.toId]?.series?.id
                     if (from != null && to != null && from != to) {
-                        linksRepository.linkRelation(from, to, edge.type)
+                        doLinkRelation(from, to, edge.type)
                     }
                 }
             }

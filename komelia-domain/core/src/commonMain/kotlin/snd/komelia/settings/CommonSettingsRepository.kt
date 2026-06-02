@@ -120,6 +120,13 @@ interface CommonSettingsRepository {
     suspend fun putAniListLinkSuggestionsEnabled(enabled: Boolean)
 
     /**
+     * Opt-in for sharing typed series relations via the Komga `links` field
+     * (read for all, write for admins). Off by default → purely local links.
+     */
+    fun getShareLinksViaKomga(): Flow<Boolean>
+    suspend fun putShareLinksViaKomga(enabled: Boolean)
+
+    /**
      * Whether the big page title at the top of Home/Library screens is a
      * dropdown library switcher. When false the title is plain text and
      * users use the side drawer (☰) for library switching.
