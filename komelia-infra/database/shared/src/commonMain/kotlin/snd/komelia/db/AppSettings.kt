@@ -55,6 +55,13 @@ data class AppSettings(
     val searchFuzzyEnabled: Boolean = true,
 
     /**
+     * Opt-in: when true the series Links tab may query the public AniList
+     * GraphQL API to suggest related series. Off by default — it sends series
+     * titles to a third party. See PRIVACY_POLICY.MD.
+     */
+    val aniListLinkSuggestionsEnabled: Boolean = false,
+
+    /**
      * When true the big page title at the top of Home / Library screens
      * becomes a dropdown that lists Home + every library for one-tap
      * switching. When false the title is plain text (historical behaviour);

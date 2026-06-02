@@ -260,6 +260,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(searchFuzzyEnabled = enabled) }
     }
 
+    override fun getAniListLinkSuggestionsEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.aniListLinkSuggestionsEnabled }.distinctUntilChanged()
+
+    override suspend fun putAniListLinkSuggestionsEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(aniListLinkSuggestionsEnabled = enabled) }
+    }
+
     override fun getLibraryDropdownInTitle(): Flow<Boolean> =
         wrapper.state.map { it.libraryDropdownInTitle }.distinctUntilChanged()
 

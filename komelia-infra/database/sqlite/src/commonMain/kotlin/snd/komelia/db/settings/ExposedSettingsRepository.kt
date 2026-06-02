@@ -61,6 +61,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[useFloatingNavigationBar] = settings.useFloatingNavigationBar
                 it[lastHighlightColor] = settings.lastHighlightColor
                 it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
+                it[aniListLinkSuggestionsEnabled] = settings.aniListLinkSuggestionsEnabled
                 it[libraryDropdownInTitle] = settings.libraryDropdownInTitle
                 it[startupScreen] = settings.startupScreen.name
                 it[statsEnabled] = settings.statsEnabled
@@ -110,6 +111,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             useFloatingNavigationBar = get(AppSettingsTable.useFloatingNavigationBar),
             lastHighlightColor = get(AppSettingsTable.lastHighlightColor),
             searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
+            aniListLinkSuggestionsEnabled = get(AppSettingsTable.aniListLinkSuggestionsEnabled),
             libraryDropdownInTitle = get(AppSettingsTable.libraryDropdownInTitle),
             startupScreen = runCatching {
                 snd.komelia.settings.model.StartupScreen.valueOf(get(AppSettingsTable.startupScreen))

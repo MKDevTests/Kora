@@ -113,6 +113,13 @@ interface CommonSettingsRepository {
     suspend fun putSearchFuzzyEnabled(enabled: Boolean)
 
     /**
+     * Opt-in for AniList online link suggestions on the series Links tab.
+     * Off by default — sends series titles to a third party.
+     */
+    fun getAniListLinkSuggestionsEnabled(): Flow<Boolean>
+    suspend fun putAniListLinkSuggestionsEnabled(enabled: Boolean)
+
+    /**
      * Whether the big page title at the top of Home/Library screens is a
      * dropdown library switcher. When false the title is plain text and
      * users use the side drawer (☰) for library switching.

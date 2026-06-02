@@ -33,6 +33,8 @@ class NavigationSettingsScreen : Screen {
                     onStatsEnabledChange = vm::onStatsEnabledChange,
                     statsInBottomNav = vm.statsInBottomNav,
                     onStatsInBottomNavChange = vm::onStatsInBottomNavChange,
+                    aniListLinkSuggestionsEnabled = vm.aniListLinkSuggestionsEnabled,
+                    onAniListLinkSuggestionsEnabledChange = vm::onAniListLinkSuggestionsEnabledChange,
                 )
             }
         }

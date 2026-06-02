@@ -27,6 +27,8 @@ fun NavigationSettingsContent(
     onStatsEnabledChange: (Boolean) -> Unit,
     statsInBottomNav: Boolean,
     onStatsInBottomNavChange: (Boolean) -> Unit,
+    aniListLinkSuggestionsEnabled: Boolean,
+    onAniListLinkSuggestionsEnabledChange: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -117,6 +119,26 @@ fun NavigationSettingsContent(
                 text = "Adds a dedicated stats button to the bottom navigation " +
                     "bar (next to Home / Search / Library). When off, the stats " +
                     "page is still reachable from the Home screen card.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+
+        // AniList link suggestions (opt-in, online) ---------------------
+        Column {
+            SwitchWithLabel(
+                label = { Text("AniList link suggestions (online)") },
+                checked = aniListLinkSuggestionsEnabled,
+                onCheckedChange = onAniListLinkSuggestionsEnabledChange,
+            )
+            Text(
+                text = "Adds an \"Analyze with AniList\" button on a series' Links " +
+                    "tab that looks up related series (sequel, prequel, spin-off) " +
+                    "to suggest — you confirm each link, nothing is added " +
+                    "automatically. Off by default: when on, the series title you " +
+                    "analyze is sent to the public AniList API (anilist.co). No " +
+                    "account or data of yours is stored there.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp),

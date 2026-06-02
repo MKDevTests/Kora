@@ -32,6 +32,8 @@ class NavigationSettingsViewModel(
         private set
     var statsInBottomNav by mutableStateOf(false)
         private set
+    var aniListLinkSuggestionsEnabled by mutableStateOf(false)
+        private set
 
     suspend fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
@@ -40,6 +42,7 @@ class NavigationSettingsViewModel(
         startupScreen = settingsRepository.getStartupScreen().first()
         statsEnabled = settingsRepository.getStatsEnabled().first()
         statsInBottomNav = settingsRepository.getStatsInBottomNav().first()
+        aniListLinkSuggestionsEnabled = settingsRepository.getAniListLinkSuggestionsEnabled().first()
         mutableState.value = LoadState.Success(Unit)
     }
 
@@ -61,5 +64,10 @@ class NavigationSettingsViewModel(
     fun onStatsInBottomNavChange(enabled: Boolean) {
         statsInBottomNav = enabled
         screenModelScope.launch { settingsRepository.putStatsInBottomNav(enabled) }
+    }
+
+    fun onAniListLinkSuggestionsEnabledChange(enabled: Boolean) {
+        aniListLinkSuggestionsEnabled = enabled
+        screenModelScope.launch { settingsRepository.putAniListLinkSuggestionsEnabled(enabled) }
     }
 }
