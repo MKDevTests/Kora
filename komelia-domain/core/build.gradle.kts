@@ -101,6 +101,10 @@ kotlin {
             implementation(projects.komeliaInfra.imageDecoder.vips)
             implementation(projects.komeliaInfra.onnxruntime.jvm)
         }
+
+        androidUnitTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
 
