@@ -198,15 +198,33 @@ class SeriesLinksState(
         analysis = AniListAnalysis(loading = true)
         screenModelScope.launch {
             analysis = try {
-                val candidates = aniListClient.search(current.metadata.title)
+                val candidates = aniListClient.search(sourceSearchQuery(current.metadata.title))
                 if (candidates.isEmpty()) {
-                    AniListAnalysis(error = "No AniList match for “${current.metadata.title}”.")
+                    AniListAnalysis(error = "No AniList match for “${current.metadata.title}”. Search AniList manually below.")
                 } else {
                     buildAnalysis(candidates.first(), candidates)
                 }
             } catch (e: Exception) {
                 AniListAnalysis(error = e.message ?: "AniList request failed")
             }
+        }
+    }
+
+    /** Strip edition / sub-title suffixes so the source search hits the base work. */
+    private fun sourceSearchQuery(title: String): String {
+        val base = title.substringBefore(" - ").substringBefore(" (").substringBefore(":").trim()
+        return base.ifBlank { title }
+    }
+
+    /** Manual AniList source search — recourse when recognition is wrong or empty. */
+    fun searchSource(query: String) {
+        if (query.isBlank()) return
+        screenModelScope.launch {
+            val results = runCatching { aniListClient.search(query) }.getOrDefault(emptyList())
+            analysis = (analysis ?: AniListAnalysis()).copy(
+                sourceCandidates = results,
+                error = if (results.isEmpty()) "No AniList match for “$query”." else null,
+            )
         }
     }
 
@@ -224,13 +242,14 @@ class SeriesLinksState(
     }
 
     private suspend fun buildAnalysis(media: AniListMedia, candidates: List<AniListMedia>): AniListAnalysis {
-        val currentId = series.value?.id?.value
+        val current = series.value
         val full = aniListClient.relations(media.id) ?: media
-        val taken = excludedIds().toMutableSet().apply { currentId?.let { add(it) } }
+        val franchise = franchiseTokens(media, current)
+        val taken = excludedIds().toMutableSet().apply { current?.id?.value?.let { add(it) } }
         val rows = mutableListOf<AniListSuggestionRow>()
         var ignored = 0
         for (suggestion in full.linkSuggestions()) {
-            val match = matchInLibrary(suggestion.node, taken)
+            val match = matchInLibrary(suggestion.node, taken, franchise)
             if (match == null) {
                 ignored++
                 continue
@@ -251,6 +270,24 @@ class SeriesLinksState(
     }
 
     /**
+     * Tokens common to the whole franchise (the source series' titles in every
+     * language we know). Removed before scoring so matching keys off the
+     * distinctive sub-title ("Junior High", "Before the Fall") rather than the
+     * shared franchise name — which differs across languages anyway
+     * ("Shingeki no Kyojin" / "Attack on Titan" / "L'Attaque des Titans").
+     */
+    private fun franchiseTokens(media: AniListMedia, current: KomgaSeries?): Set<String> = buildSet {
+        addAll(tokenize(media.title.romaji ?: ""))
+        addAll(tokenize(media.title.english ?: ""))
+        addAll(tokenize(media.title.native ?: ""))
+        media.synonyms.forEach { addAll(tokenize(it)) }
+        current?.let {
+            addAll(tokenize(it.metadata.title))
+            it.metadata.alternateTitles.forEach { alt -> addAll(tokenize(alt.title)) }
+        }
+    }
+
+    /**
      * Best-effort resolve an AniList node to a series already in the library.
      * Searches Komga with every title variant the node carries (romaji / english
      * / native / synonyms) so a library titled in any language can match —
@@ -258,7 +295,11 @@ class SeriesLinksState(
      * Queries are stripped of Lucene-special characters (":", "!", "(", …) which
      * would otherwise break Komga's full-text search and silently return nothing.
      */
-    private suspend fun matchInLibrary(node: AniListMedia, excluded: Set<String>): KomgaSeries? {
+    private suspend fun matchInLibrary(
+        node: AniListMedia,
+        excluded: Set<String>,
+        franchise: Set<String>,
+    ): KomgaSeries? {
         val nodeTitles = (listOfNotNull(node.title.romaji, node.title.english, node.title.native) + node.synonyms)
             .map { it.trim() }
             .filter { it.isNotEmpty() }
@@ -274,7 +315,7 @@ class SeriesLinksState(
         for (query in queries) {
             for (candidate in search(query)) {
                 if (candidate.id.value in excluded) continue
-                val score = titleMatchScore(nodeTitles, candidate.metadata.title)
+                val score = titleMatchScore(nodeTitles, candidate.metadata.title, franchise)
                 if (score > bestScore) {
                     bestScore = score
                     best = candidate
@@ -290,19 +331,23 @@ class SeriesLinksState(
         title.replace(luceneSpecials, " ").replace(whitespace, " ").trim()
 
     /**
-     * Match strength of an AniList node against a library title: best, across all
-     * of the node's title variants, of the shared-token coverage of the shorter
-     * set. Coverage (shared / min) tolerates a short library name ("Boruto")
-     * against a long AniList title ("Boruto: Naruto Next Generations") while still
-     * rejecting unrelated series, and picking the best sibling within a franchise.
+     * Match strength of an AniList node against a library title, keyed on the
+     * DISTINCTIVE (non-franchise) tokens so the shared franchise name — which
+     * differs across languages — doesn't drive the score. A single shared token
+     * counts only when it IS the whole shorter title and is long enough to be
+     * distinctive: "Boruto" matches "Boruto: Naruto Next Generations", but
+     * "Dead Rock" does not latch onto "Rock Lee" via the common word "rock".
      */
-    private fun titleMatchScore(nodeTitles: List<String>, libraryTitle: String): Double {
-        val lib = tokenize(libraryTitle)
+    private fun titleMatchScore(nodeTitles: List<String>, libraryTitle: String, franchise: Set<String>): Double {
+        val lib = (tokenize(libraryTitle) - franchise).ifEmpty { tokenize(libraryTitle) }
         if (lib.isEmpty()) return 0.0
         return nodeTitles.maxOfOrNull { title ->
-            val nodeTokens = tokenize(title)
-            if (nodeTokens.isEmpty()) 0.0
-            else lib.intersect(nodeTokens).size.toDouble() / minOf(lib.size, nodeTokens.size)
+            val node = (tokenize(title) - franchise).ifEmpty { tokenize(title) }
+            val shared = lib.intersect(node)
+            if (node.isEmpty() || shared.isEmpty()) return@maxOfOrNull 0.0
+            val minSize = minOf(lib.size, node.size)
+            val distinctive = shared.size >= 2 || (minSize == 1 && shared.first().length >= 5)
+            if (distinctive) shared.size.toDouble() / minSize else 0.0
         } ?: 0.0
     }
 

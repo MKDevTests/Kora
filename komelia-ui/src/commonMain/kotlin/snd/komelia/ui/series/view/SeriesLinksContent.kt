@@ -285,67 +285,47 @@ private fun AniListAnalysisDialog(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                when {
-                    analysis.loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                if (analysis.loading) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
                         Text("Analyzing…")
                     }
+                } else {
+                    SourceSection(analysis, state)
 
-                    analysis.error != null -> Text(
-                        analysis.error,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-
-                    else -> {
-                        analysis.sourceMedia?.let { source ->
-                            Text(
-                                "Recognized: ${source.displayTitle ?: "?"}",
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                            if (analysis.sourceCandidates.size > 1) {
-                                val options = remember(analysis.sourceCandidates) {
-                                    analysis.sourceCandidates.map { LabeledEntry(it, it.displayTitle ?: "?") }
-                                }
-                                DropdownChoiceMenu(
-                                    selectedOption = options.firstOrNull { it.value.id == source.id },
-                                    options = options,
-                                    onOptionChange = { state.repickSource(it.value) },
-                                    label = { Text("Not this one?") },
-                                    inputFieldModifier = Modifier.fillMaxWidth(),
+                    if (analysis.error != null) {
+                        Text(analysis.error, color = MaterialTheme.colorScheme.error)
+                    } else if (analysis.rows.isEmpty()) {
+                        Text(
+                            "No related series from AniList are in your library yet. Pick a " +
+                                "different source above, or add links manually.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            itemsIndexed(analysis.rows) { index, row ->
+                                AniListRowItem(
+                                    row = row,
+                                    onCheckedChange = { state.toggleRow(index) },
+                                    onTypeChange = { state.setRowType(index, it) },
+                                    onCorrect = { correctingIndex = index },
                                 )
                             }
                         }
+                    }
 
-                        if (analysis.rows.isEmpty()) {
-                            Text(
-                                "No related series from AniList are in your library.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                itemsIndexed(analysis.rows) { index, row ->
-                                    AniListRowItem(
-                                        row = row,
-                                        onCheckedChange = { state.toggleRow(index) },
-                                        onTypeChange = { state.setRowType(index, it) },
-                                        onCorrect = { correctingIndex = index },
-                                    )
-                                }
-                            }
-                        }
-
-                        if (analysis.ignoredCount > 0) {
-                            Text(
-                                "${analysis.ignoredCount} related not shown (not in your library, or anime / novel).",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    if (analysis.ignoredCount > 0) {
+                        Text(
+                            "${analysis.ignoredCount} related not shown (not in your library, " +
+                                "anime, or a very different localized title).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -404,6 +384,45 @@ private fun AniListRowItem(
             onOptionChange = { onTypeChange(it.value) },
             inputFieldModifier = Modifier.width(132.dp),
         )
+    }
+}
+
+@Composable
+private fun SourceSection(
+    analysis: AniListAnalysis,
+    state: SeriesLinksState,
+) {
+    var manualQuery by remember { mutableStateOf("") }
+    LaunchedEffectQuery(manualQuery) { state.searchSource(manualQuery) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        analysis.sourceMedia?.let { source ->
+            Text(
+                "Recognized: ${source.displayTitle ?: "?"}",
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
+        OutlinedTextField(
+            value = manualQuery,
+            onValueChange = { manualQuery = it },
+            label = { Text("Wrong series? Search AniList") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (manualQuery.isNotBlank() && analysis.sourceCandidates.isNotEmpty()) {
+            Column {
+                analysis.sourceCandidates.take(6).forEach { candidate ->
+                    Text(
+                        text = candidate.displayTitle ?: "?",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { state.repickSource(candidate) }
+                            .padding(vertical = 6.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
     }
 }
 
