@@ -308,6 +308,9 @@ abstract class AppModule(
                 updateClient = updateClient,
                 settingsRepository = appRepositories.settingsRepository,
             ),
+            aniListClient = snd.komelia.anilist.AniListClient(
+                ktor = ktor.config { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } },
+            ),
             bookCompletionEvents = bookCompletionEvents,
 
             coilContext = androidContext,

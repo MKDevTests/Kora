@@ -9,6 +9,7 @@ import snd.komelia.AppRepositories
 import snd.komelia.AppWindowState
 import snd.komelia.KomgaAuthenticationState
 import snd.komelia.ManagedKomgaEvents
+import snd.komelia.anilist.AniListClient
 import snd.komelia.backup.BackupService
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.KomeliaImageDecoder
@@ -52,6 +53,7 @@ data class DependencyContainer(
     val komgaEvents: ManagedKomgaEvents,
     val appUpdater: AppUpdater?,
     val releaseNotesService: ReleaseNotesService,
+    val aniListClient: AniListClient,
     val bookCompletionEvents: BookCompletionEvents,
 
     val coilContext: PlatformContext,

@@ -57,6 +57,7 @@ class SeriesViewModel(
     referentialApi: KomgaReferentialApi,
     seriesLinksRepository: snd.komelia.links.SeriesLinksRepository,
     settingsRepository: CommonSettingsRepository,
+    aniListClient: snd.komelia.anilist.AniListClient,
     defaultTab: SeriesTab,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
 
@@ -97,6 +98,8 @@ class SeriesViewModel(
         notifications = notifications,
         seriesApi = seriesApi,
         linksRepository = seriesLinksRepository,
+        aniListClient = aniListClient,
+        settingsRepository = settingsRepository,
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
     )

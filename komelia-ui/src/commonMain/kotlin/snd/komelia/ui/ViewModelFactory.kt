@@ -207,6 +207,7 @@ class ViewModelFactory(
         settingsRepository = appRepositories.settingsRepository,
         referentialApi = komgaApi.referentialApi,
         seriesLinksRepository = appRepositories.seriesLinksRepository,
+        aniListClient = dependencies.aniListClient,
         defaultTab = defaultTab ?: SeriesTab.BOOKS,
     )
 
