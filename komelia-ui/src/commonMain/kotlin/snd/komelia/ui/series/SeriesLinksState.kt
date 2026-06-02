@@ -250,33 +250,60 @@ class SeriesLinksState(
         )
     }
 
-    /** Best-effort resolve an AniList node to a series already in the library. */
+    /**
+     * Best-effort resolve an AniList node to a series already in the library.
+     * Searches Komga with every title variant the node carries (romaji / english
+     * / native / synonyms) so a library titled in any language can match —
+     * AniList synonyms frequently include the localized (e.g. French) title.
+     * Queries are stripped of Lucene-special characters (":", "!", "(", …) which
+     * would otherwise break Komga's full-text search and silently return nothing.
+     */
     private suspend fun matchInLibrary(node: AniListMedia, excluded: Set<String>): KomgaSeries? {
-        val queries = listOfNotNull(node.title.romaji, node.title.english)
+        val nodeTitles = (listOfNotNull(node.title.romaji, node.title.english, node.title.native) + node.synonyms)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        val queries = nodeTitles.asSequence()
+            .map { cleanSearchQuery(it) }
             .filter { it.isNotBlank() }
             .distinct()
+            .take(8)
+            .toList()
+
+        var best: KomgaSeries? = null
+        var bestScore = 0.0
         for (query in queries) {
-            val hit = search(query)
-                .firstOrNull { it.id.value !in excluded && sharesSignificantToken(node, it.metadata.title) }
-            if (hit != null) return hit
+            for (candidate in search(query)) {
+                if (candidate.id.value in excluded) continue
+                val score = titleMatchScore(nodeTitles, candidate.metadata.title)
+                if (score > bestScore) {
+                    bestScore = score
+                    best = candidate
+                }
+            }
+            if (bestScore >= STRONG_MATCH_SCORE) break
         }
-        return null
+        return if (bestScore >= MIN_MATCH_SCORE) best else null
     }
 
+    /** Strip Lucene query syntax so a raw title is safe for Komga full-text search. */
+    private fun cleanSearchQuery(title: String): String =
+        title.replace(luceneSpecials, " ").replace(whitespace, " ").trim()
+
     /**
-     * Guard against 1-common-word false hits from Komga's relevance ranking:
-     * accept only when the shared tokens cover at least half of the shorter
-     * title's tokens.
+     * Match strength of an AniList node against a library title: best, across all
+     * of the node's title variants, of the shared-token coverage of the shorter
+     * set. Coverage (shared / min) tolerates a short library name ("Boruto")
+     * against a long AniList title ("Boruto: Naruto Next Generations") while still
+     * rejecting unrelated series, and picking the best sibling within a franchise.
      */
-    private fun sharesSignificantToken(node: AniListMedia, libraryTitle: String): Boolean {
-        val libraryTokens = tokenize(libraryTitle)
-        val nodeTokens = (listOfNotNull(node.title.romaji, node.title.english, node.title.native) + node.synonyms)
-            .flatMap { tokenize(it) }
-            .toSet()
-        if (libraryTokens.isEmpty() || nodeTokens.isEmpty()) return false
-        val shared = libraryTokens.intersect(nodeTokens).size
-        val minSize = minOf(libraryTokens.size, nodeTokens.size)
-        return shared.toDouble() / minSize >= 0.5
+    private fun titleMatchScore(nodeTitles: List<String>, libraryTitle: String): Double {
+        val lib = tokenize(libraryTitle)
+        if (lib.isEmpty()) return 0.0
+        return nodeTitles.maxOfOrNull { title ->
+            val nodeTokens = tokenize(title)
+            if (nodeTokens.isEmpty()) 0.0
+            else lib.intersect(nodeTokens).size.toDouble() / minOf(lib.size, nodeTokens.size)
+        } ?: 0.0
     }
 
     fun toggleRow(index: Int) {
@@ -339,3 +366,13 @@ data class AniListSuggestionRow(
     val type: SeriesRelationType,
     val checked: Boolean = true,
 )
+
+/** Accept a library match at/above this coverage score; below it, treat as no match. */
+private const val MIN_MATCH_SCORE = 0.5
+
+/** Stop searching further title variants once a match this strong is found. */
+private const val STRONG_MATCH_SCORE = 0.85
+
+/** Lucene query-syntax characters that must not reach Komga's full-text search. */
+private val luceneSpecials = Regex("""[":!+\-*?~^()\[\]{}\\/&|]""")
+private val whitespace = Regex("""\s+""")

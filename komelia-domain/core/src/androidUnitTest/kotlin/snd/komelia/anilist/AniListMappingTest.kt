@@ -27,12 +27,14 @@ class AniListMappingTest {
     }
 
     @Test
-    fun onlyOwnableMangaFormatsAreLinkable() {
+    fun keepsMangaAndNovelsDropsAnime() {
         assertTrue(isLinkableMangaNode(media(type = "MANGA", format = "MANGA")))
         assertTrue(isLinkableMangaNode(media(type = "MANGA", format = "ONE_SHOT")))
-        // Light novels come back under type=MANGA but format=NOVEL — exclude them.
-        assertFalse(isLinkableMangaNode(media(type = "MANGA", format = "NOVEL")))
+        // Light novels come back under type=MANGA format=NOVEL — keep them; the
+        // user often owns the manga adaptation under the same title.
+        assertTrue(isLinkableMangaNode(media(type = "MANGA", format = "NOVEL")))
         assertFalse(isLinkableMangaNode(media(type = "ANIME", format = "TV")))
+        assertFalse(isLinkableMangaNode(media(type = "ANIME", format = "MOVIE")))
         assertFalse(isLinkableMangaNode(media(type = null, format = null)))
     }
 
@@ -43,7 +45,7 @@ class AniListMappingTest {
             relations = AniListRelations(
                 edges = listOf(
                     edge("SEQUEL", media(id = 2, type = "MANGA", format = "MANGA")),
-                    edge("SIDE_STORY", media(id = 3, type = "MANGA", format = "NOVEL")),   // dropped: novel
+                    edge("SIDE_STORY", media(id = 3, type = "MANGA", format = "NOVEL")),   // kept (novel, manga adaptation may be owned)
                     edge("ADAPTATION", media(id = 4, type = "ANIME", format = "TV")),      // dropped: anime
                     edge("OTHER", media(id = 5, type = "MANGA", format = "MANGA")),        // dropped: noisy type
                     edge("SPIN_OFF", media(id = 6, type = "MANGA", format = "ONE_SHOT")),
@@ -54,11 +56,13 @@ class AniListMappingTest {
 
         val suggestions = source.linkSuggestions()
 
-        assertEquals(2, suggestions.size)
+        assertEquals(3, suggestions.size)
         assertEquals(2, suggestions[0].node.id)
         assertEquals(SeriesRelationType.SEQUEL, suggestions[0].suggestedType)
-        assertEquals(6, suggestions[1].node.id)
+        assertEquals(3, suggestions[1].node.id)
         assertEquals(SeriesRelationType.SPIN_OFF, suggestions[1].suggestedType)
+        assertEquals(6, suggestions[2].node.id)
+        assertEquals(SeriesRelationType.SPIN_OFF, suggestions[2].suggestedType)
     }
 
     @Test

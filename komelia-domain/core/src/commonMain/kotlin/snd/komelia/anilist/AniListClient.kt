@@ -218,14 +218,14 @@ fun toSeriesRelationType(aniListRelationType: String?): SeriesRelationType? =
     }
 
 /**
- * Keep only manga the user could plausibly own: type MANGA and a print format
- * (MANGA / ONE_SHOT). Drops anime adaptations and light NOVEL entries, which
- * AniList also returns under type=MANGA (e.g. "NARUTO Hiden Series").
+ * Keep manga-side entries (type MANGA — this also covers manhwa/manhua and,
+ * deliberately, light NOVEL entries: AniList classifies novels as type=MANGA
+ * format=NOVEL, and the user often owns the manga adaptation under the same
+ * title). Only ANIME nodes are dropped. Ownership is the real filter — a kept
+ * node becomes a suggestion only if it resolves to a series already in the
+ * user's library.
  */
-fun isLinkableMangaNode(node: AniListMedia): Boolean =
-    node.type == "MANGA" && node.format in LINKABLE_FORMATS
-
-private val LINKABLE_FORMATS = setOf("MANGA", "ONE_SHOT")
+fun isLinkableMangaNode(node: AniListMedia): Boolean = node.type == "MANGA"
 
 /**
  * Extract the linkable relations from a resolved AniList media: filter to
