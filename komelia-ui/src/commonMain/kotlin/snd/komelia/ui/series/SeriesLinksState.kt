@@ -244,7 +244,7 @@ class SeriesLinksState(
 
     private suspend fun buildAnalysis(media: AniListMedia, candidates: List<AniListMedia>): AniListAnalysis {
         val current = series.value
-        val (root, suggestions) = collectFranchise(media)
+        val (root, suggestions, edges) = collectFranchise(media)
         val franchise = franchiseTokens(root, current)
         val taken = excludedIds().toMutableSet().apply { current?.id?.value?.let { add(it) } }
         val rows = mutableListOf<AniListSuggestionRow>()
@@ -257,6 +257,7 @@ class SeriesLinksState(
             }
             taken += match.id.value
             rows += AniListSuggestionRow(
+                anilistId = suggestion.node.id,
                 anilistTitle = suggestion.node.displayTitle ?: "?",
                 series = match,
                 type = suggestion.suggestedType,
@@ -267,6 +268,7 @@ class SeriesLinksState(
             sourceMedia = root,
             rows = rows,
             ignoredCount = ignored,
+            interEdges = edges,
         )
     }
 
@@ -278,7 +280,9 @@ class SeriesLinksState(
      * catches sequels-of-sequels (Gunnm → Last Order → Mars Chronicle). Bounded
      * by a visited set and a node cap.
      */
-    private suspend fun collectFranchise(media: AniListMedia): Pair<AniListMedia, List<AniListLinkSuggestion>> {
+    private suspend fun collectFranchise(
+        media: AniListMedia,
+    ): Triple<AniListMedia, List<AniListLinkSuggestion>, List<FranchiseEdge>> {
         var root = aniListClient.relations(media.id) ?: media
         val parent = root.relations?.edges
             ?.firstOrNull { it.relationType == "PARENT" && it.node?.type == "MANGA" }
@@ -286,6 +290,7 @@ class SeriesLinksState(
         if (parent != null) root = aniListClient.relations(parent.id) ?: parent
 
         val collected = LinkedHashMap<Int, AniListLinkSuggestion>()
+        val edges = mutableListOf<FranchiseEdge>()
         val expanded = mutableSetOf(root.id)
         var frontier = listOf(root)
         repeat(2) {
@@ -294,6 +299,7 @@ class SeriesLinksState(
                 val full = if (node.id == root.id) root else (aniListClient.relations(node.id) ?: node)
                 for (suggestion in full.linkSuggestions()) {
                     val id = suggestion.node.id
+                    edges += FranchiseEdge(node.id, id, suggestion.suggestedType)
                     if (id == root.id) continue
                     collected.getOrPut(id) { suggestion }
                     if (id !in expanded && expanded.size < MAX_FRANCHISE_NODES) {
@@ -304,7 +310,7 @@ class SeriesLinksState(
             }
             frontier = next
         }
-        return root to collected.values.toList()
+        return Triple(root, collected.values.toList(), edges)
     }
 
     /**
@@ -419,12 +425,27 @@ class SeriesLinksState(
 
     fun confirmAnalysis() {
         val currentId = series.value?.id ?: return
-        val checked = analysis?.rows?.filter { it.checked }.orEmpty()
+        val current = analysis ?: return
+        val checked = current.rows.filter { it.checked }
+        val edges = current.interEdges
         analysis = null
         if (checked.isEmpty()) return
         screenModelScope.launch {
             notifications.runCatchingToNotifications {
+                // Star: link the analyzed series to each chosen suggestion.
                 checked.forEach { linksRepository.linkRelation(currentId, it.series.id, it.type) }
+                // Chain: also persist AniList-known relations BETWEEN the chosen
+                // suggestions (e.g. Last Order ↔ Mars Chronicle) so one analysis
+                // builds the whole franchise order, not just a star. Never touches
+                // a series the user didn't check.
+                val byId = checked.associateBy { it.anilistId }
+                edges.forEach { edge ->
+                    val from = byId[edge.fromId]?.series?.id
+                    val to = byId[edge.toId]?.series?.id
+                    if (from != null && to != null && from != to) {
+                        linksRepository.linkRelation(from, to, edge.type)
+                    }
+                }
             }
             SeriesLinksChanges.notifyChanged()
         }
@@ -443,15 +464,21 @@ data class AniListAnalysis(
     val rows: List<AniListSuggestionRow> = emptyList(),
     val ignoredCount: Int = 0,
     val error: String? = null,
+    /** AniList-known relations among the franchise nodes, for the chain links. */
+    val interEdges: List<FranchiseEdge> = emptyList(),
 )
 
 /** One proposed link: a library series + the auto-detected (editable) type. */
 data class AniListSuggestionRow(
+    val anilistId: Int,
     val anilistTitle: String,
     val series: KomgaSeries,
     val type: SeriesRelationType,
     val checked: Boolean = true,
 )
+
+/** An AniList-known relation between two franchise members (by AniList id). */
+data class FranchiseEdge(val fromId: Int, val toId: Int, val type: SeriesRelationType)
 
 /** Accept a library match at/above this coverage score; below it, treat as no match. */
 private const val MIN_MATCH_SCORE = 0.5
