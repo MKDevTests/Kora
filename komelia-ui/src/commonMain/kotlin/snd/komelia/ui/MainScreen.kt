@@ -178,16 +178,27 @@ class MainScreen(
             // It posts an intent + pops itself; we handle the push here on the inner nav.
             LaunchedEffect(Unit) {
                 ReaderNavigationIntent.pending.collect { intent ->
-                    when (intent) {
-                        is ReaderExitDestination.Series -> {
-                            ReaderNavigationIntent.pending.value = null
-                            navigator.push(SeriesScreen(intent.id))
+                    // Build the destination, then avoid creating a DUPLICATE
+                    // navigator key. The reader lives on the parent navigator and
+                    // pops itself; we navigate on the inner nav here. When the user
+                    // opened the reader FROM this series (or via series -> book), a
+                    // screen with the same key is already on the inner stack, and
+                    // pushing it again throws "Key <id>:screen was used multiple
+                    // times" (SaveableStateHolder, surfaced by the AnimatedContent
+                    // cross-fade). popUntil reuses the existing instance; we only
+                    // push when the destination is genuinely not on the stack.
+                    val destination = when (intent) {
+                        is ReaderExitDestination.Series -> SeriesScreen(intent.id)
+                        is ReaderExitDestination.Library -> LibraryScreen(intent.id)
+                        null -> null
+                    }
+                    if (destination != null) {
+                        ReaderNavigationIntent.pending.value = null
+                        if (navigator.items.any { it.key == destination.key }) {
+                            navigator.popUntil { it.key == destination.key }
+                        } else {
+                            navigator.push(destination)
                         }
-                        is ReaderExitDestination.Library -> {
-                            ReaderNavigationIntent.pending.value = null
-                            navigator.push(LibraryScreen(intent.id))
-                        }
-                        null -> {}
                     }
                 }
             }
