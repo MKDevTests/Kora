@@ -131,7 +131,7 @@ class LibraryGenreTabState(
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 
-    /** Series in a genre, for the cover picker. */
+    /** Series in a genre, shown by default in the cover picker. */
     suspend fun seriesForGenre(genreTag: String): List<KomgaSeries> {
         val lib = library.value ?: return emptyList()
         return runCatching {
@@ -143,6 +143,20 @@ class LibraryGenreTabState(
                     }.toSeriesCondition()
                 ),
                 KomgaPageRequest(pageIndex = 0, size = 60, sort = KomgaSort.KomgaSeriesSort.byTitleAsc())
+            ).content
+        }.getOrDefault(emptyList())
+    }
+
+    /** Full-text search of series in this library, for the cover picker. */
+    suspend fun searchSeriesInLibrary(query: String): List<KomgaSeries> {
+        val lib = library.value ?: return emptyList()
+        return runCatching {
+            seriesApi.getSeriesList(
+                KomgaSeriesSearch(
+                    condition = allOfSeries { library { isEqualTo(lib.id) } }.toSeriesCondition(),
+                    fullTextSearch = query,
+                ),
+                KomgaPageRequest(pageIndex = 0, size = 60, sort = KomgaSort.Unsorted)
             ).content
         }.getOrDefault(emptyList())
     }

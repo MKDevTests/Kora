@@ -40,6 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
 import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalTransparentNavBarPadding
@@ -170,16 +171,29 @@ private fun GenreCard(
     }
 }
 
-/** Pick a cover for a genre from the series already in that genre. */
+/**
+ * Pick a cover for a genre. Shows the genre's own series by default, and a live
+ * full-text search of the whole library by name (the user names their files).
+ */
 @Composable
 fun GenreCoverPickerDialog(
     genreLabel: String,
-    loadSeries: suspend () -> List<KomgaSeries>,
+    loadGenreSeries: suspend () -> List<KomgaSeries>,
+    searchSeries: suspend (String) -> List<KomgaSeries>,
     onPick: (KomgaSeriesId) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var query by remember { mutableStateOf("") }
     var series by remember { mutableStateOf<List<KomgaSeries>?>(null) }
-    LaunchedEffect(Unit) { series = loadSeries() }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            series = loadGenreSeries()
+        } else {
+            delay(350)
+            series = searchSeries(query.trim())
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -191,19 +205,37 @@ fun GenreCoverPickerDialog(
                     "Cover for « $genreLabel »",
                     style = MaterialTheme.typography.titleMedium,
                 )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search a series by name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Spacer(Modifier.height(12.dp))
                 val list = series
-                if (list == null) {
-                    Box(
+                when {
+                    list == null -> Box(
                         Modifier.fillMaxWidth().height(200.dp),
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator() }
-                } else {
-                    LazyVerticalGrid(
+
+                    list.isEmpty() -> Box(
+                        Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            if (query.isBlank()) "No series in this genre." else "No match.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    else -> LazyVerticalGrid(
                         columns = GridCells.Adaptive(90.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.heightIn(max = 520.dp),
+                        modifier = Modifier.heightIn(max = 480.dp),
                     ) {
                         items(list, key = { it.id.value }) { s ->
                             Box(

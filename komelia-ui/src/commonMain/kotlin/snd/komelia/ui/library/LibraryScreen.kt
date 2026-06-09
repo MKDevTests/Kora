@@ -598,7 +598,8 @@ class LibraryScreen(
         coverPickFor?.let { tile ->
             GenreCoverPickerDialog(
                 genreLabel = tile.label,
-                loadSeries = { genreTabState.seriesForGenre(tile.tag) },
+                loadGenreSeries = { genreTabState.seriesForGenre(tile.tag) },
+                searchSeries = { genreTabState.searchSeriesInLibrary(it) },
                 onPick = { seriesId ->
                     genreTabState.setCover(tile.slug, seriesId)
                     coverPickFor = null
