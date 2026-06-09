@@ -134,7 +134,7 @@ class LibraryGenreTabState(
                 }.awaitAll()
             }
 
-            genres = tiles.filter { it.count > 0 }.sortedByDescending { it.count }
+            genres = tiles.filter { it.count > 0 }.sortedBy { it.label.lowercase() }
             overriddenSlugs = genres.map { it.slug }
                 .filter { coverOverrides.containsKey(overrideKey(it)) || labelOverrides.containsKey(overrideKey(it)) }
                 .toSet()
@@ -216,6 +216,7 @@ class LibraryGenreTabState(
             settingsRepository.putGenreLabelOverrides(map)
             val newLabel = if (trimmed.isEmpty()) GenreLabels.label(slug) else trimmed
             genres = genres.map { if (it.slug == slug) it.copy(label = newLabel) else it }
+                .sortedBy { it.label.lowercase() }
             refreshOverriddenSlugs()
             cacheCurrent()
         }
