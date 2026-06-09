@@ -10,10 +10,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.LoadState.Loading
 import snd.komelia.ui.LoadState.Success
@@ -22,6 +24,7 @@ import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.search.allOfSeries
+import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.series.KomgaSeriesSearch
 
@@ -50,11 +53,14 @@ class LibraryGenreTabState(
     private val seriesApi: KomgaSeriesApi,
     private val referentialApi: KomgaReferentialApi,
     private val appNotifications: AppNotifications,
+    private val settingsRepository: CommonSettingsRepository,
     private val library: StateFlow<KomgaLibrary?>,
     val cardWidth: StateFlow<Dp>,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
 
     var genres: List<GenreTile> by mutableStateOf(emptyList())
+        private set
+    var overriddenSlugs: Set<String> by mutableStateOf(emptySet())
         private set
 
     fun initialize() {
@@ -80,12 +86,17 @@ class LibraryGenreTabState(
         appNotifications.runCatchingToNotifications {
             if (genres.isEmpty()) mutableState.value = Loading
 
+            val coverOverrides = settingsRepository.getGenreCoverOverrides().first()
+            val labelOverrides = settingsRepository.getGenreLabelOverrides().first()
+
             val genreTags = referentialApi.getSeriesTags(libraryId = lib.id)
                 .filter { GenreLabels.isGenreTag(it) }
 
             val tiles = coroutineScope {
                 genreTags.map { genreTag ->
                     async {
+                        val slug = GenreLabels.slugOf(genreTag)
+                        val key = overrideKey(slug)
                         val page = seriesApi.getSeriesList(
                             KomgaSeriesSearch(
                                 condition = allOfSeries {
@@ -101,20 +112,93 @@ class LibraryGenreTabState(
                         )
                         GenreTile(
                             tag = genreTag,
-                            slug = GenreLabels.slugOf(genreTag),
-                            label = GenreLabels.label(GenreLabels.slugOf(genreTag)),
+                            slug = slug,
+                            label = labelOverrides[key] ?: GenreLabels.label(slug),
                             count = page.totalElements,
-                            coverSeriesId = page.content.firstOrNull()?.id,
+                            coverSeriesId = coverOverrides[key]?.let { KomgaSeriesId(it) }
+                                ?: page.content.firstOrNull()?.id,
                         )
                     }
                 }.awaitAll()
             }
 
             genres = tiles.filter { it.count > 0 }.sortedByDescending { it.count }
+            overriddenSlugs = genres.map { it.slug }
+                .filter { coverOverrides.containsKey(overrideKey(it)) || labelOverrides.containsKey(overrideKey(it)) }
+                .toSet()
             GenreCatalogCache.put(lib.id.value, genres)
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
+
+    /** Series in a genre, for the cover picker. */
+    suspend fun seriesForGenre(genreTag: String): List<KomgaSeries> {
+        val lib = library.value ?: return emptyList()
+        return runCatching {
+            seriesApi.getSeriesList(
+                KomgaSeriesSearch(
+                    condition = allOfSeries {
+                        library { isEqualTo(lib.id) }
+                        tag { isEqualTo(genreTag) }
+                    }.toSeriesCondition()
+                ),
+                KomgaPageRequest(pageIndex = 0, size = 60, sort = KomgaSort.KomgaSeriesSort.byTitleAsc())
+            ).content
+        }.getOrDefault(emptyList())
+    }
+
+    fun setCover(slug: String, seriesId: KomgaSeriesId) {
+        screenModelScope.launch {
+            val map = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
+            map[overrideKey(slug)] = seriesId.value
+            settingsRepository.putGenreCoverOverrides(map)
+            genres = genres.map { if (it.slug == slug) it.copy(coverSeriesId = seriesId) else it }
+            refreshOverriddenSlugs()
+            cacheCurrent()
+        }
+    }
+
+    fun setLabel(slug: String, label: String) {
+        screenModelScope.launch {
+            val key = overrideKey(slug)
+            val map = settingsRepository.getGenreLabelOverrides().first().toMutableMap()
+            val trimmed = label.trim()
+            if (trimmed.isEmpty()) map.remove(key) else map[key] = trimmed
+            settingsRepository.putGenreLabelOverrides(map)
+            val newLabel = if (trimmed.isEmpty()) GenreLabels.label(slug) else trimmed
+            genres = genres.map { if (it.slug == slug) it.copy(label = newLabel) else it }
+            refreshOverriddenSlugs()
+            cacheCurrent()
+        }
+    }
+
+    fun resetOverride(slug: String) {
+        screenModelScope.launch {
+            val key = overrideKey(slug)
+            val coverMap = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
+            val labelMap = settingsRepository.getGenreLabelOverrides().first().toMutableMap()
+            coverMap.remove(key)
+            labelMap.remove(key)
+            settingsRepository.putGenreCoverOverrides(coverMap)
+            settingsRepository.putGenreLabelOverrides(labelMap)
+            loadGenres()
+        }
+    }
+
+    private suspend fun refreshOverriddenSlugs() {
+        val coverMap = settingsRepository.getGenreCoverOverrides().first()
+        val labelMap = settingsRepository.getGenreLabelOverrides().first()
+        overriddenSlugs = genres.map { it.slug }
+            .filter { coverMap.containsKey(overrideKey(it)) || labelMap.containsKey(overrideKey(it)) }
+            .toSet()
+    }
+
+    private fun cacheCurrent() {
+        library.value?.id?.value?.let { GenreCatalogCache.put(it, genres) }
+    }
+
+    private fun overrideKey(slug: String): String =
+        "${library.value?.id?.value ?: "all"}:$slug"
 }
 
 data class GenreTile(

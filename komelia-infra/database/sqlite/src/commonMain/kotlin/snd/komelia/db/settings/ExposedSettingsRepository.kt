@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import snd.komelia.db.AppSettings
@@ -78,6 +79,12 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                     ListSerializer(String.serializer()), settings.alternateServerUrls
                 )
                 it[experimentalGenreTab] = settings.experimentalGenreTab
+                it[genreCoverOverrides] = Json.encodeToString(
+                    MapSerializer(String.serializer(), String.serializer()), settings.genreCoverOverrides
+                )
+                it[genreLabelOverrides] = Json.encodeToString(
+                    MapSerializer(String.serializer(), String.serializer()), settings.genreLabelOverrides
+                )
             }
         }
     }
@@ -138,6 +145,18 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 Json.decodeFromString(ListSerializer(String.serializer()), get(AppSettingsTable.alternateServerUrls))
             }.getOrDefault(emptyList()),
             experimentalGenreTab = get(AppSettingsTable.experimentalGenreTab),
+            genreCoverOverrides = runCatching {
+                Json.decodeFromString(
+                    MapSerializer(String.serializer(), String.serializer()),
+                    get(AppSettingsTable.genreCoverOverrides)
+                )
+            }.getOrDefault(emptyMap()),
+            genreLabelOverrides = runCatching {
+                Json.decodeFromString(
+                    MapSerializer(String.serializer(), String.serializer()),
+                    get(AppSettingsTable.genreLabelOverrides)
+                )
+            }.getOrDefault(emptyMap()),
         )
     }
 }

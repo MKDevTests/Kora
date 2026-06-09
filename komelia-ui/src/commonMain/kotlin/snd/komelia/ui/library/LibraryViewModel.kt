@@ -121,6 +121,7 @@ class LibraryViewModel(
         seriesApi = seriesApi,
         referentialApi = referentialApi,
         appNotifications = appNotifications,
+        settingsRepository = settingsRepository,
         library = library,
         cardWidth = cardWidth,
     )

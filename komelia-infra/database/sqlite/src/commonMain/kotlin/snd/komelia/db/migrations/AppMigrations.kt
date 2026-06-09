@@ -83,6 +83,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V71__language_on_covers.sql",
         "V72__server_alternate_urls.sql",
         "V73__experimental_genre_tab.sql",
+        "V74__genre_overrides.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

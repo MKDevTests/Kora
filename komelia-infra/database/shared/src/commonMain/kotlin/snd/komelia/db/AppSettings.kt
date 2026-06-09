@@ -160,4 +160,16 @@ data class AppSettings(
      * are fetched live by tag.
      */
     val experimentalGenreTab: Boolean = false,
+
+    /**
+     * Per-(library, genre) cover override for the Genre tab: key
+     * "<libraryId|all>:<genreSlug>" → chosen series id. JSON map column.
+     */
+    val genreCoverOverrides: Map<String, String> = emptyMap(),
+
+    /**
+     * Per-(library, genre) display-name override for the Genre tab: key
+     * "<libraryId|all>:<genreSlug>" → custom label. JSON map column.
+     */
+    val genreLabelOverrides: Map<String, String> = emptyMap(),
 )

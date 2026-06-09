@@ -41,6 +41,20 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(experimentalGenreTab = enabled) }
     }
 
+    override fun getGenreCoverOverrides(): Flow<Map<String, String>> =
+        wrapper.state.map { it.genreCoverOverrides }.distinctUntilChanged()
+
+    override suspend fun putGenreCoverOverrides(overrides: Map<String, String>) {
+        wrapper.transform { it.copy(genreCoverOverrides = overrides) }
+    }
+
+    override fun getGenreLabelOverrides(): Flow<Map<String, String>> =
+        wrapper.state.map { it.genreLabelOverrides }.distinctUntilChanged()
+
+    override suspend fun putGenreLabelOverrides(overrides: Map<String, String>) {
+        wrapper.transform { it.copy(genreLabelOverrides = overrides) }
+    }
+
     override fun getCardWidth(): Flow<Int> {
         return wrapper.state.map { it.cardWidth }.distinctUntilChanged()
     }

@@ -26,6 +26,12 @@ interface CommonSettingsRepository {
     fun getExperimentalGenreTab(): Flow<Boolean>
     suspend fun putExperimentalGenreTab(enabled: Boolean)
 
+    /** Genre tab per-(library, genre) cover + display-name overrides. */
+    fun getGenreCoverOverrides(): Flow<Map<String, String>>
+    suspend fun putGenreCoverOverrides(overrides: Map<String, String>)
+    fun getGenreLabelOverrides(): Flow<Map<String, String>>
+    suspend fun putGenreLabelOverrides(overrides: Map<String, String>)
+
     fun getCardWidth(): Flow<Int>
     suspend fun putCardWidth(cardWidth: Int)
 

@@ -566,6 +566,9 @@ class LibraryScreen(
         val navigator = LocalNavigator.currentOrThrow
         LaunchedEffect(libraryId) { genreTabState.initialize() }
 
+        var coverPickFor by remember { mutableStateOf<GenreTile?>(null) }
+        var renameFor by remember { mutableStateOf<GenreTile?>(null) }
+
         when (val state = genreTabState.state.collectAsState().value) {
             is Error -> ErrorContent(
                 message = state.exception.message ?: "Unknown Error",
@@ -579,13 +582,39 @@ class LibraryScreen(
                     GenreGridContent(
                         genres = genreTabState.genres,
                         minSize = genreTabState.cardWidth.collectAsState().value,
+                        overriddenSlugs = genreTabState.overriddenSlugs,
                         onGenreClick = { tile ->
                             navigator.push(GenreSeriesScreen(libraryId, tile.tag, tile.label))
                         },
+                        onChooseCover = { coverPickFor = it },
+                        onRename = { renameFor = it },
+                        onResetOverride = { genreTabState.resetOverride(it.slug) },
                         beforeContent = beforeContent,
                     )
                 }
             }
+        }
+
+        coverPickFor?.let { tile ->
+            GenreCoverPickerDialog(
+                genreLabel = tile.label,
+                loadSeries = { genreTabState.seriesForGenre(tile.tag) },
+                onPick = { seriesId ->
+                    genreTabState.setCover(tile.slug, seriesId)
+                    coverPickFor = null
+                },
+                onDismiss = { coverPickFor = null },
+            )
+        }
+        renameFor?.let { tile ->
+            GenreRenameDialog(
+                current = tile.label,
+                onConfirm = { newLabel ->
+                    genreTabState.setLabel(tile.slug, newLabel)
+                    renameFor = null
+                },
+                onDismiss = { renameFor = null },
+            )
         }
     }
 
