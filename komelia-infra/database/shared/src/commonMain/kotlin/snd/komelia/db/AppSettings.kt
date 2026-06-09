@@ -68,6 +68,12 @@ data class AppSettings(
      */
     val shareLinksViaKomga: Boolean = false,
 
+    /** Optional FR/EN language pill on series covers (Home / Library). */
+    val showLanguageOnCovers: Boolean = false,
+    val languageBadgeScale: Float = 1.0f,
+    /** false = top-left (default), true = bottom-left (just above the title). */
+    val languageBadgeAtBottom: Boolean = false,
+
     /**
      * When true the big page title at the top of Home / Library screens
      * becomes a dropdown that lists Home + every library for one-tap

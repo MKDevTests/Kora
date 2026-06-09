@@ -126,6 +126,14 @@ interface CommonSettingsRepository {
     fun getShareLinksViaKomga(): Flow<Boolean>
     suspend fun putShareLinksViaKomga(enabled: Boolean)
 
+    /** Optional FR/EN language pill on series covers, with size + position. */
+    fun getShowLanguageOnCovers(): Flow<Boolean>
+    suspend fun putShowLanguageOnCovers(enabled: Boolean)
+    fun getLanguageBadgeScale(): Flow<Float>
+    suspend fun putLanguageBadgeScale(scale: Float)
+    fun getLanguageBadgeAtBottom(): Flow<Boolean>
+    suspend fun putLanguageBadgeAtBottom(atBottom: Boolean)
+
     /**
      * Whether the big page title at the top of Home/Library screens is a
      * dropdown library switcher. When false the title is plain text and

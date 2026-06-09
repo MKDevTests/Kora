@@ -63,6 +63,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
                 it[aniListLinkSuggestionsEnabled] = settings.aniListLinkSuggestionsEnabled
                 it[shareLinksViaKomga] = settings.shareLinksViaKomga
+                it[showLanguageOnCovers] = settings.showLanguageOnCovers
+                it[languageBadgeScale] = settings.languageBadgeScale
+                it[languageBadgeAtBottom] = settings.languageBadgeAtBottom
                 it[libraryDropdownInTitle] = settings.libraryDropdownInTitle
                 it[startupScreen] = settings.startupScreen.name
                 it[statsEnabled] = settings.statsEnabled
@@ -114,6 +117,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
             aniListLinkSuggestionsEnabled = get(AppSettingsTable.aniListLinkSuggestionsEnabled),
             shareLinksViaKomga = get(AppSettingsTable.shareLinksViaKomga),
+            showLanguageOnCovers = get(AppSettingsTable.showLanguageOnCovers),
+            languageBadgeScale = get(AppSettingsTable.languageBadgeScale),
+            languageBadgeAtBottom = get(AppSettingsTable.languageBadgeAtBottom),
             libraryDropdownInTitle = get(AppSettingsTable.libraryDropdownInTitle),
             startupScreen = runCatching {
                 snd.komelia.settings.model.StartupScreen.valueOf(get(AppSettingsTable.startupScreen))

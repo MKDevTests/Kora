@@ -15,3 +15,20 @@ fun String.removeParentheses(): String {
         .trim()
     return cleaned.ifBlank { trim() }
 }
+
+/**
+ * Normalize a Komga `metadata.language` value to a short uppercase badge label
+ * ("FR" / "EN"), or null when unknown/blank. Tolerates the many forms Komga
+ * libraries use — ISO codes ("fr", "fra", "fre", "fr-FR"), and full names in
+ * English or French ("French", "Français", "English", "Anglais").
+ */
+fun languageBadgeLabel(language: String?): String? {
+    val value = language?.trim()?.lowercase() ?: return null
+    if (value.isEmpty()) return null
+    return when {
+        value.startsWith("fr") -> "FR"            // fr, fra, fre, fr-FR, french, français, francais
+        value.startsWith("en") -> "EN"            // en, eng, en-US, english
+        value == "anglais" -> "EN"
+        else -> null
+    }
+}

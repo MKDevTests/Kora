@@ -274,6 +274,27 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(shareLinksViaKomga = enabled) }
     }
 
+    override fun getShowLanguageOnCovers(): Flow<Boolean> =
+        wrapper.state.map { it.showLanguageOnCovers }.distinctUntilChanged()
+
+    override suspend fun putShowLanguageOnCovers(enabled: Boolean) {
+        wrapper.transform { it.copy(showLanguageOnCovers = enabled) }
+    }
+
+    override fun getLanguageBadgeScale(): Flow<Float> =
+        wrapper.state.map { it.languageBadgeScale }.distinctUntilChanged()
+
+    override suspend fun putLanguageBadgeScale(scale: Float) {
+        wrapper.transform { it.copy(languageBadgeScale = scale) }
+    }
+
+    override fun getLanguageBadgeAtBottom(): Flow<Boolean> =
+        wrapper.state.map { it.languageBadgeAtBottom }.distinctUntilChanged()
+
+    override suspend fun putLanguageBadgeAtBottom(atBottom: Boolean) {
+        wrapper.transform { it.copy(languageBadgeAtBottom = atBottom) }
+    }
+
     override fun getLibraryDropdownInTitle(): Flow<Boolean> =
         wrapper.state.map { it.libraryDropdownInTitle }.distinctUntilChanged()
 
