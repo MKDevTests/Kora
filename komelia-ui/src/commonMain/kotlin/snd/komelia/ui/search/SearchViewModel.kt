@@ -113,7 +113,15 @@ class SearchViewModel(
         private set
 
     suspend fun initialize(initialQuery: String?) {
-        if (state.value != LoadState.Uninitialized && initialQuery == query) return
+        // Preserve the in-memory results (and the current tab) when the user
+        // returns to the search tab after opening a result. The tab opens with
+        // initialQuery == null, so the old `initialQuery == query` guard failed
+        // once anything had been typed (null != "naruto") and re-ran the whole
+        // search on every back-navigation. Treat a null/blank seed as "no new
+        // query requested" and skip the reload when already initialized. A
+        // genuinely new seed (AppBar search → replace(SearchScreen(it))) is
+        // non-blank and still falls through to load.
+        if (state.value != LoadState.Uninitialized && (initialQuery.isNullOrBlank() || initialQuery == query)) return
         mutableState.value = LoadState.Loading
         fuzzyEnabled = settingsRepository.getSearchFuzzyEnabled().first()
         initialQuery?.let { query = it }
