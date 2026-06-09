@@ -150,4 +150,14 @@ data class AppSettings(
 
     /** Human-readable cause of the most recent failure. */
     val autobackupLastFailureMessage: String? = null,
+
+    // --- Experimental features (App Settings → Experimental) ---
+
+    /**
+     * Experimental: show a per-library "Genre" tab that groups series by their
+     * `kora:genre:*` Komga tags. Off by default. The catalog (genre list, chosen
+     * cover, label override, cached count) is stored locally; a genre's series
+     * are fetched live by tag.
+     */
+    val experimentalGenreTab: Boolean = false,
 )

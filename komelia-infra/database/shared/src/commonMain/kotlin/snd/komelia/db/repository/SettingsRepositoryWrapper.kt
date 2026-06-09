@@ -34,6 +34,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(alternateServerUrls = urls) }
     }
 
+    override fun getExperimentalGenreTab(): Flow<Boolean> =
+        wrapper.state.map { it.experimentalGenreTab }.distinctUntilChanged()
+
+    override suspend fun putExperimentalGenreTab(enabled: Boolean) {
+        wrapper.transform { it.copy(experimentalGenreTab = enabled) }
+    }
+
     override fun getCardWidth(): Flow<Int> {
         return wrapper.state.map { it.cardWidth }.distinctUntilChanged()
     }

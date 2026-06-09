@@ -77,6 +77,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[alternateServerUrls] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.alternateServerUrls
                 )
+                it[experimentalGenreTab] = settings.experimentalGenreTab
             }
         }
     }
@@ -136,6 +137,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             alternateServerUrls = runCatching {
                 Json.decodeFromString(ListSerializer(String.serializer()), get(AppSettingsTable.alternateServerUrls))
             }.getOrDefault(emptyList()),
+            experimentalGenreTab = get(AppSettingsTable.experimentalGenreTab),
         )
     }
 }

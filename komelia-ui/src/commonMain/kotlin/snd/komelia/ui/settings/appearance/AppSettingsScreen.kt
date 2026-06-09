@@ -69,6 +69,8 @@ class AppSettingsScreen : Screen {
                     onCardShadowLevelChange = vm::onCardShadowLevelChange,
                     cardCornerRadius = vm.cardCornerRadius,
                     onCardCornerRadiusChange = vm::onCardCornerRadiusChange,
+                    experimentalGenreTab = vm.experimentalGenreTab,
+                    onExperimentalGenreTabChange = vm::onExperimentalGenreTabChange,
                 )
             }
         }

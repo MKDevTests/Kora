@@ -56,6 +56,7 @@ object AppSettingsTable : Table("AppSettings") {
     val statsInBottomNav = bool("stats_in_bottom_nav").default(false)
     val lastSeenReleaseNotesVersion = text("last_seen_release_notes_version").nullable()
     val alternateServerUrls = text("alternate_server_urls").default("[]")
+    val experimentalGenreTab = bool("experimental_genre_tab").default(false)
 
     override val primaryKey = PrimaryKey(version)
 }

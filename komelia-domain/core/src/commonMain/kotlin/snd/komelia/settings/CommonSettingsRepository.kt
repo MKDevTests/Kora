@@ -22,6 +22,10 @@ interface CommonSettingsRepository {
     fun getAlternateServerUrls(): Flow<List<String>>
     suspend fun putAlternateServerUrls(urls: List<String>)
 
+    /** Experimental: per-library Genre tab grouping series by kora:genre:* tags. */
+    fun getExperimentalGenreTab(): Flow<Boolean>
+    suspend fun putExperimentalGenreTab(enabled: Boolean)
+
     fun getCardWidth(): Flow<Int>
     suspend fun putCardWidth(cardWidth: Int)
 
