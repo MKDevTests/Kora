@@ -40,6 +40,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.LoadState.Error
 import snd.komelia.ui.LoadState.Loading
 import snd.komelia.ui.LoadState.Uninitialized
+import snd.komelia.ui.LocalRawStatusBarHeight
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.components.ErrorContent
@@ -77,8 +78,9 @@ class GenreSeriesScreen(
         }
         LaunchedEffect(genreTag) { vm.initialize() }
 
+        val statusBarHeight = LocalRawStatusBarHeight.current
         ScreenPullToRefreshBox(screenState = vm.state, onRefresh = vm::reload) {
-            Column(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().padding(top = statusBarHeight)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,

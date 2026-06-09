@@ -26,6 +26,21 @@ import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.series.KomgaSeriesSearch
 
 /**
+ * Process-wide cache of the genre catalog per library, so re-opening the Genre
+ * tab (or returning to it after a drill-down) shows tiles instantly instead of
+ * re-running the discovery + per-genre count fetches. Refreshed silently in the
+ * background on every initialize, and forced by pull-to-refresh. Cleared on
+ * process restart.
+ */
+private object GenreCatalogCache {
+    private val byLibrary = mutableMapOf<String, List<GenreTile>>()
+    fun get(libraryKey: String): List<GenreTile>? = byLibrary[libraryKey]
+    fun put(libraryKey: String, tiles: List<GenreTile>) {
+        byLibrary[libraryKey] = tiles
+    }
+}
+
+/**
  * Backs the experimental Genre tab. Discovers a library's genres from its
  * `kora:genre:*` series tags (one referential call) and, for each, fetches the
  * count + a representative cover. The catalog is held in memory; a genre's
@@ -44,6 +59,15 @@ class LibraryGenreTabState(
 
     fun initialize() {
         if (state.value !is Uninitialized) return
+        // Show the cached catalog instantly (if any), then refresh in the
+        // background. loadGenres only flips to Loading when genres is empty, so
+        // a cache hit refreshes silently without a spinner.
+        library.value?.id?.value?.let { key ->
+            GenreCatalogCache.get(key)?.let { cached ->
+                genres = cached
+                mutableState.value = Success(Unit)
+            }
+        }
         screenModelScope.launch { loadGenres() }
     }
 
@@ -87,6 +111,7 @@ class LibraryGenreTabState(
             }
 
             genres = tiles.filter { it.count > 0 }.sortedByDescending { it.count }
+            GenreCatalogCache.put(lib.id.value, genres)
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }

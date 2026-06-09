@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import snd.komelia.ui.LocalFloatingToolbarPadding
+import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.common.images.SeriesThumbnail
 
 @Composable
@@ -38,11 +40,18 @@ fun GenreGridContent(
     modifier: Modifier = Modifier,
     beforeContent: @Composable () -> Unit = {},
 ) {
+    val toolbarPadding = LocalFloatingToolbarPadding.current
+    val bottomPadding = LocalTransparentNavBarPadding.current
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(
+            start = 10.dp,
+            end = 10.dp,
+            top = toolbarPadding + 10.dp,
+            bottom = bottomPadding + 10.dp,
+        ),
         modifier = modifier.fillMaxSize(),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) { beforeContent() }
