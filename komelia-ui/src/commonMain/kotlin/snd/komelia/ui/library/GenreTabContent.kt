@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +41,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalTransparentNavBarPadding
@@ -130,16 +136,25 @@ private fun GenreCard(
             onLongClick = { menuExpanded = true },
             image = {
                 val coverId = tile.coverSeriesId
-                if (coverId != null) {
-                    ThumbnailImage(
+                val localPath = tile.coverLocalPath
+                when {
+                    localPath != null -> ThumbnailImage(
+                        data = "file://$localPath",
+                        cacheKey = localPath,
+                        contentScale = ContentScale.Crop,
+                        crossfade = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    coverId != null -> ThumbnailImage(
                         data = SeriesDefaultThumbnailRequest(coverId),
                         cacheKey = coverId.value,
                         contentScale = ContentScale.Crop,
                         crossfade = false,
                         modifier = Modifier.fillMaxSize(),
                     )
-                } else {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+
+                    else -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
                 }
             },
         )
@@ -181,8 +196,16 @@ fun GenreCoverPickerDialog(
     loadGenreSeries: suspend () -> List<KomgaSeries>,
     searchSeries: suspend (String) -> List<KomgaSeries>,
     onPick: (KomgaSeriesId) -> Unit,
+    onPickLocal: (ByteArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val imagePicker = rememberFilePickerLauncher(
+        type = FileKitType.Image,
+        mode = FileKitMode.Single,
+    ) { file ->
+        file?.let { picked -> scope.launch { onPickLocal(picked.readBytes()) } }
+    }
     var query by remember { mutableStateOf("") }
     var series by remember { mutableStateOf<List<KomgaSeries>?>(null) }
 
@@ -213,6 +236,9 @@ fun GenreCoverPickerDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                TextButton(onClick = { imagePicker.launch() }) {
+                    Text("Import an image…")
+                }
                 Spacer(Modifier.height(12.dp))
                 val list = series
                 when {

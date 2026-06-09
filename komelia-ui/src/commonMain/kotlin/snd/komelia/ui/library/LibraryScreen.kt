@@ -604,6 +604,10 @@ class LibraryScreen(
                     genreTabState.setCover(tile.slug, seriesId)
                     coverPickFor = null
                 },
+                onPickLocal = { bytes ->
+                    genreTabState.setLocalCover(tile.slug, bytes)
+                    coverPickFor = null
+                },
                 onDismiss = { coverPickFor = null },
             )
         }

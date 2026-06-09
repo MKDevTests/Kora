@@ -12,6 +12,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.div
+import io.github.vinceglb.filekit.filesDir
+import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.write
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -110,13 +116,19 @@ class LibraryGenreTabState(
                                 sort = KomgaSort.KomgaSeriesSort.byTitleAsc(),
                             )
                         )
+                        val ov = coverOverrides[key]
+                        val localPath = ov?.takeIf { it.startsWith(FILE_PREFIX) }?.removePrefix(FILE_PREFIX)
                         GenreTile(
                             tag = genreTag,
                             slug = slug,
                             label = labelOverrides[key] ?: GenreLabels.label(slug),
                             count = page.totalElements,
-                            coverSeriesId = coverOverrides[key]?.let { KomgaSeriesId(it) }
-                                ?: page.content.firstOrNull()?.id,
+                            coverSeriesId = when {
+                                localPath != null -> null
+                                ov != null -> KomgaSeriesId(ov)
+                                else -> page.content.firstOrNull()?.id
+                            },
+                            coverLocalPath = localPath,
                         )
                     }
                 }.awaitAll()
@@ -166,11 +178,34 @@ class LibraryGenreTabState(
             val map = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
             map[overrideKey(slug)] = seriesId.value
             settingsRepository.putGenreCoverOverrides(map)
-            genres = genres.map { if (it.slug == slug) it.copy(coverSeriesId = seriesId) else it }
+            genres = genres.map { if (it.slug == slug) it.copy(coverSeriesId = seriesId, coverLocalPath = null) else it }
             refreshOverriddenSlugs()
             cacheCurrent()
         }
     }
+
+    /** Set a genre cover from a picked local image, copied into app storage. */
+    fun setLocalCover(slug: String, bytes: ByteArray) {
+        screenModelScope.launch {
+            val path = saveCoverBytes(overrideKey(slug), bytes) ?: return@launch
+            val map = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
+            map[overrideKey(slug)] = "$FILE_PREFIX$path"
+            settingsRepository.putGenreCoverOverrides(map)
+            genres = genres.map { if (it.slug == slug) it.copy(coverSeriesId = null, coverLocalPath = path) else it }
+            refreshOverriddenSlugs()
+            cacheCurrent()
+        }
+    }
+
+    private suspend fun saveCoverBytes(key: String, bytes: ByteArray): String? = runCatching {
+        val safe = key.replace(Regex("[^A-Za-z0-9_-]"), "_")
+        val dir = FileKit.filesDir / "genre_covers"
+        dir.createDirectories()
+        // Hash in the filename so a new image gets a new path (fresh Coil cache key).
+        val dest = dir / "${safe}_${bytes.contentHashCode()}.img"
+        dest.write(bytes)
+        dest.path
+    }.getOrNull()
 
     fun setLabel(slug: String, label: String) {
         screenModelScope.launch {
@@ -215,10 +250,13 @@ class LibraryGenreTabState(
         "${library.value?.id?.value ?: "all"}:$slug"
 }
 
+private const val FILE_PREFIX = "file:"
+
 data class GenreTile(
     val tag: String,
     val slug: String,
     val label: String,
     val count: Int,
     val coverSeriesId: KomgaSeriesId?,
+    val coverLocalPath: String? = null,
 )
