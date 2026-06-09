@@ -38,6 +38,7 @@ import snd.komelia.ui.LoadState.Uninitialized
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.LibraryMenuActions
 import snd.komelia.ui.library.LibraryTab.COLLECTIONS
+import snd.komelia.ui.library.LibraryTab.GENRE
 import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
 import snd.komga.client.book.KomgaReadStatus
@@ -58,7 +59,7 @@ class LibraryViewModel(
     private val taskEmitter: OfflineTaskEmitter,
     val bookApi: KomgaBookApi,
     seriesApi: KomgaSeriesApi,
-    referentialApi: KomgaReferentialApi,
+    private val referentialApi: KomgaReferentialApi,
 
     private val appNotifications: AppNotifications,
     private val komgaEvents: SharedFlow<KomgaEvent>,
@@ -78,6 +79,11 @@ class LibraryViewModel(
         private set
     var readListsCount by mutableStateOf(0)
         private set
+    var genresCount by mutableStateOf(0)
+        private set
+
+    val genreTabEnabled = settingsRepository.getExperimentalGenreTab()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, false)
 
     var keepReadingBooks by mutableStateOf<List<KomeliaBook>>(emptyList())
         private set
@@ -111,6 +117,13 @@ class LibraryViewModel(
         library = library,
         cardWidth = cardWidth
     )
+    val genreTabState = LibraryGenreTabState(
+        seriesApi = seriesApi,
+        referentialApi = referentialApi,
+        appNotifications = appNotifications,
+        library = library,
+        cardWidth = cardWidth,
+    )
     val showToolbar = seriesTabState.isInEditMode.map { !it }
         .stateIn(screenModelScope, SharingStarted.Eagerly, true)
 
@@ -142,6 +155,7 @@ class LibraryViewModel(
                 SERIES -> seriesTabState.reload()
                 COLLECTIONS -> collectionsTabState.reload()
                 READ_LISTS -> readListsTabState.reload()
+                GENRE -> genreTabState.reload()
             }
         }
     }
@@ -156,8 +170,16 @@ class LibraryViewModel(
             collectionsCount = collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
             readListsCount = readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
 
+            genresCount = if (genreTabEnabled.value) {
+                runCatching {
+                    referentialApi.getSeriesTags(libraryId = library.value?.id)
+                        .count { GenreLabels.isGenreTag(it) }
+                }.getOrDefault(0)
+            } else 0
+
             if (collectionsCount == 0 && currentTab == COLLECTIONS) currentTab = SERIES
             if (readListsCount == 0 && currentTab == READ_LISTS) currentTab = SERIES
+            if (genresCount == 0 && currentTab == GENRE) currentTab = SERIES
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = Error(it) }
     }
@@ -196,6 +218,10 @@ class LibraryViewModel(
         currentTab = READ_LISTS
     }
 
+    fun toGenreTab() {
+        currentTab = GENRE
+    }
+
     fun libraryActions() = LibraryMenuActions(libraryApi, appNotifications, taskEmitter, screenModelScope)
 
     fun stopKomgaEventHandler() {
@@ -224,6 +250,7 @@ class LibraryViewModel(
 enum class LibraryTab {
     SERIES,
     COLLECTIONS,
-    READ_LISTS
+    READ_LISTS,
+    GENRE
 }
 

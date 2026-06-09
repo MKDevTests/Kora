@@ -38,6 +38,7 @@ import snd.komelia.ui.dialogs.user.UserEditDialogViewModel
 import snd.komelia.ui.home.HomeFilterData
 import snd.komelia.ui.home.HomeViewModel
 import snd.komelia.ui.home.edit.FilterEditViewModel
+import snd.komelia.ui.library.GenreSeriesViewModel
 import snd.komelia.ui.library.LibraryViewModel
 import snd.komelia.ui.login.LoginViewModel
 import snd.komelia.ui.login.offline.OfflineLoginViewModel
@@ -136,6 +137,16 @@ class ViewModelFactory(
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
+        )
+    }
+
+    fun getGenreSeriesViewModel(libraryId: KomgaLibraryId?, genreTag: String): GenreSeriesViewModel {
+        return GenreSeriesViewModel(
+            seriesApi = komgaApi.seriesApi,
+            appNotifications = dependencies.appNotifications,
+            libraryId = libraryId,
+            genreTag = genreTag,
+            settingsRepository = appRepositories.settingsRepository,
         )
     }
 

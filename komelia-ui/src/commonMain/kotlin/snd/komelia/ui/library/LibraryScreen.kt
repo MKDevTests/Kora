@@ -106,6 +106,7 @@ import snd.komelia.ui.common.menus.LibraryActionsMenu
 import snd.komelia.ui.common.menus.LibraryMenuActions
 import snd.komelia.ui.topbar.NewTopAppBar
 import snd.komelia.ui.library.LibraryTab.COLLECTIONS
+import snd.komelia.ui.library.LibraryTab.GENRE
 import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
 import snd.komelia.ui.library.view.LibraryCollectionsContent
@@ -193,6 +194,14 @@ class LibraryScreen(
                                 state.pageSize
                             ) to state::onPageSizeChange
                         }
+
+                        GENRE -> {
+                            Triple(
+                                vm.genresCount,
+                                if (vm.genresCount > 1) "genres" else "genre",
+                                50
+                            ) to { _: Int -> }
+                        }
                     }
                     val (totalCount, countLabel, pageSize) = totalCountInfo
 
@@ -214,9 +223,11 @@ class LibraryScreen(
                             currentTab = vm.currentTab,
                             collectionsCount = vm.collectionsCount,
                             readListsCount = vm.readListsCount,
+                            genresCount = vm.genresCount,
                             onBrowseClick = vm::toBrowseTab,
                             onCollectionsClick = vm::toCollectionsTab,
-                            onReadListsClick = vm::toReadListsTab
+                            onReadListsClick = vm::toReadListsTab,
+                            onGenreClick = vm::toGenreTab
                         )
                     }
 
@@ -254,11 +265,13 @@ class LibraryScreen(
                                     currentTab = vm.currentTab,
                                     collectionsCount = vm.collectionsCount,
                                     readListsCount = vm.readListsCount,
+                                    genresCount = vm.genresCount,
                                     showContinueReading = showContinueReading,
                                     onReadingClick = vm::toggleContinueReading,
                                     onBrowseClick = vm::toBrowseTab,
                                     onCollectionsClick = vm::toCollectionsTab,
                                     onReadListsClick = vm::toReadListsTab,
+                                    onGenreClick = vm::toGenreTab,
                                     randomSeriesEnabled = vm.seriesTabState.totalSeriesCount > 0,
                                     onRandomSeriesClick = {
                                         vm.seriesTabState.openRandomSeries { navigator.push(seriesScreen(it)) }
@@ -298,6 +311,7 @@ class LibraryScreen(
                             SERIES -> BrowseTab(vm.seriesTabState, beforeContent)
                             COLLECTIONS -> CollectionsTab(vm.collectionsTabState, beforeContent)
                             READ_LISTS -> ReadListsTab(vm.readListsTabState, beforeContent)
+                            GENRE -> GenreTab(vm.genreTabState, beforeContent)
                         }
                     }
 
@@ -547,6 +561,34 @@ class LibraryScreen(
         }
     }
 
+    @Composable
+    private fun GenreTab(genreTabState: LibraryGenreTabState, beforeContent: @Composable () -> Unit) {
+        val navigator = LocalNavigator.currentOrThrow
+        LaunchedEffect(libraryId) { genreTabState.initialize() }
+
+        when (val state = genreTabState.state.collectAsState().value) {
+            is Error -> ErrorContent(
+                message = state.exception.message ?: "Unknown Error",
+                onReload = genreTabState::reload,
+            )
+
+            else -> {
+                if (genreTabState.genres.isEmpty() && state !is Success) {
+                    LoadingMaxSizeIndicator()
+                } else {
+                    GenreGridContent(
+                        genres = genreTabState.genres,
+                        minSize = genreTabState.cardWidth.collectAsState().value,
+                        onGenreClick = { tile ->
+                            navigator.push(GenreSeriesScreen(libraryId, tile.tag, tile.label))
+                        },
+                        beforeContent = beforeContent,
+                    )
+                }
+            }
+        }
+    }
+
 }
 
 @Composable
@@ -659,11 +701,13 @@ private fun LibraryTabChips(
     currentTab: LibraryTab,
     collectionsCount: Int,
     readListsCount: Int,
+    genresCount: Int = 0,
     showContinueReading: Boolean,
     onReadingClick: () -> Unit,
     onBrowseClick: () -> Unit,
     onCollectionsClick: () -> Unit,
     onReadListsClick: () -> Unit,
+    onGenreClick: () -> Unit = {},
     randomSeriesEnabled: Boolean = false,
     onRandomSeriesClick: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -674,7 +718,7 @@ private fun LibraryTabChips(
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (collectionsCount > 0 || readListsCount > 0) {
+        if (collectionsCount > 0 || readListsCount > 0 || genresCount > 0) {
             item {
                 FilterChip(
                     selected = currentTab == SERIES,
@@ -706,6 +750,18 @@ private fun LibraryTabChips(
                         colors = chipColors,
                         shape = AppFilterChipDefaults.shape(),
                         border = AppFilterChipDefaults.filterChipBorder(currentTab == READ_LISTS),
+                    )
+                }
+            }
+            if (genresCount > 0) {
+                item {
+                    FilterChip(
+                        selected = currentTab == GENRE,
+                        onClick = onGenreClick,
+                        label = { Text("Genres") },
+                        colors = chipColors,
+                        shape = AppFilterChipDefaults.shape(),
+                        border = AppFilterChipDefaults.filterChipBorder(currentTab == GENRE),
                     )
                 }
             }
@@ -836,12 +892,14 @@ private fun LibrarySegmentedButtons(
     currentTab: LibraryTab,
     collectionsCount: Int,
     readListsCount: Int,
+    genresCount: Int = 0,
     onBrowseClick: () -> Unit,
     onCollectionsClick: () -> Unit,
     onReadListsClick: () -> Unit,
+    onGenreClick: () -> Unit = {},
 ) {
-    if (collectionsCount > 0 || readListsCount > 0) {
-        val tabCount = getTabCount(collectionsCount, readListsCount)
+    if (collectionsCount > 0 || readListsCount > 0 || genresCount > 0) {
+        val tabCount = getTabCount(collectionsCount, readListsCount, genresCount)
         val accentColor = LocalAccentColor.current
         val colors = if (accentColor != null) {
             SegmentedButtonDefaults.colors(
@@ -878,8 +936,17 @@ private fun LibrarySegmentedButtons(
                 SegmentedButton(
                     selected = currentTab == READ_LISTS,
                     onClick = onReadListsClick,
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = tabCount),
+                    shape = SegmentedButtonDefaults.itemShape(index = index++, count = tabCount),
                     label = { Text("Read Lists") },
+                    colors = colors
+                )
+            }
+            if (genresCount > 0) {
+                SegmentedButton(
+                    selected = currentTab == GENRE,
+                    onClick = onGenreClick,
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = tabCount),
+                    label = { Text("Genres") },
                     colors = colors
                 )
             }
@@ -887,10 +954,11 @@ private fun LibrarySegmentedButtons(
     }
 }
 
-private fun getTabCount(collectionsCount: Int, readListsCount: Int): Int {
+private fun getTabCount(collectionsCount: Int, readListsCount: Int, genresCount: Int = 0): Int {
     var count = 1
     if (collectionsCount > 0) count++
     if (readListsCount > 0) count++
+    if (genresCount > 0) count++
     return count
 }
 
