@@ -27,6 +27,7 @@ import snd.komelia.ui.settings.announcements.AnnouncementsScreen
 import snd.komelia.ui.settings.appearance.AppSettingsScreen
 import snd.komelia.ui.settings.backup.BackupSettingsScreen
 import snd.komelia.ui.settings.diagnostics.DiagnosticsScreen
+import snd.komelia.ui.settings.experimental.ExperimentalSettingsScreen
 import snd.komelia.ui.settings.navigation.NavigationSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
@@ -133,6 +134,14 @@ fun SettingsNavigationMenu(
                 label = "Diagnostics",
                 onClick = { onNavigation(DiagnosticsScreen()) },
                 isSelected = currentScreen is DiagnosticsScreen,
+            )
+        }
+
+        SettingsGroup(title = "Experimental") {
+            SettingsListItem(
+                label = "Genre tab",
+                onClick = { onNavigation(ExperimentalSettingsScreen()) },
+                isSelected = currentScreen is ExperimentalSettingsScreen,
             )
         }
 

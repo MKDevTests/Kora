@@ -124,8 +124,6 @@ fun AppearanceSettingsContent(
     onCardShadowLevelChange: (Float) -> Unit,
     cardCornerRadius: Float,
     onCardCornerRadiusChange: (Float) -> Unit,
-    experimentalGenreTab: Boolean,
-    onExperimentalGenreTabChange: (Boolean) -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -417,25 +415,6 @@ fun AppearanceSettingsContent(
             onCheckedChange = onLockScreenRotationChange,
             label = { Text("Lock screen rotation") },
             supportingText = { Text("Prevent the application screen from rotating") },
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-        )
-
-        HorizontalDivider()
-
-        // k. Experimental
-        Text(
-            "Experimental",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 4.dp)
-        )
-
-        SwitchWithLabel(
-            checked = experimentalGenreTab,
-            onCheckedChange = onExperimentalGenreTabChange,
-            label = { Text("Genre tab (experimental)") },
-            supportingText = { Text("Add a Genre tab to each library, grouping series by their kora:genre:* tags. Requires a connection to the server.") },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )

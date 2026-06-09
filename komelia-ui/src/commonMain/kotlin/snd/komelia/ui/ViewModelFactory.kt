@@ -67,6 +67,7 @@ import snd.komelia.ui.settings.komf.processing.KomfProcessingSettingsViewModel
 import snd.komelia.ui.settings.komf.providers.KomfProvidersSettingsViewModel
 import snd.komelia.ui.settings.navigation.SettingsNavigationViewModel
 import snd.komelia.ui.settings.offline.OfflineSettingsViewModel
+import snd.komelia.ui.settings.experimental.ExperimentalSettingsViewModel
 import snd.komelia.ui.settings.servers.AppServerManagementViewModel
 import snd.komelia.ui.settings.server.ServerSettingsViewModel
 import snd.komelia.ui.settings.updates.AppUpdatesViewModel
@@ -815,6 +816,10 @@ class ViewModelFactory(
 
     fun getAppServerManagementViewModel(): AppServerManagementViewModel {
         return AppServerManagementViewModel(sessionManager, appRepositories.settingsRepository)
+    }
+
+    fun getExperimentalSettingsViewModel(): ExperimentalSettingsViewModel {
+        return ExperimentalSettingsViewModel(appRepositories.settingsRepository)
     }
 
     fun getStartupUpdateChecker() = startupUpdateChecker

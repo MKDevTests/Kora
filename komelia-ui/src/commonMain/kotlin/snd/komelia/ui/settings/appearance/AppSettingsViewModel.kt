@@ -42,7 +42,6 @@ class AppSettingsViewModel(
     var cardShadowLevel by mutableStateOf(2.0f)
     var cardCornerRadius by mutableStateOf(8.0f)
     var useFloatingNavigationBar by mutableStateOf(false)
-    var experimentalGenreTab by mutableStateOf(false)
 
     suspend fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
@@ -69,7 +68,6 @@ class AppSettingsViewModel(
         cardShadowLevel = settingsRepository.getCardShadowLevel().first()
         cardCornerRadius = settingsRepository.getCardCornerRadius().first()
         useFloatingNavigationBar = settingsRepository.getFloatingNavigationBar().first()
-        experimentalGenreTab = settingsRepository.getExperimentalGenreTab().first()
 
         settingsRepository.putNavBarColor(null)
         mutableState.value = LoadState.Success(Unit)
@@ -196,11 +194,6 @@ class AppSettingsViewModel(
     fun onUseImmersiveMorphingCoverChange(enabled: Boolean) {
         this.useImmersiveMorphingCover = enabled
         screenModelScope.launch { settingsRepository.putUseImmersiveMorphingCover(enabled) }
-    }
-
-    fun onExperimentalGenreTabChange(enabled: Boolean) {
-        this.experimentalGenreTab = enabled
-        screenModelScope.launch { settingsRepository.putExperimentalGenreTab(enabled) }
     }
 
 }
