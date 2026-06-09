@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -50,13 +51,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import snd.komelia.ui.LocalHideParenthesesInNames
+import snd.komelia.ui.LocalLanguageBadgeAtBottom
+import snd.komelia.ui.LocalLanguageBadgeScale
 import snd.komelia.ui.LocalLibraries
+import snd.komelia.ui.LocalShowLanguageOnCovers
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.NoPaddingChip
 import snd.komelia.ui.common.images.SeriesThumbnail
 import snd.komelia.ui.common.menus.SeriesActionsMenu
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.utils.languageBadgeLabel
 import snd.komelia.utils.removeParentheses
 import snd.komga.client.series.KomgaSeries
 import androidx.compose.material3.LinearProgressIndicator
@@ -256,6 +261,16 @@ private fun SeriesImageBadges(
     series: KomgaSeries,
     isDownloaded: Boolean = false,
 ) {
+    if (LocalShowLanguageOnCovers.current) {
+        val label = languageBadgeLabel(series.metadata.language)
+        if (label != null) {
+            LanguageBadge(
+                label = label,
+                scale = LocalLanguageBadgeScale.current,
+                atBottom = LocalLanguageBadgeAtBottom.current,
+            )
+        }
+    }
     Column(modifier = Modifier.fillMaxSize()) {
         Row {
             if (isDownloaded) {
@@ -283,6 +298,39 @@ private fun SeriesImageBadges(
                 )
             }
         }
+    }
+}
+
+/**
+ * Small FR/EN language pill overlaid on a series cover. Top-left by default,
+ * bottom-left when [atBottom]; size driven by [scale]. Subtle translucent
+ * surface background so it stays legible over any cover art. Only rendered
+ * when the language is known (see [languageBadgeLabel]).
+ */
+@Composable
+private fun LanguageBadge(
+    label: String,
+    scale: Float,
+    atBottom: Boolean,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(4.dp),
+        contentAlignment = if (atBottom) Alignment.BottomStart else Alignment.TopStart,
+    ) {
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = (11 * scale).sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    shape = RoundedCornerShape(4.dp),
+                )
+                .padding(horizontal = (5 * scale).dp, vertical = (2 * scale).dp),
+        )
     }
 }
 

@@ -36,6 +36,9 @@ import snd.komelia.ui.LocalCardCornerRadius
 import snd.komelia.ui.LocalCardLayoutBelow
 import snd.komelia.ui.LocalCardLayoutOverlayBackground
 import snd.komelia.ui.LocalHideParenthesesInNames
+import snd.komelia.ui.LocalLanguageBadgeAtBottom
+import snd.komelia.ui.LocalLanguageBadgeScale
+import snd.komelia.ui.LocalShowLanguageOnCovers
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.common.cards.LibraryItemCard
 import snd.komelia.ui.common.components.AppSlider
@@ -95,6 +98,12 @@ fun AppearanceSettingsContent(
     onShowImmersiveNavBarChange: (Boolean) -> Unit,
     hideParenthesesInNames: Boolean,
     onHideParenthesesInNamesChange: (Boolean) -> Unit,
+    showLanguageOnCovers: Boolean,
+    onShowLanguageOnCoversChange: (Boolean) -> Unit,
+    languageBadgeScale: Float,
+    onLanguageBadgeScaleChange: (Float) -> Unit,
+    languageBadgeAtBottom: Boolean,
+    onLanguageBadgeAtBottomChange: (Boolean) -> Unit,
     lockScreenRotation: Boolean,
     onLockScreenRotationChange: (Boolean) -> Unit,
     cardLayoutOverlayBackground: Boolean,
@@ -362,6 +371,41 @@ fun AppearanceSettingsContent(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
+
+        HorizontalDivider()
+
+        // i.2 Language pill on covers
+        SwitchWithLabel(
+            checked = showLanguageOnCovers,
+            onCheckedChange = onShowLanguageOnCoversChange,
+            label = { Text("Show language on covers") },
+            supportingText = { Text("Small FR/EN pill on series covers, only when the language is known") },
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+        )
+
+        if (showLanguageOnCovers) {
+            Text(
+                "Badge size: ${(languageBadgeScale * 100).roundToInt()}%",
+                modifier = Modifier.padding(horizontal = 10.dp),
+            )
+            AppSlider(
+                value = languageBadgeScale,
+                onValueChange = onLanguageBadgeScaleChange,
+                valueRange = 0.8f..2.0f,
+                colors = AppSliderDefaults.colors(accentColor = accentColor),
+                modifier = Modifier.cursorForHand().padding(end = 20.dp),
+            )
+
+            SwitchWithLabel(
+                checked = languageBadgeAtBottom,
+                onCheckedChange = onLanguageBadgeAtBottomChange,
+                label = { Text("Pill at bottom-left") },
+                supportingText = { Text("Otherwise the pill sits at the top-left of the cover") },
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
 
         HorizontalDivider()
 

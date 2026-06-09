@@ -97,6 +97,9 @@ fun MainView(
     var cardCornerRadius by remember { mutableStateOf(8.0f) }
     var useFloatingNavigationBar by remember { mutableStateOf(false) }
     var hideParenthesesInNames by remember { mutableStateOf(false) }
+    var showLanguageOnCovers by remember { mutableStateOf(false) }
+    var languageBadgeScale by remember { mutableStateOf(1.0f) }
+    var languageBadgeAtBottom by remember { mutableStateOf(false) }
     var lockScreenRotation by remember { mutableStateOf(false) }
     var cardLayoutOverlayBackground by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
@@ -138,6 +141,18 @@ fun MainView(
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getHideParenthesesInNames()
             ?.collect { hideParenthesesInNames = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getShowLanguageOnCovers()
+            ?.collect { showLanguageOnCovers = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getLanguageBadgeScale()
+            ?.collect { languageBadgeScale = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getLanguageBadgeAtBottom()
+            ?.collect { languageBadgeAtBottom = it }
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getCardLayoutOverlayBackground()
@@ -230,6 +245,9 @@ fun MainView(
                 LocalImmersiveColorAlpha provides immersiveColorAlpha,
                 LocalShowImmersiveNavBar provides showImmersiveNavBar,
                 LocalHideParenthesesInNames provides hideParenthesesInNames,
+                LocalShowLanguageOnCovers provides showLanguageOnCovers,
+                LocalLanguageBadgeScale provides languageBadgeScale,
+                LocalLanguageBadgeAtBottom provides languageBadgeAtBottom,
                 LocalLockScreenRotation provides lockScreenRotation,
                 LocalOnLockScreenRotationChange provides { newRotation ->
                     coroutineScope.launch {

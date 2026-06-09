@@ -29,6 +29,9 @@ class AppSettingsViewModel(
     var immersiveColorAlpha by mutableStateOf(0.12f)
     var showImmersiveNavBar by mutableStateOf(false)
     var hideParenthesesInNames by mutableStateOf(false)
+    var showLanguageOnCovers by mutableStateOf(false)
+    var languageBadgeScale by mutableStateOf(1.0f)
+    var languageBadgeAtBottom by mutableStateOf(false)
     var lockScreenRotation by mutableStateOf(false)
     var cardLayoutOverlayBackground by mutableStateOf(true)
     var useNewLibraryUI2 by mutableStateOf(false)
@@ -52,6 +55,9 @@ class AppSettingsViewModel(
         immersiveColorAlpha = settingsRepository.getImmersiveColorAlpha().first()
         showImmersiveNavBar = settingsRepository.getShowImmersiveNavBar().first()
         hideParenthesesInNames = settingsRepository.getHideParenthesesInNames().first()
+        showLanguageOnCovers = settingsRepository.getShowLanguageOnCovers().first()
+        languageBadgeScale = settingsRepository.getLanguageBadgeScale().first()
+        languageBadgeAtBottom = settingsRepository.getLanguageBadgeAtBottom().first()
         lockScreenRotation = settingsRepository.getLockScreenRotation().first()
         cardLayoutOverlayBackground = settingsRepository.getCardLayoutOverlayBackground().first()
         useNewLibraryUI2 = settingsRepository.getUseNewLibraryUI2().first()
@@ -153,6 +159,21 @@ class AppSettingsViewModel(
     fun onHideParenthesesInNamesChange(hide: Boolean) {
         this.hideParenthesesInNames = hide
         screenModelScope.launch { settingsRepository.putHideParenthesesInNames(hide) }
+    }
+
+    fun onShowLanguageOnCoversChange(enabled: Boolean) {
+        this.showLanguageOnCovers = enabled
+        screenModelScope.launch { settingsRepository.putShowLanguageOnCovers(enabled) }
+    }
+
+    fun onLanguageBadgeScaleChange(scale: Float) {
+        this.languageBadgeScale = scale
+        screenModelScope.launch { settingsRepository.putLanguageBadgeScale(scale) }
+    }
+
+    fun onLanguageBadgeAtBottomChange(atBottom: Boolean) {
+        this.languageBadgeAtBottom = atBottom
+        screenModelScope.launch { settingsRepository.putLanguageBadgeAtBottom(atBottom) }
     }
 
     fun onLockScreenRotationChange(locked: Boolean) {
