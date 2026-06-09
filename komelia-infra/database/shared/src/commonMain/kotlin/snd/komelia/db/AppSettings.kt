@@ -13,6 +13,15 @@ data class AppSettings(
     val username: String = "admin@example.org",
     val serverUrl: String = "http://localhost:25600",
 
+    /**
+     * Alternate URLs for the *same* Komga server (e.g. a LAN IP at home and a
+     * Tailscale address remotely). [serverUrl] is the active one; switching
+     * promotes one of these to active and demotes the old active here. Because
+     * they share the same server profile (same per-server DB), stats/ratings/
+     * links stay unified across URLs. Stored as a JSON string array column.
+     */
+    val alternateServerUrls: List<String> = emptyList(),
+
     val cardWidth: Int = 170,
     val seriesPageLoadSize: Int = 20,
     val bookPageLoadSize: Int = 20,

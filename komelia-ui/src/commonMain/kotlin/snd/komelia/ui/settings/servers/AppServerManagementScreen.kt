@@ -2,11 +2,13 @@ package snd.komelia.ui.settings.servers
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
@@ -27,16 +29,29 @@ class AppServerManagementScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getAppServerManagementViewModel() }
         val serverProfiles by vm.serverProfiles.collectAsState(emptyList())
         val currentServer by vm.currentServer.collectAsState()
+        val activeUrl by vm.activeServerUrl.collectAsState()
+        val alternateUrls by vm.alternateServerUrls.collectAsState()
 
         SettingsScreenContainer(title = "Manage Connected Servers") {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 serverProfiles.forEach { profile ->
+                    val isCurrent = profile.id == currentServer?.id
                     ServerProfileItem(
                         profile = profile,
-                        isCurrent = profile.id == currentServer?.id,
+                        isCurrent = isCurrent,
+                        displayUrl = if (isCurrent && activeUrl.isNotBlank()) activeUrl else profile.url,
                         onDelete = { vm.deleteServer(profile) },
                         onSwitch = { vm.switchServer(profile) }
                     )
+                    if (isCurrent) {
+                        AlternateUrlsSection(
+                            activeUrl = if (activeUrl.isNotBlank()) activeUrl else profile.url,
+                            alternates = alternateUrls,
+                            onAdd = vm::addAlternateUrl,
+                            onRemove = vm::removeAlternateUrl,
+                            onSwitch = vm::switchToUrl,
+                        )
+                    }
                     HorizontalDivider()
                 }
 
@@ -55,6 +70,7 @@ class AppServerManagementScreen : Screen {
     private fun ServerProfileItem(
         profile: ServerProfile,
         isCurrent: Boolean,
+        displayUrl: String,
         onDelete: () -> Unit,
         onSwitch: () -> Unit
     ) {
@@ -67,7 +83,7 @@ class AppServerManagementScreen : Screen {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(profile.name, style = MaterialTheme.typography.titleMedium)
-                Text(profile.url, style = MaterialTheme.typography.bodyMedium)
+                Text(displayUrl, style = MaterialTheme.typography.bodyMedium)
                 Text("User: ${profile.username}", style = MaterialTheme.typography.bodySmall)
             }
 
@@ -96,6 +112,105 @@ class AppServerManagementScreen : Screen {
                 buttonConfirmColor = MaterialTheme.colorScheme.error,
                 onDialogConfirm = onDelete,
                 onDialogDismiss = { showDeleteConfirmation = false }
+            )
+        }
+    }
+
+    /**
+     * Manage the alternate URLs of the *currently connected* server. The
+     * active URL is shown first; spares can be switched to or removed, and new
+     * ones added. All URLs share the same server profile and per-server DB, so
+     * reading stats, ratings and links stay unified whichever address is used.
+     */
+    @Composable
+    private fun AlternateUrlsSection(
+        activeUrl: String,
+        alternates: List<String>,
+        onAdd: (String) -> Unit,
+        onRemove: (String) -> Unit,
+        onSwitch: (String) -> Unit,
+    ) {
+        var newUrl by remember { mutableStateOf("") }
+        var pendingSwitch by remember { mutableStateOf<String?>(null) }
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = 8.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Alternate URLs for this server", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Add other addresses that reach the SAME Komga server (e.g. a local IP at home and a Tailscale address remotely). Switching keeps this profile, so your stats, ratings and links stay unified.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SuggestionChip(onClick = {}, enabled = false, label = { Text("Active") })
+                Text(
+                    activeUrl,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            alternates.forEach { url ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        url,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { pendingSwitch = url }) { Text("Switch") }
+                    IconButton(onClick = { onRemove(url) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Remove URL")
+                    }
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = newUrl,
+                    onValueChange = { newUrl = it },
+                    label = { Text("http://192.168.x.x:25600 or https://…") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = {
+                        onAdd(newUrl)
+                        newUrl = ""
+                    },
+                    enabled = newUrl.isNotBlank()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add URL")
+                }
+            }
+        }
+
+        pendingSwitch?.let { target ->
+            ConfirmationDialog(
+                title = "Switch active URL",
+                body = "Reconnect to the same server using:\n\n$target\n\nYour stats, ratings and links stay unified.",
+                buttonConfirm = "Switch",
+                onDialogConfirm = {
+                    onSwitch(target)
+                    pendingSwitch = null
+                },
+                onDialogDismiss = { pendingSwitch = null }
             )
         }
     }

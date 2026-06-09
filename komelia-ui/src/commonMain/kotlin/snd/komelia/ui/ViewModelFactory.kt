@@ -803,7 +803,7 @@ class ViewModelFactory(
     }
 
     fun getAppServerManagementViewModel(): AppServerManagementViewModel {
-        return AppServerManagementViewModel(sessionManager)
+        return AppServerManagementViewModel(sessionManager, appRepositories.settingsRepository)
     }
 
     fun getStartupUpdateChecker() = startupUpdateChecker

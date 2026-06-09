@@ -26,6 +26,14 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(serverUrl = url) }
     }
 
+    override fun getAlternateServerUrls(): Flow<List<String>> {
+        return wrapper.state.map { it.alternateServerUrls }.distinctUntilChanged()
+    }
+
+    override suspend fun putAlternateServerUrls(urls: List<String>) {
+        wrapper.transform { it.copy(alternateServerUrls = urls) }
+    }
+
     override fun getCardWidth(): Flow<Int> {
         return wrapper.state.map { it.cardWidth }.distinctUntilChanged()
     }

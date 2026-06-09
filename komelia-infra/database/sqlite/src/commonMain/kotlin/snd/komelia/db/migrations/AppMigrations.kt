@@ -81,6 +81,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V69__anilist_link_suggestions.sql",
         "V70__share_links_via_komga.sql",
         "V71__language_on_covers.sql",
+        "V72__server_alternate_urls.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

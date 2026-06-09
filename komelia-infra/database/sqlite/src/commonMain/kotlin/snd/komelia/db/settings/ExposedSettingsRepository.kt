@@ -4,6 +4,9 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import snd.komelia.db.AppSettings
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.tables.AppSettingsTable
@@ -71,6 +74,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[statsEnabled] = settings.statsEnabled
                 it[statsInBottomNav] = settings.statsInBottomNav
                 it[lastSeenReleaseNotesVersion] = settings.lastSeenReleaseNotesVersion
+                it[alternateServerUrls] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.alternateServerUrls
+                )
             }
         }
     }
@@ -127,6 +133,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             statsEnabled = get(AppSettingsTable.statsEnabled),
             statsInBottomNav = get(AppSettingsTable.statsInBottomNav),
             lastSeenReleaseNotesVersion = get(AppSettingsTable.lastSeenReleaseNotesVersion),
+            alternateServerUrls = runCatching {
+                Json.decodeFromString(ListSerializer(String.serializer()), get(AppSettingsTable.alternateServerUrls))
+            }.getOrDefault(emptyList()),
         )
     }
 }

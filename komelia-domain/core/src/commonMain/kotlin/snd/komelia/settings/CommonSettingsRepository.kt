@@ -13,6 +13,15 @@ interface CommonSettingsRepository {
     fun getServerUrl(): Flow<String>
     suspend fun putServerUrl(url: String)
 
+    /**
+     * Alternate URLs that reach the same Komga server as [getServerUrl] (e.g. a
+     * LAN IP and a Tailscale address). The active URL is the one returned by
+     * [getServerUrl]; these are the spares the user can switch to. They share
+     * one server profile, so stats / ratings / links stay unified.
+     */
+    fun getAlternateServerUrls(): Flow<List<String>>
+    suspend fun putAlternateServerUrls(urls: List<String>)
+
     fun getCardWidth(): Flow<Int>
     suspend fun putCardWidth(cardWidth: Int)
 
