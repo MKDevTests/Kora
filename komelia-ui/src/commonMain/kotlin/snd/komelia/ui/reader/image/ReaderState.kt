@@ -3,6 +3,7 @@ package snd.komelia.ui.reader.image
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import cafe.adriel.voyager.navigator.Navigator
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.plugins.*
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.http.HttpStatusCode.Companion.NotFound
@@ -89,6 +90,8 @@ import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 
 typealias SpreadIndex = Int
+
+private val logger = KotlinLogging.logger {}
 
 class ReaderState(
     private val bookApi: KomgaBookApi,
@@ -547,6 +550,12 @@ class ReaderState(
     }
 
     fun onProgressChange(page: Int) {
+        // Capture the latest page SYNCHRONOUSLY. The conflated channel + its
+        // consumer run on stateScope, which is cancelled on exit BEFORE the last
+        // send is drained — so onDispose / flushProgressNow would otherwise push
+        // a stale readProgressPage and silently lose the last page turn.
+        readProgressPage.value = page
+        logger.info { "[ReadProgress] onProgressChange page=$page book=${booksState.value?.currentBook?.id?.value}" }
         progressUpdateChannel.trySend(page)
     }
 
@@ -724,6 +733,7 @@ class ReaderState(
         // end in continuous mode) often stay "in progress" because the
         // CONFLATED progressUpdateChannel never drained its final value.
         if (markReadProgress && booksState.value != null) {
+            logger.info { "[ReadProgress] onDispose flush page=${readProgressPage.value} book=${booksState.value?.currentBook?.id?.value}" }
             finalFlushScope.launch {
                 runCatching { updateCacheAndPush() }
             }
@@ -940,8 +950,15 @@ class ReaderState(
                 koboSpan = encoded
             )
         )
+        logger.info {
+            "[ReadProgress] push page=$page/${booksState.value?.currentBookPages?.size} " +
+                "progression=${r2Prog.locator.locations?.progression} book=${currentBook.id.value}"
+        }
         runCatching { bookApi.updateReadiumProgression(currentBook.id, r2Prog) }
-            .onFailure { appNotifications.runCatchingToNotifications { throw it } }
+            .onFailure {
+                logger.warn(it) { "[ReadProgress] push FAILED page=$page book=${currentBook.id.value}" }
+                appNotifications.runCatchingToNotifications { throw it }
+            }
     }
 
     private fun preloadFirstPage(book: KomeliaBook?) {
