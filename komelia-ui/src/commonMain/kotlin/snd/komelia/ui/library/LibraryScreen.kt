@@ -579,9 +579,10 @@ class LibraryScreen(
                 if (genreTabState.genres.isEmpty() && state !is Success) {
                     LoadingMaxSizeIndicator()
                 } else {
+                    val appearance = genreTabState.tileAppearance.collectAsState().value
                     GenreGridContent(
                         genres = genreTabState.genres,
-                        minSize = genreTabState.cardWidth.collectAsState().value,
+                        minSize = appearance.minSize,
                         overriddenSlugs = genreTabState.overriddenSlugs,
                         onGenreClick = { tile ->
                             navigator.push(GenreSeriesScreen(libraryId, tile.tag, tile.label))
@@ -589,6 +590,8 @@ class LibraryScreen(
                         onChooseCover = { coverPickFor = it },
                         onRename = { renameFor = it },
                         onResetOverride = { genreTabState.resetOverride(it.slug) },
+                        textBelow = appearance.textBelow,
+                        showCount = appearance.showCount,
                         beforeContent = beforeContent,
                     )
                 }

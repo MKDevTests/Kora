@@ -38,6 +38,16 @@ interface CommonSettingsRepository {
     fun getIgnoredSeriesIds(): Flow<Set<String>>
     suspend fun putIgnoredSeriesIds(ids: Set<String>)
 
+    /** Experimental Genre tab tile appearance: custom toggle + size + text. */
+    fun getGenreTilesCustomAppearance(): Flow<Boolean>
+    suspend fun putGenreTilesCustomAppearance(enabled: Boolean)
+    fun getGenreTileWidth(): Flow<Int>
+    suspend fun putGenreTileWidth(width: Int)
+    fun getGenreTileTextBelow(): Flow<Boolean>
+    suspend fun putGenreTileTextBelow(below: Boolean)
+    fun getGenreTileShowCount(): Flow<Boolean>
+    suspend fun putGenreTileShowCount(show: Boolean)
+
     fun getCardWidth(): Flow<Int>
     suspend fun putCardWidth(cardWidth: Int)
 

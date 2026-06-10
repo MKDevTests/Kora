@@ -4,13 +4,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.createDirectories
@@ -26,6 +30,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.LoadState.Loading
 import snd.komelia.ui.LoadState.Success
 import snd.komelia.ui.LoadState.Uninitialized
+import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.library.KomgaLibrary
@@ -68,6 +73,26 @@ class LibraryGenreTabState(
         private set
     var overriddenSlugs: Set<String> by mutableStateOf(emptySet())
         private set
+
+    /**
+     * Tile appearance: when the user enables custom genre-tile appearance, the
+     * tiles use their own width + text settings; otherwise they inherit the
+     * global card width and layout (textBelow == null = inherit).
+     */
+    val tileAppearance: StateFlow<GenreTileAppearance> = combine(
+        settingsRepository.getGenreTilesCustomAppearance(),
+        settingsRepository.getGenreTileWidth(),
+        settingsRepository.getGenreTileTextBelow(),
+        settingsRepository.getGenreTileShowCount(),
+        settingsRepository.getCardWidth(),
+    ) { custom, width, textBelow, showCount, globalWidth ->
+        if (custom) GenreTileAppearance(width.dp, textBelow, showCount)
+        else GenreTileAppearance(globalWidth.dp, null, true)
+    }.stateIn(
+        screenModelScope,
+        SharingStarted.Eagerly,
+        GenreTileAppearance(defaultCardWidth.dp, null, true),
+    )
 
     fun initialize() {
         if (state.value !is Uninitialized) return
@@ -252,6 +277,13 @@ class LibraryGenreTabState(
 }
 
 private const val FILE_PREFIX = "file:"
+
+/** Resolved appearance for the genre tiles. [textBelow] null = inherit global. */
+data class GenreTileAppearance(
+    val minSize: Dp,
+    val textBelow: Boolean?,
+    val showCount: Boolean,
+)
 
 data class GenreTile(
     val tag: String,

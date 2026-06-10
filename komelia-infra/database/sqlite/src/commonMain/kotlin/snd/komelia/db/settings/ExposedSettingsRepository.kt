@@ -89,6 +89,10 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[ignoredSeriesIds] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.ignoredSeriesIds.toList()
                 )
+                it[genreTilesCustomAppearance] = settings.genreTilesCustomAppearance
+                it[genreTileWidth] = settings.genreTileWidth
+                it[genreTileTextBelow] = settings.genreTileTextBelow
+                it[genreTileShowCount] = settings.genreTileShowCount
             }
         }
     }
@@ -168,6 +172,10 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                     get(AppSettingsTable.ignoredSeriesIds)
                 ).toSet()
             }.getOrDefault(emptySet()),
+            genreTilesCustomAppearance = get(AppSettingsTable.genreTilesCustomAppearance),
+            genreTileWidth = get(AppSettingsTable.genreTileWidth),
+            genreTileTextBelow = get(AppSettingsTable.genreTileTextBelow),
+            genreTileShowCount = get(AppSettingsTable.genreTileShowCount),
         )
     }
 }

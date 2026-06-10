@@ -69,6 +69,34 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(ignoredSeriesIds = ids) }
     }
 
+    override fun getGenreTilesCustomAppearance(): Flow<Boolean> =
+        wrapper.state.map { it.genreTilesCustomAppearance }.distinctUntilChanged()
+
+    override suspend fun putGenreTilesCustomAppearance(enabled: Boolean) {
+        wrapper.transform { it.copy(genreTilesCustomAppearance = enabled) }
+    }
+
+    override fun getGenreTileWidth(): Flow<Int> =
+        wrapper.state.map { it.genreTileWidth }.distinctUntilChanged()
+
+    override suspend fun putGenreTileWidth(width: Int) {
+        wrapper.transform { it.copy(genreTileWidth = width) }
+    }
+
+    override fun getGenreTileTextBelow(): Flow<Boolean> =
+        wrapper.state.map { it.genreTileTextBelow }.distinctUntilChanged()
+
+    override suspend fun putGenreTileTextBelow(below: Boolean) {
+        wrapper.transform { it.copy(genreTileTextBelow = below) }
+    }
+
+    override fun getGenreTileShowCount(): Flow<Boolean> =
+        wrapper.state.map { it.genreTileShowCount }.distinctUntilChanged()
+
+    override suspend fun putGenreTileShowCount(show: Boolean) {
+        wrapper.transform { it.copy(genreTileShowCount = show) }
+    }
+
     override fun getCardWidth(): Flow<Int> {
         return wrapper.state.map { it.cardWidth }.distinctUntilChanged()
     }

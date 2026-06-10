@@ -50,6 +50,8 @@ import kotlinx.coroutines.launch
 import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalTransparentNavBarPadding
+import androidx.compose.runtime.CompositionLocalProvider
+import snd.komelia.ui.LocalCardLayoutBelow
 import snd.komelia.ui.LocalUseNewLibraryUI
 import snd.komelia.ui.common.cards.LibraryItemCard
 import snd.komelia.ui.common.images.ThumbnailImage
@@ -65,6 +67,8 @@ fun GenreGridContent(
     onChooseCover: (GenreTile) -> Unit,
     onRename: (GenreTile) -> Unit,
     onResetOverride: (GenreTile) -> Unit,
+    textBelow: Boolean? = null,
+    showCount: Boolean = true,
     modifier: Modifier = Modifier,
     beforeContent: @Composable () -> Unit = {},
 ) {
@@ -104,14 +108,22 @@ fun GenreGridContent(
         }
 
         items(genres, key = { it.tag }) { tile ->
-            GenreCard(
-                tile = tile,
-                hasOverride = tile.slug in overriddenSlugs,
-                onClick = { onGenreClick(tile) },
-                onChooseCover = { onChooseCover(tile) },
-                onRename = { onRename(tile) },
-                onResetOverride = { onResetOverride(tile) },
-            )
+            val card = @Composable {
+                GenreCard(
+                    tile = tile,
+                    hasOverride = tile.slug in overriddenSlugs,
+                    showCount = showCount,
+                    onClick = { onGenreClick(tile) },
+                    onChooseCover = { onChooseCover(tile) },
+                    onRename = { onRename(tile) },
+                    onResetOverride = { onResetOverride(tile) },
+                )
+            }
+            if (textBelow != null) {
+                CompositionLocalProvider(LocalCardLayoutBelow provides textBelow) { card() }
+            } else {
+                card()
+            }
         }
     }
 }
@@ -124,13 +136,14 @@ private fun GenreCard(
     onChooseCover: () -> Unit,
     onRename: () -> Unit,
     onResetOverride: () -> Unit,
+    showCount: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Box(modifier) {
         LibraryItemCard(
             title = tile.label,
-            secondaryText = "${tile.count} ${if (tile.count > 1) "séries" else "série"}",
+            secondaryText = if (showCount) "${tile.count} ${if (tile.count > 1) "séries" else "série"}" else null,
             titleBold = true,
             onClick = onClick,
             onLongClick = { menuExpanded = true },

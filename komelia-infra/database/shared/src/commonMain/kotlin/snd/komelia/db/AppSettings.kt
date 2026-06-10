@@ -185,4 +185,15 @@ data class AppSettings(
      * search, home, genres). Never sent to the server. JSON string array column.
      */
     val ignoredSeriesIds: Set<String> = emptySet(),
+
+    /**
+     * Experimental Genre tab: when true the genre tiles use their own
+     * appearance (below) instead of inheriting the global card style. Size +
+     * text only, per the user's choice.
+     */
+    val genreTilesCustomAppearance: Boolean = false,
+    val genreTileWidth: Int = 170,
+    /** false = title overlaid on the cover, true = title below it. */
+    val genreTileTextBelow: Boolean = false,
+    val genreTileShowCount: Boolean = true,
 )
