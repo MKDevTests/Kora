@@ -123,6 +123,29 @@ class LibraryGenreTabState(
             val genreTags = referentialApi.getSeriesTags(libraryId = lib.id)
                 .filter { GenreLabels.isGenreTag(it) }
 
+            // Phase 1: paint tiles from the tag list after a single call (label
+            // + any override cover; count unknown), so the grid shows almost
+            // immediately instead of waiting on a count + cover fetch per genre.
+            // Only on a cold open (nothing already on screen from the cache).
+            if (genres.isEmpty()) {
+                genres = genreTags.map { genreTag ->
+                    val slug = GenreLabels.slugOf(genreTag)
+                    val key = overrideKey(slug)
+                    val ov = coverOverrides[key]
+                    val localPath = ov?.takeIf { it.startsWith(FILE_PREFIX) }?.removePrefix(FILE_PREFIX)
+                    GenreTile(
+                        tag = genreTag,
+                        slug = slug,
+                        label = labelOverrides[key] ?: GenreLabels.label(slug),
+                        count = -1,
+                        coverSeriesId = if (localPath == null && ov != null) KomgaSeriesId(ov) else null,
+                        coverLocalPath = localPath,
+                    )
+                }.sortedBy { it.label.lowercase() }
+                mutableState.value = Success(Unit)
+            }
+
+            // Phase 2: count + representative cover per genre, concurrently.
             val tiles = coroutineScope {
                 genreTags.map { genreTag ->
                     async {

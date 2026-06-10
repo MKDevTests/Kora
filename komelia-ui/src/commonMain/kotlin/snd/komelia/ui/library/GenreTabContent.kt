@@ -143,7 +143,7 @@ private fun GenreCard(
     Box(modifier) {
         LibraryItemCard(
             title = tile.label,
-            secondaryText = if (showCount) "${tile.count} ${if (tile.count > 1) "séries" else "série"}" else null,
+            secondaryText = if (showCount && tile.count >= 0) "${tile.count} ${if (tile.count > 1) "séries" else "série"}" else null,
             titleBold = true,
             onClick = onClick,
             onLongClick = { menuExpanded = true },
