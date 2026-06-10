@@ -121,8 +121,9 @@ class LibrarySeriesTabState(
         if (state.value !is LoadState.Uninitialized) return
 
         screenModelScope.launch {
-            filterState.initialize()
-            // Restore persisted per-library filter unless an explicit filter was provided
+            // Restore the persisted per-library filter unless an explicit filter
+            // was provided. Lightweight (a DB read + JSON parse), so it stays
+            // ahead of the load — it changes the query.
             if (filter != null) {
                 filterState.applyFilter(filter)
             } else if (baseTagFilter == null) {
@@ -136,8 +137,14 @@ class LibrarySeriesTabState(
             }
 
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
+            // Paint the cached first page instantly, then load. The grid must not
+            // wait on the filter panel's referential data (genres / tags /
+            // publishers / languages / …): those six lookups are only needed when
+            // the filter panel is opened, so they run in the background here. This
+            // was the dominant per-library-switch latency.
             showCachedFirstPageIfAny()
             loadSeriesPage(1)
+            screenModelScope.launch { filterState.initialize() }
 
             settingsRepository.getSeriesPageLoadSize()
                 .onEach {
