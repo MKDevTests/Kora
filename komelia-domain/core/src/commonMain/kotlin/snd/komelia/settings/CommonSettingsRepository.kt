@@ -32,6 +32,12 @@ interface CommonSettingsRepository {
     fun getGenreLabelOverrides(): Flow<Map<String, String>>
     suspend fun putGenreLabelOverrides(overrides: Map<String, String>)
 
+    /** Experimental local Ignore List (per-server): master toggle + ignored series ids. */
+    fun getIgnoreListEnabled(): Flow<Boolean>
+    suspend fun putIgnoreListEnabled(enabled: Boolean)
+    fun getIgnoredSeriesIds(): Flow<Set<String>>
+    suspend fun putIgnoredSeriesIds(ids: Set<String>)
+
     fun getCardWidth(): Flow<Int>
     suspend fun putCardWidth(cardWidth: Int)
 

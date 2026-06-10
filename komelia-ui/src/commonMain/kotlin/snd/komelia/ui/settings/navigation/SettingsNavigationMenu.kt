@@ -28,6 +28,7 @@ import snd.komelia.ui.settings.appearance.AppSettingsScreen
 import snd.komelia.ui.settings.backup.BackupSettingsScreen
 import snd.komelia.ui.settings.diagnostics.DiagnosticsScreen
 import snd.komelia.ui.settings.experimental.ExperimentalSettingsScreen
+import snd.komelia.ui.settings.experimental.IgnoreListScreen
 import snd.komelia.ui.settings.navigation.NavigationSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
@@ -142,6 +143,12 @@ fun SettingsNavigationMenu(
                 label = "Genre tab",
                 onClick = { onNavigation(ExperimentalSettingsScreen()) },
                 isSelected = currentScreen is ExperimentalSettingsScreen,
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            SettingsListItem(
+                label = "Ignore List",
+                onClick = { onNavigation(IgnoreListScreen()) },
+                isSelected = currentScreen is IgnoreListScreen,
             )
         }
 

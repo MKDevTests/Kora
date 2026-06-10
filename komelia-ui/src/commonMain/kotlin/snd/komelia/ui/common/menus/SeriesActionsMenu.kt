@@ -54,7 +54,10 @@ import snd.komelia.ui.dialogs.komf.identify.KomfIdentifyDialog
 import snd.komelia.ui.dialogs.komf.reset.KomfResetSeriesMetadataDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
+import snd.komelia.ui.LocalIgnoreList
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komga.client.series.KomgaSeries
 
 @Composable
@@ -178,6 +181,26 @@ fun SeriesActionsMenu(
                 leadingIcon = { Icon(Icons.Rounded.Checklist, null) },
                 onClick = {
                     onSelect()
+                    onDismissRequest()
+                }
+            )
+        }
+        val ignoreList = LocalIgnoreList.current
+        if (ignoreList != null && ignoreList.enabled.collectAsState().value) {
+            val isIgnored = series.id.value in ignoreList.ignoredIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isIgnored) "Restore (stop ignoring)" else "Ignore",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = {
+                    Icon(if (isIgnored) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, null)
+                },
+                onClick = {
+                    if (isIgnored) ignoreList.unignore(listOf(series.id))
+                    else ignoreList.ignore(listOf(series.id))
                     onDismissRequest()
                 }
             )

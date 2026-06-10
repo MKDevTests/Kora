@@ -64,6 +64,7 @@ import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.stats.withStatsTracking
+import snd.komelia.ignore.withIgnoreFilter
 import snd.komelia.ui.DependencyContainer
 import snd.komelia.ui.strings.EnStrings
 import snd.komelia.updates.AppUpdater
@@ -193,6 +194,13 @@ abstract class AppModule(
         // paths converge to the same listener at the UI layer.
         val bookCompletionEvents = snd.komelia.stats.BookCompletionEvents()
 
+        // Experimental local Ignore List: empty (pass-through) unless the
+        // feature is enabled AND the user has ignored some series.
+        val ignoredSeriesFlow = combine(
+            appRepositories.settingsRepository.getIgnoreListEnabled(),
+            appRepositories.settingsRepository.getIgnoredSeriesIds(),
+        ) { enabled, ids -> if (enabled) ids else emptySet() }.stateIn(initScope)
+
         val komgaApi = isOffline.map { offline ->
             val source = if (offline) offlineModule.komgaApi
             else createRemoteApi(
@@ -204,7 +212,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            )
+            ).withIgnoreFilter(ignoredSeriesFlow)
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
@@ -218,7 +226,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            )
+            ).withIgnoreFilter(ignoredSeriesFlow)
         }.stateIn(initScope)
 
         val komgaSharedState = KomgaAuthenticationState(

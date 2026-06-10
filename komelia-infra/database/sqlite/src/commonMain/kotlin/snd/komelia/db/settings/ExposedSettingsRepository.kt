@@ -85,6 +85,10 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[genreLabelOverrides] = Json.encodeToString(
                     MapSerializer(String.serializer(), String.serializer()), settings.genreLabelOverrides
                 )
+                it[ignoreListEnabled] = settings.ignoreListEnabled
+                it[ignoredSeriesIds] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.ignoredSeriesIds.toList()
+                )
             }
         }
     }
@@ -157,6 +161,13 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                     get(AppSettingsTable.genreLabelOverrides)
                 )
             }.getOrDefault(emptyMap()),
+            ignoreListEnabled = get(AppSettingsTable.ignoreListEnabled),
+            ignoredSeriesIds = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.ignoredSeriesIds)
+                ).toSet()
+            }.getOrDefault(emptySet()),
         )
     }
 }

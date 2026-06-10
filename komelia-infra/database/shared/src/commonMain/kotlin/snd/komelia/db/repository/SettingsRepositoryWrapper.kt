@@ -55,6 +55,20 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(genreLabelOverrides = overrides) }
     }
 
+    override fun getIgnoreListEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.ignoreListEnabled }.distinctUntilChanged()
+
+    override suspend fun putIgnoreListEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(ignoreListEnabled = enabled) }
+    }
+
+    override fun getIgnoredSeriesIds(): Flow<Set<String>> =
+        wrapper.state.map { it.ignoredSeriesIds }.distinctUntilChanged()
+
+    override suspend fun putIgnoredSeriesIds(ids: Set<String>) {
+        wrapper.transform { it.copy(ignoredSeriesIds = ids) }
+    }
+
     override fun getCardWidth(): Flow<Int> {
         return wrapper.state.map { it.cardWidth }.distinctUntilChanged()
     }

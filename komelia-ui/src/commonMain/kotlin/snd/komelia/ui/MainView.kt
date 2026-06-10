@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -220,6 +222,18 @@ fun MainView(
 
             snd.komelia.ui.platform.LockScreenOrientation(lockScreenRotation)
 
+            val ignoreScope = rememberCoroutineScope()
+            val ignoreController = remember(dependencies, viewModelFactory) {
+                val repo = dependencies.appRepositories.settingsRepository
+                IgnoreListController(
+                    enabled = repo.getIgnoreListEnabled().stateIn(ignoreScope, SharingStarted.Eagerly, false),
+                    ignoredIds = repo.getIgnoredSeriesIds().stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
+                    settingsRepository = repo,
+                    scope = ignoreScope,
+                    onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
+                )
+            }
+
             CompositionLocalProvider(
                 LocalViewModelFactory provides viewModelFactory,
                 LocalToaster provides notificationToaster,
@@ -234,6 +248,7 @@ fun MainView(
                 LocalWindowHeight provides windowHeight,
                 LocalLibraries provides dependencies.komgaSharedState.libraries,
                 LocalReloadEvents provides viewModelFactory.screenReloadEvents,
+                LocalIgnoreList provides ignoreController,
                 LocalBookDownloadEvents provides dependencies.offlineDependencies.bookDownloadEvents,
                 LocalOfflineMode provides dependencies.isOffline,
                 LocalKomgaState provides dependencies.komgaSharedState,

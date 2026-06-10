@@ -172,4 +172,17 @@ data class AppSettings(
      * "<libraryId|all>:<genreSlug>" → custom label. JSON map column.
      */
     val genreLabelOverrides: Map<String, String> = emptyMap(),
+
+    /**
+     * Experimental: master switch for the local Ignore List. When off, no
+     * filtering happens and the "Ignore" action is hidden. Per-server.
+     */
+    val ignoreListEnabled: Boolean = false,
+
+    /**
+     * Experimental: series ids the user has ignored locally. Ignored series and
+     * their books are filtered out of every list (libraries, collections,
+     * search, home, genres). Never sent to the server. JSON string array column.
+     */
+    val ignoredSeriesIds: Set<String> = emptySet(),
 )

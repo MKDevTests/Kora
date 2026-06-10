@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,6 +22,8 @@ import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.offline.tasks.OfflineTaskEmitter
+import snd.komelia.ui.IgnoreListController
+import snd.komelia.ui.LocalIgnoreList
 import snd.komelia.ui.LocalKomfIntegration
 import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalOfflineMode
@@ -136,15 +139,17 @@ fun rememberSeriesBulkActionsState(
     val isOffline = LocalOfflineMode.current.collectAsState().value
     val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
     val isKomfEnabled = LocalKomfIntegration.current.collectAsState(false).value
+    val ignoreList = LocalIgnoreList.current
 
-    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled) {
+    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList) {
         SeriesBulkActionsState(
             series = series,
             actions = factory.getSeriesBulkActions(),
             coroutineScope = coroutineScope,
             isOffline = isOffline,
             isAdmin = isAdmin,
-            isKomfEnabled = isKomfEnabled
+            isKomfEnabled = isKomfEnabled,
+            ignoreList = ignoreList,
         )
     }
 }
@@ -156,6 +161,7 @@ data class SeriesBulkActionsState(
     private val isOffline: Boolean,
     private val isKomfEnabled: Boolean,
     private val isAdmin: Boolean,
+    private val ignoreList: IgnoreListController? = null,
 ) {
     var showAddToCollectionDialog by mutableStateOf(false)
     var showEditDialog by mutableStateOf(false)
@@ -221,6 +227,15 @@ data class SeriesBulkActionsState(
                     description = "Auto-identify",
                     icon = Icons.Default.Extension,
                     onClick = { showKomfIdentifyDialog = true }
+                )
+            )
+        }
+        if (ignoreList != null && ignoreList.enabled.value) {
+            add(
+                BulkActionButtonData(
+                    description = "Ignore",
+                    icon = Icons.Default.VisibilityOff,
+                    onClick = { ignoreList.ignore(series.map { it.id }) }
                 )
             )
         }

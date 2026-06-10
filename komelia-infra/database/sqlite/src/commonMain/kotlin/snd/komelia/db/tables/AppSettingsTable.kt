@@ -59,6 +59,8 @@ object AppSettingsTable : Table("AppSettings") {
     val experimentalGenreTab = bool("experimental_genre_tab").default(false)
     val genreCoverOverrides = text("genre_cover_overrides").default("{}")
     val genreLabelOverrides = text("genre_label_overrides").default("{}")
+    val ignoreListEnabled = bool("ignore_list_enabled").default(false)
+    val ignoredSeriesIds = text("ignored_series_ids").default("[]")
 
     override val primaryKey = PrimaryKey(version)
 }
