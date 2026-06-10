@@ -14,11 +14,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.createDirectories
 import io.github.vinceglb.filekit.div
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaReferentialApi
@@ -94,16 +98,33 @@ class LibraryGenreTabState(
 
     fun initialize() {
         if (state.value !is Uninitialized) return
-        // Show the cached catalog instantly (if any), then refresh in the
-        // background. loadGenres only flips to Loading when genres is empty, so
-        // a cache hit refreshes silently without a spinner.
+        // Show the in-memory cached catalog instantly (if any), then refresh in
+        // the background. loadGenres only flips to Loading when genres is empty,
+        // so a cache hit refreshes silently without a spinner.
         library.value?.id?.value?.let { key ->
             GenreCatalogCache.get(key)?.let { cached ->
                 genres = cached
                 mutableState.value = Success(Unit)
             }
         }
-        screenModelScope.launch { loadGenres() }
+        screenModelScope.launch {
+            // Nothing in memory (e.g. the first open after an app restart)? Fall
+            // back to the persisted snapshot so tiles + covers show immediately
+            // (Coil serves the images from its disk cache) while we re-verify
+            // with the server below. Unchanged tiles don't flicker.
+            if (genres.isEmpty()) {
+                library.value?.id?.value?.let { key ->
+                    loadPersistedCatalog(key)?.takeIf { it.isNotEmpty() }?.let { persisted ->
+                        if (genres.isEmpty()) {
+                            genres = persisted
+                            GenreCatalogCache.put(key, persisted)
+                            mutableState.value = Success(Unit)
+                        }
+                    }
+                }
+            }
+            loadGenres()
+        }
     }
 
     fun reload() {
@@ -196,6 +217,7 @@ class LibraryGenreTabState(
                 .filter { coverOverrides.containsKey(overrideKey(it)) || labelOverrides.containsKey(overrideKey(it)) }
                 .toSet()
             GenreCatalogCache.put(lib.id.value, genres)
+            persistCatalog(lib.id.value, genres)
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
@@ -300,6 +322,40 @@ class LibraryGenreTabState(
             .toSet()
     }
 
+    /**
+     * Read the persisted genre catalog for a library (written by [persistCatalog]).
+     * Lets a cold open show tiles + covers instantly before the server re-verify.
+     */
+    private suspend fun loadPersistedCatalog(libraryKey: String): List<GenreTile>? = runCatching {
+        val json = catalogFile(libraryKey).readBytes().decodeToString()
+        Json.decodeFromString(ListSerializer(GenreTileSnapshot.serializer()), json).map {
+            GenreTile(
+                tag = it.tag,
+                slug = it.slug,
+                label = it.label,
+                count = it.count,
+                coverSeriesId = it.coverSeriesId?.let { id -> KomgaSeriesId(id) },
+                coverLocalPath = it.coverLocalPath,
+            )
+        }
+    }.getOrNull()
+
+    /** Persist the resolved catalog so it survives a process restart. */
+    private suspend fun persistCatalog(libraryKey: String, tiles: List<GenreTile>) {
+        runCatching {
+            (FileKit.filesDir / "genre_catalog").createDirectories()
+            val snapshots = tiles.map {
+                GenreTileSnapshot(it.tag, it.slug, it.label, it.count, it.coverSeriesId?.value, it.coverLocalPath)
+            }
+            catalogFile(libraryKey).write(
+                Json.encodeToString(ListSerializer(GenreTileSnapshot.serializer()), snapshots).encodeToByteArray()
+            )
+        }
+    }
+
+    private fun catalogFile(libraryKey: String) =
+        FileKit.filesDir / "genre_catalog" / "${libraryKey.replace(Regex("[^A-Za-z0-9_-]"), "_")}.json"
+
     private fun cacheCurrent() {
         library.value?.id?.value?.let { GenreCatalogCache.put(it, genres) }
     }
@@ -315,6 +371,16 @@ data class GenreTileAppearance(
     val minSize: Dp,
     val textBelow: Boolean?,
     val showCount: Boolean,
+)
+
+@Serializable
+private data class GenreTileSnapshot(
+    val tag: String,
+    val slug: String,
+    val label: String,
+    val count: Int,
+    val coverSeriesId: String? = null,
+    val coverLocalPath: String? = null,
 )
 
 data class GenreTile(
