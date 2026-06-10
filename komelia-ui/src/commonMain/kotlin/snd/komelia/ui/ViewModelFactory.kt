@@ -38,7 +38,7 @@ import snd.komelia.ui.dialogs.user.UserEditDialogViewModel
 import snd.komelia.ui.home.HomeFilterData
 import snd.komelia.ui.home.HomeViewModel
 import snd.komelia.ui.home.edit.FilterEditViewModel
-import snd.komelia.ui.library.GenreSeriesViewModel
+import snd.komelia.ui.library.LibrarySeriesTabState
 import snd.komelia.ui.library.LibraryViewModel
 import snd.komelia.ui.login.LoginViewModel
 import snd.komelia.ui.login.offline.OfflineLoginViewModel
@@ -141,13 +141,18 @@ class ViewModelFactory(
         )
     }
 
-    fun getGenreSeriesViewModel(libraryId: KomgaLibraryId?, genreTag: String): GenreSeriesViewModel {
-        return GenreSeriesViewModel(
+    fun getGenreSeriesTabState(libraryId: KomgaLibraryId?, genreTag: String): LibrarySeriesTabState {
+        return LibrarySeriesTabState(
+            bookApi = komgaApi.bookApi,
             seriesApi = komgaApi.seriesApi,
-            appNotifications = dependencies.appNotifications,
-            libraryId = libraryId,
-            genreTag = genreTag,
+            referentialApi = komgaApi.referentialApi,
+            notifications = dependencies.appNotifications,
+            komgaEvents = dependencies.komgaEvents.events,
             settingsRepository = appRepositories.settingsRepository,
+            libraryFlow = getLibraryFlow(libraryId),
+            taskEmitter = dependencies.offlineDependencies.taskEmitter,
+            librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
+            baseTagFilter = genreTag,
         )
     }
 

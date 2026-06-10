@@ -98,8 +98,7 @@ class LibraryViewModel(
         notifications = appNotifications,
         komgaEvents = komgaEvents,
         settingsRepository = settingsRepository,
-        library = library,
-        cardWidth = cardWidth,
+        libraryFlow = library,
         taskEmitter = taskEmitter,
         librarySeriesFiltersRepository = librarySeriesFiltersRepository,
     )

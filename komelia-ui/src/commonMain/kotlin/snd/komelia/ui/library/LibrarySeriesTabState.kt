@@ -4,12 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,7 +19,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaBookApi
@@ -26,6 +31,7 @@ import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
+import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.series.SeriesFilter
@@ -51,11 +57,16 @@ class LibrarySeriesTabState(
     private val notifications: AppNotifications,
     private val komgaEvents: SharedFlow<KomgaEvent>,
     private val settingsRepository: CommonSettingsRepository,
-    private val library: StateFlow<KomgaLibrary?>,
+    libraryFlow: Flow<KomgaLibrary?>,
     private val taskEmitter: OfflineTaskEmitter,
-    val cardWidth: StateFlow<Dp>,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
+    private val baseTagFilter: String? = null,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
+    val cardWidth: StateFlow<Dp> = settingsRepository.getCardWidth()
+        .map { Dp(it.toFloat()) }
+        .stateIn(screenModelScope, SharingStarted.Eagerly, defaultCardWidth.dp)
+    private val library: StateFlow<KomgaLibrary?> =
+        libraryFlow.stateIn(screenModelScope, SharingStarted.Eagerly, null)
     val pageLoadSize = MutableStateFlow(50)
     var series by mutableStateOf<List<KomgaSeries>>(emptyList())
         private set
@@ -90,7 +101,7 @@ class LibrarySeriesTabState(
             // Restore persisted per-library filter unless an explicit filter was provided
             if (filter != null) {
                 filterState.applyFilter(filter)
-            } else {
+            } else if (baseTagFilter == null) {
                 library.value?.let { lib ->
                     runCatching {
                         librarySeriesFiltersRepository.get(lib.id)?.let { json ->
@@ -121,11 +132,13 @@ class LibrarySeriesTabState(
 
         filterState.state.drop(1).onEach { current ->
             loadSeriesPage(1)
-            // Persist user-modified filters per library
-            library.value?.let { lib ->
-                runCatching {
-                    val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
-                    librarySeriesFiltersRepository.put(lib.id, json)
+            // Persist user-modified filters per library (skip in a locked genre view)
+            if (baseTagFilter == null) {
+                library.value?.let { lib ->
+                    runCatching {
+                        val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
+                        librarySeriesFiltersRepository.put(lib.id, json)
+                    }
                 }
             }
         }.launchIn(screenModelScope)
@@ -158,6 +171,7 @@ class LibrarySeriesTabState(
             val filter = filterState.state.value
             val condition = allOfSeries {
                 library.value?.let { library { isEqualTo(it.id) } }
+                baseTagFilter?.let { tag { isEqualTo(it) } }
                 filter.addConditionTo(this)
             }
             val page = seriesApi.getSeriesList(
@@ -228,6 +242,7 @@ class LibrarySeriesTabState(
     ): Page<KomgaSeries> {
         val condition = allOfSeries {
             library.value?.let { library { isEqualTo(it.id) } }
+            baseTagFilter?.let { tag { isEqualTo(it) } }
             filter.addConditionTo(this)
         }
 
