@@ -50,6 +50,30 @@ import snd.komga.client.sse.KomgaEvent
 
 private const val SERIES_RANDOM_SORT = "random"
 
+/**
+ * Process-wide cache of each library's first series page, keyed by library id.
+ * The library screen is rebuilt on every library switch, so without this each
+ * return re-fetches the grid behind a spinner. With it the cached grid shows
+ * instantly and refreshes silently. Only the default (non genre-locked) series
+ * tab populates it; a filter signature guards against painting a page that no
+ * longer matches the active filter. Cleared on process restart.
+ */
+private object LibrarySeriesPageCache {
+    data class Snapshot(
+        val series: List<KomgaSeries>,
+        val downloadedSeriesIds: Set<KomgaSeriesId>,
+        val totalSeriesPages: Int,
+        val totalSeriesCount: Int,
+        val filterSignature: String,
+    )
+
+    private val byLibrary = mutableMapOf<String, Snapshot>()
+    fun get(libraryId: String): Snapshot? = byLibrary[libraryId]
+    fun put(libraryId: String, snapshot: Snapshot) {
+        byLibrary[libraryId] = snapshot
+    }
+}
+
 class LibrarySeriesTabState(
     private val bookApi: KomgaBookApi,
     private val seriesApi: KomgaSeriesApi,
@@ -112,6 +136,7 @@ class LibrarySeriesTabState(
             }
 
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
+            showCachedFirstPageIfAny()
             loadSeriesPage(1)
 
             settingsRepository.getSeriesPageLoadSize()
@@ -233,8 +258,44 @@ class LibrarySeriesTabState(
             series = seriesPage.content
             downloadedSeriesIds = bookApi.getDownloadedSeriesIds(seriesPage.content.map { it.id })
             mutableState.value = LoadState.Success(Unit)
+            cacheFirstPage(page)
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
+
+    /** Snapshot the first page so a return to this library paints instantly. */
+    private fun cacheFirstPage(page: Int) {
+        if (page != 1 || baseTagFilter != null) return
+        val libraryId = library.value?.id?.value ?: return
+        LibrarySeriesPageCache.put(
+            libraryId,
+            LibrarySeriesPageCache.Snapshot(
+                series = series,
+                downloadedSeriesIds = downloadedSeriesIds,
+                totalSeriesPages = totalSeriesPages,
+                totalSeriesCount = totalSeriesCount,
+                filterSignature = filterSignature(filterState.state.value),
+            )
+        )
+    }
+
+    /** Paint the cached first page (if it matches the active filter) before the network load. */
+    private fun showCachedFirstPageIfAny() {
+        if (baseTagFilter != null || state.value is LoadState.Success) return
+        val libraryId = library.value?.id?.value ?: return
+        val snapshot = LibrarySeriesPageCache.get(libraryId) ?: return
+        if (snapshot.filterSignature != filterSignature(filterState.state.value)) return
+        series = snapshot.series
+        downloadedSeriesIds = snapshot.downloadedSeriesIds
+        totalSeriesPages = snapshot.totalSeriesPages
+        totalSeriesCount = snapshot.totalSeriesCount
+        currentSeriesPage = 1
+        mutableState.value = LoadState.Success(Unit)
+    }
+
+    private fun filterSignature(filter: SeriesFilter): String =
+        runCatching {
+            kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(filter))
+        }.getOrElse { filter.toString() }
 
     private suspend fun getAllSeries(
         page: Int,
@@ -262,7 +323,10 @@ class LibrarySeriesTabState(
     private fun delayLoadState(): Deferred<Unit> {
         return screenModelScope.async {
             delay(200)
-            if (state.value !is LoadState.Error) mutableState.value = LoadState.Loading
+            // Only show the spinner before the first successful load. Once a
+            // page (or a cached snapshot) is on screen, reloads / pagination /
+            // filter changes refresh silently instead of flashing the loader.
+            if (state.value is LoadState.Uninitialized) mutableState.value = LoadState.Loading
         }
     }
 

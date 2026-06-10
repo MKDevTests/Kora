@@ -7,7 +7,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,6 +53,23 @@ import snd.komga.client.sse.KomgaEvent.CollectionAdded
 import snd.komga.client.sse.KomgaEvent.CollectionDeleted
 import snd.komga.client.sse.KomgaEvent.ReadListAdded
 import snd.komga.client.sse.KomgaEvent.ReadListDeleted
+
+/**
+ * Process-wide cache of each library's item counts (collections / read lists /
+ * genres), keyed by library id. The library screen is torn down and rebuilt on
+ * every library switch (navigateToLibrary does a replaceAll), so without this a
+ * return to a library re-fetches every count behind a spinner. With it the
+ * cached counts show instantly and refresh silently. Cleared on process restart.
+ */
+private object LibraryCountsCache {
+    data class Counts(val collections: Int, val readLists: Int, val genres: Int)
+
+    private val byLibrary = mutableMapOf<String, Counts>()
+    fun get(libraryId: String): Counts? = byLibrary[libraryId]
+    fun put(libraryId: String, counts: Counts) {
+        byLibrary[libraryId] = counts
+    }
+}
 
 class LibraryViewModel(
     private val libraryApi: KomgaLibraryApi,
@@ -163,25 +182,59 @@ class LibraryViewModel(
     private suspend fun loadItemCounts() {
         if (state.value is Error) return
 
+        // On a revisit, paint the last known counts immediately (no spinner)
+        // and refresh them silently below. Survives the screen teardown.
+        val libraryKey = library.value?.id?.value
+        if (state.value !is Success) {
+            libraryKey?.let { LibraryCountsCache.get(it) }?.let { cached ->
+                collectionsCount = cached.collections
+                readListsCount = cached.readLists
+                genresCount = cached.genres
+                applyTabFallback()
+                mutableState.value = Success(Unit)
+            }
+        }
+
         appNotifications.runCatchingToNotifications {
-            mutableState.value = Loading
+            // Only show the spinner when there is nothing on screen yet.
+            if (state.value !is Success) mutableState.value = Loading
             val pageRequest = KomgaPageRequest(size = 0)
             val libraryIds = listOfNotNull(library.value?.id)
-            collectionsCount = collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
-            readListsCount = readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
 
-            genresCount = if (genreTabEnabled.value) {
-                runCatching {
-                    referentialApi.getSeriesTags(libraryId = library.value?.id)
-                        .count { GenreLabels.isGenreTag(it) }
-                }.getOrDefault(0)
-            } else 0
+            // The three counts are independent — fetch them concurrently
+            // instead of one network round-trip after another.
+            coroutineScope {
+                val collectionsDeferred = async {
+                    collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+                }
+                val readListsDeferred = async {
+                    readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+                }
+                val genresDeferred = async {
+                    if (genreTabEnabled.value) {
+                        runCatching {
+                            referentialApi.getSeriesTags(libraryId = library.value?.id)
+                                .count { GenreLabels.isGenreTag(it) }
+                        }.getOrDefault(0)
+                    } else 0
+                }
+                collectionsCount = collectionsDeferred.await()
+                readListsCount = readListsDeferred.await()
+                genresCount = genresDeferred.await()
+            }
 
-            if (collectionsCount == 0 && currentTab == COLLECTIONS) currentTab = SERIES
-            if (readListsCount == 0 && currentTab == READ_LISTS) currentTab = SERIES
-            if (genresCount == 0 && currentTab == GENRE) currentTab = SERIES
+            libraryKey?.let {
+                LibraryCountsCache.put(it, LibraryCountsCache.Counts(collectionsCount, readListsCount, genresCount))
+            }
+            applyTabFallback()
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = Error(it) }
+    }
+
+    private fun applyTabFallback() {
+        if (collectionsCount == 0 && currentTab == COLLECTIONS) currentTab = SERIES
+        if (readListsCount == 0 && currentTab == READ_LISTS) currentTab = SERIES
+        if (genresCount == 0 && currentTab == GENRE) currentTab = SERIES
     }
 
     private suspend fun loadKeepReadingBooks() {
