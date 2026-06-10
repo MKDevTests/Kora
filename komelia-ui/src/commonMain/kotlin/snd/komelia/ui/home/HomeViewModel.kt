@@ -43,6 +43,7 @@ import snd.komga.client.common.KomgaSort.KomgaBooksSort
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.search.allOfBooks
 import snd.komga.client.search.allOfSeries
+import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesSearch
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.sse.KomgaEvent.BookEvent
@@ -101,6 +102,10 @@ class HomeViewModel(
 
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
+
+    // Multi-selection across the Home series shelves (long-press -> Select).
+    val isInEditMode = MutableStateFlow(false)
+    val selectedSeries = MutableStateFlow<List<KomgaSeries>>(emptyList())
 
     // Random-shelf cache lives in the file-scope [RandomShelfCache]
     // object above so it survives viewmodel recreation. See the docs there.
@@ -310,6 +315,24 @@ class HomeViewModel(
     }
 
     fun seriesMenuActions() = SeriesMenuActions(seriesApi, appNotifications, taskEmitter, screenModelScope)
+
+    fun onSeriesSelect(series: KomgaSeries) {
+        val current = selectedSeries.value
+        selectedSeries.value = if (current.any { it.id == series.id })
+            current.filterNot { it.id == series.id }
+        else current + series
+        isInEditMode.value = selectedSeries.value.isNotEmpty()
+    }
+
+    fun toggleSelectAll(all: List<KomgaSeries>) {
+        selectedSeries.value = if (selectedSeries.value.size >= all.size && all.isNotEmpty()) emptyList() else all
+        isInEditMode.value = selectedSeries.value.isNotEmpty()
+    }
+
+    fun clearSelection() {
+        selectedSeries.value = emptyList()
+        isInEditMode.value = false
+    }
     fun bookMenuActions() = BookMenuActions(bookApi, appNotifications, screenModelScope, taskEmitter)
 
     fun stopKomgaEventsHandler() {

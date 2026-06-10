@@ -75,6 +75,8 @@ fun HomeContent(
     bookMenuActions: BookMenuActions,
     onBookClick: (KomeliaBook) -> Unit,
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
+    selectedSeries: List<KomgaSeries> = emptyList(),
+    onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
 ) {
     val gridState = rememberLazyGridState()
     val columnState = rememberLazyListState()
@@ -94,6 +96,8 @@ fun HomeContent(
             bookMenuActions = bookMenuActions,
             onBookClick = onBookClick,
             onBookReadClick = onBookReadClick,
+            selectedSeries = selectedSeries,
+            onSeriesSelect = onSeriesSelect,
             topContent = {
                 Column {
                     HomeHeaderSection()
@@ -136,6 +140,8 @@ fun HomeContent(
                 bookMenuActions = bookMenuActions,
                 onBookClick = onBookClick,
                 onBookReadClick = onBookReadClick,
+                selectedSeries = selectedSeries,
+                onSeriesSelect = onSeriesSelect,
             )
         }
     }
@@ -271,6 +277,8 @@ private fun DisplayContent(
     bookMenuActions: BookMenuActions,
     onBookClick: (KomeliaBook) -> Unit,
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
+    selectedSeries: List<KomgaSeries> = emptyList(),
+    onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
     topContent: (@Composable () -> Unit)? = null,
 ) {
     val useNewLibraryUI = LocalUseNewLibraryUI.current
@@ -302,6 +310,8 @@ private fun DisplayContent(
                                 bookMenuActions = bookMenuActions,
                                 onBookClick = onBookClick,
                                 onBookReadClick = onBookReadClick,
+                                selectedSeries = selectedSeries,
+                                onSeriesSelect = onSeriesSelect,
                             )
                         }
                     }
@@ -336,6 +346,8 @@ private fun DisplayContent(
                             series = data.series,
                             onSeriesClick = onSeriesClick,
                             seriesMenuActions = seriesMenuActions,
+                            selectedSeries = selectedSeries,
+                            onSeriesSelect = onSeriesSelect,
                         )
                     }
                 }
@@ -366,6 +378,8 @@ private fun SectionRow(
     bookMenuActions: BookMenuActions,
     onBookClick: (KomeliaBook) -> Unit,
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
+    selectedSeries: List<KomgaSeries> = emptyList(),
+    onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 10.dp),
@@ -384,9 +398,15 @@ private fun SectionRow(
             }
 
             is SeriesFilterData -> items(data.series) { series ->
+                val selectionMode = selectedSeries.isNotEmpty()
                 SeriesImageCard(
                     series = series,
-                    onSeriesClick = { onSeriesClick(series) },
+                    onSeriesClick = {
+                        if (selectionMode && onSeriesSelect != null) onSeriesSelect(series)
+                        else onSeriesClick(series)
+                    },
+                    isSelected = selectedSeries.any { it.id == series.id },
+                    onSeriesSelect = onSeriesSelect?.let { { it(series) } },
                     seriesMenuActions = seriesMenuActions,
                     modifier = Modifier.width(cardWidth),
                 )
@@ -432,6 +452,8 @@ private fun LazyGridScope.SeriesFilterEntries(
     series: List<KomgaSeries>,
     onSeriesClick: (KomgaSeries) -> Unit,
     seriesMenuActions: SeriesMenuActions,
+    selectedSeries: List<KomgaSeries> = emptyList(),
+    onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
 ) {
     if (series.isEmpty()) return
     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -446,10 +468,16 @@ private fun LazyGridScope.SeriesFilterEntries(
         )
     }
 
-    items(series) {
+    items(series) { s ->
+        val selectionMode = selectedSeries.isNotEmpty()
         SeriesImageCard(
-            series = it,
-            onSeriesClick = { onSeriesClick(it) },
+            series = s,
+            onSeriesClick = {
+                if (selectionMode && onSeriesSelect != null) onSeriesSelect(s)
+                else onSeriesClick(s)
+            },
+            isSelected = selectedSeries.any { it.id == s.id },
+            onSeriesSelect = onSeriesSelect?.let { { it(s) } },
             seriesMenuActions = seriesMenuActions,
             modifier = Modifier.fillMaxSize()
         )

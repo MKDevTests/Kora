@@ -17,6 +17,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import snd.komelia.ui.common.menus.bulk.BottomPopupBulkActionsPanel
+import snd.komelia.ui.common.menus.bulk.BulkActionsContainer
+import snd.komelia.ui.common.menus.bulk.SeriesBulkActionsContent
+import snd.komelia.ui.platform.BackPressHandler
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -142,8 +146,28 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                             )
                                         )
                                     },
+                                    selectedSeries = vm.selectedSeries.collectAsState().value,
+                                    onSeriesSelect = vm::onSeriesSelect,
                                 )
 
+                        }
+
+                        val selectedHomeSeries = vm.selectedSeries.collectAsState().value
+                        if (selectedHomeSeries.isNotEmpty()) {
+                            val displayed = vm.currentFilters.collectAsState().value
+                                .mapNotNull { (it as? SeriesFilterData)?.series }
+                                .flatten()
+                                .distinctBy { it.id }
+                            BulkActionsContainer(
+                                onCancel = vm::clearSelection,
+                                selectedCount = selectedHomeSeries.size,
+                                allSelected = displayed.isNotEmpty() && selectedHomeSeries.size >= displayed.size,
+                                onSelectAll = { vm.toggleSelectAll(displayed) },
+                            ) {}
+                            BottomPopupBulkActionsPanel {
+                                SeriesBulkActionsContent(selectedHomeSeries, true)
+                            }
+                            BackPressHandler { vm.clearSelection() }
                         }
 
                         // Two FABs in the bottom row, side-by-side:
