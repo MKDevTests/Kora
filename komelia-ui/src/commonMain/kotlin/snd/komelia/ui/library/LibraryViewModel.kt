@@ -47,6 +47,7 @@ import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaBooksSort
 import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfBooks
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.sse.KomgaEvent.CollectionAdded
@@ -83,6 +84,7 @@ class LibraryViewModel(
     private val appNotifications: AppNotifications,
     private val komgaEvents: SharedFlow<KomgaEvent>,
     libraryFlow: Flow<KomgaLibrary?>,
+    private val libraryId: KomgaLibraryId?,
     private val settingsRepository: CommonSettingsRepository,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
@@ -118,6 +120,7 @@ class LibraryViewModel(
         komgaEvents = komgaEvents,
         settingsRepository = settingsRepository,
         libraryFlow = library,
+        libraryId = libraryId,
         taskEmitter = taskEmitter,
         librarySeriesFiltersRepository = librarySeriesFiltersRepository,
     )
@@ -184,7 +187,7 @@ class LibraryViewModel(
 
         // On a revisit, paint the last known counts immediately (no spinner)
         // and refresh them silently below. Survives the screen teardown.
-        val libraryKey = library.value?.id?.value
+        val libraryKey = libraryId?.value
         if (state.value !is Success) {
             libraryKey?.let { LibraryCountsCache.get(it) }?.let { cached ->
                 collectionsCount = cached.collections
@@ -199,7 +202,7 @@ class LibraryViewModel(
             // Only show the spinner when there is nothing on screen yet.
             if (state.value !is Success) mutableState.value = Loading
             val pageRequest = KomgaPageRequest(size = 0)
-            val libraryIds = listOfNotNull(library.value?.id)
+            val libraryIds = listOfNotNull(libraryId)
 
             // The three counts are independent — fetch them concurrently
             // instead of one network round-trip after another.
@@ -213,7 +216,7 @@ class LibraryViewModel(
                 val genresDeferred = async {
                     if (genreTabEnabled.value) {
                         runCatching {
-                            referentialApi.getSeriesTags(libraryId = library.value?.id)
+                            referentialApi.getSeriesTags(libraryId = libraryId)
                                 .count { GenreLabels.isGenreTag(it) }
                         }.getOrDefault(0)
                     } else 0
@@ -238,11 +241,11 @@ class LibraryViewModel(
     }
 
     private suspend fun loadKeepReadingBooks() {
-        val lib = library.value ?: return
+        val libId = libraryId ?: return
         appNotifications.runCatchingToNotifications {
             keepReadingBooks = bookApi.getBookList(
                 conditionBuilder = allOfBooks {
-                    library { isEqualTo(lib.id) }
+                    library { isEqualTo(libId) }
                     readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
                 },
                 pageRequest = KomgaPageRequest(

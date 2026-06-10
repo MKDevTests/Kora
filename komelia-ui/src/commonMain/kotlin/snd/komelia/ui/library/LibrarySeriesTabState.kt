@@ -44,6 +44,7 @@ import snd.komga.client.common.KomgaSort.Direction.ASC
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.common.Page
 import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.sse.KomgaEvent
@@ -82,6 +83,7 @@ class LibrarySeriesTabState(
     private val komgaEvents: SharedFlow<KomgaEvent>,
     private val settingsRepository: CommonSettingsRepository,
     libraryFlow: Flow<KomgaLibrary?>,
+    private val libraryId: KomgaLibraryId?,
     private val taskEmitter: OfflineTaskEmitter,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
     private val baseTagFilter: String? = null,
@@ -127,9 +129,9 @@ class LibrarySeriesTabState(
             if (filter != null) {
                 filterState.applyFilter(filter)
             } else if (baseTagFilter == null) {
-                library.value?.let { lib ->
+                libraryId?.let { libId ->
                     runCatching {
-                        librarySeriesFiltersRepository.get(lib.id)?.let { json ->
+                        librarySeriesFiltersRepository.get(libId)?.let { json ->
                             kotlinx.serialization.json.Json.decodeFromString<SeriesFilterDto>(json).toDomain()
                         }
                     }.getOrNull()?.let { restored -> filterState.restore(restored) }
@@ -153,6 +155,22 @@ class LibrarySeriesTabState(
                         loadSeriesPage(1)
                     }
                 }.launchIn(screenModelScope)
+
+            // Subscribe to filter changes only AFTER the restore + initial load.
+            // The restored filter is already applied and loaded, so drop(1) won't
+            // re-fire for it — this avoids a second redundant page load per open.
+            filterState.state.drop(1).onEach { current ->
+                loadSeriesPage(1)
+                // Persist user-modified filters per library (skip in a locked genre view)
+                if (baseTagFilter == null) {
+                    libraryId?.let { libId ->
+                        runCatching {
+                            val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
+                            librarySeriesFiltersRepository.put(libId, json)
+                        }
+                    }
+                }
+            }.launchIn(screenModelScope)
         }
         startKomgaEventListener()
 
@@ -160,19 +178,6 @@ class LibrarySeriesTabState(
             reloadEventsEnabled.first { it }
             loadSeriesPage(currentSeriesPage)
             delay(1000)
-        }.launchIn(screenModelScope)
-
-        filterState.state.drop(1).onEach { current ->
-            loadSeriesPage(1)
-            // Persist user-modified filters per library (skip in a locked genre view)
-            if (baseTagFilter == null) {
-                library.value?.let { lib ->
-                    runCatching {
-                        val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
-                        librarySeriesFiltersRepository.put(lib.id, json)
-                    }
-                }
-            }
         }.launchIn(screenModelScope)
     }
 
@@ -186,7 +191,7 @@ class LibrarySeriesTabState(
         SeriesNavigationContext.put(
             selectedSeries.id,
             SeriesNavigationContext.SeriesListContext(
-                libraryId = library.value?.id,
+                libraryId = libraryId,
                 filter = filterState.state.value,
                 pageSize = pageLoadSize.value,
                 currentPage = currentSeriesPage,
@@ -202,7 +207,7 @@ class LibrarySeriesTabState(
         notifications.runCatchingToNotifications(screenModelScope) {
             val filter = filterState.state.value
             val condition = allOfSeries {
-                library.value?.let { library { isEqualTo(it.id) } }
+                libraryId?.let { library { isEqualTo(it) } }
                 baseTagFilter?.let { tag { isEqualTo(it) } }
                 filter.addConditionTo(this)
             }
@@ -272,9 +277,9 @@ class LibrarySeriesTabState(
     /** Snapshot the first page so a return to this library paints instantly. */
     private fun cacheFirstPage(page: Int) {
         if (page != 1 || baseTagFilter != null) return
-        val libraryId = library.value?.id?.value ?: return
+        val libKey = libraryId?.value ?: return
         LibrarySeriesPageCache.put(
-            libraryId,
+            libKey,
             LibrarySeriesPageCache.Snapshot(
                 series = series,
                 downloadedSeriesIds = downloadedSeriesIds,
@@ -288,8 +293,8 @@ class LibrarySeriesTabState(
     /** Paint the cached first page (if it matches the active filter) before the network load. */
     private fun showCachedFirstPageIfAny() {
         if (baseTagFilter != null || state.value is LoadState.Success) return
-        val libraryId = library.value?.id?.value ?: return
-        val snapshot = LibrarySeriesPageCache.get(libraryId) ?: return
+        val libKey = libraryId?.value ?: return
+        val snapshot = LibrarySeriesPageCache.get(libKey) ?: return
         if (snapshot.filterSignature != filterSignature(filterState.state.value)) return
         series = snapshot.series
         downloadedSeriesIds = snapshot.downloadedSeriesIds
@@ -309,7 +314,7 @@ class LibrarySeriesTabState(
         filter: SeriesFilter
     ): Page<KomgaSeries> {
         val condition = allOfSeries {
-            library.value?.let { library { isEqualTo(it.id) } }
+            libraryId?.let { library { isEqualTo(it) } }
             baseTagFilter?.let { tag { isEqualTo(it) } }
             filter.addConditionTo(this)
         }
