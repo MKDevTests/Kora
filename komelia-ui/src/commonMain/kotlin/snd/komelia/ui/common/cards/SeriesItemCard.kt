@@ -221,6 +221,7 @@ private fun SeriesCardHoverOverlay(
                                 showEditOption = true,
                                 showDownloadOption = true,
                                 onDismissRequest = { onMenuExpandedChange(false) },
+                                onSelect = onSeriesSelect,
                             )
                         }
                     }
@@ -249,6 +250,7 @@ private fun SeriesCardHoverOverlay(
                         showEditOption = true,
                         showDownloadOption = true,
                         onDismissRequest = { onMenuExpandedChange(false) },
+                        onSelect = onSeriesSelect,
                     )
                 }
             }

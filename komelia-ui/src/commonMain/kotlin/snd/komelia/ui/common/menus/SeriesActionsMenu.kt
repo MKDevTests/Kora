@@ -54,6 +54,7 @@ import snd.komelia.ui.dialogs.komf.identify.KomfIdentifyDialog
 import snd.komelia.ui.dialogs.komf.reset.KomfResetSeriesMetadataDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
+import androidx.compose.material.icons.rounded.Checklist
 import snd.komga.client.series.KomgaSeries
 
 @Composable
@@ -66,6 +67,7 @@ fun SeriesActionsMenu(
     onDismissRequest: () -> Unit,
     onToggleImmersiveMode: (() -> Unit)? = null,
     onOpenInKomga: (() -> Unit)? = null,
+    onSelect: (() -> Unit)? = null,
 ) {
     val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
     val isOffline = LocalOfflineMode.current.collectAsState().value
@@ -170,6 +172,16 @@ fun SeriesActionsMenu(
         expanded = showDropdown.value,
         onDismissRequest = onDismissRequest
     ) {
+        if (onSelect != null) {
+            DropdownMenuItem(
+                text = { Text("Select", style = MaterialTheme.typography.labelLarge) },
+                leadingIcon = { Icon(Icons.Rounded.Checklist, null) },
+                onClick = {
+                    onSelect()
+                    onDismissRequest()
+                }
+            )
+        }
         // Rate row at the top — read+write of the local SeriesRatingsRepository.
         // Inline stars rather than "open a separate picker" so the user can
         // assign/edit a rating in one tap without nested dialogs. Tapping the
