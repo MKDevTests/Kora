@@ -7,8 +7,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -145,10 +143,15 @@ class LibraryGenreTabState(
                 mutableState.value = Success(Unit)
             }
 
-            // Phase 2: count + representative cover per genre, concurrently.
-            val tiles = coroutineScope {
-                genreTags.map { genreTag ->
-                    async {
+            // Phase 2: fetch the count + representative cover per genre and patch
+            // each tile in place as its call returns, so covers/counts stream in
+            // (the server is ~2s per query) instead of all appearing at the end.
+            // All updates run on the screenModel's Main dispatcher, so the shared
+            // map and `genres` writes don't race.
+            val resolvedByTag = mutableMapOf<String, GenreTile>()
+            coroutineScope {
+                genreTags.forEach { genreTag ->
+                    launch {
                         val slug = GenreLabels.slugOf(genreTag)
                         val key = overrideKey(slug)
                         val page = seriesApi.getSeriesList(
@@ -166,7 +169,7 @@ class LibraryGenreTabState(
                         )
                         val ov = coverOverrides[key]
                         val localPath = ov?.takeIf { it.startsWith(FILE_PREFIX) }?.removePrefix(FILE_PREFIX)
-                        GenreTile(
+                        val resolved = GenreTile(
                             tag = genreTag,
                             slug = slug,
                             label = labelOverrides[key] ?: GenreLabels.label(slug),
@@ -178,11 +181,17 @@ class LibraryGenreTabState(
                             },
                             coverLocalPath = localPath,
                         )
+                        resolvedByTag[genreTag] = resolved
+                        genres = genres.map { if (it.tag == genreTag) resolved else it }
                     }
-                }.awaitAll()
+                }
             }
 
-            genres = tiles.filter { it.count > 0 }.sortedBy { it.label.lowercase() }
+            // All counts in: rebuild from the fresh results (handles added /
+            // removed genres), drop empties, settle the order and cache.
+            genres = genreTags.mapNotNull { resolvedByTag[it] }
+                .filter { it.count > 0 }
+                .sortedBy { it.label.lowercase() }
             overriddenSlugs = genres.map { it.slug }
                 .filter { coverOverrides.containsKey(overrideKey(it)) || labelOverrides.containsKey(overrideKey(it)) }
                 .toSet()
