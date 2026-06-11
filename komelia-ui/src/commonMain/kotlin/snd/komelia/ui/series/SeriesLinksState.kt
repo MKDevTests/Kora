@@ -112,9 +112,15 @@ class SeriesLinksState(
             versions = linksRepository.versionsOf(current.id).mapNotNull { resolve(it) }
 
             val localRelations = linksRepository.relationsOf(current.id)
+            // Re-fetch the current series so freshly-written shared links (and the
+            // 🌐 badge) show right away — the `series` flow can still hold the
+            // pre-write metadata after an admin link/unlink.
             val sharedRelations =
-                if (shareLinksEnabled.value) current.metadata.links.mapNotNull { KoraLinkCodec.parse(it) }
-                else emptyList()
+                if (shareLinksEnabled.value) {
+                    val freshLinks = runCatching { seriesApi.getOneSeries(current.id).metadata.links }
+                        .getOrDefault(current.metadata.links)
+                    freshLinks.mapNotNull { KoraLinkCodec.parse(it) }
+                } else emptyList()
             sharedRelationIds = sharedRelations.map { it.target.value }.toSet()
 
             // Merge local + shared by target id (shared type wins on conflict).
@@ -142,17 +148,23 @@ class SeriesLinksState(
         act { current -> doLinkRelation(current, other, type) }
 
     fun unlinkRelation(other: KomgaSeriesId) = act { current ->
-        when {
-            other.value !in sharedRelationIds -> linksRepository.unlinkRelation(current, other)
-            isAdmin() -> komgaUnlinkRelation(current, other)
-            else -> error("Only an admin can remove a link shared on the server.")
-        }
+        val isShared = other.value in sharedRelationIds
+        if (isShared && !isAdmin()) error("Only an admin can remove a link shared on the server.")
+        // Always remove the local copy; also remove the shared Komga link when present.
+        linksRepository.unlinkRelation(current, other)
+        if (isShared) komgaUnlinkRelation(current, other)
     }
 
-    /** Route a new relation to the shared Komga layer (admin + sharing on) or the local store. */
+    /**
+     * Persist a new relation locally (always, bidirectional via the repository) and
+     * additionally mirror it to the shared Komga layer when sharing is on + admin.
+     * Local-always keeps links from being lost and makes both series show them
+     * immediately on reload (the repo read is always fresh, unlike the possibly
+     * stale current-series metadata).
+     */
     private suspend fun doLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) {
+        linksRepository.linkRelation(from, to, type)
         if (shareViaKomga()) komgaLinkRelation(from, to, type)
-        else linksRepository.linkRelation(from, to, type)
     }
 
     private suspend fun komgaLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) {
@@ -547,8 +559,14 @@ class SeriesLinksState(
                         ?: known[b.value to a.value]?.inverse()
                         ?: SeriesRelationType.RELATED
 
+                // Always persist the full mesh locally (bidirectional) so links
+                // survive regardless of the sharing setting and show on every member.
+                for (i in members.indices) for (j in i + 1 until members.size) {
+                    linksRepository.linkRelation(members[i], members[j], typeBetween(members[i], members[j]))
+                }
+                // Additionally mirror to Komga when sharing is on + admin: one
+                // metadata write per member (batched) with all its franchise links.
                 if (shareViaKomga()) {
-                    // One metadata write per member (batched) with all its franchise links.
                     val memberIds = members.map { it.value }.toSet()
                     members.forEach { m ->
                         val s = seriesApi.getOneSeries(m)
@@ -559,10 +577,6 @@ class SeriesLinksState(
                         val mesh = members.filter { it.value != m.value }
                             .map { other -> KoraLinkCodec.relationLink(other, typeBetween(m, other)) }
                         seriesApi.update(m, linksUpdate(s, nonKora + keptKora + mesh))
-                    }
-                } else {
-                    for (i in members.indices) for (j in i + 1 until members.size) {
-                        linksRepository.linkRelation(members[i], members[j], typeBetween(members[i], members[j]))
                     }
                 }
             }
