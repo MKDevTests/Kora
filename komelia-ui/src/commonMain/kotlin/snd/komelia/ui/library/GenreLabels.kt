@@ -43,4 +43,16 @@ object GenreLabels {
         labels[slug] ?: slug.split('-')
             .filter { it.isNotBlank() }
             .joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
+
+    /**
+     * Display-ready genre names extracted from a series' tags: only the
+     * `kora:genre:*` ones, mapped to their pretty label, in tag order, de-duped.
+     * Used by the series detail screen to show a "Genres : …" line.
+     */
+    fun genreDisplayNames(tags: List<String>): List<String> =
+        tags.asSequence()
+            .filter { isGenreTag(it) }
+            .map { label(slugOf(it)) }
+            .distinct()
+            .toList()
 }

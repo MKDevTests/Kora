@@ -60,6 +60,7 @@ fun SeriesDescriptionRow(
     pagesLeftCount: Int? = null,
     accentColor: Color? = null,
     showReleaseYear: Boolean = true,
+    genres: List<String> = emptyList(),
     modifier: Modifier
 ) {
     val strings = LocalStrings.current.seriesView
@@ -173,6 +174,16 @@ fun SeriesDescriptionRow(
                     )
                 )
             }
+        }
+
+        // Kora genre tags (kora:genre:*) shown as a plain readable line below the
+        // chips. Pre-cleaned by the caller via GenreLabels; empty on screens that
+        // don't pass them (oneshots / books).
+        if (genres.isNotEmpty()) {
+            Text(
+                text = "Genres : " + genres.joinToString(", "),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
 
         if (alternateTitles.isNotEmpty()) {

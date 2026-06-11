@@ -69,6 +69,7 @@ import snd.komelia.ui.common.menus.bulk.BottomPopupBulkActionsPanel
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
+import snd.komelia.ui.library.GenreLabels
 import snd.komelia.ui.library.SeriesScreenFilter
 import snd.komelia.ui.platform.VerticalScrollbarWithFullSpans
 import snd.komelia.ui.platform.WindowSizeClass.COMPACT
@@ -392,6 +393,7 @@ fun Series(
                         deleted = series.deleted || library.unavailable,
                         alternateTitles = series.metadata.alternateTitles,
                         onFilterClick = onFilterClick,
+                        genres = GenreLabels.genreDisplayNames(series.metadata.tags),
                         modifier = Modifier,
                     )
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))

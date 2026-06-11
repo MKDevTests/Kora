@@ -87,6 +87,7 @@ import snd.komelia.ui.common.menus.bulk.BottomPopupBulkActionsPanel
 import snd.komelia.ui.common.menus.bulk.BulkActionsContainer
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
+import snd.komelia.ui.library.GenreLabels
 import snd.komelia.ui.library.SeriesScreenFilter
 import snd.komelia.ui.series.SeriesBooksState
 import snd.komelia.ui.series.SeriesBooksState.BooksData
@@ -476,6 +477,7 @@ fun ImmersiveSeriesContent(
                             totalPagesCount = booksData.books.sumOf { it.media.pagesCount },
                             accentColor = accentColor,
                             showReleaseYear = false,
+                            genres = GenreLabels.genreDisplayNames(series.metadata.tags),
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
