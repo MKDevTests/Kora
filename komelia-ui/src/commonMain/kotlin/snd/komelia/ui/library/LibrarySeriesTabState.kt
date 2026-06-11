@@ -52,6 +52,13 @@ import snd.komga.client.sse.KomgaEvent
 private const val SERIES_RANDOM_SORT = "random"
 
 /**
+ * Reserved key under which the genre drill-down persists its single,
+ * shared-across-all-genres filter + sort, reusing the per-library filters table.
+ * It is an opaque sentinel that cannot collide with a real Komga library id.
+ */
+private val GENRE_FILTER_STORAGE_KEY = KomgaLibraryId("__kora_genre_filter__")
+
+/**
  * Process-wide cache of each library's first series page, keyed by library id.
  * The library screen is rebuilt on every library switch, so without this each
  * return re-fetches the grid behind a spinner. With it the cached grid shows
@@ -110,7 +117,9 @@ class LibrarySeriesTabState(
         private set
 
     val filterState: SeriesFilterState = SeriesFilterState(
-        defaultSort = SeriesSort.DATE_ADDED_DESC,
+        // Genre drill-down defaults to Title Ascending; the regular series tab
+        // keeps Date-added Descending.
+        defaultSort = if (baseTagFilter != null) SeriesSort.TITLE_ASC else SeriesSort.DATE_ADDED_DESC,
         library = library,
         referentialApi = referentialApi,
         appNotifications = notifications,
@@ -128,10 +137,13 @@ class LibrarySeriesTabState(
             // ahead of the load — it changes the query.
             if (filter != null) {
                 filterState.applyFilter(filter)
-            } else if (baseTagFilter == null) {
-                libraryId?.let { libId ->
+            } else {
+                // Genre drill-down restores ONE shared filter (default Title Asc);
+                // the regular series tab restores its per-library filter.
+                val storageKey = if (baseTagFilter != null) GENRE_FILTER_STORAGE_KEY else libraryId
+                storageKey?.let { key ->
                     runCatching {
-                        librarySeriesFiltersRepository.get(libId)?.let { json ->
+                        librarySeriesFiltersRepository.get(key)?.let { json ->
                             kotlinx.serialization.json.Json.decodeFromString<SeriesFilterDto>(json).toDomain()
                         }
                     }.getOrNull()?.let { restored -> filterState.restore(restored) }
@@ -161,13 +173,13 @@ class LibrarySeriesTabState(
             // re-fire for it — this avoids a second redundant page load per open.
             filterState.state.drop(1).onEach { current ->
                 loadSeriesPage(1)
-                // Persist user-modified filters per library (skip in a locked genre view)
-                if (baseTagFilter == null) {
-                    libraryId?.let { libId ->
-                        runCatching {
-                            val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
-                            librarySeriesFiltersRepository.put(libId, json)
-                        }
+                // Persist user-modified filters: per library normally, or under the
+                // shared genre key when this is a genre drill-down.
+                val storageKey = if (baseTagFilter != null) GENRE_FILTER_STORAGE_KEY else libraryId
+                storageKey?.let { key ->
+                    runCatching {
+                        val json = kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(current))
+                        librarySeriesFiltersRepository.put(key, json)
                     }
                 }
             }.launchIn(screenModelScope)
