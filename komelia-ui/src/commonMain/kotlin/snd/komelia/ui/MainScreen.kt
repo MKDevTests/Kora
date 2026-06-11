@@ -401,8 +401,14 @@ class MainScreen(
                                                 if (fabLeft != null) {
                                                     Box(Modifier.layoutId("fab-left")) { fabLeft.second() }
                                                 }
+                                                // The far-right slot is exclusively the root-screen
+                                                // "Continue reading" FAB (Home / Library). An immersive
+                                                // detail has its own read/continue FAB in the `fab` slot,
+                                                // so suppress the far-right one there — otherwise the
+                                                // leaving root screen's still-registered FAB lingers next
+                                                // to the detail's during the transition (two book FABs).
                                                 val fabFarRight = LocalFloatingActionButtonFarRight.current.value
-                                                if (fabFarRight != null) {
+                                                if (fabFarRight != null && !isImmersiveScreen) {
                                                     Box(Modifier.layoutId("fab-far-right")) { fabFarRight.second() }
                                                 }
                                             }
