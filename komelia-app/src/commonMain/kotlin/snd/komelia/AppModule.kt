@@ -65,6 +65,7 @@ import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.stats.withStatsTracking
 import snd.komelia.ignore.withIgnoreFilter
+import snd.komelia.hidden.HiddenSeriesController
 import snd.komelia.ui.DependencyContainer
 import snd.komelia.ui.strings.EnStrings
 import snd.komelia.updates.AppUpdater
@@ -201,18 +202,37 @@ abstract class AppModule(
             appRepositories.settingsRepository.getIgnoredSeriesIds(),
         ) { enabled, ids -> if (enabled) ids else emptySet() }.stateIn(initScope)
 
-        val komgaApi = isOffline.map { offline ->
-            val source = if (offline) offlineModule.komgaApi
+        // Raw (undecorated) api the hidden-series discovery query runs against —
+        // the ignore/hidden filter would otherwise drop kora:hidden series from
+        // its own lookup. The app-facing decorated api is derived from this below.
+        val rawKomgaApi: StateFlow<KomgaApi> = isOffline.map { offline ->
+            if (offline) offlineModule.komgaApi
             else createRemoteApi(
                 komgaClientFactory = komgaClientFactory,
                 offlineRepositories = offlineRepositories,
                 offlineEvents = offlineModule.komgaEvents
             )
+        }.stateIn(initScope)
+
+        // Admin "hide for everyone": series carrying the kora:hidden tag are
+        // filtered out for every Kora user, unconditionally. Re-queried on sign-in.
+        val hiddenSeriesController = HiddenSeriesController(
+            rawApi = rawKomgaApi,
+            authenticatedUser = currentUserFlow,
+            scope = initScope,
+        )
+
+        // Series removed from every list response = locally ignored ∪ server-hidden.
+        val filterIds = combine(ignoredSeriesFlow, hiddenSeriesController.hiddenIds) { ignored, hidden ->
+            ignored + hidden
+        }.stateIn(initScope)
+
+        val komgaApi = rawKomgaApi.map { source ->
             source.withStatsTracking(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(ignoredSeriesFlow)
+            ).withIgnoreFilter(filterIds)
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
@@ -226,7 +246,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(ignoredSeriesFlow)
+            ).withIgnoreFilter(filterIds)
         }.stateIn(initScope)
 
         val komgaSharedState = KomgaAuthenticationState(
