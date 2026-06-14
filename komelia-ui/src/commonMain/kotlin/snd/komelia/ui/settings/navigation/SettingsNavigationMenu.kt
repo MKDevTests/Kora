@@ -29,6 +29,7 @@ import snd.komelia.ui.settings.backup.BackupSettingsScreen
 import snd.komelia.ui.settings.diagnostics.DiagnosticsScreen
 import snd.komelia.ui.settings.experimental.ExperimentalSettingsScreen
 import snd.komelia.ui.settings.experimental.IgnoreListScreen
+import snd.komelia.ui.settings.experimental.HiddenSeriesScreen
 import snd.komelia.ui.settings.navigation.NavigationSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
@@ -150,6 +151,14 @@ fun SettingsNavigationMenu(
                 onClick = { onNavigation(IgnoreListScreen()) },
                 isSelected = currentScreen is IgnoreListScreen,
             )
+            if (isAdmin) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                SettingsListItem(
+                    label = "Séries masquées",
+                    onClick = { onNavigation(HiddenSeriesScreen()) },
+                    isSelected = currentScreen is HiddenSeriesScreen,
+                )
+            }
         }
 
         if (!isOffline) {
