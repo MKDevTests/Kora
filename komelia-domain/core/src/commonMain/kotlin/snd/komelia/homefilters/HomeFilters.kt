@@ -139,6 +139,18 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     ) : SeriesHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
     }
+
+    /** The user's local Favorites, resolved client-side from the favorite ids. */
+    @Serializable
+    @SerialName("io.github.snd_r.komelia.ui.home.SeriesHomeScreenFilter.Favorites")
+    data class Favorites(
+        override val order: Int,
+        override val label: String,
+        override val enabled: Boolean = true,
+        val pageSize: Int = 20,
+    ) : SeriesHomeScreenFilter {
+        override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
+    }
 }
 
 @Serializable

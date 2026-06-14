@@ -44,6 +44,7 @@ import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.search.allOfBooks
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
+import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.series.KomgaSeriesSearch
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.sse.KomgaEvent.BookEvent
@@ -94,8 +95,10 @@ class HomeViewModel(
     private val filterRepository: HomeScreenFilterRepository,
     private val taskEmitter: OfflineTaskEmitter,
     cardWidthFlow: Flow<Dp>,
+    favoriteIdsFlow: Flow<Set<String>>,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
+    private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
 
     private val reloadEventsEnabled = MutableStateFlow(true)
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, DROP_OLDEST)
@@ -137,7 +140,16 @@ class HomeViewModel(
             // is seeded from currentFilters, so dropping disabled shelves would
             // make them vanish from the editor and get wiped on the next save.
             // Disabled shelves are filtered out at render time (see HomeScreen).
-            currentFilters.value = filterRepository.getFilters().first()
+            // Ensure a Favorites shelf is present so it shows up + is editable
+            // (reorder/disable) like any other; the user can disable it but it is
+            // re-added if missing. Once the editor saves, the persisted copy wins.
+            val persisted = filterRepository.getFilters().first()
+            val withFavorites =
+                if (persisted.any { it is SeriesHomeScreenFilter.Favorites }) persisted
+                else listOf(
+                    SeriesHomeScreenFilter.Favorites(order = -1, label = "Favoris", enabled = true, pageSize = 20)
+                ) + persisted
+            currentFilters.value = withFavorites
                 .map { screenModelScope.async { fetchFilterData(it, force) } }
                 .awaitAll()
                 .filterNotNull()
@@ -247,6 +259,15 @@ class HomeViewModel(
                     series = series,
                     filter = filter
                 )
+            }
+
+            is SeriesHomeScreenFilter.Favorites -> {
+                // Local favorites: resolve a bounded sample by id (getOneSeries is
+                // not filtered), sorted by title.
+                val resolved = favoriteIds.value.take(filter.pageSize).mapNotNull { id ->
+                    runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+                }.sortedBy { it.metadata.title.lowercase() }
+                SeriesFilterData(series = resolved, filter = filter)
             }
 
             is BooksHomeScreenFilter.ForgottenBooks -> {

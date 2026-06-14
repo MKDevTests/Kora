@@ -170,6 +170,7 @@ class ViewModelFactory(
             filterRepository = appRepositories.homeScreenFilterRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             cardWidthFlow = getGridCardWidth(),
+            favoriteIdsFlow = appRepositories.settingsRepository.getFavoriteSeriesIds(),
         )
     }
 

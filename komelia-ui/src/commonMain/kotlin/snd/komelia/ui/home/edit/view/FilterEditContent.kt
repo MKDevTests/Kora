@@ -73,6 +73,7 @@ import snd.komelia.ui.home.edit.BookOnDeckFilterState
 import snd.komelia.ui.home.edit.FilterEditState
 import snd.komelia.ui.home.edit.FilterEditViewModel
 import snd.komelia.ui.home.edit.SeriesAlmostFinishedFilterState
+import snd.komelia.ui.home.edit.SeriesFavoritesFilterState
 import snd.komelia.ui.home.edit.SeriesCustomFilterState
 import snd.komelia.ui.home.edit.SeriesFilterEditState
 import snd.komelia.ui.home.edit.SeriesRecentlyAddedFilterState
@@ -425,6 +426,11 @@ private fun SeriesFilterEditContent(state: SeriesFilterEditState) {
                     onExcludedChange = filter::onExcludedLibrariesChange,
                 )
             }
+
+            is SeriesFavoritesFilterState -> PageSizeSettingsContent(
+                pageSize = filter.pageSize.collectAsState().value,
+                onPageSizeChange = filter::onPageSizeChange,
+            )
         }
 
         val books = state.series.collectAsState().value

@@ -85,6 +85,11 @@ class SeriesFilterEditState(
                     initial = initial,
                     initialSeries = initialSeries,
                 )
+
+                is SeriesHomeScreenFilter.Favorites -> SeriesFavoritesFilterState(
+                    initial = initial,
+                    initialSeries = initialSeries,
+                )
             }
         } ?: SeriesCustomFilterState(
             seriesApi = seriesApi,
@@ -108,6 +113,7 @@ class SeriesFilterEditState(
             is SeriesRecentlyAddedFilterState -> FilterType.RecentlyAdded
             is SeriesRecentlyUpdatedFilterState -> FilterType.RecentlyUpdated
             is SeriesAlmostFinishedFilterState -> FilterType.AlmostFinished
+            is SeriesFavoritesFilterState -> FilterType.Favorites
         }
     }.stateIn(coroutineScope, SharingStarted.Eagerly, FilterType.Custom)
 
@@ -147,6 +153,13 @@ class SeriesFilterEditState(
                 progressThresholdPercent = editState.progressThresholdPercent.value,
                 excludedLibraryIds = editState.excludedLibraryIds.value,
             )
+
+            is SeriesFavoritesFilterState -> SeriesHomeScreenFilter.Favorites(
+                order = order,
+                label = label.value,
+                enabled = enabled.value,
+                pageSize = editState.pageSize.value,
+            )
         }
     }
 
@@ -179,11 +192,13 @@ class SeriesFilterEditState(
                 initial = null,
                 initialSeries = null,
             )
+
+            FilterType.Favorites -> SeriesFavoritesFilterState(initial = null, initialSeries = null)
         }
     }
 
 
-    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished }
+    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished, Favorites }
 }
 
 sealed interface SeriesFilterStateType {
@@ -552,6 +567,21 @@ enum class SeriesSort {
     BookCount,
     Random,
     Unsorted,
+}
+
+/**
+ * Minimal edit state for the Favorites shelf — only a page-size knob. The preview
+ * stays empty in the editor (favorites are local ids, resolved on Home).
+ */
+class SeriesFavoritesFilterState(
+    initial: SeriesHomeScreenFilter.Favorites?,
+    initialSeries: List<KomgaSeries>?,
+) : SeriesFilterStateType {
+    val pageSize = MutableStateFlow(initial?.pageSize ?: 20)
+    override val series = MutableStateFlow(initialSeries ?: emptyList())
+    fun onPageSizeChange(value: Int) {
+        this.pageSize.value = value
+    }
 }
 
 class SeriesMatchConditionState(
