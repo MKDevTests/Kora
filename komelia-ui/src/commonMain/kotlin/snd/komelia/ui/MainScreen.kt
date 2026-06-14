@@ -66,6 +66,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -515,12 +523,43 @@ class MainScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FloatingToolbarButton(
-                    icon = Icons.Rounded.LocalLibrary,
-                    onClick = vm::navigateToLibrary,
-                    isSelected = navigator.lastItem is LibraryScreen,
-                    accentColor = accentColor
-                )
+                Box {
+                    val showSwitcher = remember { mutableStateOf(false) }
+                    val libraries = vm.libraries.collectAsState().value
+                    val haptics = LocalHapticFeedback.current
+                    val currentLibraryId = (navigator.lastItem as? LibraryScreen)?.libraryId
+                    FloatingToolbarButton(
+                        icon = Icons.Rounded.LocalLibrary,
+                        onClick = vm::navigateToLibrary,
+                        isSelected = navigator.lastItem is LibraryScreen,
+                        accentColor = accentColor,
+                        // Long-press opens a quick library switcher (only useful with 2+ libraries).
+                        onLongClick = if (libraries.size > 1) {
+                            {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showSwitcher.value = true
+                            }
+                        } else null,
+                    )
+                    DropdownMenu(
+                        expanded = showSwitcher.value,
+                        onDismissRequest = { showSwitcher.value = false },
+                    ) {
+                        libraries.forEach { lib ->
+                            DropdownMenuItem(
+                                text = { Text(lib.name) },
+                                onClick = {
+                                    showSwitcher.value = false
+                                    vm.navigateToLibrary(lib.id)
+                                },
+                                leadingIcon = {
+                                    if (currentLibraryId == lib.id) Icon(Icons.Filled.Check, null)
+                                    else Spacer(Modifier.width(24.dp))
+                                },
+                            )
+                        }
+                    }
+                }
                 FloatingToolbarButton(
                     icon = Icons.Rounded.Home,
                     onClick = { if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen()) },
@@ -557,17 +596,32 @@ class MainScreen(
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     private fun FloatingToolbarButton(
         icon: ImageVector,
         onClick: () -> Unit,
         isSelected: Boolean,
-        accentColor: Color?
+        accentColor: Color?,
+        onLongClick: (() -> Unit)? = null,
     ) {
         val tint = if (isSelected) accentColor ?: MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant
-        IconButton(onClick = onClick) {
-            Icon(icon, null, tint = tint)
+        if (onLongClick == null) {
+            IconButton(onClick = onClick) {
+                Icon(icon, null, tint = tint)
+            }
+        } else {
+            // IconButton has no long-press; reproduce its size + circular ripple.
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = tint)
+            }
         }
     }
 
