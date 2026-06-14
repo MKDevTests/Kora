@@ -56,8 +56,11 @@ import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
 import snd.komelia.ui.LocalIgnoreList
 import snd.komelia.ui.LocalHiddenAdmin
+import snd.komelia.ui.LocalFavorites
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komga.client.series.KomgaSeries
@@ -203,6 +206,26 @@ fun SeriesActionsMenu(
                 onClick = {
                     if (isIgnored) ignoreList.unignore(listOf(series.id))
                     else ignoreList.ignore(listOf(series.id))
+                    onDismissRequest()
+                }
+            )
+        }
+        // Local per-user Favorites (any user, no admin gate).
+        val favorites = LocalFavorites.current
+        if (favorites != null) {
+            val isFavorite = series.id.value in favorites.favoriteIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isFavorite) "Retirer des favoris" else "Ajouter aux favoris",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = {
+                    Icon(if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder, null)
+                },
+                onClick = {
+                    favorites.toggle(series.id)
                     onDismissRequest()
                 }
             )

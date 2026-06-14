@@ -26,7 +26,10 @@ import snd.komelia.ui.IgnoreListController
 import snd.komelia.ui.LocalIgnoreList
 import snd.komelia.ui.HiddenAdminController
 import snd.komelia.ui.LocalHiddenAdmin
+import snd.komelia.ui.FavoritesController
+import snd.komelia.ui.LocalFavorites
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Star
 import snd.komelia.ui.LocalKomfIntegration
 import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalOfflineMode
@@ -144,8 +147,9 @@ fun rememberSeriesBulkActionsState(
     val isKomfEnabled = LocalKomfIntegration.current.collectAsState(false).value
     val ignoreList = LocalIgnoreList.current
     val hiddenAdmin = LocalHiddenAdmin.current
+    val favorites = LocalFavorites.current
 
-    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList, hiddenAdmin) {
+    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList, hiddenAdmin, favorites) {
         SeriesBulkActionsState(
             series = series,
             actions = factory.getSeriesBulkActions(),
@@ -155,6 +159,7 @@ fun rememberSeriesBulkActionsState(
             isKomfEnabled = isKomfEnabled,
             ignoreList = ignoreList,
             hiddenAdmin = hiddenAdmin,
+            favorites = favorites,
         )
     }
 }
@@ -168,6 +173,7 @@ data class SeriesBulkActionsState(
     private val isAdmin: Boolean,
     private val ignoreList: IgnoreListController? = null,
     private val hiddenAdmin: HiddenAdminController? = null,
+    private val favorites: FavoritesController? = null,
 ) {
     var showAddToCollectionDialog by mutableStateOf(false)
     var showEditDialog by mutableStateOf(false)
@@ -251,6 +257,15 @@ data class SeriesBulkActionsState(
                     description = "Masquer pour tous",
                     icon = Icons.Default.Public,
                     onClick = { hiddenAdmin.hide(series.map { it.id }) }
+                )
+            )
+        }
+        if (favorites != null) {
+            add(
+                BulkActionButtonData(
+                    description = "Ajouter aux favoris",
+                    icon = Icons.Default.Star,
+                    onClick = { favorites.add(series.map { it.id }) }
                 )
             )
         }
