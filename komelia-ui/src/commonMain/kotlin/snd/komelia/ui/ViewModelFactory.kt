@@ -70,6 +70,7 @@ import snd.komelia.ui.settings.offline.OfflineSettingsViewModel
 import snd.komelia.ui.settings.experimental.ExperimentalSettingsViewModel
 import snd.komelia.ui.settings.experimental.IgnoreListViewModel
 import snd.komelia.ui.settings.experimental.HiddenSeriesViewModel
+import snd.komelia.ui.favorites.FavoritesViewModel
 import snd.komelia.ui.settings.servers.AppServerManagementViewModel
 import snd.komelia.ui.settings.server.ServerSettingsViewModel
 import snd.komelia.ui.settings.updates.AppUpdatesViewModel
@@ -842,6 +843,16 @@ class ViewModelFactory(
         return HiddenSeriesViewModel(
             controller = dependencies.hiddenSeriesController,
             seriesApi = komgaApi.seriesApi,
+        )
+    }
+
+    fun getFavoritesViewModel(): FavoritesViewModel {
+        return FavoritesViewModel(
+            settingsRepository = appRepositories.settingsRepository,
+            seriesApi = komgaApi.seriesApi,
+            bookApi = komgaApi.bookApi,
+            notifications = dependencies.appNotifications,
+            taskEmitter = dependencies.offlineDependencies.taskEmitter,
         )
     }
 

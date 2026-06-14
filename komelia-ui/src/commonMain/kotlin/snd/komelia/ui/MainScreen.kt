@@ -72,6 +72,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.rounded.Star
+import snd.komelia.ui.favorites.FavoritesScreen
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Color
@@ -533,18 +536,25 @@ class MainScreen(
                         onClick = vm::navigateToLibrary,
                         isSelected = navigator.lastItem is LibraryScreen,
                         accentColor = accentColor,
-                        // Long-press opens a quick library switcher (only useful with 2+ libraries).
-                        onLongClick = if (libraries.size > 1) {
-                            {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                showSwitcher.value = true
-                            }
-                        } else null,
+                        // Long-press opens a quick switcher: Favorites + every library.
+                        onLongClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showSwitcher.value = true
+                        },
                     )
                     DropdownMenu(
                         expanded = showSwitcher.value,
                         onDismissRequest = { showSwitcher.value = false },
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Favoris") },
+                            onClick = {
+                                showSwitcher.value = false
+                                if (navigator.lastItem !is FavoritesScreen) navigator.push(FavoritesScreen())
+                            },
+                            leadingIcon = { Icon(Icons.Rounded.Star, null) },
+                        )
+                        if (libraries.isNotEmpty()) HorizontalDivider()
                         libraries.forEach { lib ->
                             DropdownMenuItem(
                                 text = { Text(lib.name) },
