@@ -55,7 +55,9 @@ import snd.komelia.ui.dialogs.komf.reset.KomfResetSeriesMetadataDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
 import snd.komelia.ui.LocalIgnoreList
+import snd.komelia.ui.LocalHiddenAdmin
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komga.client.series.KomgaSeries
@@ -201,6 +203,25 @@ fun SeriesActionsMenu(
                 onClick = {
                     if (isIgnored) ignoreList.unignore(listOf(series.id))
                     else ignoreList.ignore(listOf(series.id))
+                    onDismissRequest()
+                }
+            )
+        }
+        // Admin "hide for everyone" (kora:hidden) — server-shared, admin-gated.
+        val hiddenAdmin = LocalHiddenAdmin.current
+        if (isAdmin && hiddenAdmin != null) {
+            val isHidden = series.id.value in hiddenAdmin.hiddenIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isHidden) "Réafficher pour tous" else "Masquer pour tous",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = { Icon(Icons.Rounded.Public, null) },
+                onClick = {
+                    if (isHidden) hiddenAdmin.unhide(listOf(series.id))
+                    else hiddenAdmin.hide(listOf(series.id))
                     onDismissRequest()
                 }
             )

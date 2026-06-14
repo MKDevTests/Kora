@@ -16,6 +16,7 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.until
 import snd.komelia.AppNotifications
+import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.ui.library.LibrarySeriesTabState.SeriesSort
 import snd.komelia.ui.library.SeriesScreenFilter
@@ -220,7 +221,9 @@ class SeriesFilterState(
                 val publishers = async { referentialApi.getPublishers(libraryIds = libraryIds) }
                 val languages = async { referentialApi.getLanguages(libraryIds = libraryIds) }
                 genresOptions = genres.await()
-                tagOptions = tags.await()
+                // Never surface kora:hidden as a filterable tag — it would let a
+                // non-admin reveal series an admin hid for everyone.
+                tagOptions = tags.await().filterNot { it == HIDDEN_TAG }
                 releaseDateOptions = releaseDates.await()
                 ageRatingsOptions = ageRatings.await()
                 publishersOptions = publishers.await()

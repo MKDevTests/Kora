@@ -24,6 +24,9 @@ import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komelia.ui.IgnoreListController
 import snd.komelia.ui.LocalIgnoreList
+import snd.komelia.ui.HiddenAdminController
+import snd.komelia.ui.LocalHiddenAdmin
+import androidx.compose.material.icons.filled.Public
 import snd.komelia.ui.LocalKomfIntegration
 import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalOfflineMode
@@ -140,8 +143,9 @@ fun rememberSeriesBulkActionsState(
     val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
     val isKomfEnabled = LocalKomfIntegration.current.collectAsState(false).value
     val ignoreList = LocalIgnoreList.current
+    val hiddenAdmin = LocalHiddenAdmin.current
 
-    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList) {
+    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList, hiddenAdmin) {
         SeriesBulkActionsState(
             series = series,
             actions = factory.getSeriesBulkActions(),
@@ -150,6 +154,7 @@ fun rememberSeriesBulkActionsState(
             isAdmin = isAdmin,
             isKomfEnabled = isKomfEnabled,
             ignoreList = ignoreList,
+            hiddenAdmin = hiddenAdmin,
         )
     }
 }
@@ -162,6 +167,7 @@ data class SeriesBulkActionsState(
     private val isKomfEnabled: Boolean,
     private val isAdmin: Boolean,
     private val ignoreList: IgnoreListController? = null,
+    private val hiddenAdmin: HiddenAdminController? = null,
 ) {
     var showAddToCollectionDialog by mutableStateOf(false)
     var showEditDialog by mutableStateOf(false)
@@ -236,6 +242,15 @@ data class SeriesBulkActionsState(
                     description = "Ignore",
                     icon = Icons.Default.VisibilityOff,
                     onClick = { ignoreList.ignore(series.map { it.id }) }
+                )
+            )
+        }
+        if (isAdmin && hiddenAdmin != null) {
+            add(
+                BulkActionButtonData(
+                    description = "Masquer pour tous",
+                    icon = Icons.Default.Public,
+                    onClick = { hiddenAdmin.hide(series.map { it.id }) }
                 )
             )
         }

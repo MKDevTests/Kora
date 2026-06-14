@@ -1,5 +1,11 @@
 package snd.komelia.hidden
 
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.div
+import io.github.vinceglb.filekit.filesDir
+import io.github.vinceglb.filekit.readBytes
+import io.github.vinceglb.filekit.write
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -7,7 +13,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import snd.komelia.komga.api.KomgaApi
 import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.patchLists
 import snd.komga.client.search.allOfSeries
+import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.series.KomgaSeriesMetadataUpdateRequest
 import snd.komga.client.user.KomgaUser
 
 /** Komga series tag that marks a series as hidden for every Kora client. */
@@ -23,23 +32,26 @@ const val HIDDEN_TAG = "kora:hidden"
  * Discovery MUST run against an **undecorated** [KomgaApi]: the very filter this
  * feeds would otherwise drop the kora:hidden series from its own lookup.
  *
- * The set is refreshed whenever a user becomes authenticated (cookie ready /
- * sign-in / server switch) and on demand via [refresh] (e.g. after an admin
- * hides or unhides a series, or on pull-to-refresh).
+ * The set is seeded from a small on-disk cache for instant cold-start filtering
+ * (no flash of a hidden series before the network returns), then refreshed
+ * whenever a user becomes authenticated (cookie ready / sign-in / server switch)
+ * and on demand via [refresh] (e.g. after an admin hides/unhides a series, or on
+ * pull-to-refresh).
  */
 class HiddenSeriesController(
     private val rawApi: StateFlow<KomgaApi>,
     authenticatedUser: StateFlow<KomgaUser?>,
     private val scope: CoroutineScope,
+    private val cacheKey: String? = null,
 ) {
     private val _hiddenIds = MutableStateFlow<Set<String>>(emptySet())
     val hiddenIds: StateFlow<Set<String>> = _hiddenIds.asStateFlow()
 
     init {
-        // (Re-)query on every authenticated state: the initial replay is null
-        // (no query), then a real user triggers the first fetch once the session
-        // is usable, and any sign-in / server switch refreshes it.
         scope.launch {
+            // Seed from disk FIRST so a cold/offline start filters instantly,
+            // THEN keep in sync with the server (sequential — no overwrite race).
+            loadCache()?.let { _hiddenIds.value = it }
             authenticatedUser.collect { user -> if (user != null) refresh() }
         }
     }
@@ -48,6 +60,36 @@ class HiddenSeriesController(
     suspend fun refresh() {
         val ids = runCatching { queryHiddenIds() }.getOrNull() ?: return
         _hiddenIds.value = ids
+        saveCache(ids)
+    }
+
+    /** Admin: add [HIDDEN_TAG] to each series' tags (server-gated to admins). */
+    suspend fun hide(ids: Collection<String>) = setHidden(ids, hidden = true)
+
+    /** Admin: remove [HIDDEN_TAG] from each series' tags. */
+    suspend fun unhide(ids: Collection<String>) = setHidden(ids, hidden = false)
+
+    /**
+     * Merge [HIDDEN_TAG] in/out of each series' existing tags via a metadata
+     * update, **without touching tagsLock** — the user's kora:genre:* / kora:tag:*
+     * tags are preserved. Komga rejects the write for non-admins (403). Re-queries
+     * after so the filter set + lists reflect the change. Runs on the raw api.
+     */
+    private suspend fun setHidden(ids: Collection<String>, hidden: Boolean) {
+        if (ids.isEmpty()) return
+        val seriesApi = rawApi.value.seriesApi
+        ids.forEach { value ->
+            runCatching {
+                val id = KomgaSeriesId(value)
+                val current = seriesApi.getOneSeries(id).metadata.tags
+                val updated = if (hidden) (current + HIDDEN_TAG).distinct()
+                else current.filterNot { it == HIDDEN_TAG }
+                if (updated.toSet() != current.toSet()) {
+                    seriesApi.update(id, KomgaSeriesMetadataUpdateRequest(tags = patchLists(current, updated)))
+                }
+            }
+        }
+        refresh()
     }
 
     private suspend fun queryHiddenIds(): Set<String> {
@@ -67,7 +109,28 @@ class HiddenSeriesController(
         return result
     }
 
+    // -- Cold-start cache (one id per line; no extra serialization dependency) --
+
+    private suspend fun loadCache(): Set<String>? = cacheKey?.let { key ->
+        runCatching {
+            cacheFile(key).readBytes().decodeToString()
+                .split('\n').filter { it.isNotBlank() }.toSet()
+        }.getOrNull()
+    }
+
+    private suspend fun saveCache(ids: Set<String>) {
+        val key = cacheKey ?: return
+        runCatching {
+            (FileKit.filesDir / CACHE_DIR).createDirectories()
+            cacheFile(key).write(ids.joinToString("\n").encodeToByteArray())
+        }
+    }
+
+    private fun cacheFile(key: String) =
+        FileKit.filesDir / CACHE_DIR / "${key.replace(Regex("[^A-Za-z0-9_-]"), "_")}.ids"
+
     private companion object {
         const val HIDDEN_PAGE_SIZE = 500
+        const val CACHE_DIR = "hidden_series"
     }
 }

@@ -18,6 +18,7 @@ import snd.komelia.image.KomeliaUpscaler
 import snd.komelia.image.ReaderImageFactory
 import snd.komelia.image.processing.BlankPageDetector
 import snd.komelia.image.processing.ColorCorrectionStep
+import snd.komelia.hidden.HiddenSeriesController
 import snd.komelia.komga.api.KomgaApi
 import snd.komelia.komga.api.LocalFileApiProvider
 import kotlinx.coroutines.flow.SharedFlow
@@ -45,6 +46,8 @@ data class DependencyContainer(
     val backupService: BackupService,
     val readerSyncService: ReaderSyncService,
     val komgaApi: StateFlow<KomgaApi>,
+    /** Admin "hide for everyone" (kora:hidden) handle; null on platforms without it. */
+    val hiddenSeriesController: HiddenSeriesController? = null,
 
     val isOffline: StateFlow<Boolean>,
     val komfClientFactory: KomfClientFactory,

@@ -233,6 +233,15 @@ fun MainView(
                     onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
                 )
             }
+            val hiddenController = remember(dependencies, viewModelFactory) {
+                dependencies.hiddenSeriesController?.let { domain ->
+                    HiddenAdminController(
+                        controller = domain,
+                        scope = ignoreScope,
+                        onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
+                    )
+                }
+            }
 
             CompositionLocalProvider(
                 LocalViewModelFactory provides viewModelFactory,
@@ -249,6 +258,7 @@ fun MainView(
                 LocalLibraries provides dependencies.komgaSharedState.libraries,
                 LocalReloadEvents provides viewModelFactory.screenReloadEvents,
                 LocalIgnoreList provides ignoreController,
+                LocalHiddenAdmin provides hiddenController,
                 LocalBookDownloadEvents provides dependencies.offlineDependencies.bookDownloadEvents,
                 LocalOfflineMode provides dependencies.isOffline,
                 LocalKomgaState provides dependencies.komgaSharedState,

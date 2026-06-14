@@ -220,6 +220,7 @@ abstract class AppModule(
             rawApi = rawKomgaApi,
             authenticatedUser = currentUserFlow,
             scope = initScope,
+            cacheKey = serverId?.toString() ?: "default",
         )
 
         // Series removed from every list response = locally ignored ∪ server-hidden.
@@ -326,6 +327,7 @@ abstract class AppModule(
             readerSyncService = readerSyncService,
 
             komgaApi = komgaApi,
+            hiddenSeriesController = hiddenSeriesController,
             isOffline = isOffline,
             komfClientFactory = komfClientFactory,
             appNotifications = appNotifications,
