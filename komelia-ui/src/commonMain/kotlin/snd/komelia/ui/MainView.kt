@@ -242,6 +242,15 @@ fun MainView(
                     )
                 }
             }
+            val favoritesController = remember(dependencies, viewModelFactory) {
+                val repo = dependencies.appRepositories.settingsRepository
+                FavoritesController(
+                    favoriteIds = repo.getFavoriteSeriesIds().stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
+                    settingsRepository = repo,
+                    scope = ignoreScope,
+                    onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
+                )
+            }
 
             CompositionLocalProvider(
                 LocalViewModelFactory provides viewModelFactory,
@@ -259,6 +268,7 @@ fun MainView(
                 LocalReloadEvents provides viewModelFactory.screenReloadEvents,
                 LocalIgnoreList provides ignoreController,
                 LocalHiddenAdmin provides hiddenController,
+                LocalFavorites provides favoritesController,
                 LocalBookDownloadEvents provides dependencies.offlineDependencies.bookDownloadEvents,
                 LocalOfflineMode provides dependencies.isOffline,
                 LocalKomgaState provides dependencies.komgaSharedState,

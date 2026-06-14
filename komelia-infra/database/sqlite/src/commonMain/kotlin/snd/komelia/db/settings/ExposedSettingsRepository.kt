@@ -90,6 +90,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[ignoredSeriesIds] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.ignoredSeriesIds.toList()
                 )
+                it[favoriteSeriesIds] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.favoriteSeriesIds.toList()
+                )
                 it[genreTilesCustomAppearance] = settings.genreTilesCustomAppearance
                 it[genreTileWidth] = settings.genreTileWidth
                 it[genreTileTextBelow] = settings.genreTileTextBelow
@@ -172,6 +175,12 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 Json.decodeFromString(
                     ListSerializer(String.serializer()),
                     get(AppSettingsTable.ignoredSeriesIds)
+                ).toSet()
+            }.getOrDefault(emptySet()),
+            favoriteSeriesIds = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.favoriteSeriesIds)
                 ).toSet()
             }.getOrDefault(emptySet()),
             genreTilesCustomAppearance = get(AppSettingsTable.genreTilesCustomAppearance),

@@ -76,6 +76,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(ignoredSeriesIds = ids) }
     }
 
+    override fun getFavoriteSeriesIds(): Flow<Set<String>> =
+        wrapper.state.map { it.favoriteSeriesIds }.distinctUntilChanged()
+
+    override suspend fun putFavoriteSeriesIds(ids: Set<String>) {
+        wrapper.transform { it.copy(favoriteSeriesIds = ids) }
+    }
+
     override fun getGenreTilesCustomAppearance(): Flow<Boolean> =
         wrapper.state.map { it.genreTilesCustomAppearance }.distinctUntilChanged()
 

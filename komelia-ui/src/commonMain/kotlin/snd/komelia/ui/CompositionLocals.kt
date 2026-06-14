@@ -52,6 +52,7 @@ val LocalLibraries = compositionLocalOf<StateFlow<List<KomgaLibrary>>> { error("
 val LocalReloadEvents = staticCompositionLocalOf<SharedFlow<Unit>> { error("Reload event flow was not initialized") }
 val LocalIgnoreList = staticCompositionLocalOf<IgnoreListController?> { null }
 val LocalHiddenAdmin = staticCompositionLocalOf<HiddenAdminController?> { null }
+val LocalFavorites = staticCompositionLocalOf<FavoritesController?> { null }
 val LocalBookDownloadEvents =
     staticCompositionLocalOf<SharedFlow<DownloadEvent>?> { error("Book download event flow was not initialized") }
 val LocalOfflineMode = staticCompositionLocalOf<StateFlow<Boolean>> { error("offline mode flow was not initialized") }

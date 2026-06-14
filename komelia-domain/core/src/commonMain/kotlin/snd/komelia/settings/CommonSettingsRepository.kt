@@ -38,6 +38,10 @@ interface CommonSettingsRepository {
     fun getIgnoredSeriesIds(): Flow<Set<String>>
     suspend fun putIgnoredSeriesIds(ids: Set<String>)
 
+    /** Series ids the user marked as favorites locally (per-server, cross-library). */
+    fun getFavoriteSeriesIds(): Flow<Set<String>>
+    suspend fun putFavoriteSeriesIds(ids: Set<String>)
+
     /** One-shot flag: local Ignore List pushed to the server as kora:hidden. */
     fun getIgnoreListMigratedToServerHidden(): Flow<Boolean>
     suspend fun putIgnoreListMigratedToServerHidden(value: Boolean)

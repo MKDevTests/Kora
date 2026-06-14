@@ -193,6 +193,13 @@ data class AppSettings(
     val ignoredSeriesIds: Set<String> = emptySet(),
 
     /**
+     * Series ids the user has marked as favorites locally (cross-library). Shown
+     * in the virtual "Favorites" section. Per-server, never sent to the server.
+     * JSON string array column.
+     */
+    val favoriteSeriesIds: Set<String> = emptySet(),
+
+    /**
      * Experimental Genre tab: when true the genre tiles use their own
      * appearance (below) instead of inheriting the global card style. Size +
      * text only, per the user's choice.

@@ -87,6 +87,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V75__ignore_list.sql",
         "V76__genre_tile_appearance.sql",
         "V77__ignore_list_migrated_to_hidden.sql",
+        "V78__favorite_series.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {
