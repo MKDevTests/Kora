@@ -86,6 +86,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                     MapSerializer(String.serializer(), String.serializer()), settings.genreLabelOverrides
                 )
                 it[ignoreListEnabled] = settings.ignoreListEnabled
+                it[ignoreListMigratedToServerHidden] = settings.ignoreListMigratedToServerHidden
                 it[ignoredSeriesIds] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.ignoredSeriesIds.toList()
                 )
@@ -166,6 +167,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 )
             }.getOrDefault(emptyMap()),
             ignoreListEnabled = get(AppSettingsTable.ignoreListEnabled),
+            ignoreListMigratedToServerHidden = get(AppSettingsTable.ignoreListMigratedToServerHidden),
             ignoredSeriesIds = runCatching {
                 Json.decodeFromString(
                     ListSerializer(String.serializer()),

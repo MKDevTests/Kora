@@ -62,6 +62,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(ignoreListEnabled = enabled) }
     }
 
+    override fun getIgnoreListMigratedToServerHidden(): Flow<Boolean> =
+        wrapper.state.map { it.ignoreListMigratedToServerHidden }.distinctUntilChanged()
+
+    override suspend fun putIgnoreListMigratedToServerHidden(value: Boolean) {
+        wrapper.transform { it.copy(ignoreListMigratedToServerHidden = value) }
+    }
+
     override fun getIgnoredSeriesIds(): Flow<Set<String>> =
         wrapper.state.map { it.ignoredSeriesIds }.distinctUntilChanged()
 

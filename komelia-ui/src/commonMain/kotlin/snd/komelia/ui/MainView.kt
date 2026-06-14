@@ -308,6 +308,12 @@ fun MainView(
                 if (updateChecker != null) {
                     StartupUpdateChecker(updateChecker)
                 }
+                IgnoreListToHiddenMigrationPrompt(
+                    settingsRepository = dependencies.appRepositories.settingsRepository,
+                    hiddenController = dependencies.hiddenSeriesController,
+                    authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
+                    isOffline = dependencies.isOffline,
+                )
             }
 
             BackPressHandler {}

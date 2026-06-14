@@ -38,6 +38,10 @@ interface CommonSettingsRepository {
     fun getIgnoredSeriesIds(): Flow<Set<String>>
     suspend fun putIgnoredSeriesIds(ids: Set<String>)
 
+    /** One-shot flag: local Ignore List pushed to the server as kora:hidden. */
+    fun getIgnoreListMigratedToServerHidden(): Flow<Boolean>
+    suspend fun putIgnoreListMigratedToServerHidden(value: Boolean)
+
     /** Experimental Genre tab tile appearance: custom toggle + size + text. */
     fun getGenreTilesCustomAppearance(): Flow<Boolean>
     suspend fun putGenreTilesCustomAppearance(enabled: Boolean)

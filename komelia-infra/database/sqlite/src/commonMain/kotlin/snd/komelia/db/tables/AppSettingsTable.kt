@@ -60,6 +60,7 @@ object AppSettingsTable : Table("AppSettings") {
     val genreCoverOverrides = text("genre_cover_overrides").default("{}")
     val genreLabelOverrides = text("genre_label_overrides").default("{}")
     val ignoreListEnabled = bool("ignore_list_enabled").default(false)
+    val ignoreListMigratedToServerHidden = bool("ignore_list_migrated_to_hidden").default(false)
     val ignoredSeriesIds = text("ignored_series_ids").default("[]")
     val genreTilesCustomAppearance = bool("genre_tiles_custom_appearance").default(false)
     val genreTileWidth = integer("genre_tile_width").default(170)

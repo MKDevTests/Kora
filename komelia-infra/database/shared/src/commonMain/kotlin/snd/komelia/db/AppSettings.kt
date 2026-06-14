@@ -180,6 +180,12 @@ data class AppSettings(
     val ignoreListEnabled: Boolean = false,
 
     /**
+     * One-shot flag: true once the admin's local Ignore List has been pushed to
+     * the server as kora:hidden tags (the launch prompt). Prevents re-running.
+     */
+    val ignoreListMigratedToServerHidden: Boolean = false,
+
+    /**
      * Experimental: series ids the user has ignored locally. Ignored series and
      * their books are filtered out of every list (libraries, collections,
      * search, home, genres). Never sent to the server. JSON string array column.
