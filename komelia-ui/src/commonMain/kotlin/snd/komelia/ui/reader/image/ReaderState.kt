@@ -115,6 +115,12 @@ class ReaderState(
     val pageChangeFlow: SharedFlow<Unit>,
     private val imageLoader: BookImageLoader,
     private val ocrService: OcrService,
+    /**
+     * Whether the ONNX panel detector is loaded and usable. When false, webtoon
+     * routing falls back to CONTINUOUS instead of PANELS (PANELS needs the
+     * detector to render — without it the reader would collapse to PAGED).
+     */
+    private val panelsAvailable: () -> Boolean,
 ) {
     val navigationHistory = NavigationHistory()
     private val currentSyncBlob = MutableStateFlow<String?>(null)
@@ -323,13 +329,12 @@ class ReaderState(
             when (currentSeries.metadata.readingDirection) {
                 KomgaReadingDirection.LEFT_TO_RIGHT -> ReaderType.PAGED
                 KomgaReadingDirection.RIGHT_TO_LEFT -> ReaderType.PAGED
-                // Webtoons read much better in PANELS mode (auto-zoom on each
-                // detected panel) than in a single vertical scroll: tall
-                // strips with huge inter-panel gutters become tedious in
-                // continuous mode and the heuristic gutter snap couldn't
-                // close the gap. Panel-by-panel navigation handles them
-                // cleanly out of the box.
-                KomgaReadingDirection.WEBTOON -> ReaderType.PANELS
+                // Webtoons read best in PANELS mode (auto-zoom on each detected
+                // panel). But PANELS needs the ONNX panel detector to render;
+                // when it isn't loaded, fall back to CONTINUOUS (vertical
+                // scroll) rather than PANELS — otherwise the reader collapses to
+                // PAGED, which is the worst option for a tall strip.
+                KomgaReadingDirection.WEBTOON -> webtoonReaderType()
                 KomgaReadingDirection.VERTICAL, null -> readerSettingsRepository.getReaderType().first()
             }
         } else {
@@ -340,34 +345,43 @@ class ReaderState(
         // Local webtoon auto-detect override. Only applies when:
         //  - the setting is ON
         //  - the user hasn't manually flipped readerType already this session
-        //  - the first 3 pages all look webtoon-tall (height/width >= 4)
-        // Same rationale as the metadata branch above: route to PANELS, not
-        // CONTINUOUS, because the panel-by-panel UX is what webtoons want.
-        if (!userOverrodeReaderType
-            && readerSettingsRepository.getPagedAutoDetectWebtoon().first()
-            && isWebtoonLikely(booksState.value?.currentBookPages ?: emptyList())
-        ) {
+        //  - the first-5-pages heuristic (>=3 tall) classifies it as a webtoon
+        // Same fallback as the metadata branch above: PANELS when the detector
+        // is loaded, otherwise CONTINUOUS.
+        val autoDetectOn = readerSettingsRepository.getPagedAutoDetectWebtoon().first()
+        val pages = booksState.value?.currentBookPages ?: emptyList()
+        if (!userOverrodeReaderType && autoDetectOn && isWebtoonLikely(pages)) {
             detectedAsWebtoon.value = true
-            readerType.value = ReaderType.PANELS
+            readerType.value = webtoonReaderType()
         }
     }
 
     /**
-     * Heuristic: the first 3 pages (or fewer if the book has <3) must all
-     * have a height-to-width ratio of at least 4.0 for the book to be
-     * classified as a webtoon. 4× is a safe lower bound — typical manga
-     * pages cap around 1.4-2:1, while webtoon panels start at 3-6:1.
-     * Uses the raw image dimensions from Komga metadata, BEFORE any
-     * pipeline processing (crop borders etc.), so the ratio reflects the
-     * file itself.
+     * Target reader type for a webtoon: PANELS when the ONNX panel detector is
+     * loaded, CONTINUOUS otherwise. Never PAGED — a tall strip in paged mode is
+     * unreadable. Routing to PANELS without a detector silently collapses to
+     * PAGED (the reader has no PanelsReaderState to render), which is exactly
+     * the regression this guards against.
+     */
+    private fun webtoonReaderType(): ReaderType =
+        if (panelsAvailable()) ReaderType.PANELS else ReaderType.CONTINUOUS
+
+    /**
+     * Heuristic: of the first 5 pages, at least 3 must have a height-to-width
+     * ratio of at least 4.0 for the book to be classified as a webtoon. Looking
+     * at 5 (not 3) and requiring 3 (not all) tolerates a normal-ratio first page
+     * (a cover) or an occasional short page without losing the detection. 4× is a
+     * safe lower bound — typical manga pages cap around 1.4-2:1, while webtoon
+     * panels start at 3-6:1. Uses the raw image dimensions from Komga metadata,
+     * BEFORE any pipeline processing (crop borders etc.), so the ratio reflects
+     * the file itself.
      */
     private fun isWebtoonLikely(pages: List<PageMetadata>): Boolean {
-        val sample = pages.take(3)
-        if (sample.isEmpty()) return false
-        return sample.all { page ->
-            val size = page.size ?: return@all false
+        val tall = pages.take(5).count { page ->
+            val size = page.size ?: return@count false
             size.width > 0 && size.height.toFloat() / size.width.toFloat() >= 4.0f
         }
+        return tall >= 3
     }
 
     private suspend fun getNextBook(currentBook: KomeliaBook): KomeliaBook? {

@@ -84,7 +84,6 @@ fun BoxScope.PanelsReaderContent(
     val metadata = panelsReaderState.pageMetadata.collectAsState().value
     val currentPageIndex = panelsReaderState.currentPageIndex.collectAsState().value
     val currentContainerSize = screenScaleState.areaSize.collectAsState().value
-    val tapToZoom = panelsReaderState.tapToZoom.collectAsState().value
     val adaptiveBackground = panelsReaderState.adaptiveBackground.collectAsState().value
 
     val ocrResults by panelsReaderState.readerState.ocrResults.collectAsState()
@@ -148,7 +147,12 @@ fun BoxScope.PanelsReaderContent(
             onPrevPageClick = panelsReaderState::previousPanel,
             contentAreaSize = currentContainerSize,
             scaleState = screenScaleState,
-            tapToZoom = tapToZoom,
+            // Panel skip must stay crisp + independent of the global tap-to-zoom
+            // setting: double-tap-zoom makes detectTapGestures delay every single
+            // tap (~300ms) to disambiguate, which made the panel "saut" laggy and
+            // swallowed fast taps as double-taps. Panels are already auto-zoomed;
+            // manual zoom stays available via pinch.
+            tapToZoom = false,
             tapNavigationMode = tapNavigationMode,
             isSettingsMenuOpen = showSettingsMenu,
             onSettingsMenuToggle = { onShowSettingsMenuChange(!showSettingsMenu) },

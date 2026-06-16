@@ -134,6 +134,7 @@ class ReaderViewModel(
         komgaEvents = komgaEvents,
         pageChangeFlow = pageChangeFlow,
         ocrService = ocrService,
+        panelsAvailable = { panelDetector != null && panelDetector.isAvailable.value },
     )
 
     val pagedReaderState = PagedReaderState(
