@@ -70,6 +70,7 @@ import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
 import snd.komelia.ui.library.GenreLabels
+import snd.komelia.ui.library.NextReleaseLabels
 import snd.komelia.ui.library.SeriesScreenFilter
 import snd.komelia.ui.platform.VerticalScrollbarWithFullSpans
 import snd.komelia.ui.platform.WindowSizeClass.COMPACT
@@ -394,6 +395,7 @@ fun Series(
                         alternateTitles = series.metadata.alternateTitles,
                         onFilterClick = onFilterClick,
                         genres = GenreLabels.genreDisplayNames(series.metadata.tags),
+                        nextRelease = NextReleaseLabels.upcomingRelease(series.metadata.tags),
                         modifier = Modifier,
                     )
                     HorizontalDivider(Modifier.padding(vertical = 10.dp))

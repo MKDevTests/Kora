@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.datetime.LocalDate
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.common.components.ExpandableText
+import snd.komelia.ui.library.NextReleaseLabels
 import snd.komelia.ui.library.SeriesScreenFilter
 import snd.komga.client.common.KomgaReadingDirection
 import snd.komga.client.library.KomgaLibrary
@@ -61,6 +62,7 @@ fun SeriesDescriptionRow(
     accentColor: Color? = null,
     showReleaseYear: Boolean = true,
     genres: List<String> = emptyList(),
+    nextRelease: NextReleaseLabels.NextRelease? = null,
     modifier: Modifier
 ) {
     val strings = LocalStrings.current.seriesView
@@ -69,6 +71,18 @@ fun SeriesDescriptionRow(
         verticalArrangement = Arrangement.spacedBy(5.dp),
         horizontalAlignment = Alignment.Start
     ) {
+
+        // Upcoming volume (from the user's `nextrelease:<vol>-<dd.mm.yyyy>` tag).
+        // Caller passes null when absent or already past, so a value here always
+        // means "show it". Highlighted so it stands out as actionable info.
+        nextRelease?.let { nr ->
+            Text(
+                text = "Prochain tome ${nr.volume} — ${NextReleaseLabels.formatDate(nr.date)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = accentColor ?: MaterialTheme.colorScheme.primary,
+            )
+        }
 
         if (showReleaseYear && releaseDate != null)
             Text("Release Year: ${releaseDate.year}", style = MaterialTheme.typography.labelSmall)
