@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
+import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -221,6 +222,7 @@ class LibrarySeriesTabState(
             val condition = allOfSeries {
                 libraryId?.let { library { isEqualTo(it) } }
                 baseTagFilter?.let { tag { isEqualTo(it) } }
+                tag { isNotEqualTo(HIDDEN_TAG) }
                 filter.addConditionTo(this)
             }
             val page = seriesApi.getSeriesList(
@@ -328,6 +330,11 @@ class LibrarySeriesTabState(
         val condition = allOfSeries {
             libraryId?.let { library { isEqualTo(it) } }
             baseTagFilter?.let { tag { isEqualTo(it) } }
+            // Exclude admin-hidden series (kora:hidden) server-side so each page
+            // comes back genuinely full. Otherwise the client-side ignore filter
+            // strips them AFTER fetching, leaving a 100-item page as 97-98 items
+            // -> ragged last row + page/element counts that overstate reality.
+            tag { isNotEqualTo(HIDDEN_TAG) }
             filter.addConditionTo(this)
         }
 
