@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,8 +26,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.rounded.MoreVert
@@ -47,7 +45,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -55,6 +52,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -215,23 +213,45 @@ private fun BookImageBadges(
     }
     BookDownloadCardOverlay(book)
 
+    // Fully-read marker: a filled dark-green corner (top-right) with a white
+    // check, drawn entirely in a Canvas sized as a FRACTION of the card width
+    // so it scales with the card-size setting (a fixed dp looked tiny on large
+    // cards). The badges layer is already clipped to the card's rounded corner
+    // by ItemCard, so the triangle follows the rounding automatically.
     if (book.readProgress?.completed == true) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = BiasAlignment(0.8f, -1f)
+            contentAlignment = Alignment.TopEnd
         ) {
-            Box(modifier = Modifier.offset(y = (-5).dp)) {
-                Icon(
-                    imageVector = Icons.Filled.Bookmark,
-                    contentDescription = null,
-                    tint = Color.Black.copy(alpha = 0.3f),
-                    modifier = Modifier.size(24.dp).offset(x = 1.dp, y = 1.dp)
+            Canvas(modifier = Modifier.fillMaxWidth(0.31f).aspectRatio(1f)) {
+                val s = size.width
+                drawPath(
+                    path = Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(s, 0f)
+                        lineTo(s, s)
+                        close()
+                    },
+                    color = Color(0xFF2E7D32)
                 )
-                Icon(
-                    imageVector = Icons.Filled.Bookmark,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(24.dp)
+                // White check, positioned/scaled relative to s (near the
+                // triangle's centroid toward the top-right corner).
+                val cx = s * 0.64f
+                val cy = s * 0.34f
+                val stroke = s * 0.08f
+                drawLine(
+                    color = Color.White,
+                    start = Offset(cx - 0.13f * s, cy + 0.01f * s),
+                    end = Offset(cx - 0.03f * s, cy + 0.11f * s),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round
+                )
+                drawLine(
+                    color = Color.White,
+                    start = Offset(cx - 0.03f * s, cy + 0.11f * s),
+                    end = Offset(cx + 0.16f * s, cy - 0.11f * s),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round
                 )
             }
         }
