@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import snd.komelia.AppNotifications
+import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -180,11 +181,17 @@ class SearchViewModel(
             val fuzzy = query.toFuzzyQuery()
             val search = if (libId != null) {
                 KomgaSeriesSearch(
-                    condition = allOfSeries { library { isEqualTo(libId) } }.toSeriesCondition(),
+                    condition = allOfSeries {
+                        library { isEqualTo(libId) }
+                        tag { isNotEqualTo(HIDDEN_TAG) }
+                    }.toSeriesCondition(),
                     fullTextSearch = fuzzy,
                 )
             } else {
-                KomgaSeriesSearch(fullTextSearch = fuzzy)
+                KomgaSeriesSearch(
+                    condition = allOfSeries { tag { isNotEqualTo(HIDDEN_TAG) } }.toSeriesCondition(),
+                    fullTextSearch = fuzzy,
+                )
             }
             val page = seriesApi.getSeriesList(
                 search,
@@ -284,6 +291,7 @@ class SearchViewModel(
             val condition = allOfSeries {
                 author { isEqualTo(KomgaSearchCondition.AuthorMatch(authorName, null)) }
                 libId?.let { library { isEqualTo(it) } }
+                tag { isNotEqualTo(HIDDEN_TAG) }
             }.toSeriesCondition()
             val page = seriesApi.getSeriesList(
                 KomgaSeriesSearch(condition = condition),

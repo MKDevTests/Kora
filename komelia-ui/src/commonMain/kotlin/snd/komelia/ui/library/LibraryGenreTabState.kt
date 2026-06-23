@@ -25,6 +25,7 @@ import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
 import snd.komelia.AppNotifications
+import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.settings.CommonSettingsRepository
@@ -180,6 +181,7 @@ class LibraryGenreTabState(
                                 condition = allOfSeries {
                                     library { isEqualTo(lib.id) }
                                     tag { isEqualTo(genreTag) }
+                                    tag { isNotEqualTo(HIDDEN_TAG) }
                                 }.toSeriesCondition()
                             ),
                             KomgaPageRequest(
