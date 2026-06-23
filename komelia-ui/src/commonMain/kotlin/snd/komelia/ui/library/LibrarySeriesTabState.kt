@@ -288,12 +288,20 @@ class LibrarySeriesTabState(
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 
-    /** Snapshot the first page so a return to this library paints instantly. */
+    /**
+     * Cache key: per library, or per (library + genre tag) for a genre
+     * drill-down, so reopening the SAME genre paints its cached first page
+     * instantly instead of waiting on the (server-bound) tag query every time.
+     */
+    private val seriesCacheKey: String? =
+        libraryId?.value?.let { lib -> if (baseTagFilter != null) "$lib|$baseTagFilter" else lib }
+
+    /** Snapshot the first page so a return to this library/genre paints instantly. */
     private fun cacheFirstPage(page: Int) {
-        if (page != 1 || baseTagFilter != null) return
-        val libKey = libraryId?.value ?: return
+        if (page != 1) return
+        val key = seriesCacheKey ?: return
         LibrarySeriesPageCache.put(
-            libKey,
+            key,
             LibrarySeriesPageCache.Snapshot(
                 series = series,
                 downloadedSeriesIds = downloadedSeriesIds,
@@ -306,9 +314,9 @@ class LibrarySeriesTabState(
 
     /** Paint the cached first page (if it matches the active filter) before the network load. */
     private fun showCachedFirstPageIfAny() {
-        if (baseTagFilter != null || state.value is LoadState.Success) return
-        val libKey = libraryId?.value ?: return
-        val snapshot = LibrarySeriesPageCache.get(libKey) ?: return
+        if (state.value is LoadState.Success) return
+        val key = seriesCacheKey ?: return
+        val snapshot = LibrarySeriesPageCache.get(key) ?: return
         if (snapshot.filterSignature != filterSignature(filterState.state.value)) return
         series = snapshot.series
         downloadedSeriesIds = snapshot.downloadedSeriesIds
