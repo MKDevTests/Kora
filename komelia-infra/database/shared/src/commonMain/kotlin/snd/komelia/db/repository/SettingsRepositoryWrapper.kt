@@ -380,6 +380,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(languageBadgeAtBottom = atBottom) }
     }
 
+    override fun getShowCompleteSeriesBadge(): Flow<Boolean> =
+        wrapper.state.map { it.showCompleteSeriesBadge }.distinctUntilChanged()
+
+    override suspend fun putShowCompleteSeriesBadge(enabled: Boolean) {
+        wrapper.transform { it.copy(showCompleteSeriesBadge = enabled) }
+    }
+
     override fun getLibraryDropdownInTitle(): Flow<Boolean> =
         wrapper.state.map { it.libraryDropdownInTitle }.distinctUntilChanged()
 

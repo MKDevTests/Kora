@@ -84,6 +84,13 @@ data class AppSettings(
     val languageBadgeAtBottom: Boolean = false,
 
     /**
+     * Recolors the top-right series card badge to signal a complete series
+     * (status Ended and every volume owned) instead of just the unread count.
+     * On by default.
+     */
+    val showCompleteSeriesBadge: Boolean = true,
+
+    /**
      * When true the big page title at the top of Home / Library screens
      * becomes a dropdown that lists Home + every library for one-tap
      * switching. When false the title is plain text (historical behaviour);

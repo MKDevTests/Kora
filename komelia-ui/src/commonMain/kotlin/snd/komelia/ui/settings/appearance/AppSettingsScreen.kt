@@ -49,6 +49,8 @@ class AppSettingsScreen : Screen {
                     onLanguageBadgeScaleChange = vm::onLanguageBadgeScaleChange,
                     languageBadgeAtBottom = vm.languageBadgeAtBottom,
                     onLanguageBadgeAtBottomChange = vm::onLanguageBadgeAtBottomChange,
+                    showCompleteSeriesBadge = vm.showCompleteSeriesBadge,
+                    onShowCompleteSeriesBadgeChange = vm::onShowCompleteSeriesBadgeChange,
                     lockScreenRotation = vm.lockScreenRotation,
                     onLockScreenRotationChange = vm::onLockScreenRotationChange,
                     cardLayoutOverlayBackground = vm.cardLayoutOverlayBackground,

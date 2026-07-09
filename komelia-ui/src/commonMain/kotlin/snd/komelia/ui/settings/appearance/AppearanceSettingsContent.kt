@@ -104,6 +104,8 @@ fun AppearanceSettingsContent(
     onLanguageBadgeScaleChange: (Float) -> Unit,
     languageBadgeAtBottom: Boolean,
     onLanguageBadgeAtBottomChange: (Boolean) -> Unit,
+    showCompleteSeriesBadge: Boolean,
+    onShowCompleteSeriesBadgeChange: (Boolean) -> Unit,
     lockScreenRotation: Boolean,
     onLockScreenRotationChange: (Boolean) -> Unit,
     cardLayoutOverlayBackground: Boolean,
@@ -406,6 +408,16 @@ fun AppearanceSettingsContent(
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
         }
+
+        // i.3 Complete series badge
+        SwitchWithLabel(
+            checked = showCompleteSeriesBadge,
+            onCheckedChange = onShowCompleteSeriesBadgeChange,
+            label = { Text("Highlight complete series") },
+            supportingText = { Text("Recolors the top-right badge on series cards when the series is Ended and every volume is owned") },
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+        )
 
         HorizontalDivider()
 

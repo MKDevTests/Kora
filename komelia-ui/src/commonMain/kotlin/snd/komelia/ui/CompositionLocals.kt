@@ -77,6 +77,7 @@ val LocalHideParenthesesInNames = compositionLocalOf { false }
 val LocalShowLanguageOnCovers = compositionLocalOf { false }
 val LocalLanguageBadgeScale = compositionLocalOf { 1.0f }
 val LocalLanguageBadgeAtBottom = compositionLocalOf { false }
+val LocalShowCompleteSeriesBadge = compositionLocalOf { true }
 val LocalCardLayoutOverlayBackground = compositionLocalOf { true }
 val LocalLockScreenRotation = compositionLocalOf { false }
 val LocalOnLockScreenRotationChange = staticCompositionLocalOf<(Boolean) -> Unit> { {} }

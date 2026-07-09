@@ -102,6 +102,7 @@ fun MainView(
     var showLanguageOnCovers by remember { mutableStateOf(false) }
     var languageBadgeScale by remember { mutableStateOf(1.0f) }
     var languageBadgeAtBottom by remember { mutableStateOf(false) }
+    var showCompleteSeriesBadge by remember { mutableStateOf(true) }
     var lockScreenRotation by remember { mutableStateOf(false) }
     var cardLayoutOverlayBackground by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
@@ -155,6 +156,10 @@ fun MainView(
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getLanguageBadgeAtBottom()
             ?.collect { languageBadgeAtBottom = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getShowCompleteSeriesBadge()
+            ?.collect { showCompleteSeriesBadge = it }
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getCardLayoutOverlayBackground()
@@ -283,6 +288,7 @@ fun MainView(
                 LocalShowLanguageOnCovers provides showLanguageOnCovers,
                 LocalLanguageBadgeScale provides languageBadgeScale,
                 LocalLanguageBadgeAtBottom provides languageBadgeAtBottom,
+                LocalShowCompleteSeriesBadge provides showCompleteSeriesBadge,
                 LocalLockScreenRotation provides lockScreenRotation,
                 LocalOnLockScreenRotationChange provides { newRotation ->
                     coroutineScope.launch {

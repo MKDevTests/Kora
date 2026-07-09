@@ -54,6 +54,7 @@ import snd.komelia.ui.LocalHideParenthesesInNames
 import snd.komelia.ui.LocalLanguageBadgeAtBottom
 import snd.komelia.ui.LocalLanguageBadgeScale
 import snd.komelia.ui.LocalLibraries
+import snd.komelia.ui.LocalShowCompleteSeriesBadge
 import snd.komelia.ui.LocalShowLanguageOnCovers
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.NoPaddingChip
@@ -64,7 +65,15 @@ import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.utils.languageBadgeLabel
 import snd.komelia.utils.removeParentheses
 import snd.komga.client.series.KomgaSeries
+import snd.komga.client.series.KomgaSeriesStatus
 import androidx.compose.material3.LinearProgressIndicator
+
+/** Status Ended and every volume owned — matches Komga's own "complete" series filter. */
+private val KomgaSeries.isComplete: Boolean
+    get() {
+        val total = metadata.totalBookCount
+        return metadata.status == KomgaSeriesStatus.ENDED && total != null && booksCount >= total
+    }
 
 @Composable
 fun SeriesImageCard(
@@ -287,16 +296,49 @@ private fun SeriesImageBadges(
             }
         }
     }
+    val showCompleteBadge = LocalShowCompleteSeriesBadge.current && series.isComplete
     if (series.booksUnreadCount > 0) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopEnd
         ) {
-            IndicatorBadge {
-                Text(
-                    "${series.booksUnreadCount}",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
+            if (showCompleteBadge) {
+                IndicatorBadge(
+                    backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
+                    borderColor = MaterialTheme.colorScheme.tertiary,
+                ) {
+                    Text(
+                        "${series.booksUnreadCount}",
+                        color = MaterialTheme.colorScheme.onTertiary,
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
+                    )
+                }
+            } else {
+                IndicatorBadge {
+                    Text(
+                        "${series.booksUnreadCount}",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
+                    )
+                }
+            }
+        }
+    } else if (showCompleteBadge) {
+        // Fully read and complete: no count left to show, but keep the corner
+        // marked so a finished-and-owned-in-full series is still recognizable.
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            IndicatorBadge(
+                backgroundColor = MaterialTheme.colorScheme.tertiary,
+                borderColor = MaterialTheme.colorScheme.tertiary,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiary,
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

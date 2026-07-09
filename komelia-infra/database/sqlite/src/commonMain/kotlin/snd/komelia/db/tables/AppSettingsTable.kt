@@ -50,6 +50,7 @@ object AppSettingsTable : Table("AppSettings") {
     val showLanguageOnCovers = bool("show_language_on_covers").default(false)
     val languageBadgeScale = float("language_badge_scale").default(1.0f)
     val languageBadgeAtBottom = bool("language_badge_at_bottom").default(false)
+    val showCompleteSeriesBadge = bool("show_complete_series_badge").default(true)
     val libraryDropdownInTitle = bool("library_dropdown_in_title").default(true)
     val startupScreen = text("startup_screen").default("HOME")
     val statsEnabled = bool("stats_enabled").default(true)

@@ -32,6 +32,7 @@ class AppSettingsViewModel(
     var showLanguageOnCovers by mutableStateOf(false)
     var languageBadgeScale by mutableStateOf(1.0f)
     var languageBadgeAtBottom by mutableStateOf(false)
+    var showCompleteSeriesBadge by mutableStateOf(true)
     var lockScreenRotation by mutableStateOf(false)
     var cardLayoutOverlayBackground by mutableStateOf(true)
     var useNewLibraryUI2 by mutableStateOf(false)
@@ -58,6 +59,7 @@ class AppSettingsViewModel(
         showLanguageOnCovers = settingsRepository.getShowLanguageOnCovers().first()
         languageBadgeScale = settingsRepository.getLanguageBadgeScale().first()
         languageBadgeAtBottom = settingsRepository.getLanguageBadgeAtBottom().first()
+        showCompleteSeriesBadge = settingsRepository.getShowCompleteSeriesBadge().first()
         lockScreenRotation = settingsRepository.getLockScreenRotation().first()
         cardLayoutOverlayBackground = settingsRepository.getCardLayoutOverlayBackground().first()
         useNewLibraryUI2 = settingsRepository.getUseNewLibraryUI2().first()
@@ -174,6 +176,11 @@ class AppSettingsViewModel(
     fun onLanguageBadgeAtBottomChange(atBottom: Boolean) {
         this.languageBadgeAtBottom = atBottom
         screenModelScope.launch { settingsRepository.putLanguageBadgeAtBottom(atBottom) }
+    }
+
+    fun onShowCompleteSeriesBadgeChange(enabled: Boolean) {
+        this.showCompleteSeriesBadge = enabled
+        screenModelScope.launch { settingsRepository.putShowCompleteSeriesBadge(enabled) }
     }
 
     fun onLockScreenRotationChange(locked: Boolean) {

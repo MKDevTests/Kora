@@ -178,6 +178,14 @@ interface CommonSettingsRepository {
     suspend fun putLanguageBadgeAtBottom(atBottom: Boolean)
 
     /**
+     * Recolors the top-right series card badge (normally the unread count) to
+     * signal a complete series — status Ended and every volume owned. On by
+     * default.
+     */
+    fun getShowCompleteSeriesBadge(): Flow<Boolean>
+    suspend fun putShowCompleteSeriesBadge(enabled: Boolean)
+
+    /**
      * Whether the big page title at the top of Home/Library screens is a
      * dropdown library switcher. When false the title is plain text and
      * users use the side drawer (☰) for library switching.

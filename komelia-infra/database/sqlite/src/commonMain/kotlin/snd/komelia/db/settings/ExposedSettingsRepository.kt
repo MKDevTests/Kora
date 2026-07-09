@@ -70,6 +70,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[showLanguageOnCovers] = settings.showLanguageOnCovers
                 it[languageBadgeScale] = settings.languageBadgeScale
                 it[languageBadgeAtBottom] = settings.languageBadgeAtBottom
+                it[showCompleteSeriesBadge] = settings.showCompleteSeriesBadge
                 it[libraryDropdownInTitle] = settings.libraryDropdownInTitle
                 it[startupScreen] = settings.startupScreen.name
                 it[statsEnabled] = settings.statsEnabled
@@ -146,6 +147,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             showLanguageOnCovers = get(AppSettingsTable.showLanguageOnCovers),
             languageBadgeScale = get(AppSettingsTable.languageBadgeScale),
             languageBadgeAtBottom = get(AppSettingsTable.languageBadgeAtBottom),
+            showCompleteSeriesBadge = get(AppSettingsTable.showCompleteSeriesBadge),
             libraryDropdownInTitle = get(AppSettingsTable.libraryDropdownInTitle),
             startupScreen = runCatching {
                 snd.komelia.settings.model.StartupScreen.valueOf(get(AppSettingsTable.startupScreen))

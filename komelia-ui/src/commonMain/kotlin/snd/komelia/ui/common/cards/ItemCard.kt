@@ -408,14 +408,16 @@ fun LazyGridItemScope.DraggableImageCard(
 @Composable
 fun IndicatorBadge(
     modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.background.copy(alpha = 0.8f),
+    borderColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = modifier
             .padding(1.dp)
             .defaultMinSize(minWidth = 24.dp, minHeight = 24.dp)
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.8f), CircleShape)
-            .border(1.dp, MaterialTheme.colorScheme.background, CircleShape),
+            .background(backgroundColor, CircleShape)
+            .border(1.dp, borderColor, CircleShape),
         contentAlignment = Alignment.Center,
         content = content
     )
