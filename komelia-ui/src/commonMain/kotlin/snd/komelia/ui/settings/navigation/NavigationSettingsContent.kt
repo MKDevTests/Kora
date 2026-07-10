@@ -27,6 +27,8 @@ fun NavigationSettingsContent(
     onStatsEnabledChange: (Boolean) -> Unit,
     statsInBottomNav: Boolean,
     onStatsInBottomNavChange: (Boolean) -> Unit,
+    nextReleasesInBottomNav: Boolean,
+    onNextReleasesInBottomNavChange: (Boolean) -> Unit,
     aniListLinkSuggestionsEnabled: Boolean,
     onAniListLinkSuggestionsEnabledChange: (Boolean) -> Unit,
     shareLinksViaKomga: Boolean,
@@ -120,6 +122,23 @@ fun NavigationSettingsContent(
             Text(
                 text = "Adds a dedicated stats button to the bottom navigation " +
                     "bar (next to Home / Search / Library). When off, the stats " +
+                    "page is still reachable from the Home screen card.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+
+        // Upcoming releases in bottom nav --------------------------------
+        Column {
+            SwitchWithLabel(
+                label = { Text("Show upcoming releases in bottom navigation") },
+                checked = nextReleasesInBottomNav,
+                onCheckedChange = onNextReleasesInBottomNavChange,
+            )
+            Text(
+                text = "Adds a dedicated button to the bottom navigation bar for " +
+                    "the cross-library upcoming releases calendar. When off, the " +
                     "page is still reachable from the Home screen card.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

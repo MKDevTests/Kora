@@ -57,6 +57,9 @@ import snd.komelia.ui.dialogs.series.edit.SeriesEditDialog
 import snd.komelia.ui.LocalIgnoreList
 import snd.komelia.ui.LocalHiddenAdmin
 import snd.komelia.ui.LocalFavorites
+import snd.komelia.ui.LocalPlanned
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Star
@@ -226,6 +229,26 @@ fun SeriesActionsMenu(
                 },
                 onClick = {
                     favorites.toggle(series.id)
+                    onDismissRequest()
+                }
+            )
+        }
+        // Local per-user "Planned" (a lire) — independent from Favorites.
+        val planned = LocalPlanned.current
+        if (planned != null) {
+            val isPlanned = series.id.value in planned.plannedIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isPlanned) "Retirer de « à lire »" else "Marquer « à lire »",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = {
+                    Icon(if (isPlanned) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null)
+                },
+                onClick = {
+                    planned.toggle(series.id)
                     onDismissRequest()
                 }
             )

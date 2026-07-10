@@ -118,6 +118,13 @@ data class AppSettings(
     val statsInBottomNav: Boolean = false,
 
     /**
+     * When true the "Upcoming releases" page gets a dedicated entry in the
+     * bottom navigation bar. When false the page is still reachable via its
+     * Home card. Default off, mirrors [statsInBottomNav].
+     */
+    val nextReleasesInBottomNav: Boolean = false,
+
+    /**
      * App version (e.g. "1.0.3") for which the user has already
      * acknowledged the release-notes "What's new" modal. Null means
      * never seen, so the modal will show on the next launch.
@@ -205,6 +212,14 @@ data class AppSettings(
      * JSON string array column.
      */
     val favoriteSeriesIds: Set<String> = emptySet(),
+
+    /**
+     * Series ids the user wants to read but isn't actively following yet
+     * (cross-library). Independent from Favorites — a series can be both.
+     * Shown in the virtual "Planned" section. Per-server, never sent to the
+     * server. JSON string array column.
+     */
+    val plannedSeriesIds: Set<String> = emptySet(),
 
     /**
      * Experimental Genre tab: when true the genre tiles use their own

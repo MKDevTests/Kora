@@ -71,6 +71,7 @@ import snd.komelia.ui.settings.experimental.ExperimentalSettingsViewModel
 import snd.komelia.ui.settings.experimental.IgnoreListViewModel
 import snd.komelia.ui.settings.experimental.HiddenSeriesViewModel
 import snd.komelia.ui.favorites.FavoritesViewModel
+import snd.komelia.ui.planned.PlannedViewModel
 import snd.komelia.ui.settings.servers.AppServerManagementViewModel
 import snd.komelia.ui.settings.server.ServerSettingsViewModel
 import snd.komelia.ui.settings.updates.AppUpdatesViewModel
@@ -561,6 +562,23 @@ class ViewModelFactory(
         )
     }
 
+    fun getNextReleasesViewModel(): snd.komelia.ui.nextreleases.NextReleasesViewModel {
+        return snd.komelia.ui.nextreleases.NextReleasesViewModel(createNextReleasesService())
+    }
+
+    /**
+     * Factory for [snd.komelia.ui.nextreleases.NextReleasesService]. Exposed
+     * separately so the Home card (which can't use Voyager's
+     * `rememberScreenModel` since it isn't a Screen) can instantiate the
+     * service directly via `remember { factory.createNextReleasesService() }`.
+     */
+    fun createNextReleasesService(): snd.komelia.ui.nextreleases.NextReleasesService {
+        return snd.komelia.ui.nextreleases.NextReleasesService(
+            seriesApi = komgaApi.seriesApi,
+            referentialApi = komgaApi.referentialApi,
+        )
+    }
+
     fun getSettingsUpdatesViewModel(): AppUpdatesViewModel {
         return AppUpdatesViewModel(
             releases = releases,
@@ -849,6 +867,16 @@ class ViewModelFactory(
 
     fun getFavoritesViewModel(): FavoritesViewModel {
         return FavoritesViewModel(
+            settingsRepository = appRepositories.settingsRepository,
+            seriesApi = komgaApi.seriesApi,
+            bookApi = komgaApi.bookApi,
+            notifications = dependencies.appNotifications,
+            taskEmitter = dependencies.offlineDependencies.taskEmitter,
+        )
+    }
+
+    fun getPlannedViewModel(): PlannedViewModel {
+        return PlannedViewModel(
             settingsRepository = appRepositories.settingsRepository,
             seriesApi = komgaApi.seriesApi,
             bookApi = komgaApi.bookApi,

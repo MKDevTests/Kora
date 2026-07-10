@@ -75,6 +75,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[startupScreen] = settings.startupScreen.name
                 it[statsEnabled] = settings.statsEnabled
                 it[statsInBottomNav] = settings.statsInBottomNav
+                it[nextReleasesInBottomNav] = settings.nextReleasesInBottomNav
                 it[lastSeenReleaseNotesVersion] = settings.lastSeenReleaseNotesVersion
                 it[alternateServerUrls] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.alternateServerUrls
@@ -93,6 +94,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 )
                 it[favoriteSeriesIds] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.favoriteSeriesIds.toList()
+                )
+                it[plannedSeriesIds] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.plannedSeriesIds.toList()
                 )
                 it[genreTilesCustomAppearance] = settings.genreTilesCustomAppearance
                 it[genreTileWidth] = settings.genreTileWidth
@@ -154,6 +158,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             }.getOrDefault(snd.komelia.settings.model.StartupScreen.HOME),
             statsEnabled = get(AppSettingsTable.statsEnabled),
             statsInBottomNav = get(AppSettingsTable.statsInBottomNav),
+            nextReleasesInBottomNav = get(AppSettingsTable.nextReleasesInBottomNav),
             lastSeenReleaseNotesVersion = get(AppSettingsTable.lastSeenReleaseNotesVersion),
             alternateServerUrls = runCatching {
                 Json.decodeFromString(ListSerializer(String.serializer()), get(AppSettingsTable.alternateServerUrls))
@@ -183,6 +188,12 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 Json.decodeFromString(
                     ListSerializer(String.serializer()),
                     get(AppSettingsTable.favoriteSeriesIds)
+                ).toSet()
+            }.getOrDefault(emptySet()),
+            plannedSeriesIds = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.plannedSeriesIds)
                 ).toSet()
             }.getOrDefault(emptySet()),
             genreTilesCustomAppearance = get(AppSettingsTable.genreTilesCustomAppearance),

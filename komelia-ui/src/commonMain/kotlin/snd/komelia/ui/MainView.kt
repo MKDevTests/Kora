@@ -256,6 +256,15 @@ fun MainView(
                     onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
                 )
             }
+            val plannedController = remember(dependencies, viewModelFactory) {
+                val repo = dependencies.appRepositories.settingsRepository
+                PlannedController(
+                    plannedIds = repo.getPlannedSeriesIds().stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
+                    settingsRepository = repo,
+                    scope = ignoreScope,
+                    onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
+                )
+            }
 
             CompositionLocalProvider(
                 LocalViewModelFactory provides viewModelFactory,
@@ -274,6 +283,7 @@ fun MainView(
                 LocalIgnoreList provides ignoreController,
                 LocalHiddenAdmin provides hiddenController,
                 LocalFavorites provides favoritesController,
+                LocalPlanned provides plannedController,
                 LocalBookDownloadEvents provides dependencies.offlineDependencies.bookDownloadEvents,
                 LocalOfflineMode provides dependencies.isOffline,
                 LocalKomgaState provides dependencies.komgaSharedState,

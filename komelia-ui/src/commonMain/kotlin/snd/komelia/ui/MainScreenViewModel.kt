@@ -91,6 +91,14 @@ class MainScreenViewModel(
     ) { enabled, inNav -> enabled && inNav }
         .stateIn(screenModelScope, SharingStarted.Eagerly, false)
 
+    /**
+     * True when the bottom navigation bar should expose a dedicated
+     * "Upcoming releases" button. No master switch (unlike Stats) — the
+     * feature has no tracking cost to gate.
+     */
+    val showNextReleasesInBottomNav: StateFlow<Boolean> = settingsRepository.getNextReleasesInBottomNav()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, false)
+
     private val navigatorFlow = MutableStateFlow<Navigator?>(null)
     private val navigator
         get() = navigatorFlow.value ?: error("main screen navigator is not initialized")

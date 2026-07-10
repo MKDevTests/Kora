@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.OfflinePin
@@ -35,6 +36,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +56,7 @@ import snd.komelia.ui.LocalHideParenthesesInNames
 import snd.komelia.ui.LocalLanguageBadgeAtBottom
 import snd.komelia.ui.LocalLanguageBadgeScale
 import snd.komelia.ui.LocalLibraries
+import snd.komelia.ui.LocalPlanned
 import snd.komelia.ui.LocalShowCompleteSeriesBadge
 import snd.komelia.ui.LocalShowLanguageOnCovers
 import snd.komelia.ui.LocalWindowWidth
@@ -338,6 +341,26 @@ private fun SeriesImageBadges(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onTertiary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+    val planned = LocalPlanned.current
+    val isPlanned = planned != null && series.id.value in planned.plannedIds.collectAsState().value
+    if (isPlanned) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomStart
+        ) {
+            IndicatorBadge(
+                backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                borderColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Bookmark,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(16.dp)
                 )
             }

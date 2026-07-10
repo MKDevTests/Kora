@@ -29,9 +29,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -61,8 +63,10 @@ import snd.komelia.ui.LocalOfflineMode
 import snd.komelia.ui.common.menus.LibraryActionsMenu
 import snd.komelia.ui.common.menus.LibraryMenuActions
 import snd.komelia.ui.dialogs.libraryedit.LibraryEditDialogs
+import snd.komelia.ui.favorites.FavoritesScreen
 import snd.komelia.ui.home.HomeScreen
 import snd.komelia.ui.library.LibraryScreen
+import snd.komelia.ui.planned.PlannedScreen
 import snd.komelia.ui.platform.VerticalScrollbar
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
@@ -76,6 +80,8 @@ fun NavBarContent(
     onHomeClick: () -> Unit,
     onLibrariesClick: () -> Unit,
     onLibraryClick: (KomgaLibraryId) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onPlannedClick: () -> Unit,
     onSettingsClick: () -> Unit,
     taskQueueStatus: TaskQueueStatus?,
 ) {
@@ -87,6 +93,8 @@ fun NavBarContent(
             onHomeClick = onHomeClick,
             onLibrariesClick = onLibrariesClick,
             onLibraryClick = onLibraryClick,
+            onFavoritesClick = onFavoritesClick,
+            onPlannedClick = onPlannedClick,
             onSettingsClick = onSettingsClick
         )
         if (taskQueueStatus != null && taskQueueStatus.count > 0) {
@@ -105,6 +113,8 @@ fun LibrariesNavBarContent(
     libraryActions: LibraryMenuActions,
     onLibrariesClick: () -> Unit,
     onLibraryClick: (KomgaLibraryId) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onPlannedClick: () -> Unit,
 ) {
     // Caller-provided modifier (e.g. status-bar top padding) is applied to
     // the Surface so the drawer content sits below the system status bar.
@@ -121,7 +131,9 @@ fun LibrariesNavBarContent(
                 libraries = libraries,
                 libraryActions = libraryActions,
                 onLibrariesClick = onLibrariesClick,
-                onLibraryClick = onLibraryClick
+                onLibraryClick = onLibraryClick,
+                onFavoritesClick = onFavoritesClick,
+                onPlannedClick = onPlannedClick,
             )
             Spacer(Modifier.size(30.dp))
         }
@@ -136,6 +148,8 @@ fun ColumnScope.LibrariesNavBarContent(
     libraryActions: LibraryMenuActions,
     onLibrariesClick: () -> Unit,
     onLibraryClick: (KomgaLibraryId) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onPlannedClick: () -> Unit,
 ) {
     var showLibraryAddDialog by remember { mutableStateOf(false) }
     if (showLibraryAddDialog) {
@@ -192,6 +206,23 @@ fun ColumnScope.LibrariesNavBarContent(
             }
         )
     }
+
+    // Local "virtual" libraries — not real Komga libraries, resolved
+    // client-side from a local series-id set. Set apart with a divider so
+    // they don't read as more real libraries.
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    NavButton(
+        onClick = onFavoritesClick,
+        icon = Icons.Default.Star,
+        label = "Favoris",
+        isSelected = currentScreen is FavoritesScreen,
+    )
+    NavButton(
+        onClick = onPlannedClick,
+        icon = Icons.Default.Bookmark,
+        label = "À lire",
+        isSelected = currentScreen is PlannedScreen,
+    )
 }
 
 
@@ -203,6 +234,8 @@ private fun NavMenu(
     onHomeClick: () -> Unit,
     onLibrariesClick: () -> Unit,
     onLibraryClick: (KomgaLibraryId) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onPlannedClick: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     val scrollState: ScrollState = rememberScrollState()
@@ -236,7 +269,9 @@ private fun NavMenu(
                 libraries = libraries,
                 libraryActions = libraryActions,
                 onLibrariesClick = onLibrariesClick,
-                onLibraryClick = onLibraryClick
+                onLibraryClick = onLibraryClick,
+                onFavoritesClick = onFavoritesClick,
+                onPlannedClick = onPlannedClick,
             )
 
             HorizontalDivider(Modifier.padding(0.dp, 20.dp))

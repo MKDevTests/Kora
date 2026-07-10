@@ -102,6 +102,7 @@ fun HomeContent(
                 Column {
                     HomeHeaderSection()
                     snd.komelia.ui.stats.HomeStatsCard()
+                    snd.komelia.ui.nextreleases.NextReleasesHomeCard()
                     Toolbar(
                         filters = filters,
                         currentFilterNumber = activeFilterNumber,

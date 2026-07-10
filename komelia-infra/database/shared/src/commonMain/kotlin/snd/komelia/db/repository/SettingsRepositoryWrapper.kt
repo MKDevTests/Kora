@@ -83,6 +83,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(favoriteSeriesIds = ids) }
     }
 
+    override fun getPlannedSeriesIds(): Flow<Set<String>> =
+        wrapper.state.map { it.plannedSeriesIds }.distinctUntilChanged()
+
+    override suspend fun putPlannedSeriesIds(ids: Set<String>) {
+        wrapper.transform { it.copy(plannedSeriesIds = ids) }
+    }
+
     override fun getGenreTilesCustomAppearance(): Flow<Boolean> =
         wrapper.state.map { it.genreTilesCustomAppearance }.distinctUntilChanged()
 
@@ -413,6 +420,13 @@ class SettingsRepositoryWrapper(
 
     override suspend fun putStatsInBottomNav(enabled: Boolean) {
         wrapper.transform { it.copy(statsInBottomNav = enabled) }
+    }
+
+    override fun getNextReleasesInBottomNav(): Flow<Boolean> =
+        wrapper.state.map { it.nextReleasesInBottomNav }.distinctUntilChanged()
+
+    override suspend fun putNextReleasesInBottomNav(enabled: Boolean) {
+        wrapper.transform { it.copy(nextReleasesInBottomNav = enabled) }
     }
 
     override fun getLastSeenReleaseNotesVersion(): Flow<String?> =

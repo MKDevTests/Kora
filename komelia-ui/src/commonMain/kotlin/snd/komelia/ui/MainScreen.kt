@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalLibrary
 import androidx.compose.material.icons.rounded.Search
@@ -74,7 +75,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Bookmark
 import snd.komelia.ui.favorites.FavoritesScreen
+import snd.komelia.ui.planned.PlannedScreen
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Color
@@ -554,6 +557,14 @@ class MainScreen(
                             },
                             leadingIcon = { Icon(Icons.Rounded.Star, null) },
                         )
+                        DropdownMenuItem(
+                            text = { Text("À lire") },
+                            onClick = {
+                                showSwitcher.value = false
+                                if (navigator.lastItem !is PlannedScreen) navigator.push(PlannedScreen())
+                            },
+                            leadingIcon = { Icon(Icons.Rounded.Bookmark, null) },
+                        )
                         if (libraries.isNotEmpty()) HorizontalDivider()
                         libraries.forEach { lib ->
                             DropdownMenuItem(
@@ -590,6 +601,17 @@ class MainScreen(
                                 navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
                         },
                         isSelected = navigator.lastItem is snd.komelia.ui.stats.ReadingStatsScreen,
+                        accentColor = accentColor
+                    )
+                }
+                if (vm.showNextReleasesInBottomNav.collectAsState().value) {
+                    FloatingToolbarButton(
+                        icon = Icons.Rounded.Event,
+                        onClick = {
+                            if (navigator.lastItem !is snd.komelia.ui.nextreleases.NextReleasesScreen)
+                                navigator.push(snd.komelia.ui.nextreleases.NextReleasesScreen())
+                        },
+                        isSelected = navigator.lastItem is snd.komelia.ui.nextreleases.NextReleasesScreen,
                         accentColor = accentColor
                     )
                 }
@@ -696,6 +718,19 @@ class MainScreen(
                     colors = itemColors
                 )
             }
+            if (vm.showNextReleasesInBottomNav.collectAsState().value) {
+                NavigationBarItem(
+                    alwaysShowLabel = true,
+                    selected = navigator.lastItem is snd.komelia.ui.nextreleases.NextReleasesScreen,
+                    onClick = {
+                        if (navigator.lastItem !is snd.komelia.ui.nextreleases.NextReleasesScreen)
+                            navigator.push(snd.komelia.ui.nextreleases.NextReleasesScreen())
+                    },
+                    icon = { Icon(Icons.Rounded.Event, null) },
+                    label = { Text("Sorties") },
+                    colors = itemColors
+                )
+            }
             NavigationBarItem(
                 alwaysShowLabel = true,
                 selected = navigator.lastItem is MobileSettingsScreen || navigator.lastItem is SettingsScreen,
@@ -758,6 +793,19 @@ class MainScreen(
                                     navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
                             },
                             isSelected = navigator.lastItem is snd.komelia.ui.stats.ReadingStatsScreen,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    if (vm.showNextReleasesInBottomNav.collectAsState().value) {
+                        CompactNavButton(
+                            text = "Sorties",
+                            icon = Icons.Rounded.Event,
+                            onClick = {
+                                if (navigator.lastItem !is snd.komelia.ui.nextreleases.NextReleasesScreen)
+                                    navigator.push(snd.komelia.ui.nextreleases.NextReleasesScreen())
+                            },
+                            isSelected = navigator.lastItem is snd.komelia.ui.nextreleases.NextReleasesScreen,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -836,6 +884,17 @@ class MainScreen(
                 }
                 if (width != FULL) coroutineScope.launch { vm.navBarState.snapTo(Closed) }
             },
+            onFavoritesClick = {
+                // push, not replaceAll: unlike Home/Library (tab-like, no back
+                // button), Favorites/Planned have an on-screen back arrow +
+                // BackPressHandler that need a real stack entry to pop to.
+                if (navigator.lastItem !is FavoritesScreen) navigator.push(FavoritesScreen())
+                if (width != FULL) coroutineScope.launch { vm.navBarState.snapTo(Closed) }
+            },
+            onPlannedClick = {
+                if (navigator.lastItem !is PlannedScreen) navigator.push(PlannedScreen())
+                if (width != FULL) coroutineScope.launch { vm.navBarState.snapTo(Closed) }
+            },
             onSettingsClick = { navigator.parent!!.push(SettingsScreen()) },
             taskQueueStatus = vm.komgaTaskQueueStatus.collectAsState().value
         )
@@ -866,6 +925,14 @@ class MainScreen(
                 if (current !is LibraryScreen || current.libraryId != libraryId) {
                     navigator.replaceAll(LibraryScreen(libraryId))
                 }
+                coroutineScope.launch { vm.navBarState.snapTo(Closed) }
+            },
+            onFavoritesClick = {
+                if (navigator.lastItem !is FavoritesScreen) navigator.push(FavoritesScreen())
+                coroutineScope.launch { vm.navBarState.snapTo(Closed) }
+            },
+            onPlannedClick = {
+                if (navigator.lastItem !is PlannedScreen) navigator.push(PlannedScreen())
                 coroutineScope.launch { vm.navBarState.snapTo(Closed) }
             },
         )

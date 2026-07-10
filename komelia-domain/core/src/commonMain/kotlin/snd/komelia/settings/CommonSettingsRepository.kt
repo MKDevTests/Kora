@@ -42,6 +42,13 @@ interface CommonSettingsRepository {
     fun getFavoriteSeriesIds(): Flow<Set<String>>
     suspend fun putFavoriteSeriesIds(ids: Set<String>)
 
+    /**
+     * Series ids the user wants to read but isn't actively following yet
+     * (per-server, cross-library). Independent from Favorites.
+     */
+    fun getPlannedSeriesIds(): Flow<Set<String>>
+    suspend fun putPlannedSeriesIds(ids: Set<String>)
+
     /** One-shot flag: local Ignore List pushed to the server as kora:hidden. */
     fun getIgnoreListMigratedToServerHidden(): Flow<Boolean>
     suspend fun putIgnoreListMigratedToServerHidden(value: Boolean)
@@ -211,6 +218,14 @@ interface CommonSettingsRepository {
      */
     fun getStatsInBottomNav(): Flow<Boolean>
     suspend fun putStatsInBottomNav(enabled: Boolean)
+
+    /**
+     * Whether the "Upcoming releases" page should be reachable from a
+     * dedicated entry in the bottom navigation bar. Off by default; the
+     * page is always reachable from its Home card either way.
+     */
+    fun getNextReleasesInBottomNav(): Flow<Boolean>
+    suspend fun putNextReleasesInBottomNav(enabled: Boolean)
 
     /**
      * App version (e.g. "1.0.3") for which the user has already

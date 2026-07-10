@@ -2,12 +2,22 @@ package snd.komelia.ui.settings.navigation
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +59,13 @@ import snd.komf.api.MediaServer.KOMGA
 import snd.komga.client.user.KomgaUser
 import snd.webview.webviewIsAvailable
 
+private data class NavEntry(
+    val label: String,
+    val isSelected: Boolean,
+    val trailingContent: (@Composable () -> Unit)? = null,
+    val onClick: () -> Unit,
+)
+
 @Composable
 fun SettingsNavigationMenu(
     hasMediaErrors: Boolean,
@@ -64,200 +81,257 @@ fun SettingsNavigationMenu(
 ) {
     val isAdmin = remember(user) { user?.roleAdmin() ?: true }
     val isOffline = LocalOfflineMode.current.collectAsState().value
+    var query by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        SettingsGroup(title = "App Settings") {
-            SettingsListItem(
-                label = "Appearance",
-                onClick = { onNavigation(AppSettingsScreen()) },
-                isSelected = currentScreen is AppSettingsScreen,
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Navigation",
-                onClick = { onNavigation(NavigationSettingsScreen()) },
-                isSelected = currentScreen is NavigationSettingsScreen,
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Connected Servers",
-                onClick = { onNavigation(AppServerManagementScreen()) },
-                isSelected = currentScreen is AppServerManagementScreen,
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Image Reader",
-                onClick = { onNavigation(ImageReaderSettingsScreen()) },
-                isSelected = currentScreen is ImageReaderSettingsScreen,
-            )
-            if (webviewIsAvailable()) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsListItem(
-                    label = "Epub Reader",
-                    onClick = { onNavigation(EpubReaderSettingsScreen()) },
-                    isSelected = currentScreen is EpubReaderSettingsScreen,
-                )
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Transcription",
-                onClick = { onNavigation(TranscriptionSettingsScreen()) },
-                isSelected = currentScreen is TranscriptionSettingsScreen,
-            )
-            if (updatesEnabled) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsListItem(
-                    label = "Updates",
-                    onClick = { onNavigation(AppUpdatesScreen()) },
-                    isSelected = currentScreen is AppUpdatesScreen,
-                    trailingContent = if (newVersionIsAvailable) {
-                        { ErrorIndicator() }
-                    } else null
-                )
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Offline Mode",
-                onClick = { onNavigation(OfflineSettingsScreen()) },
-                isSelected = currentScreen is OfflineSettingsScreen,
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Backup & Restore",
-                onClick = { onNavigation(BackupSettingsScreen()) },
-                isSelected = currentScreen is BackupSettingsScreen,
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Diagnostics",
-                onClick = { onNavigation(DiagnosticsScreen()) },
-                isSelected = currentScreen is DiagnosticsScreen,
-            )
-        }
+        SettingsSearchField(query = query, onQueryChange = { query = it })
 
-        SettingsGroup(title = "Experimental") {
-            SettingsListItem(
-                label = "Genre tab",
-                onClick = { onNavigation(ExperimentalSettingsScreen()) },
-                isSelected = currentScreen is ExperimentalSettingsScreen,
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SettingsListItem(
-                label = "Ignore List",
-                onClick = { onNavigation(IgnoreListScreen()) },
-                isSelected = currentScreen is IgnoreListScreen,
-            )
-            if (isAdmin) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsListItem(
-                    label = "Séries masquées",
-                    onClick = { onNavigation(HiddenSeriesScreen()) },
-                    isSelected = currentScreen is HiddenSeriesScreen,
+        FilteredSettingsGroup(
+            title = "App Settings",
+            query = query,
+            entries = buildList {
+                add(
+                    NavEntry(
+                        label = "Appearance",
+                        onClick = { onNavigation(AppSettingsScreen()) },
+                        isSelected = currentScreen is AppSettingsScreen,
+                    )
+                )
+                add(
+                    NavEntry(
+                        label = "Navigation",
+                        onClick = { onNavigation(NavigationSettingsScreen()) },
+                        isSelected = currentScreen is NavigationSettingsScreen,
+                    )
+                )
+                add(
+                    NavEntry(
+                        label = "Connected Servers",
+                        onClick = { onNavigation(AppServerManagementScreen()) },
+                        isSelected = currentScreen is AppServerManagementScreen,
+                    )
+                )
+                add(
+                    NavEntry(
+                        label = "Image Reader",
+                        onClick = { onNavigation(ImageReaderSettingsScreen()) },
+                        isSelected = currentScreen is ImageReaderSettingsScreen,
+                    )
+                )
+                if (webviewIsAvailable()) {
+                    add(
+                        NavEntry(
+                            label = "Epub Reader",
+                            onClick = { onNavigation(EpubReaderSettingsScreen()) },
+                            isSelected = currentScreen is EpubReaderSettingsScreen,
+                        )
+                    )
+                }
+                add(
+                    NavEntry(
+                        label = "Transcription",
+                        onClick = { onNavigation(TranscriptionSettingsScreen()) },
+                        isSelected = currentScreen is TranscriptionSettingsScreen,
+                    )
+                )
+                if (updatesEnabled) {
+                    add(
+                        NavEntry(
+                            label = "Updates",
+                            onClick = { onNavigation(AppUpdatesScreen()) },
+                            isSelected = currentScreen is AppUpdatesScreen,
+                            trailingContent = if (newVersionIsAvailable) {
+                                { ErrorIndicator() }
+                            } else null
+                        )
+                    )
+                }
+                add(
+                    NavEntry(
+                        label = "Offline Mode",
+                        onClick = { onNavigation(OfflineSettingsScreen()) },
+                        isSelected = currentScreen is OfflineSettingsScreen,
+                    )
+                )
+                add(
+                    NavEntry(
+                        label = "Backup & Restore",
+                        onClick = { onNavigation(BackupSettingsScreen()) },
+                        isSelected = currentScreen is BackupSettingsScreen,
+                    )
+                )
+                add(
+                    NavEntry(
+                        label = "Diagnostics",
+                        onClick = { onNavigation(DiagnosticsScreen()) },
+                        isSelected = currentScreen is DiagnosticsScreen,
+                    )
                 )
             }
-        }
+        )
+
+        FilteredSettingsGroup(
+            title = "Experimental",
+            query = query,
+            entries = buildList {
+                add(
+                    NavEntry(
+                        label = "Genre tab",
+                        onClick = { onNavigation(ExperimentalSettingsScreen()) },
+                        isSelected = currentScreen is ExperimentalSettingsScreen,
+                    )
+                )
+                add(
+                    NavEntry(
+                        label = "Ignore List",
+                        onClick = { onNavigation(IgnoreListScreen()) },
+                        isSelected = currentScreen is IgnoreListScreen,
+                    )
+                )
+                if (isAdmin) {
+                    add(
+                        NavEntry(
+                            label = "Séries masquées",
+                            onClick = { onNavigation(HiddenSeriesScreen()) },
+                            isSelected = currentScreen is HiddenSeriesScreen,
+                        )
+                    )
+                }
+            }
+        )
 
         if (!isOffline) {
-            SettingsGroup(title = "User Settings") {
-                SettingsListItem(
-                    label = "My Account",
-                    onClick = { onNavigation(AccountSettingsScreen()) },
-                    isSelected = currentScreen is AccountSettingsScreen,
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsListItem(
-                    label = "My Authentication Activity",
-                    onClick = { onNavigation(AuthenticationActivityScreen(true)) },
-                    isSelected = currentScreen is AuthenticationActivityScreen && currentScreen.forMe,
-                )
-            }
-
-            if (isAdmin) {
-                SettingsGroup(title = "Server Settings") {
-                    SettingsListItem(
-                        label = "General",
-                        onClick = { onNavigation(ServerSettingsScreen()) },
-                        isSelected = currentScreen is ServerSettingsScreen,
+            FilteredSettingsGroup(
+                title = "User Settings",
+                query = query,
+                entries = buildList {
+                    add(
+                        NavEntry(
+                            label = "My Account",
+                            onClick = { onNavigation(AccountSettingsScreen()) },
+                            isSelected = currentScreen is AccountSettingsScreen,
+                        )
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsListItem(
-                        label = "Users",
-                        onClick = { onNavigation(UsersScreen()) },
-                        isSelected = currentScreen is UsersScreen,
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsListItem(
-                        label = "Authentication Activity",
-                        onClick = { onNavigation(AuthenticationActivityScreen(false)) },
-                        isSelected = currentScreen is AuthenticationActivityScreen && !currentScreen.forMe,
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsListItem(
-                        label = "Media Management",
-                        onClick = { onNavigation(MediaAnalysisScreen()) },
-                        isSelected = currentScreen is MediaAnalysisScreen,
-                        trailingContent = if (hasMediaErrors) {
-                            { ErrorIndicator() }
-                        } else null
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsListItem(
-                        label = "Announcements",
-                        onClick = { onNavigation(AnnouncementsScreen()) },
-                        isSelected = currentScreen is AnnouncementsScreen,
+                    add(
+                        NavEntry(
+                            label = "My Authentication Activity",
+                            onClick = { onNavigation(AuthenticationActivityScreen(true)) },
+                            isSelected = currentScreen is AuthenticationActivityScreen && currentScreen.forMe,
+                        )
                     )
                 }
-            }
+            )
 
             if (isAdmin) {
-                SettingsGroup(title = "Komf Settings") {
-                    SettingsListItem(
-                        label = "Connection",
-                        onClick = { onNavigation(KomfSettingsScreen()) },
-                        isSelected = currentScreen is KomfSettingsScreen,
-                    )
-                    if (komfEnabled) {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        SettingsListItem(
-                            label = "Processing",
-                            onClick = { onNavigation(KomfProcessingSettingsScreen(KOMGA)) },
-                            isSelected = currentScreen is KomfProcessingSettingsScreen,
+                FilteredSettingsGroup(
+                    title = "Server Settings",
+                    query = query,
+                    entries = buildList {
+                        add(
+                            NavEntry(
+                                label = "General",
+                                onClick = { onNavigation(ServerSettingsScreen()) },
+                                isSelected = currentScreen is ServerSettingsScreen,
+                            )
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        SettingsListItem(
-                            label = "Providers",
-                            onClick = { onNavigation(KomfProvidersSettingsScreen()) },
-                            isSelected = currentScreen is KomfProvidersSettingsScreen,
+                        add(
+                            NavEntry(
+                                label = "Users",
+                                onClick = { onNavigation(UsersScreen()) },
+                                isSelected = currentScreen is UsersScreen,
+                            )
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        SettingsListItem(
-                            label = "Notifications",
-                            onClick = { onNavigation(KomfNotificationSettingsScreen()) },
-                            isSelected = currentScreen is KomfNotificationSettingsScreen,
+                        add(
+                            NavEntry(
+                                label = "Authentication Activity",
+                                onClick = { onNavigation(AuthenticationActivityScreen(false)) },
+                                isSelected = currentScreen is AuthenticationActivityScreen && !currentScreen.forMe,
+                            )
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        SettingsListItem(
-                            label = "Job History",
-                            onClick = { onNavigation(KomfJobsScreen()) },
-                            isSelected = currentScreen is KomfJobsScreen,
+                        add(
+                            NavEntry(
+                                label = "Media Management",
+                                onClick = { onNavigation(MediaAnalysisScreen()) },
+                                isSelected = currentScreen is MediaAnalysisScreen,
+                                trailingContent = if (hasMediaErrors) {
+                                    { ErrorIndicator() }
+                                } else null
+                            )
+                        )
+                        add(
+                            NavEntry(
+                                label = "Announcements",
+                                onClick = { onNavigation(AnnouncementsScreen()) },
+                                isSelected = currentScreen is AnnouncementsScreen,
+                            )
                         )
                     }
-                }
+                )
+            }
+
+            if (isAdmin) {
+                FilteredSettingsGroup(
+                    title = "Komf Settings",
+                    query = query,
+                    entries = buildList {
+                        add(
+                            NavEntry(
+                                label = "Connection",
+                                onClick = { onNavigation(KomfSettingsScreen()) },
+                                isSelected = currentScreen is KomfSettingsScreen,
+                            )
+                        )
+                        if (komfEnabled) {
+                            add(
+                                NavEntry(
+                                    label = "Processing",
+                                    onClick = { onNavigation(KomfProcessingSettingsScreen(KOMGA)) },
+                                    isSelected = currentScreen is KomfProcessingSettingsScreen,
+                                )
+                            )
+                            add(
+                                NavEntry(
+                                    label = "Providers",
+                                    onClick = { onNavigation(KomfProvidersSettingsScreen()) },
+                                    isSelected = currentScreen is KomfProvidersSettingsScreen,
+                                )
+                            )
+                            add(
+                                NavEntry(
+                                    label = "Notifications",
+                                    onClick = { onNavigation(KomfNotificationSettingsScreen()) },
+                                    isSelected = currentScreen is KomfNotificationSettingsScreen,
+                                )
+                            )
+                            add(
+                                NavEntry(
+                                    label = "Job History",
+                                    onClick = { onNavigation(KomfJobsScreen()) },
+                                    isSelected = currentScreen is KomfJobsScreen,
+                                )
+                            )
+                        }
+                    }
+                )
             }
         }
 
         var showLogoutConfirmation by remember { mutableStateOf(false) }
-        SettingsGroup(title = "Actions") {
-            SettingsListItem(
-                label = "Log Out",
-                onClick = { showLogoutConfirmation = true },
-                isSelected = false,
+        FilteredSettingsGroup(
+            title = "Actions",
+            query = query,
+            entries = listOf(
+                NavEntry(
+                    label = "Log Out",
+                    onClick = { showLogoutConfirmation = true },
+                    isSelected = false,
+                )
             )
-        }
+        )
 
         Spacer(Modifier.height(LocalTransparentNavBarPadding.current))
 
@@ -272,4 +346,59 @@ fun SettingsNavigationMenu(
                 onDialogDismiss = { showLogoutConfirmation = false })
         }
     }
+}
+
+/**
+ * A group of [SettingsListItem]s filtered by [query] (case-insensitive
+ * substring match on the label). Renders nothing — not even the group
+ * title — when no entry in the group matches, so searching doesn't leave
+ * empty section headers on screen.
+ */
+@Composable
+private fun FilteredSettingsGroup(
+    title: String,
+    entries: List<NavEntry>,
+    query: String,
+) {
+    val visible = entries.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
+    if (visible.isEmpty()) return
+
+    SettingsGroup(title = title) {
+        visible.forEachIndexed { index, entry ->
+            SettingsListItem(
+                label = entry.label,
+                onClick = entry.onClick,
+                isSelected = entry.isSelected,
+                trailingContent = entry.trailingContent,
+            )
+            if (index != visible.lastIndex) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        }
+    }
+}
+
+/** Filters the settings menu above by entry label as the user types. */
+@Composable
+private fun SettingsSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = { Text("Search settings") },
+        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Filled.Close, contentDescription = "Clear")
+                }
+            }
+        },
+        singleLine = true,
+        shape = CircleShape,
+        colors = OutlinedTextFieldDefaults.colors(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 4.dp),
+    )
 }

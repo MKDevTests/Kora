@@ -28,6 +28,9 @@ import snd.komelia.ui.HiddenAdminController
 import snd.komelia.ui.LocalHiddenAdmin
 import snd.komelia.ui.FavoritesController
 import snd.komelia.ui.LocalFavorites
+import snd.komelia.ui.PlannedController
+import snd.komelia.ui.LocalPlanned
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Star
 import snd.komelia.ui.LocalKomfIntegration
@@ -148,8 +151,11 @@ fun rememberSeriesBulkActionsState(
     val ignoreList = LocalIgnoreList.current
     val hiddenAdmin = LocalHiddenAdmin.current
     val favorites = LocalFavorites.current
+    val planned = LocalPlanned.current
 
-    return remember(series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList, hiddenAdmin, favorites) {
+    return remember(
+        series, coroutineScope, isOffline, isAdmin, isKomfEnabled, ignoreList, hiddenAdmin, favorites, planned
+    ) {
         SeriesBulkActionsState(
             series = series,
             actions = factory.getSeriesBulkActions(),
@@ -160,6 +166,7 @@ fun rememberSeriesBulkActionsState(
             ignoreList = ignoreList,
             hiddenAdmin = hiddenAdmin,
             favorites = favorites,
+            planned = planned,
         )
     }
 }
@@ -174,6 +181,7 @@ data class SeriesBulkActionsState(
     private val ignoreList: IgnoreListController? = null,
     private val hiddenAdmin: HiddenAdminController? = null,
     private val favorites: FavoritesController? = null,
+    private val planned: PlannedController? = null,
 ) {
     var showAddToCollectionDialog by mutableStateOf(false)
     var showEditDialog by mutableStateOf(false)
@@ -266,6 +274,15 @@ data class SeriesBulkActionsState(
                     description = "Ajouter aux favoris",
                     icon = Icons.Default.Star,
                     onClick = { favorites.add(series.map { it.id }) }
+                )
+            )
+        }
+        if (planned != null) {
+            add(
+                BulkActionButtonData(
+                    description = "Marquer à lire",
+                    icon = Icons.Default.Bookmark,
+                    onClick = { planned.add(series.map { it.id }) }
                 )
             )
         }
