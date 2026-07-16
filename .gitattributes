@@ -4,4 +4,5 @@
 # Vendored third_party/ trees keep whatever line endings they ship with.
 
 scripts/*.sh text eol=lf
+cmake/*.sh text eol=lf
 gradlew text eol=lf
