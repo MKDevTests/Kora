@@ -183,7 +183,13 @@ android {
 
 configurations.all {
     resolutionStrategy {
-        force("com.microsoft.onnxruntime:onnxruntime-android:1.23.0")
+        // MUST match the ONNX Runtime version built by the superbuild
+        // (cmake/external/onnxruntime.cmake, GIT_TAG v1.25.0). libkomelia_onnxruntime.so
+        // links the VERSIONED symbol OrtGetApiBase@VERS_<x.y.z>, so a mismatch makes
+        // dlopen fail -> OnnxRuntimeSharedLibraries.isAvailable stays false -> the whole
+        // ONNX feature (panel detection, upscaling) vanishes from the UI with no error
+        // shown on Android. Bump both sides together.
+        force("com.microsoft.onnxruntime:onnxruntime-android:1.25.0")
     }
 }
 

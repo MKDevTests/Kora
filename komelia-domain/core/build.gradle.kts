@@ -110,7 +110,9 @@ kotlin {
 
 configurations.all {
     resolutionStrategy {
-        force("com.microsoft.onnxruntime:onnxruntime-android:1.23.0")
+        // Keep in sync with komelia-app/build.gradle.kts and the superbuild's
+        // cmake/external/onnxruntime.cmake GIT_TAG. See the note there.
+        force("com.microsoft.onnxruntime:onnxruntime-android:1.25.0")
     }
 }
 
