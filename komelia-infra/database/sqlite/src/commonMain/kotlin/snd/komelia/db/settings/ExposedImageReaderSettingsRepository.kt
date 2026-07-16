@@ -96,6 +96,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         pagedAutoDetectWebtoon = it[ImageReaderSettingsTable.pagedAutoDetectWebtoon],
                         continuousReaderStopAtEnd = it[ImageReaderSettingsTable.continuousReaderStopAtEnd],
                         keepProgressBarVisibleWhileReading = it[ImageReaderSettingsTable.keepProgressBarVisibleWhileReading],
+                        invertSpeechBubbles = it[ImageReaderSettingsTable.invertSpeechBubbles],
                     )
                 }
         }
@@ -159,6 +160,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[pagedAutoDetectWebtoon] = settings.pagedAutoDetectWebtoon
                 it[continuousReaderStopAtEnd] = settings.continuousReaderStopAtEnd
                 it[keepProgressBarVisibleWhileReading] = settings.keepProgressBarVisibleWhileReading
+                it[invertSpeechBubbles] = settings.invertSpeechBubbles
             }
         }
     }

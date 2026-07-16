@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharedFlow
@@ -265,6 +266,7 @@ abstract class AppModule(
             colorCorrectionStep = colorCorrectionStep,
             autoSkipBlankPages = appRepositories.imageReaderSettingsRepository.getPagedAutoSkipBlankPages().stateIn(initScope),
             blankPageDetector = blankPageDetector,
+            invertSpeechBubbles = appRepositories.imageReaderSettingsRepository.getInvertSpeechBubbles(),
         )
         val onnxRuntimeInstaller = createOnnxRuntimeInstaller(updateClient)
         val onnxModelDownloader = createOnnxModelDownloader(updateClient)
@@ -517,12 +519,17 @@ abstract class AppModule(
         colorCorrectionStep: ColorCorrectionStep,
         autoSkipBlankPages: StateFlow<Boolean>,
         blankPageDetector: snd.komelia.image.processing.BlankPageDetector,
+        invertSpeechBubbles: Flow<Boolean>,
     ): ImageProcessingPipeline {
         val pipeline = ImageProcessingPipeline()
         pipeline.addStep(colorCorrectionStep)
 
         pipeline.addStep(CropBordersStep(cropBorders, autoSkipBlankPages, blankPageDetector))
         pipeline.addStep(SplitPageStep())
+        // MUST stay last: on Android this hands back a Bitmap-backed image, and
+        // AndroidBitmapBackedImage.mapLookupTable throws — so it has to run after
+        // ColorCorrectionStep, the only step that calls it.
+        pipeline.addStep(snd.komelia.image.processing.BubbleInvertStep(invertSpeechBubbles))
         return pipeline
     }
 

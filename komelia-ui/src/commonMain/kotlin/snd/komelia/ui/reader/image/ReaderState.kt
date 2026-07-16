@@ -167,6 +167,7 @@ class ReaderState(
     private var userOverrodeReaderType: Boolean = false
     val imageStretchToFit = MutableStateFlow(true)
     val cropBorders = MutableStateFlow(false)
+    val invertSpeechBubbles = MutableStateFlow(false)
     val loadThumbnailPreviews = MutableStateFlow(true)
     val showCarousel = MutableStateFlow(false)
     val readProgressPage = MutableStateFlow(1)
@@ -245,6 +246,7 @@ class ReaderState(
 
         imageStretchToFit.value = readerSettingsRepository.getStretchToFit().first()
         cropBorders.value = readerSettingsRepository.getCropBorders().first()
+        invertSpeechBubbles.value = readerSettingsRepository.getInvertSpeechBubbles().first()
         loadThumbnailPreviews.value = readerSettingsRepository.getLoadThumbnailPreviews().first()
         flashOnPageChange.value = readerSettingsRepository.getFlashOnPageChange().first()
         flashDuration.value = readerSettingsRepository.getFlashDuration().first()
@@ -596,6 +598,13 @@ class ReaderState(
     fun onCropBordersChange(trim: Boolean) {
         cropBorders.value = trim
         stateScope.launch { readerSettingsRepository.putCropBorders(trim) }
+    }
+
+    fun onInvertSpeechBubblesChange(invert: Boolean) {
+        invertSpeechBubbles.value = invert
+        // The pipeline's BubbleInvertStep observes the repository flow, so the
+        // write is what actually re-runs processing on the visible pages.
+        stateScope.launch { readerSettingsRepository.putInvertSpeechBubbles(invert) }
     }
 
     fun onLoadThumbnailPreviewsChange(load: Boolean) {

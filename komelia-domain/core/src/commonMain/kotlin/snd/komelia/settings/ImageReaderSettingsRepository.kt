@@ -132,6 +132,14 @@ interface ImageReaderSettingsRepository {
     suspend fun putContinuousReaderStopAtEnd(enabled: Boolean)
 
     /**
+     * Accessibility: detect speech bubbles and invert only their pixels,
+     * leaving the artwork untouched. See
+     * [snd.komelia.image.processing.BubbleInvertStep].
+     */
+    fun getInvertSpeechBubbles(): Flow<Boolean>
+    suspend fun putInvertSpeechBubbles(enabled: Boolean)
+
+    /**
      * Image reader minimal-UI-while-reading toggle (v1.0.11). When true,
      * the reader's hidden-controls state is replaced by a slim bottom
      * strip with just the progress slider + prev/next book buttons.

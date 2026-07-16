@@ -106,6 +106,7 @@ fun ImageReaderSettingsContent(
             supportingText = { Text("Pause at the last page instead of rolling silently into the next book. Swipe again to continue. Also ensures the current book gets marked as read.") },
         )
 
+
         FilledTonalButton(
             onClick = onCacheClear,
             colors = accentColor?.let {

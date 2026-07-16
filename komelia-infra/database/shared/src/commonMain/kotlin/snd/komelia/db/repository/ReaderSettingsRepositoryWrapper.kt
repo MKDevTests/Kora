@@ -319,6 +319,14 @@ class ReaderSettingsRepositoryWrapper(
         wrapper.transform { it.copy(pagedAutoDetectWebtoon = enabled) }
     }
 
+    override fun getInvertSpeechBubbles(): Flow<Boolean> {
+        return wrapper.mapState { it.invertSpeechBubbles }
+    }
+
+    override suspend fun putInvertSpeechBubbles(enabled: Boolean) {
+        wrapper.transform { it.copy(invertSpeechBubbles = enabled) }
+    }
+
     override fun getContinuousReaderStopAtEnd(): Flow<Boolean> {
         return wrapper.mapState { it.continuousReaderStopAtEnd }
     }

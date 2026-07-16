@@ -152,6 +152,7 @@ class ImageReaderSettingsViewModel(
         screenModelScope.launch { settingsRepository.putContinuousReaderStopAtEnd(enabled) }
     }
 
+
     fun onClearImageCache() {
         clearImageCache()
         appNotifications.add(AppNotification.Success("Cleared image cache"))

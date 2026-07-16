@@ -62,6 +62,13 @@ data class ImageReaderSettings(
     val pagedAutoDetectWebtoon: Boolean = false,
     val continuousReaderStopAtEnd: Boolean = true,
     /**
+     * Accessibility: detect speech bubbles and invert only their pixels
+     * (white bubble + black text -> black bubble + white text), leaving the
+     * artwork untouched. Reduces glare for light-sensitive readers. Off by
+     * default — detection is heuristic and adds per-page work.
+     */
+    val invertSpeechBubbles: Boolean = false,
+    /**
      * Minimal-UI-while-reading toggle (v1.0.11). When true, the reader's
      * "hidden controls" state is replaced by a slim bottom strip showing
      * only the [prev book] [progress slider] [next book] row plus the top

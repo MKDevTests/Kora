@@ -45,6 +45,8 @@ fun CommonImageSettings(
     onStretchToFitChange: (Boolean) -> Unit,
     cropBorders: Boolean,
     onCropBordersChange: (Boolean) -> Unit,
+    invertSpeechBubbles: Boolean,
+    onInvertSpeechBubblesChange: (Boolean) -> Unit,
     loadThumbnailPreviews: Boolean,
     onLoadThumbnailPreviewsChange: (Boolean) -> Unit,
 
@@ -79,6 +81,14 @@ fun CommonImageSettings(
                 checked = cropBorders,
                 onCheckedChange = onCropBordersChange,
                 label = { Text("Crop borders") },
+                contentPadding = PaddingValues(horizontal = 10.dp)
+            )
+
+            SwitchWithLabel(
+                checked = invertSpeechBubbles,
+                onCheckedChange = onInvertSpeechBubblesChange,
+                label = { Text("Invert speech bubbles") },
+                supportingText = { Text("Black bubble, white text — artwork untouched. Reduces glare. Bubbles with screentone or gradient backgrounds are left as-is.") },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 

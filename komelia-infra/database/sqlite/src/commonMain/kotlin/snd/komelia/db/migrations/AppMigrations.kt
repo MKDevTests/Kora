@@ -91,6 +91,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V79__complete_series_badge.sql",
         "V80__planned_series.sql",
         "V81__next_releases_bottom_nav.sql",
+        "V82__invert_speech_bubbles.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

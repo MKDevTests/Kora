@@ -97,6 +97,7 @@ fun BoxScope.SettingsOverlay(
     val linearLightDownsampling = commonReaderState.linearLightDownsampling.collectAsState().value
     val stretchToFit = commonReaderState.imageStretchToFit.collectAsState().value
     val cropBorders = commonReaderState.cropBorders.collectAsState().value
+    val invertSpeechBubbles = commonReaderState.invertSpeechBubbles.collectAsState().value
     val loadThumbnailPreviews = commonReaderState.loadThumbnailPreviews.collectAsState().value
     val flashEnabled = commonReaderState.flashOnPageChange.collectAsState().value
     val flashDuration = commonReaderState.flashDuration.collectAsState().value
@@ -124,6 +125,8 @@ fun BoxScope.SettingsOverlay(
             onStretchToFitChange = commonReaderState::onStretchToFitChange,
             cropBorders = cropBorders,
             onCropBordersChange = commonReaderState::onCropBordersChange,
+            invertSpeechBubbles = invertSpeechBubbles,
+            onInvertSpeechBubblesChange = commonReaderState::onInvertSpeechBubblesChange,
             loadThumbnailPreviews = loadThumbnailPreviews,
             onLoadThumbnailPreviewsChange = commonReaderState::onLoadThumbnailPreviewsChange,
             zoom = zoom,
@@ -167,6 +170,8 @@ fun BoxScope.SettingsOverlay(
             onStretchToFitChange = commonReaderState::onStretchToFitChange,
             cropBorders = cropBorders,
             onCropBordersChange = commonReaderState::onCropBordersChange,
+            invertSpeechBubbles = invertSpeechBubbles,
+            onInvertSpeechBubblesChange = commonReaderState::onInvertSpeechBubblesChange,
             loadThumbnailPreviews = loadThumbnailPreviews,
             onLoadThumbnailPreviewsChange = commonReaderState::onLoadThumbnailPreviewsChange,
             zoom = zoom,
