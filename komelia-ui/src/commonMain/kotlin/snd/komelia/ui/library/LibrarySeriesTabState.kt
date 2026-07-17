@@ -112,10 +112,20 @@ private object LibrarySeriesPageCache {
         cacheDir() / (key.map { if (it.isLetterOrDigit() || it == '-') it else '_' }
             .joinToString("").take(60) + "_" + key.hashCode() + ".json")
 
-    /** Disk snapshot (survives process restart). Null if absent or unreadable. */
+    /**
+     * KomgaSeries comes from an API model that may gain fields Kora doesn't know;
+     * a strict parse would throw and silently disable the cache.
+     */
+    private val gridJson = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Disk snapshot (survives process restart). Null if absent or unreadable.
+     * A miss is never fatal, but it MUST be visible: a silently disabled cache is
+     * indistinguishable from a slow server.
+     */
     suspend fun loadPersisted(key: String): Snapshot? = runCatching {
-        val json = cacheFile(key).readBytes().decodeToString()
-        val p = Json.decodeFromString(PersistedGrid.serializer(), json)
+        val raw = cacheFile(key).readBytes().decodeToString()
+        val p = gridJson.decodeFromString(PersistedGrid.serializer(), raw)
         Snapshot(
             series = p.series,
             downloadedSeriesIds = p.downloadedSeriesIds.map { KomgaSeriesId(it) }.toSet(),
@@ -123,9 +133,9 @@ private object LibrarySeriesPageCache {
             totalSeriesCount = p.totalSeriesCount,
             filterSignature = p.filterSignature,
         )
-    }.getOrNull()
+    }.onFailure { logger.warn(it) { "KORAPERF library snapshot READ failed for $key" } }.getOrNull()
 
-    /** Best-effort write — a failure only costs the next cold start its snapshot. */
+    /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun persist(key: String, snapshot: Snapshot) {
         runCatching {
             cacheDir().createDirectories()
@@ -136,8 +146,10 @@ private object LibrarySeriesPageCache {
                 totalSeriesCount = snapshot.totalSeriesCount,
                 filterSignature = snapshot.filterSignature,
             )
-            cacheFile(key).write(Json.encodeToString(PersistedGrid.serializer(), p).encodeToByteArray())
-        }
+            val encoded = gridJson.encodeToString(PersistedGrid.serializer(), p)
+            cacheFile(key).write(encoded.encodeToByteArray())
+            logger.info { "KORAPERF library snapshot WROTE $key (${p.series.size} series, ${encoded.length} chars)" }
+        }.onFailure { logger.warn(it) { "KORAPERF library snapshot WRITE failed for $key" } }
     }
 }
 
@@ -391,10 +403,21 @@ class LibrarySeriesTabState(
     private suspend fun showCachedFirstPageIfAny() {
         if (state.value is LoadState.Success) return
         val key = seriesCacheKey ?: return
-        val snapshot = LibrarySeriesPageCache.get(key)
+        val fromMemory = LibrarySeriesPageCache.get(key)
+        val snapshot = fromMemory
             ?: LibrarySeriesPageCache.loadPersisted(key)?.also { LibrarySeriesPageCache.put(key, it) }
-            ?: return
-        if (snapshot.filterSignature != filterSignature(filterState.state.value)) return
+            ?: run {
+                logger.info { "KORAPERF library snapshot MISS for $key (nothing in memory nor on disk)" }
+                return
+            }
+        if (snapshot.filterSignature != filterSignature(filterState.state.value)) {
+            logger.info { "KORAPERF library snapshot REJECTED for $key (filter signature changed)" }
+            return
+        }
+        logger.info {
+            "KORAPERF library snapshot PAINTED $key (${snapshot.series.size} series, " +
+                "from ${if (fromMemory != null) "memory" else "disk"})"
+        }
         series = snapshot.series
         downloadedSeriesIds = snapshot.downloadedSeriesIds
         totalSeriesPages = snapshot.totalSeriesPages

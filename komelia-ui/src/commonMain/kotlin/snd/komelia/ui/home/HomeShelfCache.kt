@@ -1,5 +1,6 @@
 package snd.komelia.ui.home
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.createDirectories
 import io.github.vinceglb.filekit.div
@@ -14,6 +15,8 @@ import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.SeriesHomeScreenFilter
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komga.client.series.KomgaSeries
+
+private val logger = KotlinLogging.logger { }
 
 /**
  * Disk snapshot of the last successfully loaded Home shelves.
@@ -37,17 +40,27 @@ object HomeShelfCache {
     private fun cacheDir() = FileKit.filesDir / "home_shelves"
     private fun cacheFile() = cacheDir() / "shelves.json"
 
+    /**
+     * KomgaSeries / KomeliaBook come from API models that may gain fields Kora
+     * doesn't know; a strict parse would throw and silently disable the cache.
+     */
+    private val json = Json { ignoreUnknownKeys = true }
+
     /** Stable per-shelf key. Both fields are scalars owned by Kora. */
     fun shelfKey(filter: HomeScreenFilter): String = "${filter.order}:${filter.label}"
 
-    /** Last known shelves, keyed by [shelfKey]. Null if absent or unreadable. */
+    /**
+     * Last known shelves, keyed by [shelfKey]. Null if absent or unreadable.
+     * A miss is never fatal, but it MUST be visible: a silently disabled cache is
+     * indistinguishable from a slow server.
+     */
     suspend fun load(): Map<String, PersistedShelf>? = runCatching {
-        val json = cacheFile().readBytes().decodeToString()
-        Json.decodeFromString(ListSerializer(PersistedShelf.serializer()), json)
+        val bytes = cacheFile().readBytes()
+        json.decodeFromString(ListSerializer(PersistedShelf.serializer()), bytes.decodeToString())
             .associateBy { it.key }
-    }.getOrNull()
+    }.onFailure { logger.warn(it) { "KORAPERF home snapshot READ failed" } }.getOrNull()
 
-    /** Best-effort write — a failure only costs the next cold start its instant paint. */
+    /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun save(data: List<HomeFilterData>) {
         runCatching {
             cacheDir().createDirectories()
@@ -57,10 +70,10 @@ object HomeShelfCache {
                     is BookFilterData -> PersistedShelf(shelfKey(d.filter), books = d.books)
                 }
             }
-            cacheFile().write(
-                Json.encodeToString(ListSerializer(PersistedShelf.serializer()), shelves).encodeToByteArray()
-            )
-        }
+            val encoded = json.encodeToString(ListSerializer(PersistedShelf.serializer()), shelves)
+            cacheFile().write(encoded.encodeToByteArray())
+            logger.info { "KORAPERF home snapshot WROTE ${shelves.size} shelves (${encoded.length} chars)" }
+        }.onFailure { logger.warn(it) { "KORAPERF home snapshot WRITE failed" } }
     }
 
     /**
