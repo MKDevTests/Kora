@@ -464,7 +464,16 @@ abstract class AppModule(
                     .directory(kotlinxPath.toString().toPath())
                     .build()
             }
-            diskCache?.clear()
+            // NOTE: upstream cleared this disk cache here on every startup
+            // (0e8727a3 "offline mode") — almost certainly a debug leftover: it
+            // built a disk cache and immediately wiped it, demoting it to a
+            // session-only cache. Every cold start re-downloaded every cover from
+            // Komga. On this fork that meant Home painting its 11 shelves from the
+            // local snapshot in ~145ms and then sitting on grey placeholders for
+            // seconds while ~200 covers were re-fetched over a 5-connection cap.
+            // The reader's own disk cache (createReaderImageLoader below) was never
+            // cleared — the asymmetry is what gives the accident away.
+            // Users can still wipe it on demand via Settings -> Clear image cache.
             val coilAwareDecoder = CoilAwareDecoder(decoder)
 
             ImageLoader.Builder(context)
