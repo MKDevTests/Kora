@@ -60,6 +60,9 @@ data class ImageReaderSettings(
     val pagedReaderAutoDirection: Boolean = true,
     val pagedAutoSkipBlankPages: Boolean = false,
     val pagedAutoDetectWebtoon: Boolean = false,
+    /** Webtoons use the panel-by-panel smart reader. When false they fall back
+     *  to plain continuous scroll (tap advances ~80% of the screen). */
+    val webtoonSmartScroll: Boolean = true,
     val continuousReaderStopAtEnd: Boolean = true,
     /**
      * Accessibility: detect speech bubbles and invert only their pixels

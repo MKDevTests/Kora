@@ -315,6 +315,14 @@ class ReaderSettingsRepositoryWrapper(
         return wrapper.mapState { it.pagedAutoDetectWebtoon }
     }
 
+    override fun getWebtoonSmartScroll(): Flow<Boolean> {
+        return wrapper.mapState { it.webtoonSmartScroll }
+    }
+
+    override suspend fun putWebtoonSmartScroll(enabled: Boolean) {
+        wrapper.transform { it.copy(webtoonSmartScroll = enabled) }
+    }
+
     override suspend fun putPagedAutoDetectWebtoon(enabled: Boolean) {
         wrapper.transform { it.copy(pagedAutoDetectWebtoon = enabled) }
     }

@@ -359,14 +359,18 @@ class ReaderState(
     }
 
     /**
-     * Target reader type for a webtoon: PANELS when the ONNX panel detector is
-     * loaded, CONTINUOUS otherwise. Never PAGED — a tall strip in paged mode is
-     * unreadable. Routing to PANELS without a detector silently collapses to
-     * PAGED (the reader has no PanelsReaderState to render), which is exactly
-     * the regression this guards against.
+     * Target reader type for a webtoon: PANELS (smart panel-by-panel scroll)
+     * when the ONNX panel detector is loaded AND the user hasn't turned smart
+     * scroll off; CONTINUOUS otherwise. Never PAGED — a tall strip in paged mode
+     * is unreadable. Routing to PANELS without a detector silently collapses to
+     * PAGED (the reader has no PanelsReaderState to render), which is exactly the
+     * regression this guards against.
      */
-    private fun webtoonReaderType(): ReaderType =
-        if (panelsAvailable()) ReaderType.PANELS else ReaderType.CONTINUOUS
+    private suspend fun webtoonReaderType(): ReaderType {
+        val smartScroll = readerSettingsRepository.getWebtoonSmartScroll().first()
+        return if (panelsAvailable() && smartScroll) ReaderType.PANELS
+        else ReaderType.CONTINUOUS
+    }
 
     /**
      * Heuristic: of the first 5 pages, at least 3 must have a height-to-width

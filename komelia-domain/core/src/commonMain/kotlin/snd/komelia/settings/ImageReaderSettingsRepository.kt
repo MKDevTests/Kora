@@ -128,6 +128,9 @@ interface ImageReaderSettingsRepository {
     fun getPagedAutoDetectWebtoon(): Flow<Boolean>
     suspend fun putPagedAutoDetectWebtoon(enabled: Boolean)
 
+    fun getWebtoonSmartScroll(): Flow<Boolean>
+    suspend fun putWebtoonSmartScroll(enabled: Boolean)
+
     fun getContinuousReaderStopAtEnd(): Flow<Boolean>
     suspend fun putContinuousReaderStopAtEnd(enabled: Boolean)
 

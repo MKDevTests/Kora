@@ -67,6 +67,14 @@ import kotlin.math.roundToInt
 
 private val logger = KotlinLogging.logger("ContinuousReaderState")
 
+/**
+ * A screen-tap advances by this fraction of the viewport (not a full screen),
+ * leaving an overlap so the line/panel you were reading stays visible across the
+ * jump. Also what a webtoon uses when its smart panel-by-panel scroll is turned
+ * off (see ReaderState.webtoonReaderType + the webtoonSmartScroll setting).
+ */
+private const val SCREEN_TAP_SCROLL_FRACTION = 0.8f
+
 class ContinuousReaderState(
     private val cleanupScope: CoroutineScope,
     val readerState: ReaderState,
@@ -420,16 +428,16 @@ class ContinuousReaderState(
     suspend fun scrollScreenForward() {
         val containerSize = screenScaleState.areaSize.value
         when (readingDirection.value) {
-            TOP_TO_BOTTOM -> animateScrollBy(containerSize.height.toFloat())
-            LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(containerSize.width.toFloat())
+            TOP_TO_BOTTOM -> animateScrollBy(containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(containerSize.width * SCREEN_TAP_SCROLL_FRACTION)
         }
     }
 
     suspend fun scrollScreenBackward() {
         val containerSize = screenScaleState.areaSize.value
         when (readingDirection.value) {
-            TOP_TO_BOTTOM -> animateScrollBy(-containerSize.height.toFloat())
-            LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(-containerSize.width.toFloat())
+            TOP_TO_BOTTOM -> animateScrollBy(-containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(-containerSize.width * SCREEN_TAP_SCROLL_FRACTION)
         }
     }
 

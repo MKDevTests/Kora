@@ -94,6 +94,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         pagedReaderAutoDirection = it[ImageReaderSettingsTable.pagedReaderAutoDirection],
                         pagedAutoSkipBlankPages = it[ImageReaderSettingsTable.pagedAutoSkipBlankPages],
                         pagedAutoDetectWebtoon = it[ImageReaderSettingsTable.pagedAutoDetectWebtoon],
+                        webtoonSmartScroll = it[ImageReaderSettingsTable.webtoonSmartScroll],
                         continuousReaderStopAtEnd = it[ImageReaderSettingsTable.continuousReaderStopAtEnd],
                         keepProgressBarVisibleWhileReading = it[ImageReaderSettingsTable.keepProgressBarVisibleWhileReading],
                         invertSpeechBubbles = it[ImageReaderSettingsTable.invertSpeechBubbles],
@@ -158,6 +159,7 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[pagedReaderAutoDirection] = settings.pagedReaderAutoDirection
                 it[pagedAutoSkipBlankPages] = settings.pagedAutoSkipBlankPages
                 it[pagedAutoDetectWebtoon] = settings.pagedAutoDetectWebtoon
+                it[webtoonSmartScroll] = settings.webtoonSmartScroll
                 it[continuousReaderStopAtEnd] = settings.continuousReaderStopAtEnd
                 it[keepProgressBarVisibleWhileReading] = settings.keepProgressBarVisibleWhileReading
                 it[invertSpeechBubbles] = settings.invertSpeechBubbles

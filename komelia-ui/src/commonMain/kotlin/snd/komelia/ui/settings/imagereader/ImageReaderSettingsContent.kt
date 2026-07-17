@@ -42,6 +42,9 @@ fun ImageReaderSettingsContent(
     pagedAutoDetectWebtoon: Boolean,
     onPagedAutoDetectWebtoonChange: (Boolean) -> Unit,
 
+    webtoonSmartScroll: Boolean,
+    onWebtoonSmartScrollChange: (Boolean) -> Unit,
+
     continuousReaderStopAtEnd: Boolean,
     onContinuousReaderStopAtEndChange: (Boolean) -> Unit,
 
@@ -97,6 +100,13 @@ fun ImageReaderSettingsContent(
             onCheckedChange = onPagedAutoDetectWebtoonChange,
             label = { Text("Auto-detect webtoon") },
             supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to panel-by-panel reader (auto-zoom on each panel). Your manual override sticks for the rest of the reader session.") },
+        )
+
+        SwitchWithLabel(
+            checked = webtoonSmartScroll,
+            onCheckedChange = onWebtoonSmartScrollChange,
+            label = { Text("Webtoon smart scroll") },
+            supportingText = { Text("On: webtoons use the panel-by-panel reader (needs the ONNX panel model). Off: webtoons open in plain continuous scroll — a screen tap advances ~80% of the screen.") },
         )
 
         SwitchWithLabel(
