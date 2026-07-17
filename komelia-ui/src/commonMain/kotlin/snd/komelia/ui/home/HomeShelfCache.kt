@@ -56,7 +56,7 @@ object HomeShelfCache {
         val bytes = cacheFile().readBytes()
         json.decodeFromString(ListSerializer(PersistedShelf.serializer()), bytes.decodeToString())
             .associateBy { it.key }
-    }.onFailure { logger.warn(it) { "KORAPERF home snapshot READ failed" } }.getOrNull()
+    }.onFailure { logger.warn(it) { "Home shelf snapshot unreadable; falling back to a network load" } }.getOrNull()
 
     /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun save(data: List<HomeFilterData>) {
@@ -74,8 +74,7 @@ object HomeShelfCache {
                 .encodeNullReadingDirectionAsBlank()
             val encoded = json.encodeToString(JsonElement.serializer(), tree)
             cacheFile().write(encoded.encodeToByteArray())
-            logger.info { "KORAPERF home snapshot WROTE ${shelves.size} shelves (${encoded.length} chars)" }
-        }.onFailure { logger.warn(it) { "KORAPERF home snapshot WRITE failed" } }
+        }.onFailure { logger.warn(it) { "Home shelf snapshot write failed; next cold start will hit the network" } }
     }
 
     /**

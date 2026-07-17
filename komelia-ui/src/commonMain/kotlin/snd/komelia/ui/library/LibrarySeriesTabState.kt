@@ -60,7 +60,6 @@ import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.sse.KomgaEvent
-import kotlin.time.measureTimedValue
 
 private val logger = KotlinLogging.logger { }
 
@@ -131,7 +130,7 @@ private object LibrarySeriesPageCache {
             totalSeriesCount = p.totalSeriesCount,
             filterSignature = p.filterSignature,
         )
-    }.onFailure { logger.warn(it) { "KORAPERF library snapshot READ failed for $key" } }.getOrNull()
+    }.onFailure { logger.warn(it) { "Library grid snapshot unreadable for $key; falling back to a network load" } }.getOrNull()
 
     /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun persist(key: String, snapshot: Snapshot) {
@@ -150,8 +149,7 @@ private object LibrarySeriesPageCache {
                 .encodeNullReadingDirectionAsBlank()
             val encoded = gridJson.encodeToString(JsonElement.serializer(), tree)
             cacheFile(key).write(encoded.encodeToByteArray())
-            logger.info { "KORAPERF library snapshot WROTE $key (${p.series.size} series, ${encoded.length} chars)" }
-        }.onFailure { logger.warn(it) { "KORAPERF library snapshot WRITE failed for $key" } }
+        }.onFailure { logger.warn(it) { "Library grid snapshot write failed for $key; next cold start will hit the network" } }
     }
 }
 
@@ -355,9 +353,7 @@ class LibrarySeriesTabState(
         notifications.runCatchingToNotifications {
             val loadStateDelay = delayLoadState()
             currentSeriesPage = page
-            val seriesTimed = measureTimedValue { getAllSeries(page, filterState.state.value) }
-            logger.info { "KORAPERF library getAllSeries page=$page lib=${libraryId?.value} ${seriesTimed.duration}" }
-            val seriesPage = seriesTimed.value
+            val seriesPage = getAllSeries(page, filterState.state.value)
 
             loadStateDelay.cancel()
 
@@ -365,9 +361,7 @@ class LibrarySeriesTabState(
             totalSeriesPages = seriesPage.totalPages
             totalSeriesCount = seriesPage.totalElements
             series = seriesPage.content
-            val downloadedTimed = measureTimedValue { bookApi.getDownloadedSeriesIds(seriesPage.content.map { it.id }) }
-            logger.info { "KORAPERF library getDownloadedSeriesIds (${seriesPage.content.size} ids) ${downloadedTimed.duration}" }
-            downloadedSeriesIds = downloadedTimed.value
+            downloadedSeriesIds = bookApi.getDownloadedSeriesIds(seriesPage.content.map { it.id })
             mutableState.value = LoadState.Success(Unit)
             cacheFirstPage(page)
         }.onFailure { mutableState.value = LoadState.Error(it) }
@@ -408,17 +402,11 @@ class LibrarySeriesTabState(
         val fromMemory = LibrarySeriesPageCache.get(key)
         val snapshot = fromMemory
             ?: LibrarySeriesPageCache.loadPersisted(key)?.also { LibrarySeriesPageCache.put(key, it) }
-            ?: run {
-                logger.info { "KORAPERF library snapshot MISS for $key (nothing in memory nor on disk)" }
-                return
-            }
-        if (snapshot.filterSignature != filterSignature(filterState.state.value)) {
-            logger.info { "KORAPERF library snapshot REJECTED for $key (filter signature changed)" }
-            return
-        }
-        logger.info {
-            "KORAPERF library snapshot PAINTED $key (${snapshot.series.size} series, " +
-                "from ${if (fromMemory != null) "memory" else "disk"})"
+            ?: return
+        if (snapshot.filterSignature != filterSignature(filterState.state.value)) return
+        logger.debug {
+            "painted library grid $key from ${if (fromMemory != null) "memory" else "disk"} " +
+                "(${snapshot.series.size} series)"
         }
         series = snapshot.series
         downloadedSeriesIds = snapshot.downloadedSeriesIds

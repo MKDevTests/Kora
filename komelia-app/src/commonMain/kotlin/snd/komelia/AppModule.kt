@@ -78,7 +78,6 @@ import snd.komf.client.KomfClientFactory
 import snd.komga.client.KomgaClientFactory
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.user.KomgaUser
-import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
 import snd.komelia.sync.ReaderSyncService
@@ -97,9 +96,7 @@ abstract class AppModule(
     private var offlineModuleRef: OfflineModule? = null
 
     suspend fun initDependencies(): DependencyContainer {
-        val initStart = kotlin.time.TimeSource.Monotonic.markNow()
-        measureTime { beforeInit() }
-            .also { logger.info { "KORAPERF startup beforeInit TOTAL $it" } }
+        beforeInit()
 
         // Hoisted up so the repos that need to tag rows with the current
         // user's id (reading_events, series_ratings) can read .value at
@@ -108,14 +105,8 @@ abstract class AppModule(
         // the user signs in / out.
         val currentUserIdFlow = MutableStateFlow<snd.komga.client.user.KomgaUserId?>(null)
 
-        // KORAPERF: createAppRepositories opens the SQLite databases, which runs
-        // the Flyway migrations (81 app migrations + offline) on every cold start.
-        val appRepositories = measureTimedValue { createAppRepositories(currentUserIdFlow) }
-            .also { logger.info { "KORAPERF startup createAppRepositories (db open + flyway) ${it.duration}" } }
-            .value
-        val offlineRepositories = measureTimedValue { createOfflineRepositories() }
-            .also { logger.info { "KORAPERF startup createOfflineRepositories ${it.duration}" } }
-            .value
+        val appRepositories = createAppRepositories(currentUserIdFlow)
+        val offlineRepositories = createOfflineRepositories()
         val ktor = createKtorClient()
         val ktorWithoutCache = createKtorClientWithoutCache()
         this.ktor = ktor
@@ -329,8 +320,6 @@ abstract class AppModule(
             onnxModelDownloader = onnxModelDownloader
         )
 
-        logger.info { "KORAPERF startup initDependencies TOTAL ${initStart.elapsedNow()}" }
-
         return DependencyContainer(
             appStrings = MutableStateFlow(EnStrings),
             appRepositories = appRepositories,
@@ -490,26 +479,6 @@ abstract class AppModule(
                 }
                 .memoryCache(createCoilMemoryCache())
                 .diskCache { diskCache }
-                // KORAPERF (temporary): report where every image actually came
-                // from. Data timings alone were blind to this — Home paints its
-                // shelves from the local snapshot in ~145ms and then waits on
-                // covers, which is what the user actually watches.
-                // Count with: adb logcat | grep "KORAPERF img"
-                .eventListener(object : coil3.EventListener() {
-                    override fun onSuccess(
-                        request: coil3.request.ImageRequest,
-                        result: coil3.request.SuccessResult
-                    ) {
-                        logger.info { "KORAPERF img ${result.dataSource}" }
-                    }
-
-                    override fun onError(
-                        request: coil3.request.ImageRequest,
-                        result: coil3.request.ErrorResult
-                    ) {
-                        logger.info { "KORAPERF img ERROR ${result.throwable::class.simpleName}" }
-                    }
-                })
                 .build()
                 .also { loader -> SingletonImageLoader.setUnsafe(loader) }
         }

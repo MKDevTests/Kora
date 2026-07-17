@@ -142,18 +142,15 @@ class AndroidAppModule(
             } catch (e: UnsatisfiedLinkError) {
                 logger.error(e) { "Couldn't load vips shared libraries. reader image loading will not work" }
             }
-        }.also { logger.info { "KORAPERF startup vips-libs-load $it" } }
+        }.also { logger.info { "completed vips libraries load in $it" } }
 
-        measureTime {
-            try {
-                OnnxRuntimeSharedLibraries.load()
-            } catch (e: UnsatisfiedLinkError) {
-                logger.error(e) { "Failed to load onnxruntime " }
-            }
-        }.also { logger.info { "KORAPERF startup onnx-libs-load $it" } }
+        try {
+            OnnxRuntimeSharedLibraries.load()
+        } catch (e: UnsatisfiedLinkError) {
+            logger.error(e) { "Failed to load onnxruntime " }
+        }
 
-        measureTime { NcnnSharedLibraries.load() }
-            .also { logger.info { "KORAPERF startup ncnn-libs-load $it" } }
+        NcnnSharedLibraries.load()
         snd.komelia.image.OcrService.context = context
 
         fontsDirectory = Path(context.filesDir.resolve("fonts").absolutePath)
