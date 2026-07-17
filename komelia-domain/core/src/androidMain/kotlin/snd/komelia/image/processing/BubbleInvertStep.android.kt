@@ -37,11 +37,12 @@ private val logger = KotlinLogging.logger {}
 // many of them, small, and all about the same height (one font size). Artwork
 // features are few and wildly different sizes.
 //
-// NOTE: this is the version that tested best in practice (manga ~95%, BD ~65%).
-// Later attempts — a per-page relative white point, and counting ink components
-// instead of enclosed holes — both regressed real pages and were reverted. If
-// you touch this, change ONE thing at a time and re-measure; the interactions
-// are not intuitive.
+// NOTE: tuning by reasoning alone failed twice (a per-page relative white
+// point, and counting ink components instead of enclosed holes — both regressed
+// real pages and were reverted). Every threshold change MUST now go through the
+// offline bench first: C:\Users\mathi\Downloads\Dev\_bubble-bench\bench.py is a
+// faithful Python port of this file (validated against on-device screenshots),
+// run it over full volumes and diff detections before touching Kotlin.
 
 /** Pixels at/above this (0..255) count as "bright" when isolating blobs. */
 private const val BRIGHT_THRESHOLD = 200.0
@@ -92,6 +93,24 @@ private const val MAX_INK_RATIO = 0.35
 private const val GLYPH_HEIGHT_MIN_FACTOR = 0.45
 private const val GLYPH_HEIGHT_MAX_FACTOR = 2.0
 private const val MIN_UNIFORM_SHARE = 0.65
+
+/**
+ * Two-tier solidity. Bubbles with a long tail (BD) or a spiky outline (manga
+ * shouts) score 0.78-0.88 solidity — the SAME range as some artwork (a brick
+ * wall measured 0.871, a hatched arm 0.805), so lowering MIN_SOLIDITY alone
+ * re-introduces the "inverted skull" class of false positive. What separates
+ * them, measured on the offline bench (301 pages, DB Perfect t8 + Wunderwaffen
+ * t3): glyph-height uniformity. Real text in the low-solidity range scored
+ * 0.81-0.95; the confirmed false positives 0.71 and 0.78.
+ *
+ * Rule: below MIN_SOLIDITY a candidate may still pass IF solidity >=
+ * [TIER2_MIN_SOLIDITY] AND uniformity >= [TIER2_MIN_UNIFORM]. Purely additive —
+ * every v2 detection still passes tier 1 unchanged. Bench result: +219
+ * detections, 0 regressions, page-220 audit 12/12 bubbles with 0 false
+ * positives.
+ */
+private const val TIER2_MIN_SOLIDITY = 0.78
+private const val TIER2_MIN_UNIFORM = 0.80
 
 private val openCvLoaded: Boolean by lazy {
     runCatching { OpenCVLoader.initLocal() }
@@ -243,8 +262,11 @@ actual class BubbleInvertStep actual constructor(
         if (boundsArea <= 0.0) return false
         if (area / boundsArea < MIN_FILL_RATIO) return false
 
-        if (!holesLookLikeText(contours, hierarchy, firstChild, area)) return false
-        if (solidity(contour) < MIN_SOLIDITY) return false
+        val uniformShare = holesLookLikeText(contours, hierarchy, firstChild, area) ?: return false
+        val sol = solidity(contour)
+        if (sol < MIN_SOLIDITY &&
+            !(sol >= TIER2_MIN_SOLIDITY && uniformShare >= TIER2_MIN_UNIFORM)
+        ) return false
         return whitePurity(contour, bounds, pureWhite) >= MIN_WHITE_PURITY
     }
 
@@ -252,37 +274,42 @@ actual class BubbleInvertStep actual constructor(
      * The heart of the filter. Text is many small glyphs of a shared height;
      * artwork inside a bright region is a handful of features of wildly
      * different sizes.
+     *
+     * Returns the glyph-height uniformity share when the holes look like text,
+     * or null when they don't. The share feeds the two-tier solidity rule: a
+     * less-solid outline is only trusted with strong text evidence.
      */
     private fun holesLookLikeText(
         contours: List<MatOfPoint>,
         hierarchy: Mat,
         firstChild: Int,
         blobArea: Double,
-    ): Boolean {
+    ): Double? {
         val heights = ArrayList<Int>()
         var inkArea = 0.0
         var child = firstChild
 
         while (child != -1) {
             val holeArea = Imgproc.contourArea(contours[child])
-            if (holeArea > blobArea * MAX_HOLE_RATIO) return false // a drawing, not a glyph
+            if (holeArea > blobArea * MAX_HOLE_RATIO) return null // a drawing, not a glyph
             inkArea += holeArea
             heights.add(Imgproc.boundingRect(contours[child]).height)
-            if (heights.size > MAX_GLYPH_COUNT) return false
+            if (heights.size > MAX_GLYPH_COUNT) return null
             child = hierarchy.get(0, child)?.get(0)?.toInt() ?: -1
         }
 
-        if (heights.size < MIN_GLYPH_COUNT) return false
+        if (heights.size < MIN_GLYPH_COUNT) return null
         val inkRatio = inkArea / blobArea
-        if (inkRatio < MIN_INK_RATIO || inkRatio > MAX_INK_RATIO) return false
+        if (inkRatio < MIN_INK_RATIO || inkRatio > MAX_INK_RATIO) return null
 
         heights.sort()
         val median = heights[heights.size / 2].toDouble()
-        if (median <= 0.0) return false
+        if (median <= 0.0) return null
         val uniform = heights.count {
             it >= median * GLYPH_HEIGHT_MIN_FACTOR && it <= median * GLYPH_HEIGHT_MAX_FACTOR
         }
-        return uniform.toDouble() / heights.size >= MIN_UNIFORM_SHARE
+        val share = uniform.toDouble() / heights.size
+        return if (share >= MIN_UNIFORM_SHARE) share else null
     }
 
     /** area / convexHull area — how blob-like (vs ragged) the outline is. */
