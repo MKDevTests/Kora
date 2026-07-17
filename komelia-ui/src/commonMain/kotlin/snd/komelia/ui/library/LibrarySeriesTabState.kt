@@ -32,7 +32,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import snd.komelia.ui.common.encodeNullReadingDirectionAsBlank
+import snd.komelia.ui.common.komgaCacheJson
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaBookApi
@@ -112,11 +114,7 @@ private object LibrarySeriesPageCache {
         cacheDir() / (key.map { if (it.isLetterOrDigit() || it == '-') it else '_' }
             .joinToString("").take(60) + "_" + key.hashCode() + ".json")
 
-    /**
-     * KomgaSeries comes from an API model that may gain fields Kora doesn't know;
-     * a strict parse would throw and silently disable the cache.
-     */
-    private val gridJson = Json { ignoreUnknownKeys = true }
+    private val gridJson = komgaCacheJson
 
     /**
      * Disk snapshot (survives process restart). Null if absent or unreadable.
@@ -146,7 +144,11 @@ private object LibrarySeriesPageCache {
                 totalSeriesCount = snapshot.totalSeriesCount,
                 filterSignature = snapshot.filterSignature,
             )
-            val encoded = gridJson.encodeToString(PersistedGrid.serializer(), p)
+            // See encodeNullReadingDirectionAsBlank: a null readingDirection is
+            // written by komga-client in a form it cannot read back.
+            val tree = gridJson.encodeToJsonElement(PersistedGrid.serializer(), p)
+                .encodeNullReadingDirectionAsBlank()
+            val encoded = gridJson.encodeToString(JsonElement.serializer(), tree)
             cacheFile(key).write(encoded.encodeToByteArray())
             logger.info { "KORAPERF library snapshot WROTE $key (${p.series.size} series, ${encoded.length} chars)" }
         }.onFailure { logger.warn(it) { "KORAPERF library snapshot WRITE failed for $key" } }

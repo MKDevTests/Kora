@@ -9,7 +9,9 @@ import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import snd.komelia.ui.common.encodeNullReadingDirectionAsBlank
+import snd.komelia.ui.common.komgaCacheJson
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.SeriesHomeScreenFilter
@@ -40,11 +42,7 @@ object HomeShelfCache {
     private fun cacheDir() = FileKit.filesDir / "home_shelves"
     private fun cacheFile() = cacheDir() / "shelves.json"
 
-    /**
-     * KomgaSeries / KomeliaBook come from API models that may gain fields Kora
-     * doesn't know; a strict parse would throw and silently disable the cache.
-     */
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = komgaCacheJson
 
     /** Stable per-shelf key. Both fields are scalars owned by Kora. */
     fun shelfKey(filter: HomeScreenFilter): String = "${filter.order}:${filter.label}"
@@ -70,7 +68,11 @@ object HomeShelfCache {
                     is BookFilterData -> PersistedShelf(shelfKey(d.filter), books = d.books)
                 }
             }
-            val encoded = json.encodeToString(ListSerializer(PersistedShelf.serializer()), shelves)
+            // See encodeNullReadingDirectionAsBlank: a null readingDirection is
+            // written by komga-client in a form it cannot read back.
+            val tree = json.encodeToJsonElement(ListSerializer(PersistedShelf.serializer()), shelves)
+                .encodeNullReadingDirectionAsBlank()
+            val encoded = json.encodeToString(JsonElement.serializer(), tree)
             cacheFile().write(encoded.encodeToByteArray())
             logger.info { "KORAPERF home snapshot WROTE ${shelves.size} shelves (${encoded.length} chars)" }
         }.onFailure { logger.warn(it) { "KORAPERF home snapshot WRITE failed" } }
