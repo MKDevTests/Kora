@@ -591,6 +591,25 @@ class PanelsReaderState(
                         imageResult = ReaderImageResult.Error(e),
                         panelData = null
                     )
+                } catch (e: Throwable) {
+                    // The detector needs a vips-backed image (it calls
+                    // toVipsImage()). A processing step can hand back a non-vips
+                    // image — BubbleInvertStep returns an Android Bitmap — and
+                    // getOriginalImage() returns the PROCESSED image, so with
+                    // bubble inversion on, toVipsImage() throws here. Degrade to
+                    // full-page display (panelData = null) instead of crashing:
+                    // reader_type is persisted, so an uncaught throw would
+                    // re-crash on every reopen with no way out from the UI.
+                    currentCoroutineContext().ensureActive()
+                    logger.warn(e) {
+                        "panel detection unavailable for page ${meta.pageNumber} " +
+                            "(non-vips image, e.g. bubble inversion on); showing full page"
+                    }
+                    return@async PanelsPage(
+                        metadata = meta,
+                        imageResult = imageResult,
+                        panelData = null
+                    )
                 }
             }
             logger.info { "page ${meta.pageNumber} panel detection completed in $duration" }
