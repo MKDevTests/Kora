@@ -135,8 +135,6 @@ class HomeViewModel(
 
     private suspend fun load(force: Boolean = false) {
         appNotifications.runCatchingToNotifications {
-            mutableState.value = LoadState.Loading
-
             // Keep the FULL list (enabled + disabled) here: the home-shelf editor
             // is seeded from currentFilters, so dropping disabled shelves would
             // make them vanish from the editor and get wiped on the next save.
@@ -152,6 +150,16 @@ class HomeViewModel(
                 else listOf(
                     SeriesHomeScreenFilter.Favorites(order = -1, label = "Favoris", enabled = true, pageSize = 20)
                 ) + persisted
+
+            // Paint the last known shelves from disk BEFORE touching the network.
+            // Every shelf costs a server round-trip and the awaitAll below waits on
+            // the slowest, so without this a cold start stares at an empty screen
+            // for the full duration (measured: 7.3s for 11 shelves).
+            if (!force) paintPersistedShelves(withFavorites)
+            // Only spin when there was nothing to paint — otherwise the refresh
+            // stays silent behind the snapshot instead of blanking it.
+            if (state.value !is LoadState.Success) mutableState.value = LoadState.Loading
+
             val allTimed = measureTimedValue {
                 withFavorites
                     .map { screenModelScope.async { fetchFilterData(it, force) } }
@@ -162,7 +170,28 @@ class HomeViewModel(
             currentFilters.value = allTimed.value
 
             mutableState.value = LoadState.Success(Unit)
+            // Fire-and-forget: the disk write must never delay the screen.
+            screenModelScope.launch { HomeShelfCache.save(allTimed.value) }
         }.onFailure { mutableState.value = LoadState.Error(it) }
+    }
+
+    /**
+     * Paints the disk snapshot, pairing each persisted shelf with its live filter
+     * (re-read from the database every load). A shelf the user has since renamed,
+     * reordered or deleted simply won't match its key and is skipped — the fresh
+     * load right after is what reconciles everything.
+     */
+    private suspend fun paintPersistedShelves(filters: List<HomeScreenFilter>) {
+        if (state.value is LoadState.Success) return
+        val cachedTimed = measureTimedValue { HomeShelfCache.load() }
+        val cached = cachedTimed.value ?: return
+        val data = filters.mapNotNull { filter ->
+            cached[HomeShelfCache.shelfKey(filter)]?.let { HomeShelfCache.toFilterData(it, filter) }
+        }
+        if (data.isEmpty()) return
+        currentFilters.value = data
+        mutableState.value = LoadState.Success(Unit)
+        logger.info { "KORAPERF home painted ${data.size}/${filters.size} shelves from disk in ${cachedTimed.duration}" }
     }
 
     private suspend fun fetchFilterData(filter: HomeScreenFilter, force: Boolean): HomeFilterData? {
