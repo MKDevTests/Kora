@@ -45,6 +45,9 @@ fun ImageReaderSettingsContent(
     webtoonSmartScroll: Boolean,
     onWebtoonSmartScrollChange: (Boolean) -> Unit,
 
+    invertSpeechBubbles: Boolean,
+    onInvertSpeechBubblesChange: (Boolean) -> Unit,
+
     continuousReaderStopAtEnd: Boolean,
     onContinuousReaderStopAtEndChange: (Boolean) -> Unit,
 
@@ -107,6 +110,13 @@ fun ImageReaderSettingsContent(
             onCheckedChange = onWebtoonSmartScrollChange,
             label = { Text("Webtoon smart scroll") },
             supportingText = { Text("On: webtoons use the panel-by-panel reader (needs the ONNX panel model). Off: webtoons open in plain continuous scroll — a screen tap advances ~80% of the screen.") },
+        )
+
+        SwitchWithLabel(
+            checked = invertSpeechBubbles,
+            onCheckedChange = onInvertSpeechBubblesChange,
+            label = { Text("Invert speech bubbles") },
+            supportingText = { Text("Black bubble, white text — artwork untouched. Reduces glare. Bubbles with screentone or gradient backgrounds are left as-is. Also available in the in-reader settings.") },
         )
 
         SwitchWithLabel(

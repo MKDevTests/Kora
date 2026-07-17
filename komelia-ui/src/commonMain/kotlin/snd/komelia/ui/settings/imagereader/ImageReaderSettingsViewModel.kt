@@ -75,6 +75,7 @@ class ImageReaderSettingsViewModel(
     val pagedAutoSkipBlankPages = MutableStateFlow(false)
     val pagedAutoDetectWebtoon = MutableStateFlow(false)
     val webtoonSmartScroll = MutableStateFlow(true)
+    val invertSpeechBubbles = MutableStateFlow(false)
     val continuousReaderStopAtEnd = MutableStateFlow(true)
     val availableUpsamplingModes = availableUpsamplingModes()
     val availableDownsamplingKernels = availableReduceKernels()
@@ -93,6 +94,7 @@ class ImageReaderSettingsViewModel(
         pagedAutoSkipBlankPages.value = settingsRepository.getPagedAutoSkipBlankPages().first()
         pagedAutoDetectWebtoon.value = settingsRepository.getPagedAutoDetectWebtoon().first()
         webtoonSmartScroll.value = settingsRepository.getWebtoonSmartScroll().first()
+        invertSpeechBubbles.value = settingsRepository.getInvertSpeechBubbles().first()
         continuousReaderStopAtEnd.value = settingsRepository.getContinuousReaderStopAtEnd().first()
         onnxRuntimeSettingsState.initialize()
         ncnnSettingsState.initialize()
@@ -147,6 +149,11 @@ class ImageReaderSettingsViewModel(
     fun onWebtoonSmartScrollChange(enabled: Boolean) {
         webtoonSmartScroll.value = enabled
         screenModelScope.launch { settingsRepository.putWebtoonSmartScroll(enabled) }
+    }
+
+    fun onInvertSpeechBubblesChange(enabled: Boolean) {
+        invertSpeechBubbles.value = enabled
+        screenModelScope.launch { settingsRepository.putInvertSpeechBubbles(enabled) }
     }
 
     fun onPagedAutoDetectWebtoonChange(enabled: Boolean) {

@@ -168,6 +168,7 @@ class ReaderState(
     val imageStretchToFit = MutableStateFlow(true)
     val cropBorders = MutableStateFlow(false)
     val invertSpeechBubbles = MutableStateFlow(false)
+    val webtoonSmartScroll = MutableStateFlow(true)
     val loadThumbnailPreviews = MutableStateFlow(true)
     val showCarousel = MutableStateFlow(false)
     val readProgressPage = MutableStateFlow(1)
@@ -247,6 +248,7 @@ class ReaderState(
         imageStretchToFit.value = readerSettingsRepository.getStretchToFit().first()
         cropBorders.value = readerSettingsRepository.getCropBorders().first()
         invertSpeechBubbles.value = readerSettingsRepository.getInvertSpeechBubbles().first()
+        webtoonSmartScroll.value = readerSettingsRepository.getWebtoonSmartScroll().first()
         loadThumbnailPreviews.value = readerSettingsRepository.getLoadThumbnailPreviews().first()
         flashOnPageChange.value = readerSettingsRepository.getFlashOnPageChange().first()
         flashDuration.value = readerSettingsRepository.getFlashDuration().first()
@@ -366,11 +368,9 @@ class ReaderState(
      * PAGED (the reader has no PanelsReaderState to render), which is exactly the
      * regression this guards against.
      */
-    private suspend fun webtoonReaderType(): ReaderType {
-        val smartScroll = readerSettingsRepository.getWebtoonSmartScroll().first()
-        return if (panelsAvailable() && smartScroll) ReaderType.PANELS
+    private fun webtoonReaderType(): ReaderType =
+        if (panelsAvailable() && webtoonSmartScroll.value) ReaderType.PANELS
         else ReaderType.CONTINUOUS
-    }
 
     /**
      * Heuristic: of the first 5 pages, at least 3 must have a height-to-width
@@ -609,6 +609,11 @@ class ReaderState(
         // The pipeline's BubbleInvertStep observes the repository flow, so the
         // write is what actually re-runs processing on the visible pages.
         stateScope.launch { readerSettingsRepository.putInvertSpeechBubbles(invert) }
+    }
+
+    fun onWebtoonSmartScrollChange(enabled: Boolean) {
+        webtoonSmartScroll.value = enabled
+        stateScope.launch { readerSettingsRepository.putWebtoonSmartScroll(enabled) }
     }
 
     fun onLoadThumbnailPreviewsChange(load: Boolean) {

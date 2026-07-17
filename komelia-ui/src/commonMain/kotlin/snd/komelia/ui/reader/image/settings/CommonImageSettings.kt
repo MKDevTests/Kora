@@ -47,6 +47,8 @@ fun CommonImageSettings(
     onCropBordersChange: (Boolean) -> Unit,
     invertSpeechBubbles: Boolean,
     onInvertSpeechBubblesChange: (Boolean) -> Unit,
+    webtoonSmartScroll: Boolean,
+    onWebtoonSmartScrollChange: (Boolean) -> Unit,
     loadThumbnailPreviews: Boolean,
     onLoadThumbnailPreviewsChange: (Boolean) -> Unit,
 
@@ -89,6 +91,14 @@ fun CommonImageSettings(
                 onCheckedChange = onInvertSpeechBubblesChange,
                 label = { Text("Invert speech bubbles") },
                 supportingText = { Text("Black bubble, white text — artwork untouched. Reduces glare. Bubbles with screentone or gradient backgrounds are left as-is.") },
+                contentPadding = PaddingValues(horizontal = 10.dp)
+            )
+
+            SwitchWithLabel(
+                checked = webtoonSmartScroll,
+                onCheckedChange = onWebtoonSmartScrollChange,
+                label = { Text("Webtoon smart scroll") },
+                supportingText = { Text("On: webtoons read panel-by-panel (needs the ONNX panel model). Off: plain continuous scroll, a tap advances ~80% of the screen.") },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 
