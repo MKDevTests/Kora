@@ -60,7 +60,7 @@ abstract class CoilFetcher(
     }
 
     // decode right away to avoid copying bytearray into okio buffer
-    private fun decode(bytes: ByteArray, dataSource: DataSource): FetchResult {
+    private suspend fun decode(bytes: ByteArray, dataSource: DataSource): FetchResult {
         decoder.decodeBytes(bytes, options).use { image ->
             return ImageFetchResult(
                 image = image.toCoilImage(),
