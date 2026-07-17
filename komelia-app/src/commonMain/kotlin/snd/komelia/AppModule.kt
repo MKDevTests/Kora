@@ -490,6 +490,26 @@ abstract class AppModule(
                 }
                 .memoryCache(createCoilMemoryCache())
                 .diskCache { diskCache }
+                // KORAPERF (temporary): report where every image actually came
+                // from. Data timings alone were blind to this — Home paints its
+                // shelves from the local snapshot in ~145ms and then waits on
+                // covers, which is what the user actually watches.
+                // Count with: adb logcat | grep "KORAPERF img"
+                .eventListener(object : coil3.EventListener() {
+                    override fun onSuccess(
+                        request: coil3.request.ImageRequest,
+                        result: coil3.request.SuccessResult
+                    ) {
+                        logger.info { "KORAPERF img ${result.dataSource}" }
+                    }
+
+                    override fun onError(
+                        request: coil3.request.ImageRequest,
+                        result: coil3.request.ErrorResult
+                    ) {
+                        logger.info { "KORAPERF img ERROR ${result.throwable::class.simpleName}" }
+                    }
+                })
                 .build()
                 .also { loader -> SingletonImageLoader.setUnsafe(loader) }
         }
