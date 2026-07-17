@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
+import kotlin.time.measureTimedValue
 import snd.komelia.AppNotifications
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
@@ -143,16 +144,22 @@ class HomeViewModel(
             // Ensure a Favorites shelf is present so it shows up + is editable
             // (reorder/disable) like any other; the user can disable it but it is
             // re-added if missing. Once the editor saves, the persisted copy wins.
-            val persisted = filterRepository.getFilters().first()
+            val persistedTimed = measureTimedValue { filterRepository.getFilters().first() }
+            logger.info { "KORAPERF home filters-read-from-db took ${persistedTimed.duration}" }
+            val persisted = persistedTimed.value
             val withFavorites =
                 if (persisted.any { it is SeriesHomeScreenFilter.Favorites }) persisted
                 else listOf(
                     SeriesHomeScreenFilter.Favorites(order = -1, label = "Favoris", enabled = true, pageSize = 20)
                 ) + persisted
-            currentFilters.value = withFavorites
-                .map { screenModelScope.async { fetchFilterData(it, force) } }
-                .awaitAll()
-                .filterNotNull()
+            val allTimed = measureTimedValue {
+                withFavorites
+                    .map { screenModelScope.async { fetchFilterData(it, force) } }
+                    .awaitAll()
+                    .filterNotNull()
+            }
+            logger.info { "KORAPERF home load TOTAL ${allTimed.duration} for ${withFavorites.size} shelves (force=$force)" }
+            currentFilters.value = allTimed.value
 
             mutableState.value = LoadState.Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
@@ -174,7 +181,11 @@ class HomeViewModel(
         } else if (cacheKey != null) {
             logger.info { "RandomShelfCache BYPASS for $cacheKey (force=true)" }
         }
-        val fresh = fetchFilterDataFromServer(filter) ?: return null
+        val freshTimed = measureTimedValue { fetchFilterDataFromServer(filter) }
+        logger.info {
+            "KORAPERF home shelf '${filter.label}' [${filter::class.simpleName}] took ${freshTimed.duration}"
+        }
+        val fresh = freshTimed.value ?: return null
         if (cacheKey != null) {
             RandomShelfCache.put(cacheKey, fresh)
             logger.info { "RandomShelfCache STORED $cacheKey" }

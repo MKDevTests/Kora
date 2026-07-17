@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -49,6 +50,9 @@ import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.sse.KomgaEvent
+import kotlin.time.measureTimedValue
+
+private val logger = KotlinLogging.logger { }
 
 private const val SERIES_RANDOM_SORT = "random"
 
@@ -274,7 +278,9 @@ class LibrarySeriesTabState(
         notifications.runCatchingToNotifications {
             val loadStateDelay = delayLoadState()
             currentSeriesPage = page
-            val seriesPage = getAllSeries(page, filterState.state.value)
+            val seriesTimed = measureTimedValue { getAllSeries(page, filterState.state.value) }
+            logger.info { "KORAPERF library getAllSeries page=$page lib=${libraryId?.value} ${seriesTimed.duration}" }
+            val seriesPage = seriesTimed.value
 
             loadStateDelay.cancel()
 
@@ -282,7 +288,9 @@ class LibrarySeriesTabState(
             totalSeriesPages = seriesPage.totalPages
             totalSeriesCount = seriesPage.totalElements
             series = seriesPage.content
-            downloadedSeriesIds = bookApi.getDownloadedSeriesIds(seriesPage.content.map { it.id })
+            val downloadedTimed = measureTimedValue { bookApi.getDownloadedSeriesIds(seriesPage.content.map { it.id }) }
+            logger.info { "KORAPERF library getDownloadedSeriesIds (${seriesPage.content.size} ids) ${downloadedTimed.duration}" }
+            downloadedSeriesIds = downloadedTimed.value
             mutableState.value = LoadState.Success(Unit)
             cacheFirstPage(page)
         }.onFailure { mutableState.value = LoadState.Error(it) }
