@@ -8,6 +8,12 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.div
+import io.github.vinceglb.filekit.filesDir
+import io.github.vinceglb.filekit.readBytes
+import io.github.vinceglb.filekit.write
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
@@ -25,6 +31,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaBookApi
@@ -64,12 +72,18 @@ private const val SERIES_RANDOM_SORT = "random"
 private val GENRE_FILTER_STORAGE_KEY = KomgaLibraryId("__kora_genre_filter__")
 
 /**
- * Process-wide cache of each library's first series page, keyed by library id.
- * The library screen is rebuilt on every library switch, so without this each
- * return re-fetches the grid behind a spinner. With it the cached grid shows
- * instantly and refreshes silently. Only the default (non genre-locked) series
- * tab populates it; a filter signature guards against painting a page that no
- * longer matches the active filter. Cleared on process restart.
+ * Cache of each library's first series page, keyed by library id (or
+ * library|genre-tag for a drill-down). The library screen is rebuilt on every
+ * library switch, so without this each return re-fetches the grid behind a
+ * spinner. With it the cached grid shows instantly and refreshes silently. Only
+ * the default (non genre-locked) series tab populates it; a filter signature
+ * guards against painting a page that no longer matches the active filter.
+ *
+ * Persisted to disk (mirrors [snd.komelia.ui.nextreleases.NextReleasesCache] and
+ * the genre catalog): the in-memory map alone dies with the process, so a COLD
+ * start re-paid the full server cost — measured at 6.9-9.4s for a single first
+ * page on the user's server. With the snapshot the grid paints instantly from
+ * disk while the network load runs silently behind it.
  */
 private object LibrarySeriesPageCache {
     data class Snapshot(
@@ -85,7 +99,56 @@ private object LibrarySeriesPageCache {
     fun put(libraryId: String, snapshot: Snapshot) {
         byLibrary[libraryId] = snapshot
     }
+
+    private fun cacheDir() = FileKit.filesDir / "library_grid"
+
+    /**
+     * Cache keys embed a library id and, for a drill-down, an arbitrary genre tag
+     * — which may contain characters that are illegal in a filename. Sanitize for
+     * readability and append the key's hash so two different keys can never
+     * collapse onto the same file.
+     */
+    private fun cacheFile(key: String) =
+        cacheDir() / (key.map { if (it.isLetterOrDigit() || it == '-') it else '_' }
+            .joinToString("").take(60) + "_" + key.hashCode() + ".json")
+
+    /** Disk snapshot (survives process restart). Null if absent or unreadable. */
+    suspend fun loadPersisted(key: String): Snapshot? = runCatching {
+        val json = cacheFile(key).readBytes().decodeToString()
+        val p = Json.decodeFromString(PersistedGrid.serializer(), json)
+        Snapshot(
+            series = p.series,
+            downloadedSeriesIds = p.downloadedSeriesIds.map { KomgaSeriesId(it) }.toSet(),
+            totalSeriesPages = p.totalSeriesPages,
+            totalSeriesCount = p.totalSeriesCount,
+            filterSignature = p.filterSignature,
+        )
+    }.getOrNull()
+
+    /** Best-effort write — a failure only costs the next cold start its snapshot. */
+    suspend fun persist(key: String, snapshot: Snapshot) {
+        runCatching {
+            cacheDir().createDirectories()
+            val p = PersistedGrid(
+                series = snapshot.series,
+                downloadedSeriesIds = snapshot.downloadedSeriesIds.map { it.value },
+                totalSeriesPages = snapshot.totalSeriesPages,
+                totalSeriesCount = snapshot.totalSeriesCount,
+                filterSignature = snapshot.filterSignature,
+            )
+            cacheFile(key).write(Json.encodeToString(PersistedGrid.serializer(), p).encodeToByteArray())
+        }
+    }
 }
+
+@Serializable
+private data class PersistedGrid(
+    val series: List<KomgaSeries>,
+    val downloadedSeriesIds: List<String>,
+    val totalSeriesPages: Int,
+    val totalSeriesCount: Int,
+    val filterSignature: String,
+)
 
 class LibrarySeriesTabState(
     private val bookApi: KomgaBookApi,
@@ -308,23 +371,29 @@ class LibrarySeriesTabState(
     private fun cacheFirstPage(page: Int) {
         if (page != 1) return
         val key = seriesCacheKey ?: return
-        LibrarySeriesPageCache.put(
-            key,
-            LibrarySeriesPageCache.Snapshot(
-                series = series,
-                downloadedSeriesIds = downloadedSeriesIds,
-                totalSeriesPages = totalSeriesPages,
-                totalSeriesCount = totalSeriesCount,
-                filterSignature = filterSignature(filterState.state.value),
-            )
+        val snapshot = LibrarySeriesPageCache.Snapshot(
+            series = series,
+            downloadedSeriesIds = downloadedSeriesIds,
+            totalSeriesPages = totalSeriesPages,
+            totalSeriesCount = totalSeriesCount,
+            filterSignature = filterSignature(filterState.state.value),
         )
+        LibrarySeriesPageCache.put(key, snapshot)
+        // Fire-and-forget: the disk write must never delay the grid.
+        screenModelScope.launch { LibrarySeriesPageCache.persist(key, snapshot) }
     }
 
-    /** Paint the cached first page (if it matches the active filter) before the network load. */
-    private fun showCachedFirstPageIfAny() {
+    /**
+     * Paint the cached first page (if it matches the active filter) before the
+     * network load. Memory first, then the disk snapshot — the latter is what
+     * makes a COLD start instant instead of waiting several seconds on the server.
+     */
+    private suspend fun showCachedFirstPageIfAny() {
         if (state.value is LoadState.Success) return
         val key = seriesCacheKey ?: return
-        val snapshot = LibrarySeriesPageCache.get(key) ?: return
+        val snapshot = LibrarySeriesPageCache.get(key)
+            ?: LibrarySeriesPageCache.loadPersisted(key)?.also { LibrarySeriesPageCache.put(key, it) }
+            ?: return
         if (snapshot.filterSignature != filterSignature(filterState.state.value)) return
         series = snapshot.series
         downloadedSeriesIds = snapshot.downloadedSeriesIds
