@@ -22,7 +22,6 @@ import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
-import kotlin.time.measureTimedValue
 import snd.komelia.AppNotifications
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
@@ -142,9 +141,7 @@ class HomeViewModel(
             // Ensure a Favorites shelf is present so it shows up + is editable
             // (reorder/disable) like any other; the user can disable it but it is
             // re-added if missing. Once the editor saves, the persisted copy wins.
-            val persistedTimed = measureTimedValue { filterRepository.getFilters().first() }
-            logger.info { "KORAPERF home filters-read-from-db took ${persistedTimed.duration}" }
-            val persisted = persistedTimed.value
+            val persisted = filterRepository.getFilters().first()
             val withFavorites =
                 if (persisted.any { it is SeriesHomeScreenFilter.Favorites }) persisted
                 else listOf(
@@ -160,18 +157,15 @@ class HomeViewModel(
             // stays silent behind the snapshot instead of blanking it.
             if (state.value !is LoadState.Success) mutableState.value = LoadState.Loading
 
-            val allTimed = measureTimedValue {
-                withFavorites
-                    .map { screenModelScope.async { fetchFilterData(it, force) } }
-                    .awaitAll()
-                    .filterNotNull()
-            }
-            logger.info { "KORAPERF home load TOTAL ${allTimed.duration} for ${withFavorites.size} shelves (force=$force)" }
-            currentFilters.value = allTimed.value
+            val fresh = withFavorites
+                .map { screenModelScope.async { fetchFilterData(it, force) } }
+                .awaitAll()
+                .filterNotNull()
+            currentFilters.value = fresh
 
             mutableState.value = LoadState.Success(Unit)
             // Fire-and-forget: the disk write must never delay the screen.
-            screenModelScope.launch { HomeShelfCache.save(allTimed.value) }
+            screenModelScope.launch { HomeShelfCache.save(fresh) }
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 
@@ -183,15 +177,31 @@ class HomeViewModel(
      */
     private suspend fun paintPersistedShelves(filters: List<HomeScreenFilter>) {
         if (state.value is LoadState.Success) return
-        val cachedTimed = measureTimedValue { HomeShelfCache.load() }
-        val cached = cachedTimed.value ?: return
+        val cached = HomeShelfCache.load() ?: return
         val data = filters.mapNotNull { filter ->
             cached[HomeShelfCache.shelfKey(filter)]?.let { HomeShelfCache.toFilterData(it, filter) }
         }
         if (data.isEmpty()) return
+
+        // Seed the random-shelf cache with the picks we just painted. Without
+        // this, the fresh load starting right after finds an empty (process-new)
+        // RandomShelfCache, re-rolls every random shelf, and swaps the content out
+        // from under the user seconds after it appeared — re-downloading ~80 covers
+        // that were never seen before. Discover shelves now keep their picks until
+        // an explicit refresh.
+        //
+        // put() stamps fetchedAt = now, so the entries stay valid for the cache's
+        // 5-minute TTL, exactly as if they had just been fetched. Pull-to-refresh
+        // passes force=true, which bypasses this cache entirely and rolls a genuinely
+        // new pick — that path is deliberately left untouched.
+        data.forEach { filterData ->
+            filterData.filter.randomShelfCacheKey()?.let { key ->
+                RandomShelfCache.put(key, filterData)
+            }
+        }
+
         currentFilters.value = data
         mutableState.value = LoadState.Success(Unit)
-        logger.info { "KORAPERF home painted ${data.size}/${filters.size} shelves from disk in ${cachedTimed.duration}" }
     }
 
     private suspend fun fetchFilterData(filter: HomeScreenFilter, force: Boolean): HomeFilterData? {
@@ -210,11 +220,7 @@ class HomeViewModel(
         } else if (cacheKey != null) {
             logger.info { "RandomShelfCache BYPASS for $cacheKey (force=true)" }
         }
-        val freshTimed = measureTimedValue { fetchFilterDataFromServer(filter) }
-        logger.info {
-            "KORAPERF home shelf '${filter.label}' [${filter::class.simpleName}] took ${freshTimed.duration}"
-        }
-        val fresh = freshTimed.value ?: return null
+        val fresh = fetchFilterDataFromServer(filter) ?: return null
         if (cacheKey != null) {
             RandomShelfCache.put(cacheKey, fresh)
             logger.info { "RandomShelfCache STORED $cacheKey" }
