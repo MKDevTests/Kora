@@ -64,10 +64,23 @@ class NextReleasesService(
      * but any failure marks the scan incomplete.
      */
     suspend fun compute(libraries: List<KomgaLibrary>): Scan = coroutineScope {
-        // Not wrapped in runCatching on purpose: a failure here must propagate.
-        val tagsByLibrary = libraries.map { lib ->
-            async { referentialApi.getSeriesTags(lib.id) }
+        // Per-library tolerance: `/api/v1/tags/series` can take longer than the
+        // 30s socket timeout on a large library, and one slow library must not
+        // cost the whole calendar. A library that fails contributes nothing and
+        // marks the scan incomplete — which is what stops the (partial) result
+        // from overwriting a better cached one.
+        val tagResults = libraries.map { lib ->
+            async { runCatching { referentialApi.getSeriesTags(lib.id) } }
         }.awaitAll()
+
+        // Every library failing means we learned nothing at all — that is a
+        // failure, not an empty calendar.
+        if (libraries.isNotEmpty() && tagResults.all { it.isFailure }) {
+            throw tagResults.first().exceptionOrNull()
+                ?: IllegalStateException("tag discovery failed for every library")
+        }
+        val discoveryComplete = tagResults.none { it.isFailure }
+        val tagsByLibrary = tagResults.mapNotNull { it.getOrNull() }
 
         val candidates = tagsByLibrary.flatten().distinct()
             .mapNotNull { tag -> NextReleaseLabels.upcomingRelease(listOf(tag))?.let { tag to it } }
@@ -107,7 +120,7 @@ class NextReleasesService(
 
         Scan(
             releases = outcomes.mapNotNull { it.getOrNull() }.sortedBy { it.date },
-            complete = outcomes.none { it.isFailure },
+            complete = discoveryComplete && outcomes.none { it.isFailure },
         )
     }
 

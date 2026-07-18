@@ -45,8 +45,14 @@ object NextReleasesScanner {
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
 
-    /** Backoff between scan attempts. Its size is the attempt count. */
-    private val RETRY_DELAYS = listOf(3.seconds, 10.seconds, 30.seconds)
+    /**
+     * Backoff between scan attempts. Its size is the attempt count, kept low on
+     * purpose: a scan only fails outright when every library's tag query failed,
+     * and those failures are 30s socket timeouts. Retrying hard would mean
+     * minutes of pointless work (and battery) against a server that is simply
+     * too slow to answer.
+     */
+    private val RETRY_DELAYS = listOf(5.seconds, 30.seconds)
 
     /** Seeds from the disk snapshot. Cheap and idempotent. */
     suspend fun primeFromDisk() {
