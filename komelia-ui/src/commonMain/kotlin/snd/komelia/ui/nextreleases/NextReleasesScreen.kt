@@ -42,6 +42,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
@@ -260,6 +261,11 @@ class NextReleasesViewModel(
                     logger.warn { "Incomplete next-releases scan returned nothing; keeping cached list" }
                     if (cached == null) mutableState.value = LoadState.Success(emptyList())
                 }
+            } catch (c: CancellationException) {
+                // Leaving the screen cancels the scan. That's normal control
+                // flow, not a failure — swallowing it here would also break
+                // structured concurrency.
+                throw c
             } catch (t: Throwable) {
                 logger.error(t) { "NextReleasesService.compute failed" }
                 // Keep showing the stale cached list rather than erroring out
