@@ -1,9 +1,14 @@
 package snd.komelia.ui.library
 
 /**
- * Helpers for the experimental Genre tab. Genres are Komga series *tags* in the
- * `kora:genre:<slug>` namespace, written by the user's external classifier. Kora
- * only ever reads them.
+ * Helpers for the Genre tab. Genres are Komga series *tags* in the
+ * `kora:genre:<slug>` namespace, tagged by hand in Komga — there is no
+ * classifier or script that re-tags the library, so nothing overwrites a manual
+ * edit and the admin genre editor can write these tags freely.
+ *
+ * When writing them, only `kora:genre:*` may be touched: a series' other tags
+ * carry real meaning (`kora:hidden` hides it for everyone) and replacing the
+ * whole tag list would silently drop them.
  */
 object GenreLabels {
     const val PREFIX = "kora:genre:"
