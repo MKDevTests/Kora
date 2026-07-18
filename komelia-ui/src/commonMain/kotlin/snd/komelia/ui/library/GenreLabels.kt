@@ -44,11 +44,12 @@ object GenreLabels {
     )
 
     /**
-     * The full taxonomy, in the order it should be offered to the admin editor.
-     * Fixed on purpose: the point of the genre tab is a small, stable vocabulary,
-     * not a free-form tag cloud (that's what Komga's own tags are for).
+     * The full taxonomy, sorted by display label so the admin editor reads
+     * alphabetically rather than in map-declaration order. Fixed vocabulary on
+     * purpose: the point of the genre tab is a small, stable list, not a
+     * free-form tag cloud (that's what Komga's own tags are for).
      */
-    val allSlugs: List<String> = labels.keys.toList()
+    val allSlugs: List<String> = labels.keys.sortedBy { labels.getValue(it).lowercase() }
 
     /** Tag string for a slug, e.g. "fantasy" -> "kora:genre:fantasy". */
     fun tagOf(slug: String): String = PREFIX + slug
