@@ -105,12 +105,11 @@ fun ImageReaderSettingsContent(
             supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to panel-by-panel reader (auto-zoom on each panel). Your manual override sticks for the rest of the reader session.") },
         )
 
-        SwitchWithLabel(
-            checked = webtoonSmartScroll,
-            onCheckedChange = onWebtoonSmartScrollChange,
-            label = { Text("Webtoon smart scroll") },
-            supportingText = { Text("On: webtoons use the panel-by-panel reader (needs the ONNX panel model). Off: webtoons open in plain continuous scroll — a screen tap advances ~80% of the screen.") },
-        )
+        // "Webtoon smart scroll" toggle intentionally not shown: it used to pick
+        // PANELS vs CONTINUOUS for webtoons, and PANELS is now never used for
+        // them (its panel ordering breaks on tall strips). The setting, its
+        // column and its plumbing are kept — they come back with a real meaning
+        // once the tap snaps to the next content block instead of a fixed 80%.
 
         SwitchWithLabel(
             checked = invertSpeechBubbles,

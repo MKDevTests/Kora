@@ -372,16 +372,20 @@ class ReaderState(
     }
 
     /**
-     * Target reader type for a webtoon: PANELS (smart panel-by-panel scroll)
-     * when the ONNX panel detector is loaded AND the user hasn't turned smart
-     * scroll off; CONTINUOUS otherwise. Never PAGED — a tall strip in paged mode
-     * is unreadable. Routing to PANELS without a detector silently collapses to
-     * PAGED (the reader has no PanelsReaderState to render), which is exactly the
-     * regression this guards against.
+     * Webtoons always read in CONTINUOUS.
+     *
+     * PANELS is deliberately NOT used here any more: on a tall strip its panel
+     * ordering falls apart — reading starts mid- or end-of-page and skips 4-5
+     * image zones (the same ordering weakness measured at ~13% of normal manga
+     * pages, amplified by strip geometry). Plain vertical scrolling is strictly
+     * better for the format. PAGED is never an option either: a tall strip in
+     * paged mode is unreadable.
+     *
+     * [webtoonSmartScroll] therefore no longer picks the reader type; it selects
+     * how a screen tap advances (currently a fixed ~80% of the viewport, soon a
+     * snap to the next content block).
      */
-    private fun webtoonReaderType(): ReaderType =
-        if (panelsAvailable() && webtoonSmartScroll.value) ReaderType.PANELS
-        else ReaderType.CONTINUOUS
+    private fun webtoonReaderType(): ReaderType = ReaderType.CONTINUOUS
 
     /**
      * Heuristic: of the first 5 pages, at least 3 must be at least
