@@ -140,7 +140,15 @@ class ShelfDetailScreen(private val filter: HomeScreenFilter) : Screen {
                                 onBookClick = { navigator.push(bookScreen(it)) },
                                 onBookReadClick = { book, markProgress ->
                                     navigator.parent?.push(
-                                        readerScreen(book = book, markReadProgress = markProgress)
+                                        readerScreen(
+                                            book = book,
+                                            markReadProgress = markProgress,
+                                            // Mirrors HomeScreen: read progress changes even when
+                                            // you leave on the same book, so the shelf has to
+                                            // re-resolve on the way back or it shows stale
+                                            // progress until a manual pull-to-refresh.
+                                            onExit = { vm.reload() },
+                                        )
                                     )
                                 },
                                 bookMenuActions = vm.bookMenuActions(),
