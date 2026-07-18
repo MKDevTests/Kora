@@ -76,8 +76,17 @@ private val logger = KotlinLogging.logger("ContinuousReaderState")
  */
 private const val SCREEN_TAP_SCROLL_FRACTION = 0.8f
 
-/** A smart-scroll tap always advances at least this much: snapping a few pixels feels broken. */
-private const val SMART_SCROLL_MIN_FRACTION = 0.35f
+/**
+ * A smart-scroll tap always advances at least this much: snapping a few pixels
+ * feels broken.
+ *
+ * Kept low on purpose. At 0.35 this rejected perfectly good snaps just under the
+ * bar (measured: block starts at 853px and 926px in a 2960px viewport) and fell
+ * back to the blind 80% jump, which then sailed *over* both blocks and landed
+ * mid-panel — exactly the cut this feature exists to prevent. A short snap is
+ * always better than an overshoot.
+ */
+private const val SMART_SCROLL_MIN_FRACTION = 0.20f
 
 /** ...and never more than this, so a tap can't carry content past the screen unseen. */
 private const val SMART_SCROLL_MAX_FRACTION = 0.95f
