@@ -241,36 +241,22 @@ class NextReleasesViewModel(
     private val service: NextReleasesService,
 ) : StateScreenModel<LoadState<List<NextReleasesService.UpcomingRelease>>>(LoadState.Uninitialized) {
 
+    /**
+     * Shows the cached calendar immediately and asks [NextReleasesScanner] for a
+     * fresh scan. The scan itself is process-scoped, so leaving this screen no
+     * longer cancels it — only the observation below stops.
+     */
     fun load(libraries: List<KomgaLibrary>) {
         screenModelScope.launch {
-            // Memory hit first (fastest), else the disk snapshot (still far
-            // cheaper than a fresh scan) so a cold app start shows the last
-            // known list instead of a blank spinner for ~2 minutes.
-            val cached = NextReleasesCache.releases ?: NextReleasesCache.loadPersisted()?.also {
-                NextReleasesCache.releases = it
-            }
-            mutableState.value = if (cached != null) LoadState.Success(cached) else LoadState.Loading
-            try {
-                val scan = service.compute(libraries)
-                NextReleasesCache.update(scan)
-                // An incomplete scan that came back empty tells us nothing; keep
-                // showing what we had rather than blanking the screen.
-                if (scan.complete || scan.releases.isNotEmpty()) {
-                    mutableState.value = LoadState.Success(scan.releases)
-                } else {
-                    logger.warn { "Incomplete next-releases scan returned nothing; keeping cached list" }
-                    if (cached == null) mutableState.value = LoadState.Success(emptyList())
+            NextReleasesScanner.primeFromDisk()
+            // Opening the calendar is an explicit ask, so bypass the TTL.
+            NextReleasesScanner.ensureFresh(service, libraries, force = true)
+            NextReleasesScanner.releases.collect { list ->
+                mutableState.value = when {
+                    list != null -> LoadState.Success(list)
+                    // Nothing cached yet and a scan is under way.
+                    else -> LoadState.Loading
                 }
-            } catch (c: CancellationException) {
-                // Leaving the screen cancels the scan. That's normal control
-                // flow, not a failure — swallowing it here would also break
-                // structured concurrency.
-                throw c
-            } catch (t: Throwable) {
-                logger.error(t) { "NextReleasesService.compute failed" }
-                // Keep showing the stale cached list rather than erroring out
-                // over it, if we had one to show.
-                if (cached == null) mutableState.value = LoadState.Error(t)
             }
         }
     }
@@ -292,29 +278,14 @@ fun NextReleasesHomeCard() {
     val service = remember { factory.createNextReleasesService() }
     // Memory, then disk, show instantly; the effects below still refresh
     // silently so the teaser (and the shared cache) stay current.
-    // `remember` matters: without it every recomposition rebuilt the state and
-    // dropped whatever the effects below had written.
-    var releases by remember { mutableStateOf(NextReleasesCache.releases) }
-    LaunchedEffect(Unit) {
-        if (releases == null) {
-            NextReleasesCache.loadPersisted()?.let {
-                NextReleasesCache.releases = it
-                releases = it
-            }
-        }
-    }
+    // Observed, not driven: the scan lives in NextReleasesScanner so that
+    // scrolling away from the card (or leaving Home) can't cancel it.
+    val releases by NextReleasesScanner.releases.collectAsState()
     LaunchedEffect(libraries) {
-        // A scan is one Komga query per nextrelease tag. This composable enters
-        // composition on every return to Home, so without the staleness check it
-        // re-paid that cost each time.
-        if (libraries.isNotEmpty() && NextReleasesCache.isStale()) {
-            runCatching { service.compute(libraries) }.getOrNull()?.let { scan ->
-                NextReleasesCache.update(scan)
-                // update() may have refused an empty incomplete scan; show what
-                // the cache actually holds, not what this scan returned.
-                releases = NextReleasesCache.releases
-            }
-        }
+        NextReleasesScanner.primeFromDisk()
+        // Honours the 30-minute TTL — this card is entered on every return to
+        // Home, and a scan is one Komga query per nextrelease tag.
+        NextReleasesScanner.ensureFresh(service, libraries)
     }
 
     val navigator = LocalNavigator.currentOrThrow
