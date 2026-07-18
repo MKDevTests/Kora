@@ -85,6 +85,13 @@ import snd.komelia.sync.ReaderSyncService
 
 private val logger = KotlinLogging.logger { }
 
+/**
+ * Filename of the speech-bubble detector inside the ONNX models directory
+ * (ogkalu/comic-text-and-bubble-detector, RT-DETR, Apache-2.0, ~11 MB).
+ * Absent = bubble inversion silently stays off.
+ */
+const val BUBBLE_DETECTOR_MODEL = "comic-bubble-detector.onnx"
+
 abstract class AppModule(
     val serverId: Long? = null
 ) {
@@ -529,7 +536,11 @@ abstract class AppModule(
         // MUST stay last: on Android this hands back a Bitmap-backed image, and
         // AndroidBitmapBackedImage.mapLookupTable throws — so it has to run after
         // ColorCorrectionStep, the only step that calls it.
-        pipeline.addStep(snd.komelia.image.processing.BubbleInvertStep(invertSpeechBubbles))
+        pipeline.addStep(
+            snd.komelia.image.processing.BubbleInvertStep(invertSpeechBubbles) {
+                getOnnxModelsDirectoryPath()?.let { "$it/$BUBBLE_DETECTOR_MODEL" }
+            }
+        )
         return pipeline
     }
 
@@ -586,6 +597,13 @@ abstract class AppModule(
         modelDownloader: OnnxModelDownloader,
         settings: ImageReaderSettingsRepository,
     ): KomeliaPanelDetector?
+
+    /**
+     * Directory holding downloaded ONNX models (the panel detector lives here
+     * too), or null on platforms that don't ship them. Used to locate the
+     * speech-bubble detector; a missing file just disables bubble inversion.
+     */
+    protected open fun getOnnxModelsDirectoryPath(): String? = null
 
     protected abstract fun getCoilCacheDirectory(): Path?
     protected abstract fun createCoilMemoryCache(): MemoryCache?

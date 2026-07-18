@@ -389,6 +389,10 @@ class AndroidAppModule(
         return panelDetector
     }
 
+    /** Same directory the panel detector downloads into (filesDir/onnx). */
+    override fun getOnnxModelsDirectoryPath(): String =
+        context.filesDir.resolve("onnx").absolutePath
+
     override fun getCoilCacheDirectory(): Path {
         val path = context.cacheDir.resolve("coil3_disk_cache")
         return Path(if (serverId != null) path.resolve("server_$serverId").toString() else path.toString())

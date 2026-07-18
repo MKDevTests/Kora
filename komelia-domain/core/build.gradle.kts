@@ -72,6 +72,12 @@ kotlin {
             implementation(libs.mlkit.text.recognition.japanese)
             implementation(libs.mlkit.text.recognition.korean)
             implementation(libs.rapidocr.android)
+            // Explicit: BubbleInvertStep uses the ai.onnxruntime JAVA API for the
+            // speech-bubble detector. It arrives transitively via rapidocr, but a
+            // transitive `implementation` is not on OUR compile classpath, so the
+            // import would not resolve. Version is pinned by the resolutionStrategy
+            // force below (must match the superbuild — see komelia-app).
+            implementation("com.microsoft.onnxruntime:onnxruntime-android:1.25.0")
             implementation(libs.kotlinx.coroutines.play.services)
             implementation(libs.commons.compress)
             api(libs.ktor.client.okhttp)
