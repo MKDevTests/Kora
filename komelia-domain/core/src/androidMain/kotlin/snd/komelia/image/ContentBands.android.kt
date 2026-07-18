@@ -1,13 +1,9 @@
 package snd.komelia.image
 
 import android.graphics.Bitmap
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import snd.komelia.image.AndroidBitmap.toBitmap
-import kotlin.math.abs
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Width the page is squashed to before profiling. A row's ink fraction doesn't
@@ -16,11 +12,17 @@ private val logger = KotlinLogging.logger {}
  */
 private const val PROFILE_WIDTH = 64
 
-/** A pixel counts as ink when it differs from the background by more than this. */
-private const val BG_TOLERANCE = 28
-
-/** A row is "empty" below this fraction of ink pixels. */
-private const val EMPTY_ROW_SCORE = 0.02f
+/**
+ * A row is a gutter when its darkest and lightest sample differ by no more than
+ * this — i.e. the row is FLAT, whatever colour it happens to be.
+ *
+ * Deliberately not "close to an estimated background colour": that approach read
+ * the background off the page's edge columns, which is only valid when the art
+ * leaves a margin. On a full-bleed strip the estimate lands on the artwork
+ * (measured: bg=202 and bg=214 on real pages), the genuinely white gutters then
+ * look like ink, and the page collapses to a single block.
+ */
+private const val FLAT_ROW_RANGE = 14
 
 /**
  * Empty runs shorter than this fraction of the page WIDTH are NOT gutters —
@@ -81,27 +83,16 @@ private fun analyse(image: KomeliaImage): List<ClosedFloatingPointRange<Float>> 
             (((p shr 16) and 0xFF) * 299 + ((p shr 8) and 0xFF) * 587 + (p and 0xFF) * 114) / 1000
         }
 
-        // Background = median of the left/right edge columns. Works whether the
-        // strip is white, black or a flat colour.
-        val edge = ArrayList<Int>(height * 4)
-        for (y in 0 until height) {
-            val row = y * PROFILE_WIDTH
-            edge.add(luma[row])
-            edge.add(luma[row + 1])
-            edge.add(luma[row + PROFILE_WIDTH - 2])
-            edge.add(luma[row + PROFILE_WIDTH - 1])
-        }
-        edge.sort()
-        val background = edge[edge.size / 2]
-
-        val minInk = (PROFILE_WIDTH * EMPTY_ROW_SCORE).coerceAtLeast(1f)
         val empty = BooleanArray(height) { y ->
-            var ink = 0
             val row = y * PROFILE_WIDTH
+            var min = 255
+            var max = 0
             for (x in 0 until PROFILE_WIDTH) {
-                if (abs(luma[row + x] - background) > BG_TOLERANCE) ink++
+                val v = luma[row + x]
+                if (v < min) min = v
+                if (v > max) max = v
             }
-            ink < minInk
+            max - min <= FLAT_ROW_RANGE
         }
 
         // Vertical closing: an empty run too short to be a gutter is content.
@@ -135,7 +126,7 @@ private fun analyse(image: KomeliaImage): List<ClosedFloatingPointRange<Float>> 
         val h = height.toFloat()
         android.util.Log.i(
             "BANDS",
-            "page ${source.width}x$height bg=$background minGutter=$minGutter blocks=${blocks.size} " +
+            "page ${source.width}x$height flatRows=${empty.count { it }} minGutter=$minGutter blocks=${blocks.size} " +
                 blocks.take(12).joinToString { "${it.first}-${it.last}" }
         )
 

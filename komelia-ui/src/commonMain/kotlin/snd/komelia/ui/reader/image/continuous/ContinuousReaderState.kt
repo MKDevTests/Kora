@@ -488,7 +488,14 @@ class ContinuousReaderState(
             if (item.size <= 0) continue
             val bands = contentBandsFor(page) ?: continue
             for (band in bands) {
+                // Align the block's top to the top of the screen.
                 candidates.add(item.offset + band.start * item.size)
+                // ...or, for a block taller than the screen, its bottom to the
+                // bottom of the screen: that finishes a tall panel in one go
+                // instead of cutting it, which a top-align alone can't do
+                // (measured: blocks spaced ~3500px in a 2960px viewport, so no
+                // top-align candidate falls in the allowed window at all).
+                candidates.add(item.offset + band.endInclusive * item.size - viewport)
             }
         }
         if (candidates.isEmpty()) {
