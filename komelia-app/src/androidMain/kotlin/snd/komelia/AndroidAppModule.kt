@@ -154,6 +154,41 @@ class AndroidAppModule(
         snd.komelia.image.OcrService.context = context
 
         fontsDirectory = Path(context.filesDir.resolve("fonts").absolutePath)
+        installBundledBubbleModel()
+    }
+
+    /**
+     * Copies the bundled speech-bubble detector out of assets into the ONNX
+     * models directory, once, so [snd.komelia.image.processing.BubbleInvertStep]
+     * can open it by path like the panel model.
+     *
+     * Re-copies when the size differs, which is what makes a model update ride
+     * along with an app update. Failures are non-fatal: a missing model just
+     * leaves bubble inversion inactive.
+     */
+    private fun installBundledBubbleModel() {
+        runCatching {
+            val dir = context.filesDir.resolve("onnx").apply { mkdirs() }
+            val target = dir.resolve(BUBBLE_DETECTOR_MODEL)
+            val marker = dir.resolve("$BUBBLE_DETECTOR_MODEL.installed")
+            val appVersion = context.packageManager
+                .getPackageInfo(context.packageName, 0).versionName ?: "unknown"
+
+            // Version marker rather than a size comparison: assets are stored
+            // compressed, so AssetManager.openFd() would throw and we'd have no
+            // reliable expected size — and the failure would be silent.
+            if (target.isFile && runCatching { marker.readText() }.getOrNull() == appVersion) {
+                return@runCatching
+            }
+
+            context.assets.open(BUBBLE_DETECTOR_MODEL).use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+            marker.writeText(appVersion)
+            logger.info { "installed bundled bubble detection model (${target.length()} bytes)" }
+        }.onFailure {
+            logger.warn(it) { "could not install bundled bubble detection model; bubble inversion stays off" }
+        }
     }
 
 

@@ -115,6 +115,11 @@ android {
     sourceSets["main"].manifest.srcFile("src/androidMain/$manifestFile")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
+    // NOTE: src/androidMain/assets is already packaged (that is where
+    // logback.xml lives) — no srcDirs override needed, and none wanted since
+    // srcDirs() would REPLACE the default list. The speech-bubble detector model
+    // ships from there. It is unaffected by the `**/*.onnx` exclusion below:
+    // that one applies to Java/JAR resources, not Android assets.
 
     buildFeatures {
         buildConfig = true
