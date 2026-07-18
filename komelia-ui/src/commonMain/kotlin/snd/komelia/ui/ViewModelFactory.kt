@@ -175,6 +175,18 @@ class ViewModelFactory(
         )
     }
 
+    fun getShelfDetailViewModel(filter: snd.komelia.homefilters.HomeScreenFilter): snd.komelia.ui.home.ShelfDetailViewModel {
+        return snd.komelia.ui.home.ShelfDetailViewModel(
+            filter = filter,
+            settingsRepository = appRepositories.settingsRepository,
+            seriesApi = komgaApi.seriesApi,
+            bookApi = komgaApi.bookApi,
+            notifications = dependencies.appNotifications,
+            taskEmitter = dependencies.offlineDependencies.taskEmitter,
+            favoriteIdsFlow = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+        )
+    }
+
     fun getFilterEditViewModel(homeFilters: List<HomeFilterData>?): FilterEditViewModel {
         return FilterEditViewModel(
             initialFilters = homeFilters,

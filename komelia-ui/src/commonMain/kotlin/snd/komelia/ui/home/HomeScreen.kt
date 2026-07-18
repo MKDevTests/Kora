@@ -150,6 +150,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     },
                                     selectedSeries = vm.selectedSeries.collectAsState().value,
                                     onSeriesSelect = vm::onSeriesSelect,
+                                    onShelfClick = { navigator push ShelfDetailScreen(it) },
                                 )
 
                         }

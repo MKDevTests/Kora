@@ -1,0 +1,175 @@
+package snd.komelia.ui.home
+
+import snd.komelia.homefilters.BooksHomeScreenFilter
+import snd.komelia.homefilters.HomeScreenFilter
+import snd.komelia.homefilters.SeriesHomeScreenFilter
+import snd.komelia.komga.api.KomgaBookApi
+import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komga.client.book.KomgaBookSearch
+import snd.komga.client.book.KomgaReadStatus
+import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.KomgaSort
+import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.search.allOfBooks
+import snd.komga.client.search.allOfSeries
+import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.series.KomgaSeriesSearch
+
+/**
+ * Resolves a [HomeScreenFilter] into the actual series/books it stands for.
+ *
+ * Extracted out of HomeViewModel so the shelf-detail screen can reuse the exact
+ * same queries instead of duplicating them. Only three dependencies, none of
+ * them stateful beyond the favorite ids, so the resolver is cheap to build
+ * anywhere a viewmodel can reach the Komga APIs.
+ *
+ * [favoriteIds] is a lambda rather than a value because the local favorites are
+ * a live setting — reading it at resolve time keeps a long-lived resolver from
+ * serving a stale set.
+ */
+class HomeShelfResolver(
+    private val seriesApi: KomgaSeriesApi,
+    private val bookApi: KomgaBookApi,
+    private val favoriteIds: () -> Set<String>,
+) {
+
+    suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? {
+        return when (filter) {
+            is BooksHomeScreenFilter.CustomFilter -> {
+                val books = bookApi.getBookList(
+                    search = KomgaBookSearch(filter.filter, filter.textSearch),
+                    pageRequest = filter.pageRequest
+                ).content
+
+                BookFilterData(books = books, filter = filter)
+            }
+
+            is BooksHomeScreenFilter.OnDeck -> {
+                val books = bookApi.getBooksOnDeck(pageRequest = KomgaPageRequest(size = filter.pageSize)).content
+                BookFilterData(books, filter)
+            }
+
+            is SeriesHomeScreenFilter.CustomFilter -> {
+                val series = seriesApi.getSeriesList(
+                    search = KomgaSeriesSearch(filter.filter, filter.textSearch),
+                    pageRequest = filter.pageRequest
+                ).content
+
+                SeriesFilterData(series = series, filter = filter)
+            }
+
+            is SeriesHomeScreenFilter.RecentlyAdded -> {
+                val series = seriesApi.getNewSeries(
+                    oneshot = false,
+                    pageRequest = KomgaPageRequest(size = filter.pageSize)
+                ).content
+                SeriesFilterData(
+                    series = series,
+                    filter = filter
+                )
+            }
+
+            is SeriesHomeScreenFilter.RecentlyUpdated -> {
+                val series = seriesApi.getUpdatedSeries(
+                    oneshot = false,
+                    pageRequest = KomgaPageRequest(size = filter.pageSize)
+                ).content
+                SeriesFilterData(
+                    series = series,
+                    filter = filter
+                )
+            }
+
+            is SeriesHomeScreenFilter.Favorites -> {
+                // Local favorites: resolve a bounded sample by id (getOneSeries is
+                // not filtered), sorted by title.
+                val resolved = favoriteIds().take(filter.pageSize).mapNotNull { id ->
+                    runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+                }.sortedBy { it.metadata.title.lowercase() }
+                SeriesFilterData(series = resolved, filter = filter)
+            }
+
+            is BooksHomeScreenFilter.ForgottenBooks -> {
+                // Mirror of "Keep reading": same IN_PROGRESS query, but
+                // sorted ASCENDING by read date so the oldest activity
+                // surfaces first. The label is what the user named the
+                // shelf in the home config — defaults to "Forgotten".
+                //
+                // Library exclusions are applied server-side via repeated
+                // `library { isNotEqualTo(...) }` AND-ed conditions —
+                // cheaper than fetching everything and filtering in
+                // Kotlin.
+                val excludedIds = filter.excludedLibraryIds
+                val books = bookApi.getBookList(
+                    search = KomgaBookSearch(
+                        allOfBooks {
+                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                            excludedIds.forEach { libId ->
+                                library { isNotEqualTo(KomgaLibraryId(libId)) }
+                            }
+                        }.toBookCondition()
+                    ),
+                    pageRequest = KomgaPageRequest(
+                        sort = KomgaSort.KomgaBooksSort.byReadDate(KomgaSort.Direction.ASC),
+                        size = filter.pageSize,
+                    ),
+                ).content
+                BookFilterData(books, filter)
+            }
+
+            is SeriesHomeScreenFilter.AlmostFinished -> {
+                // Komga doesn't expose a server-side filter on the
+                // booksRead / total ratio. Pull a wider window of
+                // IN_PROGRESS series and filter client-side. Cap the
+                // window at 5x the requested pageSize so big libraries
+                // don't pull thousands of series for a 20-item shelf.
+                // Library exclusions go server-side via the search DSL.
+                val excludedIds = filter.excludedLibraryIds
+                val poolSize = (filter.pageSize * 5).coerceAtMost(100)
+                val pool = seriesApi.getSeriesList(
+                    search = KomgaSeriesSearch(
+                        allOfSeries {
+                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                            excludedIds.forEach { libId ->
+                                library { isNotEqualTo(KomgaLibraryId(libId)) }
+                            }
+                        }.toSeriesCondition()
+                    ),
+                    pageRequest = KomgaPageRequest(size = poolSize),
+                ).content
+                val threshold = filter.progressThresholdPercent / 100f
+                val almost = pool
+                    .mapNotNull { series ->
+                        val total = series.booksCount
+                        if (total <= 0) return@mapNotNull null
+                        val ratio = series.booksReadCount.toFloat() / total
+                        if (ratio < threshold) null else series to ratio
+                    }
+                    .sortedByDescending { it.second }
+                    .take(filter.pageSize)
+                    .map { it.first }
+                SeriesFilterData(series = almost, filter = filter)
+            }
+        }
+    }
+}
+
+/**
+ * Returns a copy of the filter asking the server for [size] items instead of
+ * the shelf-sized handful. Every variant carries its own page-size field (a
+ * plain `pageSize`, or the `size` inside a [KomgaPageRequest]), so widening a
+ * shelf into a full screen needs no new query — just a wider filter.
+ */
+fun HomeScreenFilter.withPageSize(size: Int): HomeScreenFilter = when (this) {
+    is SeriesHomeScreenFilter.RecentlyAdded -> copy(pageSize = size)
+    is SeriesHomeScreenFilter.RecentlyUpdated -> copy(pageSize = size)
+    is SeriesHomeScreenFilter.AlmostFinished -> copy(pageSize = size)
+    is SeriesHomeScreenFilter.Favorites -> copy(pageSize = size)
+    is SeriesHomeScreenFilter.CustomFilter ->
+        copy(pageRequest = (pageRequest ?: KomgaPageRequest()).copy(size = size))
+
+    is BooksHomeScreenFilter.OnDeck -> copy(pageSize = size)
+    is BooksHomeScreenFilter.ForgottenBooks -> copy(pageSize = size)
+    is BooksHomeScreenFilter.CustomFilter ->
+        copy(pageRequest = (pageRequest ?: KomgaPageRequest()).copy(size = size))
+}

@@ -35,17 +35,10 @@ import snd.komelia.ui.LoadState.Uninitialized
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
-import snd.komga.client.book.KomgaBookSearch
-import snd.komga.client.book.KomgaReadStatus
-import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.common.KomgaSort.KomgaBooksSort
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
-import snd.komga.client.search.allOfBooks
-import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
-import snd.komga.client.series.KomgaSeriesId
-import snd.komga.client.series.KomgaSeriesSearch
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.sse.KomgaEvent.BookEvent
 import snd.komga.client.sse.KomgaEvent.ReadProgressEvent
@@ -99,6 +92,7 @@ class HomeViewModel(
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
     private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
+    private val shelfResolver = HomeShelfResolver(seriesApi, bookApi) { favoriteIds.value }
 
     private val reloadEventsEnabled = MutableStateFlow(true)
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, DROP_OLDEST)
@@ -281,126 +275,10 @@ class HomeViewModel(
         return "$order:$label"
     }
 
-    private suspend fun fetchFilterDataFromServer(filter: HomeScreenFilter): HomeFilterData? {
-        return when (filter) {
-            is BooksHomeScreenFilter.CustomFilter -> {
-                val books = bookApi.getBookList(
-                    search = KomgaBookSearch(filter.filter, filter.textSearch),
-                    pageRequest = filter.pageRequest
-                ).content
-
-                BookFilterData(books = books, filter = filter)
-            }
-
-            is BooksHomeScreenFilter.OnDeck -> {
-                val books = bookApi.getBooksOnDeck(pageRequest = KomgaPageRequest(size = filter.pageSize)).content
-                BookFilterData(books, filter)
-            }
-
-            is SeriesHomeScreenFilter.CustomFilter -> {
-                val series = seriesApi.getSeriesList(
-                    search = KomgaSeriesSearch(filter.filter, filter.textSearch),
-                    pageRequest = filter.pageRequest
-                ).content
-
-                SeriesFilterData(series = series, filter = filter)
-            }
-
-            is SeriesHomeScreenFilter.RecentlyAdded -> {
-                val series = seriesApi.getNewSeries(
-                    oneshot = false,
-                    pageRequest = KomgaPageRequest(size = filter.pageSize)
-                ).content
-                SeriesFilterData(
-                    series = series,
-                    filter = filter
-                )
-            }
-
-            is SeriesHomeScreenFilter.RecentlyUpdated -> {
-                val series = seriesApi.getUpdatedSeries(
-                    oneshot = false,
-                    pageRequest = KomgaPageRequest(size = filter.pageSize)
-                ).content
-                SeriesFilterData(
-                    series = series,
-                    filter = filter
-                )
-            }
-
-            is SeriesHomeScreenFilter.Favorites -> {
-                // Local favorites: resolve a bounded sample by id (getOneSeries is
-                // not filtered), sorted by title.
-                val resolved = favoriteIds.value.take(filter.pageSize).mapNotNull { id ->
-                    runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
-                }.sortedBy { it.metadata.title.lowercase() }
-                SeriesFilterData(series = resolved, filter = filter)
-            }
-
-            is BooksHomeScreenFilter.ForgottenBooks -> {
-                // Mirror of "Keep reading": same IN_PROGRESS query, but
-                // sorted ASCENDING by read date so the oldest activity
-                // surfaces first. The label is what the user named the
-                // shelf in the home config — defaults to "Forgotten".
-                //
-                // Library exclusions are applied server-side via repeated
-                // `library { isNotEqualTo(...) }` AND-ed conditions —
-                // cheaper than fetching everything and filtering in
-                // Kotlin.
-                val excludedIds = filter.excludedLibraryIds
-                val books = bookApi.getBookList(
-                    search = KomgaBookSearch(
-                        allOfBooks {
-                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
-                            excludedIds.forEach { libId ->
-                                library { isNotEqualTo(snd.komga.client.library.KomgaLibraryId(libId)) }
-                            }
-                        }.toBookCondition()
-                    ),
-                    pageRequest = KomgaPageRequest(
-                        sort = KomgaSort.KomgaBooksSort.byReadDate(KomgaSort.Direction.ASC),
-                        size = filter.pageSize,
-                    ),
-                ).content
-                BookFilterData(books, filter)
-            }
-
-            is SeriesHomeScreenFilter.AlmostFinished -> {
-                // Komga doesn't expose a server-side filter on the
-                // booksRead / total ratio. Pull a wider window of
-                // IN_PROGRESS series and filter client-side. Cap the
-                // window at 5x the requested pageSize so big libraries
-                // don't pull thousands of series for a 20-item shelf.
-                // Library exclusions go server-side via the search DSL.
-                val excludedIds = filter.excludedLibraryIds
-                val poolSize = (filter.pageSize * 5).coerceAtMost(100)
-                val pool = seriesApi.getSeriesList(
-                    search = KomgaSeriesSearch(
-                        allOfSeries {
-                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
-                            excludedIds.forEach { libId ->
-                                library { isNotEqualTo(snd.komga.client.library.KomgaLibraryId(libId)) }
-                            }
-                        }.toSeriesCondition()
-                    ),
-                    pageRequest = KomgaPageRequest(size = poolSize),
-                ).content
-                val threshold = filter.progressThresholdPercent / 100f
-                val almost = pool
-                    .mapNotNull { series ->
-                        val total = series.booksCount
-                        if (total <= 0) return@mapNotNull null
-                        val ratio = series.booksReadCount.toFloat() / total
-                        if (ratio < threshold) null else series to ratio
-                    }
-                    .sortedByDescending { it.second }
-                    .take(filter.pageSize)
-                    .map { it.first }
-                SeriesFilterData(series = almost, filter = filter)
-            }
-        }
-
-    }
+    /** The queries themselves live in [HomeShelfResolver], shared with the
+     *  shelf-detail screen so both surfaces resolve a shelf identically. */
+    private suspend fun fetchFilterDataFromServer(filter: HomeScreenFilter): HomeFilterData? =
+        shelfResolver.resolve(filter)
 
     fun seriesMenuActions() = SeriesMenuActions(seriesApi, appNotifications, taskEmitter, screenModelScope)
 

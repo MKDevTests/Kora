@@ -1,6 +1,7 @@
 package snd.komelia.ui.home
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,7 @@ import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.NotoSerif_Bold
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
+import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalPlatform
@@ -77,6 +79,7 @@ fun HomeContent(
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
     selectedSeries: List<KomgaSeries> = emptyList(),
     onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
+    onShelfClick: (HomeScreenFilter) -> Unit = {},
 ) {
     val gridState = rememberLazyGridState()
     val columnState = rememberLazyListState()
@@ -98,6 +101,7 @@ fun HomeContent(
             onBookReadClick = onBookReadClick,
             selectedSeries = selectedSeries,
             onSeriesSelect = onSeriesSelect,
+            onShelfClick = onShelfClick,
             topContent = {
                 Column {
                     HomeHeaderSection()
@@ -143,6 +147,7 @@ fun HomeContent(
                 onBookReadClick = onBookReadClick,
                 selectedSeries = selectedSeries,
                 onSeriesSelect = onSeriesSelect,
+                onShelfClick = onShelfClick,
             )
         }
     }
@@ -280,6 +285,7 @@ private fun DisplayContent(
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
     selectedSeries: List<KomgaSeries> = emptyList(),
     onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
+    onShelfClick: (HomeScreenFilter) -> Unit = {},
     topContent: (@Composable () -> Unit)? = null,
 ) {
     val useNewLibraryUI = LocalUseNewLibraryUI.current
@@ -302,7 +308,7 @@ private fun DisplayContent(
                 if (!isEmpty) {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SectionHeader(data.filter.label)
+                            SectionHeader(data.filter.label, onClick = { onShelfClick(data.filter) })
                             SectionRow(
                                 data = data,
                                 cardWidth = cardWidth,
@@ -336,6 +342,7 @@ private fun DisplayContent(
                     when (data) {
                         is BookFilterData -> BookFilterEntry(
                             label = data.filter.label,
+                            onLabelClick = { onShelfClick(data.filter) },
                             books = data.books,
                             bookMenuActions = bookMenuActions,
                             onBookClick = onBookClick,
@@ -344,6 +351,7 @@ private fun DisplayContent(
 
                         is SeriesFilterData -> SeriesFilterEntries(
                             label = data.filter.label,
+                            onLabelClick = { onShelfClick(data.filter) },
                             series = data.series,
                             onSeriesClick = onSeriesClick,
                             seriesMenuActions = seriesMenuActions,
@@ -357,17 +365,57 @@ private fun DisplayContent(
     }
 }
 
+/**
+ * Shelf title. Tapping it opens the shelf full-screen ([ShelfDetailScreen]);
+ * the chevron is what tells the user the row is more than a label.
+ */
 @Composable
-private fun SectionHeader(label: String) {
+private fun SectionHeader(label: String, onClick: () -> Unit) {
     val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
-    Text(
-        label,
-        style = MaterialTheme.typography.titleLarge.copy(
-            fontFamily = inter,
-            fontWeight = FontWeight.SemiBold
-        ),
-        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontFamily = inter,
+                fontWeight = FontWeight.SemiBold
+            ),
+        )
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.padding(start = 2.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** [SectionHeader]'s twin for the paginated grid layout (no horizontal inset). */
+@Composable
+private fun GridSectionHeader(label: String, onClick: () -> Unit) {
+    val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable(onClick = onClick).padding(vertical = 4.dp),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontFamily = inter,
+                fontWeight = FontWeight.SemiBold
+            ),
+        )
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.padding(start = 2.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -418,6 +466,7 @@ private fun SectionRow(
 
 private fun LazyGridScope.BookFilterEntry(
     label: String,
+    onLabelClick: () -> Unit,
     books: List<KomeliaBook>,
     bookMenuActions: BookMenuActions,
     onBookClick: (KomeliaBook) -> Unit,
@@ -426,15 +475,7 @@ private fun LazyGridScope.BookFilterEntry(
     if (books.isEmpty()) return
 
     item(span = { GridItemSpan(maxLineSpan) }) {
-        val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
-        Text(
-            label,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = inter,
-                fontWeight = FontWeight.SemiBold
-            ),
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
+        GridSectionHeader(label, onLabelClick)
     }
     items(books) { book ->
         BookImageCard(
@@ -450,6 +491,7 @@ private fun LazyGridScope.BookFilterEntry(
 
 private fun LazyGridScope.SeriesFilterEntries(
     label: String,
+    onLabelClick: () -> Unit,
     series: List<KomgaSeries>,
     onSeriesClick: (KomgaSeries) -> Unit,
     seriesMenuActions: SeriesMenuActions,
@@ -458,15 +500,7 @@ private fun LazyGridScope.SeriesFilterEntries(
 ) {
     if (series.isEmpty()) return
     item(span = { GridItemSpan(maxLineSpan) }) {
-        val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
-        Text(
-            label,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = inter,
-                fontWeight = FontWeight.SemiBold
-            ),
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
+        GridSectionHeader(label, onLabelClick)
     }
 
     items(series) { s ->
