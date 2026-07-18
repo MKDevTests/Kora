@@ -361,6 +361,7 @@ class ViewModelFactory(
             referentialApi = komgaApi.referentialApi,
             notifications = dependencies.appNotifications,
             cardWidth = getGridCardWidth(),
+            isAdmin = dependencies.komgaSharedState.authenticatedUser.value?.roleAdmin() ?: true,
         )
 
     fun getSeriesBulkEditDialogViewModel(series: List<KomgaSeries>, onDismissRequest: () -> Unit) =

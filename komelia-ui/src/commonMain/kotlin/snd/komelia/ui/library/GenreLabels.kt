@@ -43,6 +43,16 @@ object GenreLabels {
         "espionnage" to "Espionnage",
     )
 
+    /**
+     * The full taxonomy, in the order it should be offered to the admin editor.
+     * Fixed on purpose: the point of the genre tab is a small, stable vocabulary,
+     * not a free-form tag cloud (that's what Komga's own tags are for).
+     */
+    val allSlugs: List<String> = labels.keys.toList()
+
+    /** Tag string for a slug, e.g. "fantasy" -> "kora:genre:fantasy". */
+    fun tagOf(slug: String): String = PREFIX + slug
+
     /** Pretty display name for a slug: curated label, else "foo-bar" -> "Foo Bar". */
     fun label(slug: String): String =
         labels[slug] ?: slug.split('-')

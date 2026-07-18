@@ -26,6 +26,9 @@ class SeriesEditDialogViewModel(
     private val referentialApi: KomgaReferentialApi,
     private val notifications: AppNotifications,
     private val cardWidth: Flow<Dp>,
+    /** Gates the GENRES tab. Server-side Komga rejects a non-admin tag write
+     *  anyway (403); this only keeps the tab out of sight. */
+    isAdmin: Boolean,
 ) {
     private val allTags = MutableStateFlow<List<String>>(emptyList())
     private val allGenres = MutableStateFlow<List<String>>(emptyList())
@@ -35,16 +38,18 @@ class SeriesEditDialogViewModel(
     private val generalTab = GeneralTab(metadataState)
     private val alternativeTitlesTab = AlternativeTitlesTab(metadataState)
     private val tagsTab = TagsTab(metadataState)
+    private val genresTab = GenresTab(metadataState)
     private val linksTab = LinksTab(metadataState)
     private val posterTab = PosterTab(posterState)
     private val sharingTab = SharingTab(metadataState)
 
     var currentTab by mutableStateOf<DialogTab>(generalTab)
 
-    val tabs: List<DialogTab> = listOf(
+    val tabs: List<DialogTab> = listOfNotNull(
         generalTab,
         alternativeTitlesTab,
         tagsTab,
+        genresTab.takeIf { isAdmin },
         linksTab,
         posterTab,
         sharingTab
