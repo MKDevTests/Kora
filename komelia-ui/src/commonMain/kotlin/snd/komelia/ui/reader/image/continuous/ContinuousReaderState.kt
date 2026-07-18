@@ -512,9 +512,15 @@ class ContinuousReaderState(
             return null
         }
 
+        // Take the FARTHEST boundary that still fits, not the nearest one. The
+        // goal is "advance as much as possible without cutting a block", not "go
+        // to the next block": snapping to the nearest boundary stops dead on the
+        // first small block in front of us, and measured on real pages that meant
+        // ~1000px steps in a 2960px viewport — three taps per screen, with most
+        // of the screen showing content you were about to see anyway.
         val target =
-            if (forward) candidates.filter { it >= minAdvance && it <= maxAdvance }.minOrNull()
-            else candidates.filter { it <= -minAdvance && it >= -maxAdvance }.maxOrNull()
+            if (forward) candidates.filter { it >= minAdvance && it <= maxAdvance }.maxOrNull()
+            else candidates.filter { it <= -minAdvance && it >= -maxAdvance }.minOrNull()
 
         logger.info {
             "smartScroll forward=$forward viewport=$viewport window=$minAdvance..$maxAdvance " +
