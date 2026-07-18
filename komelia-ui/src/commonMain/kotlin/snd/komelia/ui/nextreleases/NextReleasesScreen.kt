@@ -250,9 +250,16 @@ class NextReleasesViewModel(
             }
             mutableState.value = if (cached != null) LoadState.Success(cached) else LoadState.Loading
             try {
-                val fresh = service.compute(libraries)
-                NextReleasesCache.update(fresh)
-                mutableState.value = LoadState.Success(fresh)
+                val scan = service.compute(libraries)
+                NextReleasesCache.update(scan)
+                // An incomplete scan that came back empty tells us nothing; keep
+                // showing what we had rather than blanking the screen.
+                if (scan.complete || scan.releases.isNotEmpty()) {
+                    mutableState.value = LoadState.Success(scan.releases)
+                } else {
+                    logger.warn { "Incomplete next-releases scan returned nothing; keeping cached list" }
+                    if (cached == null) mutableState.value = LoadState.Success(emptyList())
+                }
             } catch (t: Throwable) {
                 logger.error(t) { "NextReleasesService.compute failed" }
                 // Keep showing the stale cached list rather than erroring out
@@ -279,7 +286,9 @@ fun NextReleasesHomeCard() {
     val service = remember { factory.createNextReleasesService() }
     // Memory, then disk, show instantly; the effects below still refresh
     // silently so the teaser (and the shared cache) stay current.
-    var releases by mutableStateOf(NextReleasesCache.releases)
+    // `remember` matters: without it every recomposition rebuilt the state and
+    // dropped whatever the effects below had written.
+    var releases by remember { mutableStateOf(NextReleasesCache.releases) }
     LaunchedEffect(Unit) {
         if (releases == null) {
             NextReleasesCache.loadPersisted()?.let {
@@ -289,10 +298,15 @@ fun NextReleasesHomeCard() {
         }
     }
     LaunchedEffect(libraries) {
-        if (libraries.isNotEmpty()) {
-            runCatching { service.compute(libraries) }.getOrNull()?.let {
-                NextReleasesCache.update(it)
-                releases = it
+        // A scan is one Komga query per nextrelease tag. This composable enters
+        // composition on every return to Home, so without the staleness check it
+        // re-paid that cost each time.
+        if (libraries.isNotEmpty() && NextReleasesCache.isStale()) {
+            runCatching { service.compute(libraries) }.getOrNull()?.let { scan ->
+                NextReleasesCache.update(scan)
+                // update() may have refused an empty incomplete scan; show what
+                // the cache actually holds, not what this scan returned.
+                releases = NextReleasesCache.releases
             }
         }
     }

@@ -3,6 +3,8 @@ package snd.komelia.ui.nextreleases
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.LocalDate
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -45,34 +47,72 @@ class NextReleasesService(
         val date: LocalDate,
     )
 
-    suspend fun compute(libraries: List<KomgaLibrary>): List<UpcomingRelease> = coroutineScope {
+    /**
+     * Outcome of a scan. [complete] is false when at least one query failed, so
+     * callers can tell "you genuinely have no upcoming release" apart from "the
+     * server didn't answer" — an empty list used to mean both, and the caller
+     * would happily persist the empty one over a perfectly good cache.
+     */
+    data class Scan(val releases: List<UpcomingRelease>, val complete: Boolean)
+
+    /**
+     * Scans every library for `nextrelease:*` tags and resolves each to a series.
+     *
+     * Throws if tag discovery fails: without the tag list there is nothing to
+     * resolve, and reporting an empty calendar would be a lie. Individual series
+     * lookups are allowed to fail — one bad tag shouldn't blank the calendar —
+     * but any failure marks the scan incomplete.
+     */
+    suspend fun compute(libraries: List<KomgaLibrary>): Scan = coroutineScope {
+        // Not wrapped in runCatching on purpose: a failure here must propagate.
         val tagsByLibrary = libraries.map { lib ->
-            async { runCatching { referentialApi.getSeriesTags(lib.id) }.getOrDefault(emptyList()) }
+            async { referentialApi.getSeriesTags(lib.id) }
         }.awaitAll()
 
         val candidates = tagsByLibrary.flatten().distinct()
             .mapNotNull { tag -> NextReleaseLabels.upcomingRelease(listOf(tag))?.let { tag to it } }
 
-        candidates.map { (tag, nextRelease) ->
+        // One server query per tag, so a well-tagged library used to fire
+        // hundreds of requests at once — which is what made the whole scan time
+        // out (and drained the battery) once the tag count grew. Cap the
+        // in-flight count instead; the scan takes a little longer and survives.
+        val limit = Semaphore(MAX_CONCURRENT_LOOKUPS)
+
+        // Each lookup reports its own outcome rather than flipping a shared flag,
+        // so no cross-coroutine mutable state is involved.
+        val outcomes: List<Result<UpcomingRelease?>> = candidates.map { (tag, nextRelease) ->
             async {
-                val page = runCatching {
-                    seriesApi.getSeriesList(
-                        KomgaSeriesSearch(
-                            condition = allOfSeries { tag { isEqualTo(tag) } }.toSeriesCondition()
-                        ),
-                        KomgaPageRequest(pageIndex = 0, size = 1),
-                    )
-                }.getOrNull()
-                page?.content?.firstOrNull()?.let { series ->
-                    UpcomingRelease(
-                        seriesId = series.id,
-                        seriesTitle = series.metadata.title,
-                        libraryId = series.libraryId,
-                        volume = nextRelease.volume,
-                        date = nextRelease.date,
-                    )
+                limit.withPermit {
+                    runCatching {
+                        seriesApi.getSeriesList(
+                            KomgaSeriesSearch(
+                                condition = allOfSeries { tag { isEqualTo(tag) } }.toSeriesCondition()
+                            ),
+                            KomgaPageRequest(pageIndex = 0, size = 1),
+                        )
+                    }.map { page ->
+                        page.content.firstOrNull()?.let { series ->
+                            UpcomingRelease(
+                                seriesId = series.id,
+                                seriesTitle = series.metadata.title,
+                                libraryId = series.libraryId,
+                                volume = nextRelease.volume,
+                                date = nextRelease.date,
+                            )
+                        }
+                    }
                 }
             }
-        }.awaitAll().filterNotNull().sortedBy { it.date }
+        }.awaitAll()
+
+        Scan(
+            releases = outcomes.mapNotNull { it.getOrNull() }.sortedBy { it.date },
+            complete = outcomes.none { it.isFailure },
+        )
+    }
+
+    private companion object {
+        /** In-flight series lookups. Low enough that a big tag set can't stampede Komga. */
+        const val MAX_CONCURRENT_LOOKUPS = 4
     }
 }

@@ -6,6 +6,9 @@ import io.github.vinceglb.filekit.div
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -29,6 +32,23 @@ object NextReleasesCache {
     /** In-memory hit — fastest path, cleared on process restart. */
     var releases: List<NextReleasesService.UpcomingRelease>? = null
 
+    /** When the last *successful* scan finished. Null = none this process. */
+    private var lastScanAt: Instant? = null
+
+    /**
+     * How long a successful scan is trusted before a re-scan is worth its cost.
+     * A scan is one Komga query per `nextrelease:` tag; without this the scan
+     * re-ran on every single entry into Home, which is what made the feature
+     * expensive enough to notice in the battery stats.
+     */
+    private val scanTtl = 30.minutes
+
+    /** True when a fresh scan is worth running (no recent successful one). */
+    fun isStale(now: Instant = Clock.System.now()): Boolean {
+        val last = lastScanAt ?: return true
+        return (now - last) >= scanTtl
+    }
+
     private fun cacheDir() = FileKit.filesDir / "next_releases"
     private fun cacheFile() = cacheDir() / "cache.json"
 
@@ -46,8 +66,20 @@ object NextReleasesCache {
         }
     }.getOrNull()
 
-    /** Updates the in-memory cache and persists to disk. Best-effort — a write failure isn't fatal. */
-    suspend fun update(fresh: List<NextReleasesService.UpcomingRelease>) {
+    /**
+     * Stores the result of a scan, in memory and on disk.
+     *
+     * An **incomplete** scan (a query failed) is never allowed to replace a
+     * non-empty cache with an empty list. That exact sequence — a timeout
+     * yielding an empty list, persisted over a good one — is what left the
+     * calendar permanently blank despite the tags still being there.
+     * Best-effort on the disk write: a write failure isn't fatal.
+     */
+    suspend fun update(scan: NextReleasesService.Scan) {
+        if (!scan.complete && scan.releases.isEmpty() && !releases.isNullOrEmpty()) return
+        if (scan.complete) lastScanAt = Clock.System.now()
+
+        val fresh = scan.releases
         releases = fresh
         runCatching {
             cacheDir().createDirectories()
