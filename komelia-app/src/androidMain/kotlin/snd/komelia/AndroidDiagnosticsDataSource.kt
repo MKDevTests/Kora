@@ -109,17 +109,36 @@ class AndroidDiagnosticsDataSource(
             ?.filter { it.isFile && (it.name.endsWith(".log") || it.name.endsWith(".txt")) }
             ?.sortedBy { it.name }
             ?: emptyList()
-        val raw = buildString {
+        // Redact line by line while streaming. Reading every file into one
+        // String and then running three whole-string Regex.replace over it
+        // allocated ~4 copies of the entire log set at once — a 20MB cap is
+        // 40MB in UTF-16, and the export OOM'd on the StringBuilder growth.
+        buildString {
             append("Kora logs export\n")
             append("Generated: ${Date()}\n")
             append("(server URLs, emails and tokens redacted)\n\n")
+            var truncated = false
             files.forEach { f ->
+                if (truncated) return@forEach
                 append("=== ${f.name} ===\n")
-                append(runCatching { f.readText() }.getOrDefault("<unreadable>"))
+                runCatching {
+                    f.useLines { lines ->
+                        for (line in lines) {
+                            if (length >= MAX_EXPORT_CHARS) {
+                                truncated = true
+                                break
+                            }
+                            append(redactLine(line))
+                            append('\n')
+                        }
+                    }
+                }.onFailure { append("<unreadable>") }
                 append("\n\n")
             }
+            if (truncated) {
+                append("=== export truncated at ${MAX_EXPORT_CHARS / 1_000_000}MB ===\n")
+            }
         }
-        redact(raw)
     }
 
     override fun setLogCap(cap: LogSizeCap) {
@@ -128,14 +147,29 @@ class AndroidDiagnosticsDataSource(
 
     private fun logDir(): File = File(context.getExternalFilesDir(null) ?: context.filesDir, "komelia/logs")
 
-    /** Strip server URLs, emails and auth/token/cookie/password values from exported logs. */
-    private fun redact(text: String): String {
-        var t = text
-        t = Regex("""https?://\S+""").replace(t, "[url]")
-        t = Regex("""[\w.+-]+@[\w.-]+\.\w{2,}""").replace(t, "[email]")
-        t = Regex("""(?i)\b(authorization|bearer|token|password|cookie|api[_-]?key)\b\s*[:=]\s*\S+""")
-            .replace(t) { m -> "${m.groupValues[1]}=[redacted]" }
+    /**
+     * Strip server URLs, emails and auth/token/cookie/password values from one
+     * log line. Applied per line rather than to the whole export: the patterns
+     * never span a newline, so the result is identical, but peak memory stays
+     * proportional to a line instead of to the entire log set.
+     */
+    private fun redactLine(line: String): String {
+        var t = line
+        t = URL_PATTERN.replace(t, "[url]")
+        t = EMAIL_PATTERN.replace(t, "[email]")
+        t = SECRET_PATTERN.replace(t) { m -> "${m.groupValues[1]}=[redacted]" }
         return t
+    }
+
+    private companion object {
+        /** Ceiling on the exported text. Above this the export is what OOM'd. */
+        const val MAX_EXPORT_CHARS = 4_000_000
+
+        // Compiled once rather than per line.
+        val URL_PATTERN = Regex("""https?://\S+""")
+        val EMAIL_PATTERN = Regex("""[\w.+-]+@[\w.-]+\.\w{2,}""")
+        val SECRET_PATTERN =
+            Regex("""(?i)\b(authorization|bearer|token|password|cookie|api[_-]?key)\b\s*[:=]\s*\S+""")
     }
 
     private fun dirSize(dir: File): Long {
