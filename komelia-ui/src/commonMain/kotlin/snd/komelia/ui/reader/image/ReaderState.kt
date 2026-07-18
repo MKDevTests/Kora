@@ -93,6 +93,17 @@ typealias SpreadIndex = Int
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Minimum height/width ratio for a page to count as "webtoon-tall".
+ *
+ * Was 4.0, which missed real webtoons: "The Hole is Open" ships 720x2752 tiles
+ * = **3.82**, just under the bar, so it never auto-detected. 3.0 catches those
+ * while keeping a 1.5x margin over the tallest normal manga page (~2:1).
+ * Double-page spreads are irrelevant here — being wider than tall, they score
+ * ~0.7 and sit far below any value we'd pick.
+ */
+private const val WEBTOON_MIN_ASPECT = 3.0f
+
 class ReaderState(
     private val bookApi: KomgaBookApi,
     private val seriesApi: KomgaSeriesApi,
@@ -373,19 +384,21 @@ class ReaderState(
         else ReaderType.CONTINUOUS
 
     /**
-     * Heuristic: of the first 5 pages, at least 3 must have a height-to-width
-     * ratio of at least 4.0 for the book to be classified as a webtoon. Looking
-     * at 5 (not 3) and requiring 3 (not all) tolerates a normal-ratio first page
-     * (a cover) or an occasional short page without losing the detection. 4× is a
-     * safe lower bound — typical manga pages cap around 1.4-2:1, while webtoon
-     * panels start at 3-6:1. Uses the raw image dimensions from Komga metadata,
-     * BEFORE any pipeline processing (crop borders etc.), so the ratio reflects
-     * the file itself.
+     * Heuristic: of the first 5 pages, at least 3 must be at least
+     * [WEBTOON_MIN_ASPECT] times taller than they are wide. Looking at 5 (not 3)
+     * and requiring 3 (not all) tolerates a normal-ratio first page (a cover) or
+     * an occasional short page without losing the detection. Uses the raw image
+     * dimensions from Komga metadata, BEFORE any pipeline processing (crop
+     * borders etc.), so the ratio reflects the file itself.
+     *
+     * The test is strictly HEIGHT / WIDTH, so a wide double-page spread can never
+     * trigger it: those come out around 0.7 (twice as wide as tall), i.e. below
+     * 1 — the opposite end of the scale from any threshold we'd set here.
      */
     private fun isWebtoonLikely(pages: List<PageMetadata>): Boolean {
         val tall = pages.take(5).count { page ->
             val size = page.size ?: return@count false
-            size.width > 0 && size.height.toFloat() / size.width.toFloat() >= 4.0f
+            size.width > 0 && size.height.toFloat() / size.width.toFloat() >= WEBTOON_MIN_ASPECT
         }
         return tall >= 3
     }

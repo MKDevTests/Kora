@@ -191,6 +191,22 @@ abstract class TilingReaderImage(
         }
     }
 
+    override suspend fun getUnprocessedImage(): Result<KomeliaImage> {
+        return coroutineScope {
+            select {
+                // Awaiting `image` also guarantees loadImage() has run, and it
+                // assigns originalImage BEFORE the pipeline — so by the time the
+                // processed image exists, the raw one is set. It stays alive
+                // until close() (the changeFlow handler explicitly avoids
+                // closing it), so handing it out is safe.
+                async { image.filterNotNull().first() }.onAwait {
+                    Result.success(originalImage ?: it)
+                }
+                async { error.filterNotNull().first() }.onAwait { Result.failure(it) }
+            }.also { coroutineContext.cancelChildren() }
+        }
+    }
+
     protected fun startImageLoading() {
         processingScope.launch { loadImage() }
     }

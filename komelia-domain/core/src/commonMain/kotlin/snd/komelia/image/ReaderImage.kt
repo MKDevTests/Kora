@@ -40,7 +40,21 @@ interface ReaderImage : AutoCloseable {
 
     suspend fun getOriginalImageSize(): Result<IntSize>
 
+    /**
+     * The image AFTER the processing pipeline (crop borders, colour correction,
+     * bubble inversion…) — despite the name. This is what the reader displays.
+     */
     suspend fun getOriginalImage(): Result<KomeliaImage>
+
+    /**
+     * The raw decoded image, BEFORE any processing step.
+     *
+     * Needed by consumers that must see the untouched artwork and/or require a
+     * vips-backed image: the ONNX panel detector calls `toVipsImage()`, which
+     * throws on the Bitmap-backed result that bubble inversion produces. Falls
+     * back to the processed image when no raw copy is retained.
+     */
+    suspend fun getUnprocessedImage(): Result<KomeliaImage>
 
     /**
      * calculate image dimensions that can be displayed on maxDisplaySize area

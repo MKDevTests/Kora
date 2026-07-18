@@ -574,6 +574,22 @@ class PanelsReaderState(
                     panelData = null
                 )
 
+            // Detect on the RAW image when it shares the displayed image's
+            // coordinate space. Why: the detector needs a vips-backed image
+            // (toVipsImage()), and bubble inversion hands back an Android Bitmap
+            // — which used to kill panel detection entirely. Inversion preserves
+            // dimensions, so the raw image is a drop-in there.
+            // The size check is the safety net: crop-borders DOES change
+            // dimensions, and detecting on a differently-sized image would
+            // misplace every panel. In that case we stay on the processed image
+            // (and the catch below degrades gracefully if it isn't vips-backed).
+            val rawImage = image.getUnprocessedImage().getOrNull()
+            val detectionImage =
+                if (rawImage != null &&
+                    rawImage.width == originalImage.width &&
+                    rawImage.height == originalImage.height
+                ) rawImage else originalImage
+
                         val containerSize = screenScaleState.areaSize.value
                         val fitToScreenSize = image.calculateSizeForArea(containerSize, true)
                         val originalImageSize = IntSize(originalImage.width, originalImage.height)
@@ -584,7 +600,7 @@ class PanelsReaderState(
                         val (panels, duration) = measureTimedValue {
             
                 try {
-                    onnxRuntimeRfDetr.detect(originalImage).map { it.boundingBox }
+                    onnxRuntimeRfDetr.detect(detectionImage).map { it.boundingBox }
                 } catch (e: OnnxRuntimeException) {
                     return@async PanelsPage(
                         metadata = meta,
