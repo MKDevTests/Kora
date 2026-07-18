@@ -467,7 +467,10 @@ class ContinuousReaderState(
      * Aligning to a block start instead makes every tap show a whole unit of story.
      */
     private suspend fun smartScrollDistance(forward: Boolean): Float? {
-        if (!readerState.webtoonSmartScroll.value) return null
+        if (!readerState.webtoonSmartScroll.value) {
+            logger.info { "smartScroll: setting is OFF -> fixed jump" }
+            return null
+        }
 
         val layout = lazyListState.layoutInfo
         val viewport = (layout.viewportEndOffset - layout.viewportStartOffset).toFloat()
@@ -488,12 +491,19 @@ class ContinuousReaderState(
                 candidates.add(item.offset + band.start * item.size)
             }
         }
-        if (candidates.isEmpty()) return null
+        if (candidates.isEmpty()) {
+            logger.info { "smartScroll: no bands for ${layout.visibleItemsInfo.size} visible items -> fixed jump" }
+            return null
+        }
 
         val target =
             if (forward) candidates.filter { it >= minAdvance && it <= maxAdvance }.minOrNull()
             else candidates.filter { it <= -minAdvance && it >= -maxAdvance }.maxOrNull()
 
+        logger.info {
+            "smartScroll forward=$forward viewport=$viewport window=$minAdvance..$maxAdvance " +
+                    "candidates=${candidates.sorted().joinToString { it.toInt().toString() }} -> $target"
+        }
         return target
     }
 
@@ -506,8 +516,14 @@ class ContinuousReaderState(
         val pageId = page.toPageId()
         contentBandCache[pageId]?.let { return it.takeIf { cached -> cached.isNotEmpty() } }
 
-        val image = imagesInUse[pageId] ?: return null
-        val komeliaImage = image.getOriginalImage().getOrNull() ?: return null
+        val image = imagesInUse[pageId]
+        if (image == null) {
+            logger.info { "smartScroll: no in-use image for $pageId" }
+            return null
+        }
+        val komeliaImage = image.getOriginalImage()
+            .onFailure { logger.warn(it) { "smartScroll: getOriginalImage failed for $pageId" } }
+            .getOrNull() ?: return null
         val bands = detectContentBands(komeliaImage)
         contentBandCache[pageId] = bands
         return bands.takeIf { it.isNotEmpty() }

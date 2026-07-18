@@ -23,25 +23,30 @@ private const val BG_TOLERANCE = 28
 private const val EMPTY_ROW_SCORE = 0.02f
 
 /**
- * Empty runs shorter than this fraction of the page height are NOT gutters —
+ * Empty runs shorter than this fraction of the page WIDTH are NOT gutters —
  * they're the blank rows between lines of text. Filling them first (a vertical
  * closing) is what stops a bubble floating in a white gutter from being shredded
  * into slivers, which would make a skip-the-gutter scroll jump straight over it.
  *
- * Calibrated on real strips (720x2752 tiles): intra-content gaps cluster at
- * 30-100px while true panel gutters measured 112-1748px, so ~110px on a 2752px
- * page ≈ 0.04.
+ * Scaled by width, NOT height: a gutter is a design element sized relative to the
+ * strip's width, while the height of a webtoon page is arbitrary (a single page
+ * can be 2000px or 15000px). Keying it to height made the threshold grow with the
+ * strip until the closing swallowed every real gutter, collapsing the page to one
+ * block — which silently disabled the whole feature.
+ *
+ * Calibrated on real strips (720px wide): intra-content gaps cluster at 30-100px
+ * while true panel gutters measured 112-1748px, so ~110px on 720px ≈ 0.15.
  */
-private const val MIN_GUTTER_FRACTION = 0.04f
+private const val MIN_GUTTER_WIDTH_FRACTION = 0.15f
 
-/** Blocks thinner than this are absorbed into the previous one. */
-private const val MIN_BLOCK_FRACTION = 0.02f
+/** Blocks thinner than this fraction of the page width are absorbed into the previous one. */
+private const val MIN_BLOCK_WIDTH_FRACTION = 0.08f
 
 actual suspend fun detectContentBands(
     image: KomeliaImage,
 ): List<ClosedFloatingPointRange<Float>> = withContext(Dispatchers.Default) {
     runCatching { analyse(image) }
-        .onFailure { logger.debug(it) { "content band detection failed; scroll falls back to fixed distance" } }
+        .onFailure { android.util.Log.w("BANDS", "detection failed; falling back to fixed scroll", it) }
         .getOrDefault(emptyList())
 }
 
@@ -100,7 +105,7 @@ private fun analyse(image: KomeliaImage): List<ClosedFloatingPointRange<Float>> 
         }
 
         // Vertical closing: an empty run too short to be a gutter is content.
-        val minGutter = (height * MIN_GUTTER_FRACTION).toInt().coerceAtLeast(2)
+        val minGutter = (source.width * MIN_GUTTER_WIDTH_FRACTION).toInt().coerceAtLeast(2)
         var y = 0
         while (y < height) {
             if (empty[y]) {
@@ -111,7 +116,7 @@ private fun analyse(image: KomeliaImage): List<ClosedFloatingPointRange<Float>> 
         }
 
         // Content blocks = what is left between the (now genuine) gutters.
-        val minBlock = (height * MIN_BLOCK_FRACTION).toInt().coerceAtLeast(2)
+        val minBlock = (source.width * MIN_BLOCK_WIDTH_FRACTION).toInt().coerceAtLeast(2)
         val blocks = ArrayList<IntRange>()
         y = 0
         while (y < height) {
@@ -127,10 +132,16 @@ private fun analyse(image: KomeliaImage): List<ClosedFloatingPointRange<Float>> 
             } else y++
         }
 
+        val h = height.toFloat()
+        android.util.Log.i(
+            "BANDS",
+            "page ${source.width}x$height bg=$background minGutter=$minGutter blocks=${blocks.size} " +
+                blocks.take(12).joinToString { "${it.first}-${it.last}" }
+        )
+
         // A single block spanning the page tells the scroller nothing.
         if (blocks.size < 2) return emptyList()
 
-        val h = height.toFloat()
         return blocks.map { (it.first / h)..((it.last + 1) / h) }
     } finally {
         if (ownsSource) source.recycle()
