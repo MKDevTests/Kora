@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import snd.komelia.ui.common.encodeNullReadingDirectionAsBlank
@@ -294,8 +295,21 @@ class LibrarySeriesTabState(
         )
     }
 
+    /**
+     * Opens a random series from the current filtered list.
+     *
+     * Picks a random *offset* under the list's own sort rather than asking the
+     * server for `sort=RANDOM`. A randomly-sorted result has no knowable position,
+     * so it could not be given a [SeriesNavigationContext] — and every sibling
+     * move (next/previous series, and the reader's "next series with the current
+     * filters" when a book ends) is computed from that position. Random was
+     * therefore a dead end: you landed on one series and had to roll again.
+     * Drawing an offset instead makes the pick indistinguishable from having
+     * browsed to it.
+     */
     fun openRandomSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
-        if (totalSeriesCount == 0) return
+        val total = totalSeriesCount
+        if (total == 0) return
         notifications.runCatchingToNotifications(screenModelScope) {
             val filter = filterState.state.value
             val condition = allOfSeries {
@@ -304,16 +318,34 @@ class LibrarySeriesTabState(
                 tag { isNotEqualTo(HIDDEN_TAG) }
                 filter.addConditionTo(this)
             }
+            // An offset is only meaningful under a stable order, so when the list
+            // is itself sorted randomly we anchor the draw on the title instead.
+            val sort = if (filter.sortOrder == SeriesSort.RANDOM) SeriesSort.TITLE_ASC else filter.sortOrder
+            val index = Random.nextInt(total)
             val page = seriesApi.getSeriesList(
                 conditionBuilder = condition,
                 fulltextSearch = filter.searchTerm.ifBlank { null },
                 pageRequest = KomgaPageRequest(
                     size = 1,
-                    pageIndex = 0,
-                    sort = SeriesSort.RANDOM.komgaSort
+                    pageIndex = index,
+                    sort = sort.komgaSort
                 )
             )
-            page.content.firstOrNull()?.let(onSeriesSelected)
+            page.content.firstOrNull()?.let { picked ->
+                // pageSize = 1 makes the global index simply `index`, which is
+                // exactly what the sibling navigation reads back.
+                SeriesNavigationContext.put(
+                    picked.id,
+                    SeriesNavigationContext.SeriesListContext(
+                        libraryId = libraryId,
+                        filter = filter.copy(sortOrder = sort),
+                        pageSize = 1,
+                        currentPage = index + 1,
+                        seriesIndexInPage = 0,
+                    )
+                )
+                onSeriesSelected(picked)
+            }
         }
     }
 

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaCollectionsApi
@@ -144,22 +145,65 @@ class SeriesViewModel(
         }
     }
 
+    /**
+     * Jumps to a random series in the same filtered list.
+     *
+     * Draws a random *offset* under a stable sort rather than asking for
+     * `sort=RANDOM`: a randomly-sorted hit has no knowable position, so it could
+     * not be given a [SeriesNavigationContext], and next/previous then fell back
+     * to their contextless branch — which always resolved to the second series of
+     * the library by title, identically after every roll.
+     *
+     * It also inherits the list's filters through the context; before, it only
+     * kept the library and silently dropped everything else.
+     */
     fun openRandomSiblingSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
         val currentSeries = series.value ?: return
+        val ctx = SeriesNavigationContext.get(currentSeries.id)
         notifications.runCatchingToNotifications(screenModelScope) {
             val condition = allOfSeries {
-                library { isEqualTo(currentSeries.libraryId) }
+                if (ctx != null) {
+                    ctx.libraryId?.let { library { isEqualTo(it) } }
+                    ctx.filter.addConditionTo(this)
+                } else {
+                    library { isEqualTo(currentSeries.libraryId) }
+                }
             }
-            val page = seriesApi.getSeriesList(
+            val search = ctx?.filter?.searchTerm?.ifBlank { null }
+            val filter = ctx?.filter ?: SeriesFilter()
+            val sortOrder = filter.sortOrder
+                .takeIf { it != LibrarySeriesTabState.SeriesSort.RANDOM }
+                ?: LibrarySeriesTabState.SeriesSort.TITLE_ASC
+
+            // First call doubles as the count probe, and is reused when the draw
+            // lands on 0 so the common path stays a single round trip.
+            val probe = seriesApi.getSeriesList(
                 conditionBuilder = condition,
-                fulltextSearch = null,
-                pageRequest = KomgaPageRequest(
-                    size = 1,
-                    pageIndex = 0,
-                    sort = LibrarySeriesTabState.SeriesSort.RANDOM.komgaSort
-                )
+                fulltextSearch = search,
+                pageRequest = KomgaPageRequest(size = 1, pageIndex = 0, sort = sortOrder.komgaSort)
             )
-            page.content.firstOrNull()?.let(onSeriesSelected)
+            val total = probe.totalElements.toInt()
+            if (total == 0) return@runCatchingToNotifications
+
+            val index = Random.nextInt(total)
+            val page = if (index == 0) probe else seriesApi.getSeriesList(
+                conditionBuilder = condition,
+                fulltextSearch = search,
+                pageRequest = KomgaPageRequest(size = 1, pageIndex = index, sort = sortOrder.komgaSort)
+            )
+            page.content.firstOrNull()?.let { picked ->
+                SeriesNavigationContext.put(
+                    picked.id,
+                    SeriesNavigationContext.SeriesListContext(
+                        libraryId = ctx?.libraryId ?: currentSeries.libraryId,
+                        filter = filter.copy(sortOrder = sortOrder),
+                        pageSize = 1,
+                        currentPage = index + 1,
+                        seriesIndexInPage = 0,
+                    )
+                )
+                onSeriesSelected(picked)
+            }
         }
     }
 

@@ -1,8 +1,5 @@
 package snd.komelia.image.processing
 
-import ai.onnxruntime.OnnxTensor
-import ai.onnxruntime.OrtEnvironment
-import ai.onnxruntime.OrtSession
 import android.graphics.Bitmap
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -25,25 +22,12 @@ import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
 import snd.komelia.image.AndroidBitmap.toBitmap
 import snd.komelia.image.AndroidBitmapBackedImage
+import snd.komelia.image.BubbleBands
+import snd.komelia.image.BubbleDetector
 import snd.komelia.image.KomeliaImage
 import snd.komelia.image.ReaderImage.PageId
-import java.io.File
-import java.nio.FloatBuffer
-import java.nio.LongBuffer
 
 private val logger = KotlinLogging.logger {}
-
-// --- Model contract (ogkalu/comic-text-and-bubble-detector, RT-DETR, Apache-2.0)
-private const val INPUT_SIZE = 640
-private const val CLASS_BUBBLE = 0
-private const val MIN_SCORE = 0.5f
-
-/**
- * `orig_target_sizes` for THIS export is [width, height].
- * Verified on the bench: passing [height, width] pushes the X coordinates past
- * the image width (boxes landing at x=2435 on a 1920-wide page).
- */
-private fun sizeTensorValues(width: Int, height: Int) = longArrayOf(width.toLong(), height.toLong())
 
 // --- Local mask refinement inside a detected box ------------------------------
 /** A pixel at/above this is "bubble paper" when refining the mask. */
@@ -63,36 +47,18 @@ actual class BubbleInvertStep actual constructor(
 ) : ProcessingStep {
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    private val ortEnv: OrtEnvironment? by lazy {
-        runCatching { OrtEnvironment.getEnvironment() }
-            .onFailure { logger.warn(it) { "ONNX runtime unavailable, bubble inversion disabled" } }
-            .getOrNull()
-    }
-
-    /**
-     * Built once, on first use. Null when the model file isn't on disk — the
-     * step then does nothing, which is why a missing model degrades to "no
-     * inversion" rather than an error.
-     */
-    private val session: OrtSession? by lazy {
-        val env = ortEnv ?: return@lazy null
-        val path = modelPath()
-        if (path == null || !File(path).isFile) {
-            logger.info { "bubble detection model not found ($path); inversion disabled" }
-            return@lazy null
-        }
-        runCatching { env.createSession(path, OrtSession.SessionOptions()) }
-            .onFailure { logger.warn(it) { "failed to open bubble detection model at $path" } }
-            .getOrNull()
+    init {
+        // This step is constructed whether or not inversion is enabled, so this
+        // is also what points the smart scroll's fallback detection at the model.
+        BubbleDetector.configure(modelPath)
     }
 
     actual override suspend fun process(pageId: PageId, image: KomeliaImage): KomeliaImage? {
         if (!enabled.first()) return null
         if (!openCvLoaded) return null
-        val session = session ?: return null
 
         return withContext(Dispatchers.Default) {
-            runCatching { invertBubbles(image, session) }
+            runCatching { invertBubbles(pageId, image) }
                 .onFailure { logger.warn(it) { "bubble inversion failed for $pageId, leaving page untouched" } }
                 .getOrNull()
         }
@@ -106,7 +72,7 @@ actual class BubbleInvertStep actual constructor(
      * Never returns the input instance: [ImageProcessingPipeline] closes the
      * previous image once a step returns a new one.
      */
-    private fun invertBubbles(image: KomeliaImage, session: OrtSession): KomeliaImage? {
+    private fun invertBubbles(pageId: PageId, image: KomeliaImage): KomeliaImage? {
         // toBitmap() goes through vips and yields a HARDWARE bitmap on API 29+,
         // whose pixels can't be read back — same copy dance as OcrService.
         val decoded: Bitmap = if (image is AndroidBitmapBackedImage) image.bitmap else image.toBitmap()
@@ -123,70 +89,17 @@ actual class BubbleInvertStep actual constructor(
         }
 
         try {
-            val boxes = detectBubbles(source, session)
+            val boxes = BubbleDetector.boxes(source)
+            // Hand the boxes to the smart scroll: it needs exactly these, and
+            // re-running an 11 MB model for them would be pure waste.
+            val h = source.height.toFloat()
+            BubbleBands.publish(pageId, boxes.map { (it.y / h)..((it.y + it.height) / h) })
             if (boxes.isEmpty()) return null
             return invertInsideBoxes(source, boxes)?.let { AndroidBitmapBackedImage(it) }
         } finally {
             if (ownsSource) source.recycle()
             if (ownsDecoded) decoded.recycle()
         }
-    }
-
-    /** Runs the detector and returns bubble boxes in ORIGINAL pixel coordinates. */
-    private fun detectBubbles(source: Bitmap, session: OrtSession): List<Rect> {
-        val env = ortEnv ?: return emptyList()
-        val width = source.width
-        val height = source.height
-
-        val scaled = Bitmap.createScaledBitmap(source, INPUT_SIZE, INPUT_SIZE, true)
-        val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
-        scaled.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
-        if (scaled !== source) scaled.recycle()
-
-        // CHW, [0,1]. This model's preprocessor sets do_normalize=false, so there
-        // is deliberately NO ImageNet mean/std here (unlike the panel detector).
-        val plane = INPUT_SIZE * INPUT_SIZE
-        val chw = FloatArray(3 * plane)
-        for (i in 0 until plane) {
-            val p = pixels[i]
-            chw[i] = ((p shr 16) and 0xFF) / 255f
-            chw[plane + i] = ((p shr 8) and 0xFF) / 255f
-            chw[2 * plane + i] = (p and 0xFF) / 255f
-        }
-
-        val out = ArrayList<Rect>()
-        OnnxTensor.createTensor(
-            env, FloatBuffer.wrap(chw), longArrayOf(1, 3, INPUT_SIZE.toLong(), INPUT_SIZE.toLong())
-        ).use { imagesTensor ->
-            OnnxTensor.createTensor(
-                env, LongBuffer.wrap(sizeTensorValues(width, height)), longArrayOf(1, 2)
-            ).use { sizesTensor ->
-                session.run(mapOf("images" to imagesTensor, "orig_target_sizes" to sizesTensor))
-                    .use { results ->
-                        // This export decodes internally: labels[1,300],
-                        // boxes[1,300,4] already in original pixels (xyxy),
-                        // scores[1,300]. No sigmoid / top-k / NMS to do here.
-                        @Suppress("UNCHECKED_CAST")
-                        val labels = results.get("labels").get().value as Array<LongArray>
-                        @Suppress("UNCHECKED_CAST")
-                        val boxes = results.get("boxes").get().value as Array<Array<FloatArray>>
-                        @Suppress("UNCHECKED_CAST")
-                        val scores = results.get("scores").get().value as Array<FloatArray>
-
-                        for (i in labels[0].indices) {
-                            if (scores[0][i] < MIN_SCORE) continue
-                            if (labels[0][i].toInt() != CLASS_BUBBLE) continue
-                            val b = boxes[0][i]
-                            val x0 = b[0].toInt().coerceIn(0, width - 1)
-                            val y0 = b[1].toInt().coerceIn(0, height - 1)
-                            val x1 = b[2].toInt().coerceIn(x0 + 1, width)
-                            val y1 = b[3].toInt().coerceIn(y0 + 1, height)
-                            out.add(Rect(x0, y0, x1 - x0, y1 - y0))
-                        }
-                    }
-            }
-        }
-        return out
     }
 
     /**

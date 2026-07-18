@@ -46,6 +46,9 @@ import kotlinx.coroutines.withContext
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
+import snd.komelia.image.BubbleBands
+import snd.komelia.image.detectBubbleBands
+import snd.komelia.image.detectContentBands
 import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImage.PageId
 import snd.komelia.image.ReaderImageFactory
@@ -63,6 +66,7 @@ import snd.komelia.ui.reader.image.ScreenScaleState
 import snd.komelia.ui.strings.AppStrings
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.common.KomgaReadingDirection
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val logger = KotlinLogging.logger("ContinuousReaderState")
@@ -74,6 +78,23 @@ private val logger = KotlinLogging.logger("ContinuousReaderState")
  * off (see ReaderState.webtoonReaderType + the webtoonSmartScroll setting).
  */
 private const val SCREEN_TAP_SCROLL_FRACTION = 0.8f
+
+/**
+ * A smart-scroll tap advances this much before any correction — nearly a full
+ * screen, keeping a sliver of overlap so a bubble sitting on the seam is never
+ * cut with nothing to reconnect to.
+ *
+ * Swept on the bench over 215 real pages from 4 series (_bubble-bench/wtscroll.py).
+ * 1.00 scored marginally better on every metric but leaves zero overlap, which the
+ * bench cannot judge; 0.95 costs ~0.4pt of blank space for that safety margin.
+ */
+private const val SMART_SCROLL_BASE_FRACTION = 0.95f
+
+/** How far the advance may be pulled back to show a block whole rather than sliced. */
+private const val SMART_SCROLL_SNAP_BACK_FRACTION = 0.80f
+
+/** Below this, a correction reads as a broken tap; use the plain advance instead. */
+private const val SMART_SCROLL_MIN_FRACTION = 0.15f
 
 class ContinuousReaderState(
     private val cleanupScope: CoroutineScope,
@@ -89,6 +110,13 @@ class ContinuousReaderState(
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val imageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+
+    /**
+     * Bubble detection runs off the image-loading scope on purpose: that one is
+     * limitedParallelism(1), and a ~770 ms inference queued on it would stall the
+     * page loads the reader needs to keep scrolling smooth.
+     */
+    private val bubbleDetectScope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
 
     val lazyListState = LazyListState(0, 0)
 
@@ -142,6 +170,12 @@ class ContinuousReaderState(
         }
         .build()
     private val imagesInUse: MutableMap<PageId, ReaderImage> = ConcurrentMap()
+
+    /** Per-page content bands for the smart scroll. Empty list = analysis failed. */
+    private val contentBandCache: MutableMap<PageId, List<ClosedFloatingPointRange<Float>>> = ConcurrentMap()
+
+    /** Pages whose bubble detection has been kicked off, so it runs at most once each. */
+    private val bubbleDetectionStarted: MutableSet<PageId> = ConcurrentSet()
     private val imageDisplayFlow: MutableSharedFlow<ReaderImage> = MutableSharedFlow()
 
     suspend fun initialize() {
@@ -272,11 +306,15 @@ class ContinuousReaderState(
     fun stop() {
         stateScope.coroutineContext.cancelChildren()
         imageLoadScope.coroutineContext.cancelChildren()
+        bubbleDetectScope.coroutineContext.cancelChildren()
         pageIntervals.value = emptyList()
         currentIntervalIndex.value = 0
 
         imagesInUse.values.forEach { it.close() }
         imagesInUse.clear()
+        BubbleBands.clear()
+        bubbleDetectionStarted.clear()
+        contentBandCache.clear()
         imageCache.invalidateAll()
     }
 
@@ -428,7 +466,10 @@ class ContinuousReaderState(
     suspend fun scrollScreenForward() {
         val containerSize = screenScaleState.areaSize.value
         when (readingDirection.value) {
-            TOP_TO_BOTTOM -> animateScrollBy(containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            TOP_TO_BOTTOM -> animateScrollBy(
+                smartScrollDistance(forward = true) ?: (containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            )
+
             LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(containerSize.width * SCREEN_TAP_SCROLL_FRACTION)
         }
     }
@@ -436,9 +477,169 @@ class ContinuousReaderState(
     suspend fun scrollScreenBackward() {
         val containerSize = screenScaleState.areaSize.value
         when (readingDirection.value) {
-            TOP_TO_BOTTOM -> animateScrollBy(-containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            TOP_TO_BOTTOM -> animateScrollBy(
+                smartScrollDistance(forward = false) ?: (-containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            )
+
             LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(-containerSize.width * SCREEN_TAP_SCROLL_FRACTION)
         }
+    }
+
+    /**
+     * Distance that lands the next content block flush against the top of the
+     * viewport, or null to fall back to the blind [SCREEN_TAP_SCROLL_FRACTION] jump.
+     *
+     * This is what replaces PANELS mode on webtoons: a tall strip is mostly artwork
+     * separated by large blank gutters, so stopping ON a gutter — which a fixed 80%
+     * jump does constantly — wastes a third of the screen and cuts panels in half.
+     * Aligning to a block start instead makes every tap show a whole unit of story.
+     */
+    private suspend fun smartScrollDistance(forward: Boolean): Float? {
+        if (!readerState.webtoonSmartScroll.value) return null
+
+        val layout = lazyListState.layoutInfo
+        val viewport = (layout.viewportEndOffset - layout.viewportStartOffset).toFloat()
+        if (viewport <= 0f) return null
+
+        // Content blocks of everything on screen, in viewport-relative pixels
+        // (item offsets are already relative to the viewport top).
+        val blocks = mutableListOf<ClosedFloatingPointRange<Float>>()
+        for (item in layout.visibleItemsInfo) {
+            val page = item.key as? PageMetadata ?: continue
+            if (item.size <= 0) continue
+            // One unanalysed item is enough to make a gutter-skip unsafe: it could
+            // hop straight over that page. Give up on this tap instead.
+            val bands = contentBandsFor(page) ?: return null
+            for (band in bands) {
+                blocks.add((item.offset + band.start * item.size)..(item.offset + band.endInclusive * item.size))
+            }
+        }
+        if (blocks.isEmpty()) return null
+
+        // Anchor on a nearly-full screen and correct only when it pays. Anchoring
+        // on block boundaries instead (either nearest or farthest) was measured
+        // WORSE than the blind jump on tap count: block heights straddle the
+        // viewport (median 1.40 screen-widths against 1.60) so boundary-seeking
+        // spends taps stopping short.
+        val base = viewport * SMART_SCROLL_BASE_FRACTION
+        // The leading edge in the direction of travel: the screen's top going
+        // forward, its bottom going back.
+        val anchor = if (forward) base else -base + viewport
+        val inBlock = blocks.firstOrNull { anchor >= it.start && anchor < it.endInclusive }
+
+        val movedAnchor = when {
+            // In a gutter: cross it whole. Nothing is skipped — it is blank by
+            // construction — and this is what removes the tall white bands.
+            inBlock == null ->
+                if (forward) blocks.filter { it.start >= anchor }.minOfOrNull { it.start }
+                else blocks.filter { it.endInclusive <= anchor }.maxOfOrNull { it.endInclusive }
+
+            // Inside a block that would have fitted whole: pull the edge to its
+            // boundary so it is shown entire instead of sliced.
+            (inBlock.endInclusive - inBlock.start) <= viewport -> {
+                val edge = if (forward) inBlock.start else inBlock.endInclusive
+                if (abs(anchor - edge) <= viewport * SMART_SCROLL_SNAP_BACK_FRACTION) edge else null
+            }
+
+            // Inside a block taller than the screen: the cut is geometry, not a
+            // defect (38.7% of blocks measured taller than the viewport).
+            else -> null
+        } ?: return if (forward) base else -base
+
+        val distance = if (forward) movedAnchor else movedAnchor - viewport
+        // A snap this short reads as a broken tap; take the plain advance instead.
+        val plain = if (forward) base else -base
+        if (abs(distance) < viewport * SMART_SCROLL_MIN_FRACTION) return avoidCuttingBubbles(plain, viewport)
+        return avoidCuttingBubbles(distance, viewport)
+    }
+
+    /**
+     * Nudges [distance] so no screen edge lands through a speech bubble.
+     *
+     * Content blocks alone can't do this: a bubble sits *inside* a panel, so band
+     * alignment happily slices it. Measured over 8 chapters of 4 series, without
+     * this 53% of screens cut a bubble and 12% of bubbles were never readable in
+     * one screen; with it, 17% and 4%, for 3% more taps and nothing skipped.
+     *
+     * Corrections stay within one viewport so the move can never carry unseen
+     * content past the screen — allowing more skipped 0.11% of the artwork.
+     */
+    private fun avoidCuttingBubbles(distance: Float, viewport: Float): Float {
+        val bubbles = mutableListOf<ClosedFloatingPointRange<Float>>()
+        for (item in lazyListState.layoutInfo.visibleItemsInfo) {
+            val page = item.key as? PageMetadata ?: continue
+            if (item.size <= 0) continue
+            val bands = BubbleBands.cached(page.toPageId()) ?: continue
+            for (band in bands) {
+                bubbles.add((item.offset + band.start * item.size)..(item.offset + band.endInclusive * item.size))
+            }
+        }
+        if (bubbles.isEmpty()) return distance
+
+        val minMove = viewport * SMART_SCROLL_MIN_FRACTION
+        var result = distance
+        // Two passes: fixing the bottom edge can push a bubble onto the top one.
+        repeat(2) {
+            val top = result
+            val bottom = result + viewport
+            val atBottom = bubbles.firstOrNull { bottom > it.start && bottom < it.endInclusive }
+            if (atBottom != null) {
+                // Either show the bubble whole, or leave it for the next screen.
+                val options = listOf(atBottom.endInclusive - viewport, atBottom.start - viewport)
+                    .filter { abs(it) in minMove..viewport }
+                if (options.isNotEmpty()) {
+                    result = options.minBy { abs(it - result) }
+                    return@repeat
+                }
+            }
+            val atTop = bubbles.firstOrNull { top > it.start && top < it.endInclusive }
+            if (atTop != null && abs(atTop.start) in minMove..viewport) result = atTop.start
+        }
+        return result
+    }
+
+    /**
+     * Makes sure the bubbles of every visible page are on their way.
+     *
+     * The invert step publishes them for free when it runs, so this only pays for
+     * pages it didn't treat. The inference is slow (~770 ms), hence: never on the
+     * tap path, and a page whose boxes haven't landed yet simply scrolls without
+     * bubble alignment this once.
+     */
+    private fun prefetchBubbleBands() {
+        for (item in lazyListState.layoutInfo.visibleItemsInfo) {
+            val page = item.key as? PageMetadata ?: continue
+            val pageId = page.toPageId()
+            if (BubbleBands.cached(pageId) != null) continue
+            if (!bubbleDetectionStarted.add(pageId)) continue
+            bubbleDetectScope.launch {
+                val image = imagesInUse[pageId]?.getOriginalImage()?.getOrNull()
+                if (image == null) {
+                    bubbleDetectionStarted.remove(pageId)   // retry once it is loaded
+                    return@launch
+                }
+                BubbleBands.publish(pageId, detectBubbleBands(image))
+            }
+        }
+    }
+
+    /**
+     * Content bands of a page, computed once and kept until the reader closes.
+     * A page whose analysis fails caches an empty list so we don't pay for it
+     * again on every tap. (An *inconclusive* page is not empty: it comes back as
+     * one full-page block, so a gutter-skip can never hop over it.)
+     */
+    private suspend fun contentBandsFor(page: PageMetadata): List<ClosedFloatingPointRange<Float>>? {
+        val pageId = page.toPageId()
+        contentBandCache[pageId]?.let { return it.takeIf { cached -> cached.isNotEmpty() } }
+
+        val image = imagesInUse[pageId] ?: return null
+        val komeliaImage = image.getOriginalImage()
+            .onFailure { logger.warn(it) { "smartScroll: getOriginalImage failed for $pageId" } }
+            .getOrNull() ?: return null
+        val bands = detectContentBands(komeliaImage)
+        contentBandCache[pageId] = bands
+        return bands.takeIf { it.isNotEmpty() }
     }
 
     private suspend fun animateScrollBy(amount: Float) {
@@ -530,6 +731,7 @@ class ContinuousReaderState(
     private suspend fun updateVisibleImages() {
         val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
         if (visibleItems.isEmpty()) return
+        if (readerState.webtoonSmartScroll.value) prefetchBubbleBands()
 
         val firstItem = visibleItems.first()
 
