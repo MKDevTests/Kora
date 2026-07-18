@@ -98,7 +98,7 @@ fun CommonImageSettings(
                 checked = webtoonSmartScroll,
                 onCheckedChange = onWebtoonSmartScrollChange,
                 label = { Text("Webtoon smart scroll") },
-                supportingText = { Text("Tapping in a vertical strip lands on the next block of artwork instead of a fixed distance, so a tap never stops on a blank gutter.") },
+                supportingText = { Text("Tapping in a vertical strip crosses blank gutters whole and stops on panel and speech-bubble boundaries, instead of a fixed distance.") },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 

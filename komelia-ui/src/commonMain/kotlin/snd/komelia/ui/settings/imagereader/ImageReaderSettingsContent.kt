@@ -109,7 +109,7 @@ fun ImageReaderSettingsContent(
             checked = webtoonSmartScroll,
             onCheckedChange = onWebtoonSmartScrollChange,
             label = { Text("Webtoon smart scroll") },
-            supportingText = { Text("In the continuous reader, a screen tap lands on the next block of artwork instead of advancing a blind 80%, so it never stops on a blank gutter. Falls back to the fixed distance when a page can't be analysed. Also available in the in-reader settings.") },
+            supportingText = { Text("In the continuous reader, a screen tap crosses blank gutters whole and stops on panel and speech-bubble boundaries instead of advancing a blind 80%. Falls back to the fixed distance when a page can't be analysed. Also available in the in-reader settings.") },
         )
 
         SwitchWithLabel(
