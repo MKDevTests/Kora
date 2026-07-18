@@ -46,6 +46,7 @@ import kotlinx.coroutines.withContext
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
+import snd.komelia.image.detectContentBands
 import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImage.PageId
 import snd.komelia.image.ReaderImageFactory
@@ -74,6 +75,12 @@ private val logger = KotlinLogging.logger("ContinuousReaderState")
  * off (see ReaderState.webtoonReaderType + the webtoonSmartScroll setting).
  */
 private const val SCREEN_TAP_SCROLL_FRACTION = 0.8f
+
+/** A smart-scroll tap always advances at least this much: snapping a few pixels feels broken. */
+private const val SMART_SCROLL_MIN_FRACTION = 0.35f
+
+/** ...and never more than this, so a tap can't carry content past the screen unseen. */
+private const val SMART_SCROLL_MAX_FRACTION = 0.95f
 
 class ContinuousReaderState(
     private val cleanupScope: CoroutineScope,
@@ -142,6 +149,9 @@ class ContinuousReaderState(
         }
         .build()
     private val imagesInUse: MutableMap<PageId, ReaderImage> = ConcurrentMap()
+
+    /** Per-page content bands for the smart scroll. Empty list = analysed, inconclusive. */
+    private val contentBandCache: MutableMap<PageId, List<ClosedFloatingPointRange<Float>>> = ConcurrentMap()
     private val imageDisplayFlow: MutableSharedFlow<ReaderImage> = MutableSharedFlow()
 
     suspend fun initialize() {
@@ -428,7 +438,10 @@ class ContinuousReaderState(
     suspend fun scrollScreenForward() {
         val containerSize = screenScaleState.areaSize.value
         when (readingDirection.value) {
-            TOP_TO_BOTTOM -> animateScrollBy(containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            TOP_TO_BOTTOM -> animateScrollBy(
+                smartScrollDistance(forward = true) ?: (containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            )
+
             LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(containerSize.width * SCREEN_TAP_SCROLL_FRACTION)
         }
     }
@@ -436,9 +449,68 @@ class ContinuousReaderState(
     suspend fun scrollScreenBackward() {
         val containerSize = screenScaleState.areaSize.value
         when (readingDirection.value) {
-            TOP_TO_BOTTOM -> animateScrollBy(-containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            TOP_TO_BOTTOM -> animateScrollBy(
+                smartScrollDistance(forward = false) ?: (-containerSize.height * SCREEN_TAP_SCROLL_FRACTION)
+            )
+
             LEFT_TO_RIGHT, RIGHT_TO_LEFT -> animateScrollBy(-containerSize.width * SCREEN_TAP_SCROLL_FRACTION)
         }
+    }
+
+    /**
+     * Distance that lands the next content block flush against the top of the
+     * viewport, or null to fall back to the blind [SCREEN_TAP_SCROLL_FRACTION] jump.
+     *
+     * This is what replaces PANELS mode on webtoons: a tall strip is mostly artwork
+     * separated by large blank gutters, so stopping ON a gutter — which a fixed 80%
+     * jump does constantly — wastes a third of the screen and cuts panels in half.
+     * Aligning to a block start instead makes every tap show a whole unit of story.
+     */
+    private suspend fun smartScrollDistance(forward: Boolean): Float? {
+        if (!readerState.webtoonSmartScroll.value) return null
+
+        val layout = lazyListState.layoutInfo
+        val viewport = (layout.viewportEndOffset - layout.viewportStartOffset).toFloat()
+        if (viewport <= 0f) return null
+
+        // Never nudge by a sliver, and never jump past content that was never shown.
+        val minAdvance = viewport * SMART_SCROLL_MIN_FRACTION
+        val maxAdvance = viewport * SMART_SCROLL_MAX_FRACTION
+
+        // Item offsets are already expressed relative to the viewport top, so the
+        // current top is simply 0 and a band start maps to offset + fraction * size.
+        val candidates = mutableListOf<Float>()
+        for (item in layout.visibleItemsInfo) {
+            val page = item.key as? PageMetadata ?: continue
+            if (item.size <= 0) continue
+            val bands = contentBandsFor(page) ?: continue
+            for (band in bands) {
+                candidates.add(item.offset + band.start * item.size)
+            }
+        }
+        if (candidates.isEmpty()) return null
+
+        val target =
+            if (forward) candidates.filter { it >= minAdvance && it <= maxAdvance }.minOrNull()
+            else candidates.filter { it <= -minAdvance && it >= -maxAdvance }.maxOrNull()
+
+        return target
+    }
+
+    /**
+     * Content bands of a page, computed once and kept until the reader closes.
+     * A page whose analysis is inconclusive caches an empty list so we don't pay
+     * for it again on every tap.
+     */
+    private suspend fun contentBandsFor(page: PageMetadata): List<ClosedFloatingPointRange<Float>>? {
+        val pageId = page.toPageId()
+        contentBandCache[pageId]?.let { return it.takeIf { cached -> cached.isNotEmpty() } }
+
+        val image = imagesInUse[pageId] ?: return null
+        val komeliaImage = image.getOriginalImage().getOrNull() ?: return null
+        val bands = detectContentBands(komeliaImage)
+        contentBandCache[pageId] = bands
+        return bands.takeIf { it.isNotEmpty() }
     }
 
     private suspend fun animateScrollBy(amount: Float) {

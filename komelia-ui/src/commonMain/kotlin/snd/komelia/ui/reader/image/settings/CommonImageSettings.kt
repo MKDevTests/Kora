@@ -94,9 +94,13 @@ fun CommonImageSettings(
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 
-            // "Webtoon smart scroll" toggle intentionally not shown here either —
-            // see ImageReaderSettingsContent for why (PANELS is no longer used
-            // for webtoons, so the switch has nothing to switch yet).
+            SwitchWithLabel(
+                checked = webtoonSmartScroll,
+                onCheckedChange = onWebtoonSmartScrollChange,
+                label = { Text("Webtoon smart scroll") },
+                supportingText = { Text("Tapping in a vertical strip lands on the next block of artwork instead of a fixed distance, so a tap never stops on a blank gutter.") },
+                contentPadding = PaddingValues(horizontal = 10.dp)
+            )
 
             SwitchWithLabel(
                 checked = loadThumbnailPreviews,
