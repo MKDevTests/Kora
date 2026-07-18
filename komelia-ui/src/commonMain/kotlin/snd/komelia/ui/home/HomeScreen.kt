@@ -141,11 +141,10 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                             readerScreen(
                                                 book = book,
                                                 markReadProgress = markProgress,
-                                                onExit = { lastReadBook ->
-                                                    if (lastReadBook.id != book.id) {
-                                                        vm.reload()
-                                                    }
-                                                }
+                                                // Always refresh: read progress changes even when
+                                                // you leave on the SAME book, and "Keep reading"
+                                                // has to reflect it without a manual pull.
+                                                onExit = { vm.refreshAfterReading() }
                                             )
                                         )
                                     },
@@ -186,9 +185,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                 readerScreen(
                                     book = book,
                                     markReadProgress = true,
-                                    onExit = { lastReadBook ->
-                                        if (lastReadBook.id != book.id) vm.reload()
-                                    },
+                                    onExit = { vm.refreshAfterReading() },
                                 )
                             )
                         }

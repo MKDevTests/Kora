@@ -132,6 +132,27 @@ class HomeViewModel(
         screenModelScope.launch { load(force = true) }
     }
 
+    /**
+     * Silent refresh used when coming back from the reader: server-backed
+     * shelves ("Keep reading", "Recently read", …) re-query so read progress
+     * shows immediately, while random "Discover" shelves keep their current
+     * picks (they hit RandomShelfCache, unlike [reload] which forces a re-roll).
+     *
+     * Nothing blanks: the screen is already in LoadState.Success, so load()
+     * neither repaints the disk snapshot nor flips to Loading — the new data
+     * just replaces the old when it arrives.
+     */
+    fun refreshAfterReading() {
+        screenModelScope.launch {
+            // The reader flushes the final read-progress to Komga fire-and-forget
+            // on dispose, so querying immediately can race it and read back the
+            // OLD progress. A short grace period makes the refresh reliable; the
+            // Komga read-progress SSE event is the backstop if it still lands late.
+            delay(600)
+            load(force = false)
+        }
+    }
+
     private suspend fun load(force: Boolean = false) {
         appNotifications.runCatchingToNotifications {
             // Keep the FULL list (enabled + disabled) here: the home-shelf editor
