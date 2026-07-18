@@ -107,7 +107,11 @@ class AndroidDiagnosticsDataSource(
         if (!dir.exists()) return@withContext "No logs."
         val files = dir.listFiles()
             ?.filter { it.isFile && (it.name.endsWith(".log") || it.name.endsWith(".txt")) }
-            ?.sortedBy { it.name }
+            // Newest first. Sorting by name put komelia.1.log (a rotated, older
+            // file) ahead of the current komelia.log, so the size cap below was
+            // spent on stale data and the export never reached what just went
+            // wrong — which is the whole point of exporting.
+            ?.sortedByDescending { it.lastModified() }
             ?: emptyList()
         // Redact line by line while streaming. Reading every file into one
         // String and then running three whole-string Regex.replace over it

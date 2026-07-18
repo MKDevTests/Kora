@@ -5,6 +5,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +45,9 @@ object NextReleasesScanner {
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
 
+    /** Backoff between scan attempts. Its size is the attempt count. */
+    private val RETRY_DELAYS = listOf(3.seconds, 10.seconds, 30.seconds)
+
     /** Seeds from the disk snapshot. Cheap and idempotent. */
     suspend fun primeFromDisk() {
         if (_releases.value != null) return
@@ -68,16 +75,31 @@ object NextReleasesScanner {
         job = scope.launch {
             _scanning.value = true
             try {
-                val scan = service.compute(libraries)
-                NextReleasesCache.update(scan)
-                // update() may refuse an empty result from an incomplete scan,
-                // so publish what the cache actually holds.
-                _releases.value = NextReleasesCache.releases
-                if (!scan.complete) {
-                    logger.warn { "Incomplete next-releases scan (${scan.releases.size} resolved)" }
+                // Tag discovery is all-or-nothing (no tags = nothing to resolve),
+                // so a single dropped connection used to lose the whole scan.
+                // A home server over wifi drops one now and then; retry rather
+                // than give up until the next TTL window.
+                RETRY_DELAYS.forEachIndexed { attempt, backoff ->
+                    try {
+                        val scan = service.compute(libraries)
+                        NextReleasesCache.update(scan)
+                        // update() may refuse an empty result from an incomplete
+                        // scan, so publish what the cache actually holds.
+                        _releases.value = NextReleasesCache.releases
+                        if (!scan.complete) {
+                            logger.warn { "Incomplete next-releases scan (${scan.releases.size} resolved)" }
+                        } else {
+                            logger.info { "Next-releases scan done (${scan.releases.size} upcoming)" }
+                        }
+                        return@launch
+                    } catch (t: Throwable) {
+                        currentCoroutineContext().ensureActive()
+                        val last = attempt == RETRY_DELAYS.lastIndex
+                        if (last) logger.error(t) { "Next-releases scan failed after ${RETRY_DELAYS.size} attempts" }
+                        else logger.warn { "Next-releases scan attempt ${attempt + 1} failed (${t::class.simpleName}), retrying" }
+                        if (!last) delay(backoff)
+                    }
                 }
-            } catch (t: Throwable) {
-                logger.error(t) { "Next-releases scan failed" }
             } finally {
                 _scanning.value = false
             }
