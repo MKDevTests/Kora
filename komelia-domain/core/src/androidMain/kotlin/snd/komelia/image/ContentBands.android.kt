@@ -124,14 +124,11 @@ private fun analyse(image: KomeliaImage): List<ClosedFloatingPointRange<Float>> 
         }
 
         val h = height.toFloat()
-        android.util.Log.i(
-            "BANDS",
-            "page ${source.width}x$height flatRows=${empty.count { it }} minGutter=$minGutter blocks=${blocks.size} " +
-                blocks.take(12).joinToString { "${it.first}-${it.last}" }
-        )
 
-        // A single block spanning the page tells the scroller nothing.
-        if (blocks.size < 2) return emptyList()
+        // An inconclusive page is ONE solid block, never "nothing". Returning an
+        // empty list here let the caller's gutter-skip leap clean over an entire
+        // unanalysed page: 1.91% of all content never shown, measured on the bench.
+        if (blocks.size < 2) return listOf(0f..1f)
 
         return blocks.map { (it.first / h)..((it.last + 1) / h) }
     } finally {

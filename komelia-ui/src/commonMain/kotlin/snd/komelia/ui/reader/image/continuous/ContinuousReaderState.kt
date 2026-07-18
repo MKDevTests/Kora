@@ -64,6 +64,7 @@ import snd.komelia.ui.reader.image.ScreenScaleState
 import snd.komelia.ui.strings.AppStrings
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.common.KomgaReadingDirection
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val logger = KotlinLogging.logger("ContinuousReaderState")
@@ -77,19 +78,21 @@ private val logger = KotlinLogging.logger("ContinuousReaderState")
 private const val SCREEN_TAP_SCROLL_FRACTION = 0.8f
 
 /**
- * A smart-scroll tap always advances at least this much: snapping a few pixels
- * feels broken.
+ * A smart-scroll tap advances this much before any correction — nearly a full
+ * screen, keeping a sliver of overlap so a bubble sitting on the seam is never
+ * cut with nothing to reconnect to.
  *
- * Kept low on purpose. At 0.35 this rejected perfectly good snaps just under the
- * bar (measured: block starts at 853px and 926px in a 2960px viewport) and fell
- * back to the blind 80% jump, which then sailed *over* both blocks and landed
- * mid-panel — exactly the cut this feature exists to prevent. A short snap is
- * always better than an overshoot.
+ * Swept on the bench over 215 real pages from 4 series (_bubble-bench/wtscroll.py).
+ * 1.00 scored marginally better on every metric but leaves zero overlap, which the
+ * bench cannot judge; 0.95 costs ~0.4pt of blank space for that safety margin.
  */
-private const val SMART_SCROLL_MIN_FRACTION = 0.20f
+private const val SMART_SCROLL_BASE_FRACTION = 0.95f
 
-/** ...and never more than this, so a tap can't carry content past the screen unseen. */
-private const val SMART_SCROLL_MAX_FRACTION = 0.95f
+/** How far the advance may be pulled back to show a block whole rather than sliced. */
+private const val SMART_SCROLL_SNAP_BACK_FRACTION = 0.80f
+
+/** Below this, a correction reads as a broken tap; use the plain advance instead. */
+private const val SMART_SCROLL_MIN_FRACTION = 0.15f
 
 class ContinuousReaderState(
     private val cleanupScope: CoroutineScope,
@@ -159,7 +162,7 @@ class ContinuousReaderState(
         .build()
     private val imagesInUse: MutableMap<PageId, ReaderImage> = ConcurrentMap()
 
-    /** Per-page content bands for the smart scroll. Empty list = analysed, inconclusive. */
+    /** Per-page content bands for the smart scroll. Empty list = analysis failed. */
     private val contentBandCache: MutableMap<PageId, List<ClosedFloatingPointRange<Float>>> = ConcurrentMap()
     private val imageDisplayFlow: MutableSharedFlow<ReaderImage> = MutableSharedFlow()
 
@@ -476,73 +479,74 @@ class ContinuousReaderState(
      * Aligning to a block start instead makes every tap show a whole unit of story.
      */
     private suspend fun smartScrollDistance(forward: Boolean): Float? {
-        if (!readerState.webtoonSmartScroll.value) {
-            logger.info { "smartScroll: setting is OFF -> fixed jump" }
-            return null
-        }
+        if (!readerState.webtoonSmartScroll.value) return null
 
         val layout = lazyListState.layoutInfo
         val viewport = (layout.viewportEndOffset - layout.viewportStartOffset).toFloat()
         if (viewport <= 0f) return null
 
-        // Never nudge by a sliver, and never jump past content that was never shown.
-        val minAdvance = viewport * SMART_SCROLL_MIN_FRACTION
-        val maxAdvance = viewport * SMART_SCROLL_MAX_FRACTION
-
-        // Item offsets are already expressed relative to the viewport top, so the
-        // current top is simply 0 and a band start maps to offset + fraction * size.
-        val candidates = mutableListOf<Float>()
+        // Content blocks of everything on screen, in viewport-relative pixels
+        // (item offsets are already relative to the viewport top).
+        val blocks = mutableListOf<ClosedFloatingPointRange<Float>>()
         for (item in layout.visibleItemsInfo) {
             val page = item.key as? PageMetadata ?: continue
             if (item.size <= 0) continue
-            val bands = contentBandsFor(page) ?: continue
+            // One unanalysed item is enough to make a gutter-skip unsafe: it could
+            // hop straight over that page. Give up on this tap instead.
+            val bands = contentBandsFor(page) ?: return null
             for (band in bands) {
-                // Align the block's top to the top of the screen.
-                candidates.add(item.offset + band.start * item.size)
-                // ...or, for a block taller than the screen, its bottom to the
-                // bottom of the screen: that finishes a tall panel in one go
-                // instead of cutting it, which a top-align alone can't do
-                // (measured: blocks spaced ~3500px in a 2960px viewport, so no
-                // top-align candidate falls in the allowed window at all).
-                candidates.add(item.offset + band.endInclusive * item.size - viewport)
+                blocks.add((item.offset + band.start * item.size)..(item.offset + band.endInclusive * item.size))
             }
         }
-        if (candidates.isEmpty()) {
-            logger.info { "smartScroll: no bands for ${layout.visibleItemsInfo.size} visible items -> fixed jump" }
-            return null
-        }
+        if (blocks.isEmpty()) return null
 
-        // Take the FARTHEST boundary that still fits, not the nearest one. The
-        // goal is "advance as much as possible without cutting a block", not "go
-        // to the next block": snapping to the nearest boundary stops dead on the
-        // first small block in front of us, and measured on real pages that meant
-        // ~1000px steps in a 2960px viewport — three taps per screen, with most
-        // of the screen showing content you were about to see anyway.
-        val target =
-            if (forward) candidates.filter { it >= minAdvance && it <= maxAdvance }.maxOrNull()
-            else candidates.filter { it <= -minAdvance && it >= -maxAdvance }.minOrNull()
+        // Anchor on a nearly-full screen and correct only when it pays. Anchoring
+        // on block boundaries instead (either nearest or farthest) was measured
+        // WORSE than the blind jump on tap count: block heights straddle the
+        // viewport (median 1.40 screen-widths against 1.60) so boundary-seeking
+        // spends taps stopping short.
+        val base = viewport * SMART_SCROLL_BASE_FRACTION
+        // The leading edge in the direction of travel: the screen's top going
+        // forward, its bottom going back.
+        val anchor = if (forward) base else -base + viewport
+        val inBlock = blocks.firstOrNull { anchor >= it.start && anchor < it.endInclusive }
 
-        logger.info {
-            "smartScroll forward=$forward viewport=$viewport window=$minAdvance..$maxAdvance " +
-                    "candidates=${candidates.sorted().joinToString { it.toInt().toString() }} -> $target"
-        }
-        return target
+        val movedAnchor = when {
+            // In a gutter: cross it whole. Nothing is skipped — it is blank by
+            // construction — and this is what removes the tall white bands.
+            inBlock == null ->
+                if (forward) blocks.filter { it.start >= anchor }.minOfOrNull { it.start }
+                else blocks.filter { it.endInclusive <= anchor }.maxOfOrNull { it.endInclusive }
+
+            // Inside a block that would have fitted whole: pull the edge to its
+            // boundary so it is shown entire instead of sliced.
+            (inBlock.endInclusive - inBlock.start) <= viewport -> {
+                val edge = if (forward) inBlock.start else inBlock.endInclusive
+                if (abs(anchor - edge) <= viewport * SMART_SCROLL_SNAP_BACK_FRACTION) edge else null
+            }
+
+            // Inside a block taller than the screen: the cut is geometry, not a
+            // defect (38.7% of blocks measured taller than the viewport).
+            else -> null
+        } ?: return if (forward) base else -base
+
+        val distance = if (forward) movedAnchor else movedAnchor - viewport
+        // A snap this short reads as a broken tap; take the plain advance instead.
+        if (abs(distance) < viewport * SMART_SCROLL_MIN_FRACTION) return if (forward) base else -base
+        return distance
     }
 
     /**
      * Content bands of a page, computed once and kept until the reader closes.
-     * A page whose analysis is inconclusive caches an empty list so we don't pay
-     * for it again on every tap.
+     * A page whose analysis fails caches an empty list so we don't pay for it
+     * again on every tap. (An *inconclusive* page is not empty: it comes back as
+     * one full-page block, so a gutter-skip can never hop over it.)
      */
     private suspend fun contentBandsFor(page: PageMetadata): List<ClosedFloatingPointRange<Float>>? {
         val pageId = page.toPageId()
         contentBandCache[pageId]?.let { return it.takeIf { cached -> cached.isNotEmpty() } }
 
-        val image = imagesInUse[pageId]
-        if (image == null) {
-            logger.info { "smartScroll: no in-use image for $pageId" }
-            return null
-        }
+        val image = imagesInUse[pageId] ?: return null
         val komeliaImage = image.getOriginalImage()
             .onFailure { logger.warn(it) { "smartScroll: getOriginalImage failed for $pageId" } }
             .getOrNull() ?: return null
