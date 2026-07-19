@@ -592,7 +592,7 @@ class ReaderState(
         // send is drained — so onDispose / flushProgressNow would otherwise push
         // a stale readProgressPage and silently lose the last page turn.
         readProgressPage.value = page
-        logger.info { "[ReadProgress] onProgressChange page=$page book=${booksState.value?.currentBook?.id?.value}" }
+        logger.debug { "[ReadProgress] onProgressChange page=$page book=${booksState.value?.currentBook?.id?.value}" }
         progressUpdateChannel.trySend(page)
     }
 
@@ -782,7 +782,7 @@ class ReaderState(
         // end in continuous mode) often stay "in progress" because the
         // CONFLATED progressUpdateChannel never drained its final value.
         if (markReadProgress && booksState.value != null) {
-            logger.info { "[ReadProgress] onDispose flush page=${readProgressPage.value} book=${booksState.value?.currentBook?.id?.value}" }
+            logger.debug { "[ReadProgress] onDispose flush page=${readProgressPage.value} book=${booksState.value?.currentBook?.id?.value}" }
             finalFlushScope.launch {
                 runCatching { updateCacheAndPush() }
             }
@@ -999,7 +999,7 @@ class ReaderState(
                 koboSpan = encoded
             )
         )
-        logger.info {
+        logger.debug {
             "[ReadProgress] push page=$page/${booksState.value?.currentBookPages?.size} " +
                 "progression=${r2Prog.locator.locations?.progression} book=${currentBook.id.value}"
         }

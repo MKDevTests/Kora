@@ -33,8 +33,19 @@
     <!-- Level set from App.initLogging() via the LOG_LEVEL system property:
          DEBUG for debug builds, INFO for release. Default INFO is the safe
          fallback if the property is somehow unset. -->
+    <!-- The file appender writes on the calling thread, so every log statement
+         cost a disk write wherever it was made — including the reader's
+         per-page path. Buffer it: the queue absorbs bursts, and when it fills
+         AsyncAppender drops TRACE/DEBUG/INFO first, never WARN or ERROR. -->
+    <appender name="asyncFile" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <!-- Never block the app thread waiting for the log queue. -->
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="file" />
+    </appender>
+
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="logcat" />
-        <appender-ref ref="file" />
+        <appender-ref ref="asyncFile" />
     </root>
 </configuration>

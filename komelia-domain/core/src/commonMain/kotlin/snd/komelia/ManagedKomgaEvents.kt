@@ -76,7 +76,7 @@ class ManagedKomgaEvents(
 
     private fun startBroadcast(events: Flow<KomgaEvent>) {
         events.onEach { event ->
-            logger.info { event }
+            logger.debug { event }
 
             when (event) {
                 is TaskQueueStatus -> {}

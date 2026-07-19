@@ -354,7 +354,7 @@ abstract class TilingReaderImage(
                 displaySize = displayArea,
                 scaleFactor = scaleFactor
             )
-        }.also { logger.info { "page ${pageId.pageNumber} completed full resize to $dstWidth x $dstHeight in $it" } }
+        }.also { logger.debug { "page ${pageId.pageNumber} completed full resize to $dstWidth x $dstHeight in $it" } }
 
     }
 
@@ -458,7 +458,7 @@ abstract class TilingReaderImage(
             )
 
             val end = timeSource.markNow()
-            logger.info { "page ${pageId.pageNumber} completed tiled resize in ${end - start};  ${newTiles.size} tiles" }
+            logger.debug { "page ${pageId.pageNumber} completed tiled resize in ${end - start};  ${newTiles.size} tiles" }
         }
         lastUsedScaleFactor = scaleFactor
 

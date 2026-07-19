@@ -24,12 +24,12 @@ class CropBordersStep(
             // skip the crop (graceful fallback), and notify the detector so
             // readers with the auto-skip setting can exclude it from spreads.
             if (trim.width <= 0 || trim.height <= 0) {
-                logger.info { "page ${pageId.pageNumber} appears blank; skipping crop" }
+                logger.debug { "page ${pageId.pageNumber} appears blank; skipping crop" }
                 if (autoSkipBlankPages.value) blankPageDetector.report(pageId)
                 return null
             }
             val result = measureTimedValue { image.extractArea(trim) }
-            logger.info { "page ${pageId.pageNumber} completed border crop in ${result.duration}" }
+            logger.debug { "page ${pageId.pageNumber} completed border crop in ${result.duration}" }
             result.value
         } catch (e: Exception) {
             // Defensive: also catch any VipsException that slips through despite
