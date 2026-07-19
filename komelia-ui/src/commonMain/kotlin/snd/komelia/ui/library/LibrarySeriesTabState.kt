@@ -1,5 +1,6 @@
 package snd.komelia.ui.library
 
+import snd.komelia.perf.PerfTrace
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -470,15 +471,17 @@ class LibrarySeriesTabState(
 
         // Letter filter is applied by SeriesFilter.addConditionTo above
         // via titleSort.beginsWith — accurate, indexed, server-side.
-        return seriesApi.getSeriesList(
-            conditionBuilder = condition,
-            fulltextSearch = filter.searchTerm.ifBlank { null },
-            pageRequest = KomgaPageRequest(
-                size = pageLoadSize.value,
-                pageIndex = page - 1,
-                sort = filter.sortOrder.komgaSort
+        return PerfTrace.measure("library.series page=$page", { it.content.size }) {
+            seriesApi.getSeriesList(
+                conditionBuilder = condition,
+                fulltextSearch = filter.searchTerm.ifBlank { null },
+                pageRequest = KomgaPageRequest(
+                    size = pageLoadSize.value,
+                    pageIndex = page - 1,
+                    sort = filter.sortOrder.komgaSort
+                )
             )
-        )
+        }
     }
 
     private fun delayLoadState(): Deferred<Unit> {

@@ -1,5 +1,6 @@
 package snd.komelia.ui.nextreleases
 
+import snd.komelia.perf.PerfTrace
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

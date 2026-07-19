@@ -1,5 +1,6 @@
 package snd.komelia.ui.library
 
+import snd.komelia.perf.PerfTrace
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -140,8 +141,9 @@ class LibraryGenreTabState(
             val coverOverrides = settingsRepository.getGenreCoverOverrides().first()
             val labelOverrides = settingsRepository.getGenreLabelOverrides().first()
 
-            val genreTags = referentialApi.getSeriesTags(libraryId = lib.id)
-                .filter { GenreLabels.isGenreTag(it) }
+            val genreTags = PerfTrace.measure("genre.getSeriesTags", { it.size }) {
+                referentialApi.getSeriesTags(libraryId = lib.id)
+            }.filter { GenreLabels.isGenreTag(it) }
 
             // Phase 1: paint tiles from the tag list after a single call (label
             // + any override cover; count unknown), so the grid shows almost

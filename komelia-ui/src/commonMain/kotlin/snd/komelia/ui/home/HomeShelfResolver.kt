@@ -1,5 +1,6 @@
 package snd.komelia.ui.home
 
+import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.SeriesHomeScreenFilter
@@ -33,7 +34,16 @@ class HomeShelfResolver(
     private val favoriteIds: () -> Set<String>,
 ) {
 
-    suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? {
+    suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? =
+        PerfTrace.measure("home.shelf '${filter.label}'", { data ->
+            when (data) {
+                is SeriesFilterData -> data.series.size
+                is BookFilterData -> data.books.size
+                else -> null
+            }
+        }) { resolveInner(filter) }
+
+    private suspend fun resolveInner(filter: HomeScreenFilter): HomeFilterData? {
         return when (filter) {
             is BooksHomeScreenFilter.CustomFilter -> {
                 val books = bookApi.getBookList(
