@@ -538,6 +538,7 @@ class ReaderState(
     suspend fun loadNextBook() {
         val booksState = requireNotNull(booksState.value)
         if (booksState.nextBook != null) {
+            val outgoingBook = booksState.currentBook
             val nextBook = getNextBook(booksState.nextBook)
             val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
             // preload-after-loadnext
@@ -559,6 +560,22 @@ class ReaderState(
             )
             readProgressPage.value = 1
             currentBookId.value = booksState.nextBook.id
+            // Moving on to the next book means we're done with the one we're
+            // leaving — mark it read. This covers the "next volume" skip button
+            // from mid-book (user's choice: skipping = finished); when we got
+            // here by reading to the last page it's already complete, so the
+            // call is idempotent. Runs AFTER the swap so a queued progress push
+            // can't retarget the outgoing book, and off the critical path.
+            if (markReadProgress) {
+                finalFlushScope.launch {
+                    runCatching {
+                        bookApi.markReadProgress(
+                            outgoingBook.id,
+                            KomgaBookReadProgressUpdateRequest(completed = true),
+                        )
+                    }
+                }
+            }
             updateCurrentSeriesAndReaderType(booksState.nextBook)
             onProgressChange(1)
         } else {
