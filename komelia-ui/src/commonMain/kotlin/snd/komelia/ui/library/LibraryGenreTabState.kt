@@ -9,6 +9,8 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -50,6 +52,14 @@ import snd.komga.client.series.KomgaSeriesSearch
  * background on every initialize, and forced by pull-to-refresh. Cleared on
  * process restart.
  */
+/**
+ * Max concurrent per-genre count queries in the Genre tab's phase 2. Komga's DB
+ * connection pool is small; firing one query per genre at once saturated it and
+ * stalled every other request (grid loads spiked to ~20s). Streaming them a few
+ * at a time keeps the server responsive.
+ */
+private const val MAX_CONCURRENT_COUNTS = 4
+
 private object GenreCatalogCache {
     private val byLibrary = mutableMapOf<String, List<GenreTile>>()
     fun get(libraryKey: String): List<GenreTile>? = byLibrary[libraryKey]
@@ -173,25 +183,34 @@ class LibraryGenreTabState(
             // All updates run on the screenModel's Main dispatcher, so the shared
             // map and `genres` writes don't race.
             val resolvedByTag = mutableMapOf<String, GenreTile>()
+            // Bound the fan-out: this used to launch one query PER genre at once
+            // (~22 concurrent), which saturated Komga's DB connection pool and
+            // made any grid load happening at the same time queue for many
+            // seconds behind it (measured: a 50-item page spiking to ~20s during
+            // a genre open, vs ~1s idle). A small permit count keeps counts
+            // streaming in without stampeding the server.
+            val limit = Semaphore(MAX_CONCURRENT_COUNTS)
             coroutineScope {
                 genreTags.forEach { genreTag ->
                     launch {
                         val slug = GenreLabels.slugOf(genreTag)
                         val key = overrideKey(slug)
-                        val page = seriesApi.getSeriesList(
-                            KomgaSeriesSearch(
-                                condition = allOfSeries {
-                                    library { isEqualTo(lib.id) }
-                                    tag { isEqualTo(genreTag) }
-                                    tag { isNotEqualTo(HIDDEN_TAG) }
-                                }.toSeriesCondition()
-                            ),
-                            KomgaPageRequest(
-                                pageIndex = 0,
-                                size = 1,
-                                sort = KomgaSort.KomgaSeriesSort.byTitleAsc(),
+                        val page = limit.withPermit {
+                            seriesApi.getSeriesList(
+                                KomgaSeriesSearch(
+                                    condition = allOfSeries {
+                                        library { isEqualTo(lib.id) }
+                                        tag { isEqualTo(genreTag) }
+                                        tag { isNotEqualTo(HIDDEN_TAG) }
+                                    }.toSeriesCondition()
+                                ),
+                                KomgaPageRequest(
+                                    pageIndex = 0,
+                                    size = 1,
+                                    sort = KomgaSort.KomgaSeriesSort.byTitleAsc(),
+                                )
                             )
-                        )
+                        }
                         val ov = coverOverrides[key]
                         val localPath = ov?.takeIf { it.startsWith(FILE_PREFIX) }?.removePrefix(FILE_PREFIX)
                         val resolved = GenreTile(
