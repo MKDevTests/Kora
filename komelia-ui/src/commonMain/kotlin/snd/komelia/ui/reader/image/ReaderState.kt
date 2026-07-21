@@ -589,6 +589,7 @@ class ReaderState(
     suspend fun loadPreviousBook(fromStart: Boolean = false) {
         val booksState = requireNotNull(booksState.value)
         if (booksState.previousBook != null) {
+            val outgoingBook = booksState.currentBook
             val previousBook = getPreviousBook(booksState.previousBook.id)
             val previousBookPages =
                 if (previousBook != null) loadBookPages(previousBook.id) else emptyList()
@@ -607,6 +608,16 @@ class ReaderState(
                 previousBookPages = previousBookPages,
             )
             readProgressPage.value = restoredPage
+            currentBookId.value = booksState.previousBook.id
+            // Mirror of loadNextBook: backing out of a book means we're NOT done
+            // with it — mark it unread. Symmetric with the "next volume" skip
+            // marking the volume we leave as read. Runs AFTER the swap so a
+            // queued progress push can't retarget the outgoing book.
+            if (markReadProgress) {
+                finalFlushScope.launch {
+                    runCatching { bookApi.deleteReadProgress(outgoingBook.id) }
+                }
+            }
         } else
             appNotifications.add(AppNotification.Normal("You're at the beginning of the book"))
         return

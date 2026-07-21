@@ -107,8 +107,14 @@ class ImageReaderScreen(
         }
 
         //FIXME: do outside of composition? No proper multiplatform way to do it in viewmodel
-        // restore current book when app process is killed in background on Android
-        var currentBookId by rememberSaveable { mutableStateOf(bookId.value) }
+        // restore current book when app process is killed in background on Android.
+        // Keyed on bookId: ImageReaderScreen doesn't override Screen.key, so every
+        // reader instance shares one saveable slot. Without the key, opening a
+        // DIFFERENT book restored the previously-read book's id here and initialize()
+        // opened THAT instead of the book the user picked ("it continues the current
+        // volume, not the one on screen"). The key keeps the process-death restore
+        // (same bookId across recreation) while isolating distinct opens.
+        var currentBookId by rememberSaveable(bookId.value) { mutableStateOf(bookId.value) }
         LaunchedEffect(Unit) {
             // Ensure no stale return-nav intent leaks from a previous reader session
             // whose caller didn't consume it.
