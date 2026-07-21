@@ -543,7 +543,11 @@ class ReaderState(
             // preload-after-loadnext
             preloadFirstPage(nextBook)
 
-            readProgressPage.value = 1
+            // Swap the book state and reset the page in one uninterrupted block
+            // (no suspension between). Setting the page BEFORE the swap left a
+            // window where a concurrent progress push saw the OLD book paired
+            // with page 1 and wiped the finished book's progress. See
+            // updateCacheAndPush.
             this.booksState.value = BookState(
                 currentBook = booksState.nextBook,
                 currentBookPages = booksState.nextBookPages,
@@ -553,6 +557,7 @@ class ReaderState(
                 nextBook = nextBook,
                 nextBookPages = nextBookPages
             )
+            readProgressPage.value = 1
             currentBookId.value = booksState.nextBook.id
             updateCurrentSeriesAndReaderType(booksState.nextBook)
             onProgressChange(1)
@@ -571,7 +576,10 @@ class ReaderState(
             val previousBookPages =
                 if (previousBook != null) loadBookPages(previousBook.id) else emptyList()
 
-            readProgressPage.value = if (fromStart) 1 else booksState.previousBookPages.size
+            // Swap first, THEN set the page — no suspension between — so a
+            // concurrent progress push never pairs the outgoing book with the
+            // incoming page. See loadNextBook / updateCacheAndPush.
+            val restoredPage = if (fromStart) 1 else booksState.previousBookPages.size
             this.booksState.value = BookState(
                 currentBook = booksState.previousBook,
                 currentBookPages = booksState.previousBookPages,
@@ -581,6 +589,7 @@ class ReaderState(
                 previousBook = previousBook,
                 previousBookPages = previousBookPages,
             )
+            readProgressPage.value = restoredPage
         } else
             appNotifications.add(AppNotification.Normal("You're at the beginning of the book"))
         return
@@ -949,7 +958,16 @@ class ReaderState(
     }
 
     private suspend fun updateCacheAndPush() {
-        val currentBook = booksState.value?.currentBook ?: return
+        // Capture book + page + total as ONE consistent snapshot BEFORE any
+        // suspension. loadNextBook swaps booksState and resets the page to 1;
+        // without this, the page/total re-read further down (after the repository
+        // awaits below) could pair the OLD, just-finished book with the NEW
+        // page=1 and push "page 1" onto it — silently wiping its progress, which
+        // also un-completes it so getNextBook re-serves the same volume.
+        val bookState = booksState.value ?: return
+        val currentBook = bookState.currentBook
+        val snapshotTotalPages = bookState.currentBookPages.size.coerceAtLeast(1)
+        val snapshotPage = readProgressPage.value.coerceIn(1, snapshotTotalPages)
         val bookmarks = epubBookmarkRepository.getBookmarks(currentBook.id).first()
         val annotations = bookAnnotationRepository.getAnnotations(currentBook.id).first()
         val audioBookmarks = audioBookmarkRepository.getBookmarks(currentBook.id).first()
@@ -985,7 +1003,7 @@ class ReaderState(
         currentSyncBlob.value = encoded
 
         if (!markReadProgress) return
-        val page = readProgressPage.value
+        val page = snapshotPage
         val r2Prog = R2Progression(
             modified = Clock.System.now(),
             device = R2Device("komelia-android", "Komelia"),
@@ -994,13 +1012,13 @@ class ReaderState(
                 type = "image/jpeg",
                 locations = R2Location(
                     position = page,
-                    progression = page.toFloat() / (booksState.value?.currentBookPages?.size ?: 1)
+                    progression = page.toFloat() / snapshotTotalPages
                 ),
                 koboSpan = encoded
             )
         )
         logger.debug {
-            "[ReadProgress] push page=$page/${booksState.value?.currentBookPages?.size} " +
+            "[ReadProgress] push page=$page/$snapshotTotalPages " +
                 "progression=${r2Prog.locator.locations?.progression} book=${currentBook.id.value}"
         }
         runCatching { bookApi.updateReadiumProgression(currentBook.id, r2Prog) }
