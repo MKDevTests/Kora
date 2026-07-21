@@ -31,6 +31,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -169,10 +171,19 @@ class FavoritesViewModel(
     private suspend fun load(ids: Set<String>) {
         notifications.runCatchingToNotifications {
             if (state.value is LoadState.Uninitialized) mutableState.value = LoadState.Loading
-            // getOneSeries is not filtered; resolve favorites in parallel, sort by title.
+            // getOneSeries is not filtered, so favorites resolve one id at a
+            // time. Bound the concurrency: a large favorites set used to fire one
+            // getOneSeries per id at once, saturating Komga's DB connection pool
+            // and stalling every other request (same class of stampede as the
+            // genre-tab counts). Four in flight keeps it responsive.
+            val limit = Semaphore(4)
             val resolved = coroutineScope {
                 ids.map { id ->
-                    async { runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull() }
+                    async {
+                        limit.withPermit {
+                            runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+                        }
+                    }
                 }.awaitAll().filterNotNull()
             }.sortedBy { it.metadata.title.lowercase() }
             series = resolved
