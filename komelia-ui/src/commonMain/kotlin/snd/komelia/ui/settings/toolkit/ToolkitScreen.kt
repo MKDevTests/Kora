@@ -7,16 +7,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,11 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import snd.komelia.toolkit.ToolkitFunction
 import snd.komelia.toolkit.ToolkitSource
+import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalLibraries
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.platform.rememberToolkitSettings
@@ -70,6 +78,18 @@ class ToolkitScreen : Screen {
                     ?: libraries.firstOrNull()?.id?.value)
             }
 
+            // Pre-fill the URL from the CURRENTLY connected Komga server (runtime,
+            // not baked in) + Toolkit's default port, only when unset. The user
+            // can edit or clear it; keeping it persists it. No native connection.
+            val komgaServerUrl = LocalKomgaState.current.serverUrl.value
+            LaunchedEffect(komgaServerUrl) {
+                if (settings.baseUrl.isBlank()) {
+                    suggestToolkitUrl(komgaServerUrl)?.let { settings.setBaseUrl(it) }
+                }
+            }
+
+            var tokenVisible by remember { mutableStateOf(false) }
+
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Automatisation via ton serveur Komga Toolkit (admin uniquement). " +
@@ -91,8 +111,16 @@ class ToolkitScreen : Screen {
                     onValueChange = settings::setToken,
                     label = { Text("Jeton (24 caractères min)") },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    trailingIcon = {
+                        IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                            Icon(
+                                if (tokenVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (tokenVisible) "Masquer" else "Afficher",
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -157,6 +185,16 @@ class ToolkitScreen : Screen {
             }
         }
     }
+}
+
+/**
+ * Derives a Toolkit URL suggestion from the connected Komga server URL: same
+ * scheme + host, Toolkit's default port 8765. Returns null if the Komga URL
+ * can't be parsed. Nothing here is hardcoded to a specific server.
+ */
+private fun suggestToolkitUrl(komgaUrl: String): String? {
+    val m = Regex("^(https?)://([^/:]+)").find(komgaUrl.trim()) ?: return null
+    return "${m.groupValues[1]}://${m.groupValues[2]}:8765"
 }
 
 /**
