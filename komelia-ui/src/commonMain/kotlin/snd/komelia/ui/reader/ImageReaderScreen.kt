@@ -71,6 +71,7 @@ fun readerScreen(
                 markReadProgress = markReadProgress,
                 bookSiblingsContext = context,
                 onExit = onExit,
+                book = book,
             )
         }
         mediaProfile == EPUB -> EpubScreen(
@@ -90,6 +91,11 @@ class ImageReaderScreen(
     private val bookSiblingsContext: BookSiblingsContext,
     private val markReadProgress: Boolean = true,
     @Transient private val onExit: ((KomeliaBook) -> Unit)? = null,
+    // Seed for a fast open: the caller (series/book/home screen) already holds
+    // the full book, so the reader can start the sibling/series lookups without
+    // waiting on its own getOne. Transient — lost on process-death restore,
+    // which is fine: the restore path falls back to the id-only flow.
+    @Transient private val book: KomeliaBook? = null,
 ) : Screen {
 
     @Composable
@@ -120,7 +126,10 @@ class ImageReaderScreen(
             // whose caller didn't consume it.
             ReaderNavigationIntent.pending.value = null
             val bookId = KomgaBookId(currentBookId)
-            vm.initialize(bookId)
+            // Only seed when the saved id still matches the book we were opened
+            // with — after a process-death restore mid-series the user may be on
+            // a different volume than the one this screen was created for.
+            vm.initialize(bookId, book?.takeIf { it.id.value == currentBookId })
             val book = vm.readerState.booksState.value?.currentBook
             if (book != null && book.media.mediaProfile != DIVINA && book.media.mediaProfile != PDF) {
                 navigator.replace(

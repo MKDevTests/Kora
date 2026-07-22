@@ -30,6 +30,7 @@ import snd.komelia.image.KomeliaUpscaler
 import snd.komelia.image.ReaderImageFactory
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaReadListApi
+import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.reader.SeriesReaderOverridesRepository
@@ -213,13 +214,13 @@ class ReaderViewModel(
             }.launchIn(screenModelScope)
     }
 
-    suspend fun initialize(bookId: KomgaBookId) {
+    suspend fun initialize(bookId: KomgaBookId, seedBook: KomeliaBook? = null) {
         val currentState = readerState.state.value
         if (currentState is LoadState.Success || currentState == LoadState.Loading) return
 
         onnxRuntimeSettingsState?.initialize()
         ncnnSettingsState.initialize()
-        readerState.initialize(bookId)
+        readerState.initialize(bookId, seedBook)
         screenScaleState.areaSize.takeWhile { it == IntSize.Zero }.collect()
 
         readerState.readerType.onEach {

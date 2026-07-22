@@ -248,7 +248,7 @@ class ReaderState(
     val pendingAnnotationNote = MutableStateFlow<String?>(null)
     val lastHighlightColor = MutableStateFlow(0xFFFFEB3B.toInt())
 
-    suspend fun initialize(bookId: KomgaBookId) {
+    suspend fun initialize(bookId: KomgaBookId, seedBook: KomeliaBook? = null) {
         komgaEvents.events.onEach { event ->
             if (event is KomgaEvent.ReadProgressChanged && event.bookId == (booksState.value?.currentBook?.id ?: bookId)) {
                 runCatching { initialSync() }
@@ -277,30 +277,49 @@ class ReaderState(
         appNotifications.runCatchingToNotifications {
             PerfTrace.measure("reader.open CRITICAL") {
                 state.value = LoadState.Loading
-                val newBook = PerfTrace.measure("reader.open getOne") { bookApi.getOne(bookId) }
 
-                // Fan the independent server calls out concurrently instead of
-                // running them one after another. Each call is ~2s on the user's
-                // server, and initialize used to issue 6-8 of them SERIALLY, so a
-                // reader open took 13-21s. The books/pages are still all resolved
-                // before the first paint (the continuous reader assumes a fully
-                // populated BookState in a single update — deferring the siblings
-                // to a second update mis-fires its navigation logic), but now the
-                // wall-clock is bounded by the slowest call, not their sum.
+                // ONE parallel wave for every server call. Each call is ~2s on the
+                // user's server; serial phases add up (6-8 serial calls = 13-21s
+                // measured, then 3 phases = ~6s). The books/pages are still all
+                // resolved before the first paint (the continuous reader assumes a
+                // fully populated BookState in a single update — deferring the
+                // siblings to a second update mis-fires its navigation logic), but
+                // the wall-clock is now bounded by the single slowest call.
+                //
+                // [seedBook] is the full book the calling screen already had. It
+                // lets the sibling/series lookups start immediately instead of
+                // waiting on our own getOne. The fresh getOne is STILL awaited for
+                // readProgressPage — a seed from a stale grid must never decide
+                // which page we open on.
                 coroutineScope {
-                    val pagesDeferred = async { loadBookPages(newBook.id) }
+                    val freshBookDeferred = async {
+                        PerfTrace.measure("reader.open getOne") { bookApi.getOne(bookId) }
+                    }
+                    val pagesDeferred = async {
+                        PerfTrace.measure("reader.open currentPages", { it.size }) { loadBookPages(bookId) }
+                    }
                     val prevDeferred = async {
                         val pb = getPreviousBook(bookId)
                         pb to (if (pb != null) loadBookPages(pb.id) else emptyList())
                     }
                     val nextDeferred = async {
-                        val nb = getNextBook(newBook)
+                        val base = seedBook ?: freshBookDeferred.await()
+                        val nb = getNextBook(base)
                         nb to (if (nb != null) loadBookPages(nb.id) else emptyList())
                     }
+                    val seriesDeferred = async {
+                        val seriesId = (seedBook ?: freshBookDeferred.await()).seriesId
+                        if (seriesId.value.startsWith("local")) null
+                        else runCatching {
+                            PerfTrace.measure("reader.open getOneSeries") { seriesApi.getOneSeries(seriesId) }
+                        }.getOrNull()
+                    }
 
+                    val newBook = freshBookDeferred.await()
                     val bookPages = pagesDeferred.await()
                     val (prevBook, prevBookPages) = prevDeferred.await()
                     val (nextBook, nextBookPages) = nextDeferred.await()
+                    val prefetchedSeries = seriesDeferred.await()
 
                     // Set readProgressPage BEFORE booksState to avoid race condition
                     val bookProgress = newBook.readProgress
@@ -319,7 +338,7 @@ class ReaderState(
                     preloadFirstPage(nextBook)
                     preloadFirstPage(prevBook)
                     currentBookId.value = bookId
-                    PerfTrace.measure("reader.open seriesAndReaderType") { updateCurrentSeriesAndReaderType(newBook) }
+                    updateCurrentSeriesAndReaderType(newBook, prefetchedSeries)
                     state.value = LoadState.Success(Unit)
                 }
             }
@@ -355,13 +374,21 @@ class ReaderState(
         }
     }
 
-    private suspend fun updateCurrentSeriesAndReaderType(book: KomeliaBook) {
+    /**
+     * [prefetchedSeries] lets initialize() overlap the series fetch with the
+     * other open-path calls; null (the default, used by the next/previous-book
+     * transitions) keeps the original fetch-here behaviour.
+     */
+    private suspend fun updateCurrentSeriesAndReaderType(
+        book: KomeliaBook,
+        prefetchedSeries: KomgaSeries? = null,
+    ) {
         // Reset the per-book webtoon flag; we'll set it back below if the new
         // book also qualifies.
         detectedAsWebtoon.value = false
 
         val baseReaderType = if (!book.seriesId.value.startsWith("local")) {
-            val currentSeries = seriesApi.getOneSeries(book.seriesId)
+            val currentSeries = prefetchedSeries ?: seriesApi.getOneSeries(book.seriesId)
             series.value = currentSeries
             when (currentSeries.metadata.readingDirection) {
                 KomgaReadingDirection.LEFT_TO_RIGHT -> ReaderType.PAGED
