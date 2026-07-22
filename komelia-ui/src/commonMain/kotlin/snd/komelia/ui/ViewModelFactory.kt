@@ -187,6 +187,10 @@ class ViewModelFactory(
         )
     }
 
+    fun getToolkitViewModel(): snd.komelia.ui.settings.toolkit.ToolkitViewModel {
+        return snd.komelia.ui.settings.toolkit.ToolkitViewModel(api = dependencies.toolkitApi)
+    }
+
     fun getMaintenanceViewModel(): snd.komelia.ui.settings.maintenance.MaintenanceViewModel {
         return snd.komelia.ui.settings.maintenance.MaintenanceViewModel(
             service = createNextReleasesService(),

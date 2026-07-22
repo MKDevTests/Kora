@@ -62,7 +62,6 @@ kotlin {
             implementation(libs.androidx.appcompat)
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.core.splashscreen)
-            implementation(libs.androidx.security.crypto)
             implementation(libs.androidx.window)
             implementation(libs.androidx.workManager)
             implementation(libs.androidx.workManager.ktx)
