@@ -43,6 +43,7 @@ import coil3.toBitmap
 import io.github.oshai.kotlinlogging.KotlinLogging
 import snd.komelia.MainActivity
 import snd.komelia.dependencies
+import snd.komelia.ui.platform.WidgetLibraryFilterSettings
 import snd.komelia.image.coil.BookDefaultThumbnailRequest
 import snd.komelia.komga.api.model.KomeliaBook
 
@@ -87,7 +88,11 @@ class NextBookWidget : GlanceAppWidget() {
         // attempt, so a successful refresh shows up immediately.
         container?.let { c ->
             runCatching {
-                val books = c.nextBookService.getNextUpBooks(slotCount).getOrNull()
+                // Optional per-library filter, set from Settings → Navigation.
+                // Read directly from SharedPreferences: this render path runs
+                // without the app's DI graph being guaranteed warm.
+                val libraryFilter = WidgetLibraryFilterSettings.getLibraryId(context)
+                val books = c.nextBookService.getNextUpBooks(slotCount, libraryFilter).getOrNull()
                 if (books != null) {
                     val refreshed = persistFresh(context, c.coilImageLoader, cache, books)
                     cache.save(refreshed)

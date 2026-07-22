@@ -7,6 +7,7 @@ import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfBooks
 
 /**
@@ -27,12 +28,17 @@ import snd.komga.client.search.allOfBooks
 class NextBookService(
     private val komgaApi: StateFlow<KomgaApi>,
 ) {
-    suspend fun getNextUpBooks(limit: Int = 3): Result<List<KomeliaBook>> = runCatching {
+    /**
+     * [libraryId] restricts the query to one library (the widget's optional
+     * filter, an Android SharedPreference read by the caller); null = all.
+     */
+    suspend fun getNextUpBooks(limit: Int = 3, libraryId: String? = null): Result<List<KomeliaBook>> = runCatching {
         val api = komgaApi.value
         val page = api.bookApi.getBookList(
             search = KomgaBookSearch(
                 allOfBooks {
                     readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                    libraryId?.let { library { isEqualTo(KomgaLibraryId(it)) } }
                 }.toBookCondition()
             ),
             pageRequest = KomgaPageRequest(
