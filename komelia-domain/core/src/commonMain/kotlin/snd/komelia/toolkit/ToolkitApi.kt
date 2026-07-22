@@ -46,9 +46,13 @@ class ToolkitApi(
     suspend fun status(): ToolkitResult<ToolkitStatus> =
         request { cfg -> client.get("${cfg.baseUrl}/api/automation/status") { auth(cfg) } }
 
-    suspend fun preview(source: ToolkitSource, libraryId: String): ToolkitResult<ToolkitJob> =
+    suspend fun preview(
+        function: ToolkitFunction,
+        source: ToolkitSource,
+        libraryId: String,
+    ): ToolkitResult<ToolkitJob> =
         requestJob { cfg ->
-            client.post("${cfg.baseUrl}/api/automation/release-tracking/${source.slug}/preview") {
+            client.post("${cfg.baseUrl}/api/automation/${function.slug}/${source.slug}/preview") {
                 auth(cfg)
                 contentType(ContentType.Application.Json)
                 setBody("""{"library_id":"$libraryId"}""")
@@ -58,9 +62,13 @@ class ToolkitApi(
     suspend fun job(jobId: String): ToolkitResult<ToolkitJob> =
         requestJob { cfg -> client.get("${cfg.baseUrl}/api/automation/jobs/$jobId") { auth(cfg) } }
 
-    suspend fun confirm(source: ToolkitSource, previewJobId: String): ToolkitResult<ToolkitJob> =
+    suspend fun confirm(
+        function: ToolkitFunction,
+        source: ToolkitSource,
+        previewJobId: String,
+    ): ToolkitResult<ToolkitJob> =
         requestJob { cfg ->
-            client.post("${cfg.baseUrl}/api/automation/release-tracking/${source.slug}/confirm") {
+            client.post("${cfg.baseUrl}/api/automation/${function.slug}/${source.slug}/confirm") {
                 auth(cfg)
                 contentType(ContentType.Application.Json)
                 setBody("""{"preview_job_id":"$previewJobId","confirmed":true}""")
