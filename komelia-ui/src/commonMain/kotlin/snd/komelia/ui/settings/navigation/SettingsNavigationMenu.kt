@@ -40,6 +40,7 @@ import snd.komelia.ui.settings.diagnostics.DiagnosticsScreen
 import snd.komelia.ui.settings.experimental.ExperimentalSettingsScreen
 import snd.komelia.ui.settings.experimental.IgnoreListScreen
 import snd.komelia.ui.settings.experimental.HiddenSeriesScreen
+import snd.komelia.ui.settings.maintenance.MaintenanceScreen
 import snd.komelia.ui.settings.navigation.NavigationSettingsScreen
 import snd.komelia.ui.settings.servers.AppServerManagementScreen
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityScreen
@@ -203,6 +204,24 @@ fun SettingsNavigationMenu(
                 }
             }
         )
+
+        // Whole group hidden from non-admins: these tools write server-side
+        // metadata that Komga rejects for them anyway (403).
+        if (isAdmin) {
+            FilteredSettingsGroup(
+                title = "Admin",
+                query = query,
+                entries = buildList {
+                    add(
+                        NavEntry(
+                            label = "Maintenance",
+                            onClick = { onNavigation(MaintenanceScreen()) },
+                            isSelected = currentScreen is MaintenanceScreen,
+                        )
+                    )
+                }
+            )
+        }
 
         if (!isOffline) {
             FilteredSettingsGroup(

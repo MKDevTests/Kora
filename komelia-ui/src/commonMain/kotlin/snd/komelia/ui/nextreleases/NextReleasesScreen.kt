@@ -48,8 +48,11 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import androidx.compose.material3.TextButton
 import snd.komelia.ui.LoadState
+import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalLibraries
+import snd.komelia.ui.settings.maintenance.MaintenanceScreen
 import snd.komelia.ui.LocalRawStatusBarHeight
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.ErrorContent
@@ -99,6 +102,31 @@ class NextReleasesScreen : Screen {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 12.dp),
                 )
+            }
+
+            // Admin-only, shown only when there is something to clean: the
+            // no-spam nudge towards Settings → Admin → Maintenance. Non-admins
+            // never see it (they couldn't purge anyway — Komga 403s the write).
+            val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: false
+            val expiredTags = NextReleasesScanner.expiredTags.collectAsState().value
+            if (isAdmin && expiredTags.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "${expiredTags.size} tag(s) nextrelease périmé(s)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { navigator.push(MaintenanceScreen()) }) { Text("Gérer") }
+                    }
+                }
             }
 
             if (libraries.size > 1) {

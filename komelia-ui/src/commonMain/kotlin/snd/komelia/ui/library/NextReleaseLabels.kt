@@ -32,6 +32,15 @@ object NextReleaseLabels {
             .filter { it.date >= today }
             .minByOrNull { it.date }
 
+    /**
+     * Parse a full tag, prefix included: `nextrelease:24-12.01.2027` ->
+     * NextRelease("24", 2027-01-12). Null for non-nextrelease or malformed
+     * tags. Unlike [upcomingRelease] it does NOT filter past dates — the
+     * admin maintenance screen needs exactly the expired ones.
+     */
+    fun parseTag(tag: String): NextRelease? =
+        if (!tag.startsWith(PREFIX)) null else parse(tag.removePrefix(PREFIX))
+
     /** Parse `24-12.01.2027` -> NextRelease("24", 2027-01-12); `null` if malformed. */
     private fun parse(value: String): NextRelease? {
         val dash = value.indexOf('-')

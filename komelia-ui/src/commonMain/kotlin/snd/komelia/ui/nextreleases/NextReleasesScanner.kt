@@ -46,6 +46,13 @@ object NextReleasesScanner {
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
 
     /**
+     * Expired `nextrelease:*` tags found by the latest scan. Drives the
+     * admin-only banner on the calendar screen; empty until a scan lands.
+     */
+    private val _expiredTags = MutableStateFlow<List<String>>(emptyList())
+    val expiredTags: StateFlow<List<String>> = _expiredTags.asStateFlow()
+
+    /**
      * Backoff between scan attempts. Its size is the attempt count, kept low on
      * purpose: a scan only fails outright when every library's tag query failed,
      * and those failures are 30s socket timeouts. Retrying hard would mean
@@ -92,6 +99,7 @@ object NextReleasesScanner {
                         // update() may refuse an empty result from an incomplete
                         // scan, so publish what the cache actually holds.
                         _releases.value = NextReleasesCache.releases
+                        _expiredTags.value = scan.expiredTags
                         if (!scan.complete) {
                             logger.warn { "Incomplete next-releases scan (${scan.releases.size} resolved)" }
                         } else {

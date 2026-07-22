@@ -6,7 +6,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.ui.library.NextReleaseLabels
@@ -54,7 +57,17 @@ class NextReleasesService(
      * server didn't answer" — an empty list used to mean both, and the caller
      * would happily persist the empty one over a perfectly good cache.
      */
-    data class Scan(val releases: List<UpcomingRelease>, val complete: Boolean)
+    data class Scan(
+        val releases: List<UpcomingRelease>,
+        val complete: Boolean,
+        /**
+         * `nextrelease:*` tags whose date is already past. Collected for free
+         * during discovery (no extra server call) so the admin maintenance
+         * screen can offer to purge them — the user tags by hand in Komga and
+         * expired tags otherwise pile up silently.
+         */
+        val expiredTags: List<String> = emptyList(),
+    )
 
     /**
      * Scans every library for `nextrelease:*` tags and resolves each to a series.
@@ -83,8 +96,10 @@ class NextReleasesService(
         val discoveryComplete = tagResults.none { it.isFailure }
         val tagsByLibrary = tagResults.mapNotNull { it.getOrNull() }
 
-        val candidates = tagsByLibrary.flatten().distinct()
-            .mapNotNull { tag -> NextReleaseLabels.upcomingRelease(listOf(tag))?.let { tag to it } }
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val allParsed = tagsByLibrary.flatten().distinct()
+            .mapNotNull { tag -> NextReleaseLabels.parseTag(tag)?.let { tag to it } }
+        val (candidates, expired) = allParsed.partition { (_, release) -> release.date >= today }
 
         // One server query per tag, so a well-tagged library used to fire
         // hundreds of requests at once — which is what made the whole scan time
@@ -122,6 +137,7 @@ class NextReleasesService(
         Scan(
             releases = outcomes.mapNotNull { it.getOrNull() }.sortedBy { it.date },
             complete = discoveryComplete && outcomes.none { it.isFailure },
+            expiredTags = expired.map { it.first },
         )
     }
 

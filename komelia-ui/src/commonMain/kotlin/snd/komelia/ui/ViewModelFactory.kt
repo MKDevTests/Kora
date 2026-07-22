@@ -187,6 +187,14 @@ class ViewModelFactory(
         )
     }
 
+    fun getMaintenanceViewModel(): snd.komelia.ui.settings.maintenance.MaintenanceViewModel {
+        return snd.komelia.ui.settings.maintenance.MaintenanceViewModel(
+            service = createNextReleasesService(),
+            seriesApi = komgaApi.seriesApi,
+            notifications = dependencies.appNotifications,
+        )
+    }
+
     fun getFilterEditViewModel(homeFilters: List<HomeFilterData>?): FilterEditViewModel {
         return FilterEditViewModel(
             initialFilters = homeFilters,
