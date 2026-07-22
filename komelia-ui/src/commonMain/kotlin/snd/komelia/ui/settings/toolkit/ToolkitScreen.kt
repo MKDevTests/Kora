@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
@@ -141,6 +142,12 @@ class ToolkitScreen : Screen {
                         is ToolkitViewModel.TestState.Error -> Text(t.message, color = MaterialTheme.colorScheme.error)
                     }
                 }
+
+                val uriHandler = LocalUriHandler.current
+                OutlinedButton(
+                    enabled = settings.baseUrl.isNotBlank(),
+                    onClick = { runCatching { uriHandler.openUri(settings.baseUrl) } },
+                ) { Text("Ouvrir le WebUI Toolkit") }
 
                 OutlinedButton(onClick = { settings.clearCode(); unlocked = false }) {
                     Text("Changer le code d'accès")
