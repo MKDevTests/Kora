@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import snd.komelia.perf.PerfTrace
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -71,6 +72,8 @@ class DiagnosticsScreen : Screen {
                 DiagnosticRow("App version", AppVersion.current.toString())
                 DiagnosticRow("Mode", if (isOffline) "Offline" else "Online")
                 DiagnosticRow("Active server", serverUrl.ifBlank { "—" })
+
+                ServerLatencySection()
 
                 if (vm.isSupported) {
                     val cache by vm.cache.collectAsState()
@@ -178,6 +181,42 @@ class DiagnosticsScreen : Screen {
             )
         }
     }
+}
+
+/**
+ * Live latency readout built from [PerfTrace]'s in-memory ring of measured
+ * server operations. Its whole purpose is to answer "is the server slow right
+ * now, or is the app broken?" in five seconds, without pulling logs — the
+ * question that cost several debugging round-trips in the past.
+ *
+ * Composite measurements (e.g. `reader.open CRITICAL`, which spans several
+ * calls) are excluded so a single user action isn't counted twice. Cache hits
+ * remain included: the numbers reflect what the user actually experiences.
+ */
+@Composable
+private fun ServerLatencySection() {
+    val samples by PerfTrace.samples.collectAsState()
+    val calls = remember(samples) { samples.filterNot { it.label.contains("CRITICAL") } }
+    if (calls.isEmpty()) return
+
+    DiagnosticSection("Server latency (this session)")
+
+    val sorted = remember(calls) { calls.map { it.millis }.sorted() }
+    val p50 = sorted[sorted.size / 2]
+    val p95 = sorted[((sorted.size - 1) * 95) / 100]
+    val worst = calls.maxBy { it.millis }
+    val failures = calls.count { it.failed }
+
+    DiagnosticRow("Samples", "${calls.size} operations")
+    DiagnosticRow("Median", "$p50 ms")
+    DiagnosticRow("p95", "$p95 ms")
+    DiagnosticRow("Slowest", "${worst.millis} ms · ${worst.label}")
+    if (failures > 0) DiagnosticRow("Failures", "$failures")
+    Text(
+        text = "Median ≥ 2000 ms: the server is the bottleneck, not the app.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
