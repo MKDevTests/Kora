@@ -28,8 +28,9 @@ data class ToolkitStatus(
 /** Envelope returned by the preview/confirm POSTs. */
 @Serializable
 data class ToolkitJobEnvelope(
-    @SerialName("contract_version") val contractVersion: String,
-    val kind: String,
+    @SerialName("contract_version") val contractVersion: String = "",
+    // Absent on GET jobs/{id} (only preview/confirm set kind + source).
+    val kind: String? = null,
     val source: String? = null,
     val job: ToolkitJob,
 )
