@@ -16,6 +16,12 @@ interface ToolkitSettingsState {
     val configured: Boolean
     fun setBaseUrl(value: String)
     fun setToken(value: String)
+
+    /** Local access code that gates the screen. */
+    val hasCode: Boolean
+    fun setCode(code: String)
+    fun verifyCode(code: String): Boolean
+    fun clearCode()
 }
 
 @Composable

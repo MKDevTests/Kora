@@ -20,6 +20,7 @@ object ToolkitSecureStore {
     private const val PREFS = "kora_toolkit_secure"
     private const val KEY_BASE_URL = "base_url"
     private const val KEY_TOKEN = "token"
+    private const val KEY_CODE_HASH = "code_hash"
 
     @Volatile
     private var cached: SharedPreferences? = null
@@ -63,4 +64,31 @@ object ToolkitSecureStore {
         val token = getToken(context) ?: return null
         return ToolkitConfig(url, token)
     }
+
+    // -- Access code -----------------------------------------------------------
+    // A local passcode that gates the screen so only the owner runs automation
+    // on this device. Stored as a SHA-256 hash inside the already-encrypted
+    // prefs — never the code itself. This is a local barrier, not a strong
+    // cryptographic secret; the real protection is the token being device-only.
+
+    fun hasCode(context: Context): Boolean =
+        prefs(context)?.getString(KEY_CODE_HASH, null) != null
+
+    fun setCode(context: Context, code: String) {
+        prefs(context)?.edit()?.putString(KEY_CODE_HASH, hash(code))?.apply()
+    }
+
+    fun verifyCode(context: Context, code: String): Boolean {
+        val stored = prefs(context)?.getString(KEY_CODE_HASH, null) ?: return false
+        return stored == hash(code)
+    }
+
+    fun clearCode(context: Context) {
+        prefs(context)?.edit()?.remove(KEY_CODE_HASH)?.apply()
+    }
+
+    private fun hash(code: String): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest(code.encodeToByteArray())
+            .joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 }

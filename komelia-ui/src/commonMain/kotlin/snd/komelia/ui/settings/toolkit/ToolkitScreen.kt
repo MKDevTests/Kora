@@ -57,6 +57,14 @@ class ToolkitScreen : Screen {
                 return@SettingsScreenContainer
             }
 
+            // Local code gate, re-asked on every entry so only the owner runs
+            // automation on this device. Volatile: unlock lives with this screen.
+            var unlocked by remember { mutableStateOf(false) }
+            if (!unlocked) {
+                CodeGate(settings, onUnlocked = { unlocked = true })
+                return@SettingsScreenContainer
+            }
+
             var selectedLibraryId by remember(libraries) {
                 mutableStateOf(libraries.firstOrNull { it.name.equals("Mangas", true) }?.id?.value
                     ?: libraries.firstOrNull()?.id?.value)
@@ -74,7 +82,7 @@ class ToolkitScreen : Screen {
                 OutlinedTextField(
                     value = settings.baseUrl,
                     onValueChange = settings::setBaseUrl,
-                    label = { Text("URL Toolkit (ex http://192.168.1.30:8765)") },
+                    label = { Text("URL Toolkit (http://hôte:port)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -104,6 +112,10 @@ class ToolkitScreen : Screen {
                         )
                         is ToolkitViewModel.TestState.Error -> Text(t.message, color = MaterialTheme.colorScheme.error)
                     }
+                }
+
+                OutlinedButton(onClick = { settings.clearCode(); unlocked = false }) {
+                    Text("Changer le code d'accès")
                 }
 
                 HorizontalDivider()
@@ -144,6 +156,63 @@ class ToolkitScreen : Screen {
                 FlowSection(flow, onConfirm = vm::confirm, onCancel = vm::cancel, onReset = vm::reset)
             }
         }
+    }
+}
+
+/**
+ * First entry: set a code. Later entries: enter it. Kora never fills the code —
+ * the user types it. Purely local (SHA-256 in the encrypted store); the real
+ * protection is that the token lives only on this device.
+ */
+@Composable
+private fun CodeGate(
+    settings: snd.komelia.ui.platform.ToolkitSettingsState,
+    onUnlocked: () -> Unit,
+) {
+    val setup = !settings.hasCode
+    var code by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            if (setup) "Définis un code d'accès pour verrouiller cette section."
+            else "Section verrouillée. Saisis ton code d'accès.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        OutlinedTextField(
+            value = code,
+            onValueChange = { code = it; error = null },
+            label = { Text("Code") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (setup) {
+            OutlinedTextField(
+                value = confirm,
+                onValueChange = { confirm = it; error = null },
+                label = { Text("Confirmer le code") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Button(
+            enabled = code.length >= 4 && (!setup || confirm.isNotEmpty()),
+            onClick = {
+                if (setup) {
+                    if (code != confirm) { error = "Les codes ne correspondent pas."; return@Button }
+                    settings.setCode(code); onUnlocked()
+                } else {
+                    if (settings.verifyCode(code)) onUnlocked() else error = "Code incorrect."
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(if (setup) "Définir et déverrouiller" else "Déverrouiller") }
     }
 }
 
