@@ -296,16 +296,21 @@ class ReaderState(
                         PerfTrace.measure("reader.open getOne") { bookApi.getOne(bookId) }
                     }
                     val pagesDeferred = async {
-                        PerfTrace.measure("reader.open currentPages", { it.size }) { loadBookPages(bookId) }
+                        // Needs the book for its fileHash (cache key). With a seed
+                        // this resolves without any await; the seedless restore
+                        // path waits on getOne first — rare, and usually a cache
+                        // hit right after anyway.
+                        val base = seedBook ?: freshBookDeferred.await()
+                        PerfTrace.measure("reader.open currentPages", { it.size }) { loadBookPages(base) }
                     }
                     val prevDeferred = async {
                         val pb = getPreviousBook(bookId)
-                        pb to (if (pb != null) loadBookPages(pb.id) else emptyList())
+                        pb to (if (pb != null) loadBookPages(pb) else emptyList())
                     }
                     val nextDeferred = async {
                         val base = seedBook ?: freshBookDeferred.await()
                         val nb = getNextBook(base)
-                        nb to (if (nb != null) loadBookPages(nb.id) else emptyList())
+                        nb to (if (nb != null) loadBookPages(nb) else emptyList())
                     }
                     val seriesDeferred = async {
                         val seriesId = (seedBook ?: freshBookDeferred.await()).seriesId
@@ -360,7 +365,19 @@ class ReaderState(
         }
     }
 
-    private suspend fun loadBookPages(bookId: KomgaBookId): List<PageMetadata> {
+    /**
+     * Page list via [BookPagesCache]: a hit costs zero server round-trips, a
+     * miss fetches and persists. Keyed by the book's fileHash so a replaced
+     * CBZ can never be served stale pages.
+     */
+    private suspend fun loadBookPages(book: KomeliaBook): List<PageMetadata> {
+        BookPagesCache.get(book.id, book.fileHash)?.let { return it }
+        return loadBookPagesFromServer(book.id).also {
+            BookPagesCache.put(book.id, book.fileHash, it)
+        }
+    }
+
+    private suspend fun loadBookPagesFromServer(bookId: KomgaBookId): List<PageMetadata> {
         val pages = bookApi.getBookPages(bookId)
 
         return pages.map {
@@ -589,7 +606,7 @@ class ReaderState(
         if (booksState.nextBook != null) {
             val outgoingBook = booksState.currentBook
             val nextBook = getNextBook(booksState.nextBook)
-            val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
+            val nextBookPages = if (nextBook != null) loadBookPages(nextBook) else emptyList()
             // preload-after-loadnext
             preloadFirstPage(nextBook)
 
@@ -641,7 +658,7 @@ class ReaderState(
             val outgoingBook = booksState.currentBook
             val previousBook = getPreviousBook(booksState.previousBook.id)
             val previousBookPages =
-                if (previousBook != null) loadBookPages(previousBook.id) else emptyList()
+                if (previousBook != null) loadBookPages(previousBook) else emptyList()
 
             // Swap first, THEN set the page — no suspension between — so a
             // concurrent progress push never pairs the outgoing book with the
