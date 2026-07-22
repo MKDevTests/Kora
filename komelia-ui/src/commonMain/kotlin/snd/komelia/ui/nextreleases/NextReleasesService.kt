@@ -70,6 +70,29 @@ class NextReleasesService(
     )
 
     /**
+     * Discovery ONLY: one getSeriesTags call per library, no series resolution.
+     * This is what the admin Maintenance screen needs — [compute] additionally
+     * resolves every FUTURE tag to build the calendar (one query per tag), which
+     * on a slow server takes minutes and is pure waste when all we want is the
+     * expired list. Libraries that fail contribute nothing; throws only if every
+     * library failed.
+     */
+    suspend fun findExpiredTags(libraries: List<KomgaLibrary>): List<String> = coroutineScope {
+        val tagResults = libraries.map { lib ->
+            async { runCatching { referentialApi.getSeriesTags(lib.id) } }
+        }.awaitAll()
+        if (libraries.isNotEmpty() && tagResults.all { it.isFailure }) {
+            throw tagResults.first().exceptionOrNull()
+                ?: IllegalStateException("tag discovery failed for every library")
+        }
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        tagResults.mapNotNull { it.getOrNull() }.flatten().distinct()
+            .mapNotNull { tag -> NextReleaseLabels.parseTag(tag)?.let { tag to it } }
+            .filter { (_, release) -> release.date < today }
+            .map { it.first }
+    }
+
+    /**
      * Scans every library for `nextrelease:*` tags and resolves each to a series.
      *
      * Throws if tag discovery fails: without the tag list there is nothing to

@@ -168,12 +168,15 @@ class MaintenanceViewModel(
         initialized = true
         screenModelScope.launch {
             notifications.runCatchingToNotifications {
-                val scan = service.compute(libraries)
+                // Discovery-only scan (one call per library). compute() would
+                // also resolve every FUTURE tag for the calendar — minutes of
+                // wasted queries on a slow server, which froze this screen.
+                val expiredTags = service.findExpiredTags(libraries)
                 // Resolve each expired tag to its series, a few at a time —
                 // never stampede the server pool (see reference: Semaphore rule).
                 val limit = Semaphore(4)
                 expired = coroutineScope {
-                    scan.expiredTags.mapNotNull { tag ->
+                    expiredTags.mapNotNull { tag ->
                         NextReleaseLabels.parseTag(tag)?.let { release -> Triple(tag, release.volume, release.date) }
                     }.map { (tag, volume, date) ->
                         async {
