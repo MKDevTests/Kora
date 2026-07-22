@@ -8,6 +8,8 @@ import io.ktor.client.plugins.*
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CancellationException
@@ -80,6 +82,7 @@ import snd.komelia.ui.platform.CommonParcelizeRawValue
 import snd.komelia.ui.series.SeriesScreen
 import snd.komelia.ui.reader.common.NavigationHistory
 import snd.komelia.ui.series.SeriesNavigationContext
+import snd.komelia.perf.PerfTrace
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.book.KomgaBookReadProgressUpdateRequest
 import snd.komga.client.common.KomgaPageRequest
@@ -272,39 +275,58 @@ class ReaderState(
             readerSettingsRepository.getKeepProgressBarVisibleWhileReading().first()
 
         appNotifications.runCatchingToNotifications {
-            state.value = LoadState.Loading
-            val currentBooksState = booksState.value
-            if (currentBooksState == null) state.value = LoadState.Loading
-            val newBook = bookApi.getOne(bookId)
+            PerfTrace.measure("reader.open CRITICAL") {
+                state.value = LoadState.Loading
+                val newBook = PerfTrace.measure("reader.open getOne") { bookApi.getOne(bookId) }
 
-            val bookPages = loadBookPages(newBook.id)
-            val prevBook = getPreviousBook(bookId)
-            val prevBookPages = if (prevBook != null) loadBookPages(prevBook.id) else emptyList()
-            val nextBook = getNextBook(newBook)
-            val nextBookPages = if (nextBook != null) loadBookPages(nextBook.id) else emptyList()
+                // Fan the independent server calls out concurrently instead of
+                // running them one after another. Each call is ~2s on the user's
+                // server, and initialize used to issue 6-8 of them SERIALLY, so a
+                // reader open took 13-21s. The books/pages are still all resolved
+                // before the first paint (the continuous reader assumes a fully
+                // populated BookState in a single update — deferring the siblings
+                // to a second update mis-fires its navigation logic), but now the
+                // wall-clock is bounded by the slowest call, not their sum.
+                coroutineScope {
+                    val pagesDeferred = async { loadBookPages(newBook.id) }
+                    val prevDeferred = async {
+                        val pb = getPreviousBook(bookId)
+                        pb to (if (pb != null) loadBookPages(pb.id) else emptyList())
+                    }
+                    val nextDeferred = async {
+                        val nb = getNextBook(newBook)
+                        nb to (if (nb != null) loadBookPages(nb.id) else emptyList())
+                    }
 
-            // Set readProgressPage BEFORE booksState to avoid race condition
-            val bookProgress = newBook.readProgress
-            readProgressPage.value = when {
-                bookProgress == null || bookProgress.completed -> 1
-                else -> bookProgress.page
+                    val bookPages = pagesDeferred.await()
+                    val (prevBook, prevBookPages) = prevDeferred.await()
+                    val (nextBook, nextBookPages) = nextDeferred.await()
+
+                    // Set readProgressPage BEFORE booksState to avoid race condition
+                    val bookProgress = newBook.readProgress
+                    readProgressPage.value = when {
+                        bookProgress == null || bookProgress.completed -> 1
+                        else -> bookProgress.page
+                    }
+                    booksState.value = BookState(
+                        currentBook = newBook,
+                        currentBookPages = bookPages,
+                        previousBook = prevBook,
+                        previousBookPages = prevBookPages,
+                        nextBook = nextBook,
+                        nextBookPages = nextBookPages,
+                    )
+                    preloadFirstPage(nextBook)
+                    preloadFirstPage(prevBook)
+                    currentBookId.value = bookId
+                    PerfTrace.measure("reader.open seriesAndReaderType") { updateCurrentSeriesAndReaderType(newBook) }
+                    state.value = LoadState.Success(Unit)
+                }
             }
-            booksState.value = BookState(
-                currentBook = newBook,
-                currentBookPages = bookPages,
-                previousBook = prevBook,
-                previousBookPages = prevBookPages,
-                nextBook = nextBook,
-                nextBookPages = nextBookPages
-            )
-            preloadFirstPage(nextBook)
-            preloadFirstPage(prevBook)
-            currentBookId.value = bookId
 
-            updateCurrentSeriesAndReaderType(newBook)
-
-            initialSync()
-            state.value = LoadState.Success(Unit)
+            // The sync-blob reconciliation touches no BookState invariant and is
+            // never needed for the first page, so it runs after paint.
+            stateScope.launch { runCatching { initialSync() } }
         }.onFailure { throwable ->
             state.value = LoadState.Error(throwable)
             if (throwable.isNetworkError()) serverUnavailableDialogVisible.value = true
