@@ -81,6 +81,8 @@ data class DependencyContainer(
 
     val offlineDependencies: OfflineDependencies,
     val nextBookService: NextBookService,
+    /** Komga Toolkit automation client (admin release-tracking / next-releases). */
+    val toolkitApi: snd.komelia.toolkit.ToolkitApi,
     /**
      * Stream of books to open in the reader, emitted by the home-screen
      * widget's tap handler after fetching the [KomeliaBook] from the

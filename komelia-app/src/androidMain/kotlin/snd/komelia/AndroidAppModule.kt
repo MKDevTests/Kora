@@ -450,6 +450,9 @@ class AndroidAppModule(
     ): snd.komelia.ui.settings.diagnostics.DiagnosticsDataSource =
         AndroidDiagnosticsDataSource(context, coilImageLoader)
 
+    override fun createToolkitConfigProvider(): () -> snd.komelia.toolkit.ToolkitConfig? =
+        { snd.komelia.toolkit.ToolkitSecureStore.config(context) }
+
     override fun createLocalFileApiProvider(): LocalFileApiProvider {
         return LocalFileApiProviderImpl(
             context = context,

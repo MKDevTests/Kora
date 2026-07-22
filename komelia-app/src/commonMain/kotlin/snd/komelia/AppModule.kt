@@ -378,6 +378,7 @@ abstract class AppModule(
             panelDetector = panelDetector,
             offlineDependencies = offlineModule,
             nextBookService = snd.komelia.nextbook.NextBookService(komgaApi),
+            toolkitApi = snd.komelia.toolkit.ToolkitApi(ktor, createToolkitConfigProvider()),
             widgetBookToOpenFlow = createWidgetBookToOpenFlow(komgaApi),
             onBookChange = createOnBookChange(),
             onEpubCacheClear = createOnEpubCacheClear(),
@@ -387,6 +388,13 @@ abstract class AppModule(
             diagnostics = createDiagnosticsDataSource(coil),
         )
     }
+
+    /**
+     * Provides the Toolkit base URL + bearer token, or null when unset. Read
+     * fresh on every automation call so a settings change takes effect at once.
+     * Android reads an encrypted store; other platforms have no Toolkit UI.
+     */
+    protected open fun createToolkitConfigProvider(): () -> snd.komelia.toolkit.ToolkitConfig? = { null }
 
     protected open fun createOnBookChange(): () -> Unit = {}
 
