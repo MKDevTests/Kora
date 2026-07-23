@@ -146,7 +146,8 @@ object ToolkitJobRunner {
         }
 
     private val POLL_INTERVAL = 1500.milliseconds
-    private val MAX_WAIT = 15.minutes
+    // Toolkit scans can exceed 30 min on a large library; give generous headroom.
+    private val MAX_WAIT = 45.minutes
 }
 
 /** Which step of the two-step flow a job belongs to. */

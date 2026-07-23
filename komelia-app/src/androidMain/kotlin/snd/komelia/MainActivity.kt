@@ -72,12 +72,25 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    // POST_NOTIFICATIONS is manifest-declared but must be requested at runtime on
+    // Android 13+, otherwise every Kora notification (Toolkit job done, autobackup,
+    // widget install failure) is silently dropped. Registered before STARTED.
+    private val notificationPermissionLauncher =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(null)
         WebView.setWebContentsDebuggingEnabled(false)
         FileKit.init(this)
         mainActivity.value = this
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            runCatching { notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+        }
 
         initScope.launch {
             initMutex.withLock {
