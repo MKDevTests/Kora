@@ -1,9 +1,14 @@
 package snd.komelia
 
 import android.app.Application
+import android.app.PendingIntent
+import android.content.Intent
 import androidx.core.app.NotificationChannelCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW
+import snd.komelia.ui.settings.toolkit.ToolkitFlowState
+import snd.komelia.ui.settings.toolkit.ToolkitJobRunner
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -41,6 +46,52 @@ class App : Application() {
         startAutobackupScheduler()
         startWidgetRefresher()
         observeAppBackgroundForWidgetRefresh()
+        observeToolkitCompletion()
+    }
+
+    /**
+     * Posts a notification when a Komga Toolkit automation job finishes, so the
+     * admin doesn't have to sit on the screen for the (multi-minute) run. The
+     * result stays available on the screen; the notification just points there.
+     */
+    private fun observeToolkitCompletion() {
+        appScope.launch {
+            var lastNotified: ToolkitFlowState? = null
+            ToolkitJobRunner.state.collect { s ->
+                when (s) {
+                    is ToolkitFlowState.Applied, is ToolkitFlowState.Failed ->
+                        if (s !== lastNotified) { lastNotified = s; postToolkitNotification(s) }
+                    else -> lastNotified = null
+                }
+            }
+        }
+    }
+
+    private fun postToolkitNotification(state: ToolkitFlowState) {
+        val nm = NotificationManagerCompat.from(this)
+        if (!nm.areNotificationsEnabled()) return
+        val (title, text) = when (state) {
+            is ToolkitFlowState.Applied ->
+                "Komga Toolkit — terminé" to "${state.function.label} · ${state.source.label} : résultat dans Kora."
+            is ToolkitFlowState.Failed ->
+                "Komga Toolkit — échec" to state.message
+            else -> return
+        }
+        val openApp = Intent(this, MainActivity::class.java)
+            .apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+        val pi = PendingIntent.getActivity(
+            this, 0, openApp,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(this, toolkitChannelId)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setAutoCancel(true)
+            .setContentIntent(pi)
+            .build()
+        runCatching { nm.notify(toolkitNotificationId, notification) }
     }
 
     /**
@@ -132,10 +183,19 @@ class App : Application() {
                     .setName("Autobackup failures")
                     .setDescription("Shown when an automatic settings backup cannot be written.")
                     .setShowBadge(true)
+                    .build(),
+                NotificationChannelCompat
+                    .Builder(toolkitChannelId, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                    .setName("Komga Toolkit")
+                    .setDescription("Fin des tâches d'automatisation Komga Toolkit.")
+                    .setShowBadge(true)
                     .build()
             )
         )
     }
+
+    private val toolkitChannelId = "kora_toolkit"
+    private val toolkitNotificationId = 4201
 
     private fun initWorkManager() {
         val config = Configuration.Builder()
