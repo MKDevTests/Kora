@@ -28,17 +28,6 @@ actual fun rememberToolkitSettings(): ToolkitSettingsState? {
                 _token = value
                 ToolkitSecureStore.setToken(context, value)
             }
-
-            private var _hasCode by mutableStateOf(ToolkitSecureStore.hasCode(context))
-            override val hasCode: Boolean get() = _hasCode
-            override fun setCode(code: String) {
-                ToolkitSecureStore.setCode(context, code); _hasCode = true
-            }
-            override fun verifyCode(code: String): Boolean = ToolkitSecureStore.verifyCode(context, code)
-            override fun clearCode() {
-                ToolkitSecureStore.clearCode(context); _hasCode = false
-            }
-
             // Reactive per-category library mapping.
             private val libByCategory = androidx.compose.runtime.mutableStateMapOf<String, String>().apply {
                 snd.komelia.toolkit.ToolkitCategory.entries.forEach { cat ->

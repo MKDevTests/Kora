@@ -63,10 +63,13 @@ private data class ToolkitAction(
 )
 
 /**
- * Admin screen for the Komga Toolkit automation. Code-locked. Configure URL +
- * token, bind each perimeter category (Mangas/BD/Comics) to a Komga library,
- * then launch the functions — each locked to its category's library. The flow
- * runs in the background ([ToolkitJobRunner]); leaving and returning is safe.
+ * Admin screen for the Komga Toolkit automation. Configure URL + token, bind
+ * each perimeter category (Mangas/BD/Comics) to a Komga library, then launch
+ * the functions — each locked to its category's library. The flow runs in the
+ * background ([ToolkitJobRunner]); leaving and returning is safe.
+ *
+ * Reachable only by Komga admins (the settings entry is role-gated); the token
+ * itself lives encrypted on this device only.
  */
 class ToolkitScreen : Screen {
 
@@ -82,12 +85,7 @@ class ToolkitScreen : Screen {
                 Text("Non disponible sur cette plateforme.")
                 return@SettingsScreenContainer
             }
-            var unlocked by remember { mutableStateOf(false) }
-            if (!unlocked) {
-                CodeGate(settings, onUnlocked = { unlocked = true })
-                return@SettingsScreenContainer
-            }
-            Unlocked(settings, vm, libraries, onRelock = { unlocked = false })
+            Unlocked(settings, vm, libraries)
         }
     }
 }
@@ -97,7 +95,6 @@ private fun Unlocked(
     settings: ToolkitSettingsState,
     vm: ToolkitViewModel,
     libraries: List<KomgaLibrary>,
-    onRelock: () -> Unit,
 ) {
     val komgaServerUrl = LocalKomgaState.current.serverUrl.value
     LaunchedEffect(komgaServerUrl) {
@@ -162,7 +159,6 @@ private fun Unlocked(
             OutlinedButton(enabled = settings.baseUrl.isNotBlank(), onClick = { runCatching { uriHandler.openUri(settings.baseUrl) } }) {
                 Text("Ouvrir le WebUI")
             }
-            OutlinedButton(onClick = { settings.clearCode(); onRelock() }) { Text("Changer le code") }
         }
 
         HorizontalDivider()
@@ -183,6 +179,16 @@ private fun Unlocked(
                     onClick = { if (a.run) pendingRun = a else vm.startPreview(a.function, a.source, libId) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(a.label) }
+                // A greyed button used to be silent. Say why: almost always the
+                // source isn't configured server-side (Bedetheque CSV not loaded,
+                // ComicVine key missing).
+                if (ready != null && ready.ready && ready.komgaConnected && !sourceOk) {
+                    Text(
+                        "${a.source.label} n'est pas prête côté Toolkit (CSV ou clé API manquante).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
 
@@ -268,45 +274,6 @@ private fun suggestToolkitUrl(komgaUrl: String): String? {
     return "${m.groupValues[1]}://${m.groupValues[2]}:8765"
 }
 
-@Composable
-private fun CodeGate(settings: ToolkitSettingsState, onUnlocked: () -> Unit) {
-    val setup = !settings.hasCode
-    var code by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            if (setup) "Définis un code d'accès pour verrouiller cette section."
-            else "Section verrouillée. Saisis ton code d'accès.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        OutlinedTextField(
-            value = code, onValueChange = { code = it; error = null }, label = { Text("Code") }, singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (setup) {
-            OutlinedTextField(
-                value = confirm, onValueChange = { confirm = it; error = null }, label = { Text("Confirmer le code") }, singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Button(
-            enabled = code.length >= 4 && (!setup || confirm.isNotEmpty()),
-            onClick = {
-                if (setup) {
-                    if (code != confirm) { error = "Les codes ne correspondent pas."; return@Button }
-                    settings.setCode(code); onUnlocked()
-                } else if (settings.verifyCode(code)) onUnlocked() else error = "Code incorrect."
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (setup) "Définir et déverrouiller" else "Déverrouiller") }
-    }
-}
 
 @Composable
 private fun FlowSection(flow: ToolkitFlowState, onConfirm: () -> Unit, onCancel: () -> Unit, onReset: () -> Unit) {
