@@ -34,7 +34,13 @@ data class ToolkitStatus(
     @SerialName("komga_connected") val komgaConnected: Boolean,
     @SerialName("preview_expires_in_seconds") val previewExpiresInSeconds: Int = 1800,
     val sources: List<String> = emptyList(),
-)
+    /** Per-source usability, e.g. ComicVine is false until its key is set. */
+    @SerialName("source_ready") val sourceReady: Map<String, Boolean> = emptyMap(),
+    @SerialName("request_delays_seconds") val requestDelays: Map<String, Double> = emptyMap(),
+) {
+    /** True when this source can be used (absent = assume usable). */
+    fun isSourceReady(source: ToolkitSource): Boolean = sourceReady[source.serverKey] ?: true
+}
 
 /** Envelope returned by the preview/confirm POSTs. */
 @Serializable
@@ -68,6 +74,8 @@ data class ToolkitJob(
     fun releaseTrackingResult(): ReleaseResult? = decode(ReleaseResult.serializer())
     fun nextReleaseResult(): NextReleaseResult? = decode(NextReleaseResult.serializer())
     fun applyResult(): ApplyResult? = decode(ApplyResult.serializer())
+    fun nextReleaseAutoResult(): NextReleaseAutoResult? = decode(NextReleaseAutoResult.serializer())
+    fun releaseTrackingAutoResult(): ReleaseTrackingAutoResult? = decode(ReleaseTrackingAutoResult.serializer())
 
     private fun <T> decode(serializer: kotlinx.serialization.KSerializer<T>): T? =
         result?.let { runCatching { toolkitJson.decodeFromJsonElement(serializer, it) }.getOrNull() }
@@ -187,17 +195,71 @@ data class ApplyResult(
     val failed: Int = 0,
 )
 
-/** The two release-tracking sources; slug is used in the URL path. */
-enum class ToolkitSource(val slug: String, val label: String) {
-    MANGA_NEWS("manga-news", "Manga News"),
-    MANGABAKA("mangabaka", "MangaBaka");
+/** `job.result` after a /run next-releases job (mode "next_release_auto"):
+ *  what was actually written. Rows carry the real fields from the guide. */
+@Serializable
+data class NextReleaseAutoResult(
+    val mode: String = "",
+    val source: String = "",
+    val scanned: Int = 0,
+    @SerialName("valid_changes") val validChanges: Int = 0,
+    val applied: Int = 0,
+    val unchanged: Int = 0,
+    @SerialName("skipped_guardrail") val skippedGuardrail: Int = 0,
+    val failed: Int = 0,
+    val cancelled: Boolean = false,
+    val rows: List<NextReleaseAutoRow> = emptyList(),
+)
+
+@Serializable
+data class NextReleaseAutoRow(
+    @SerialName("series_id") val seriesId: String = "",
+    val title: String = "",
+    val source: String = "",
+    @SerialName("old_tag") val oldTag: String = "",
+    @SerialName("new_tag") val newTag: String = "",
+    val volume: String = "",
+    val date: String = "",
+)
+
+/** `job.result` after a /run release-tracking job (mode "release_tracking_auto"). */
+@Serializable
+data class ReleaseTrackingAutoResult(
+    val mode: String = "",
+    val source: String = "",
+    val scanned: Int = 0,
+    @SerialName("high_confidence") val highConfidence: Int = 0,
+    val applied: Int = 0,
+    val unchanged: Int = 0,
+    @SerialName("skipped_guardrail") val skippedGuardrail: Int = 0,
+    val failed: Int = 0,
+    val cancelled: Boolean = false,
+    val rows: List<ReleaseTrackingAutoRow> = emptyList(),
+)
+
+@Serializable
+data class ReleaseTrackingAutoRow(
+    @SerialName("series_id") val seriesId: String = "",
+    val title: String = "",
+    val source: String = "",
+    @SerialName("current_status") val currentStatus: String = "",
+    @SerialName("new_status") val newStatus: String = "",
+    @SerialName("current_totalBookCount") val currentTotal: Int? = null,
+    @SerialName("new_totalBookCount") val newTotal: Int? = null,
+)
+
+/**
+ * Automation sources. [slug] is the URL path segment; [serverKey] is the value
+ * the server uses in `source`/`source_ready` (underscore form).
+ */
+enum class ToolkitSource(val slug: String, val serverKey: String, val label: String) {
+    MANGA_NEWS("manga-news", "manga_news", "Manga News"),
+    MANGABAKA("mangabaka", "mangabaka", "MangaBaka"),
+    BEDETHEQUE("bedetheque", "bedetheque", "Bedetheque"),
+    COMICVINE("comicvine", "comicvine", "ComicVine");
 
     companion object {
-        /** Server `source` field uses an underscore ("manga_news"); map both forms. */
-        fun fromServer(value: String?): ToolkitSource? = when (value) {
-            "manga_news", "manga-news" -> MANGA_NEWS
-            "mangabaka" -> MANGABAKA
-            else -> null
-        }
+        fun fromServer(value: String?): ToolkitSource? =
+            entries.firstOrNull { it.serverKey == value || it.slug == value }
     }
 }

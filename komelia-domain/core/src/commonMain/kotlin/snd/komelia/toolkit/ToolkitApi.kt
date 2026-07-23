@@ -59,6 +59,21 @@ class ToolkitApi(
             }
         }
 
+    /** Fire-and-apply: analyses, filters, revalidates AND writes in one job.
+     *  Used by next-releases (no preview) and available for tracking too. */
+    suspend fun run(
+        function: ToolkitFunction,
+        source: ToolkitSource,
+        libraryId: String,
+    ): ToolkitResult<ToolkitJob> =
+        requestJob { cfg ->
+            client.post("${cfg.baseUrl}/api/automation/${function.slug}/${source.slug}/run") {
+                auth(cfg)
+                contentType(ContentType.Application.Json)
+                setBody("""{"library_id":"$libraryId"}""")
+            }
+        }
+
     suspend fun job(jobId: String): ToolkitResult<ToolkitJob> =
         requestJob { cfg -> client.get("${cfg.baseUrl}/api/automation/jobs/$jobId") { auth(cfg) } }
 
