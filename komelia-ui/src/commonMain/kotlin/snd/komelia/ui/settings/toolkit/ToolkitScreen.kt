@@ -210,16 +210,16 @@ private fun actionsFor(cat: ToolkitCategory): List<ToolkitAction> = when (cat) {
     ToolkitCategory.MANGAS -> listOf(
         ToolkitAction("Prochaines sorties · Manga News", ToolkitFunction.NEXT_RELEASES, ToolkitSource.MANGA_NEWS, run = true),
         ToolkitAction("Prochaines sorties · MangaBaka", ToolkitFunction.NEXT_RELEASES, ToolkitSource.MANGABAKA, run = true),
-        ToolkitAction("Suivi des sorties · Manga News", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.MANGA_NEWS, run = false),
-        ToolkitAction("Suivi des sorties · MangaBaka", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.MANGABAKA, run = false),
-        ToolkitAction("Suivi des tomes · Bedetheque", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.BEDETHEQUE, run = false),
+        ToolkitAction("Suivi des sorties · Manga News", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.MANGA_NEWS, run = true),
+        ToolkitAction("Suivi des sorties · MangaBaka", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.MANGABAKA, run = true),
+        ToolkitAction("Suivi des tomes · Bedetheque", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.BEDETHEQUE, run = true),
     )
     ToolkitCategory.BD -> listOf(
-        ToolkitAction("Suivi des tomes · Bedetheque", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.BEDETHEQUE, run = false),
+        ToolkitAction("Suivi des tomes · Bedetheque", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.BEDETHEQUE, run = true),
     )
     ToolkitCategory.COMICS -> listOf(
-        ToolkitAction("Suivi tomes/issues · ComicVine", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.COMICVINE, run = false),
-        ToolkitAction("Suivi des tomes · Bedetheque", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.BEDETHEQUE, run = false),
+        ToolkitAction("Suivi tomes/issues · ComicVine", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.COMICVINE, run = true),
+        ToolkitAction("Suivi des tomes · Bedetheque", ToolkitFunction.RELEASE_TRACKING, ToolkitSource.BEDETHEQUE, run = true),
     )
 }
 
