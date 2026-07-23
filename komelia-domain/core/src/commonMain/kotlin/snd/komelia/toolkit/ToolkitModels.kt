@@ -15,6 +15,18 @@ enum class ToolkitFunction(val slug: String, val label: String) {
 }
 
 /**
+ * Fixed perimeter categories. Each is bound to one Komga library (auto-matched
+ * by name, correctable). Every function button targets the library of its
+ * category, so a manga source can never run on the comics library and vice
+ * versa. Bedetheque is transverse (all three).
+ */
+enum class ToolkitCategory(val label: String) {
+    MANGAS("Mangas"),
+    BD("BD"),
+    COMICS("Comics"),
+}
+
+/**
  * Wire models for the Komga Toolkit automation API (release tracking).
  * Field names mirror the server JSON exactly (snake_case via @SerialName).
  *

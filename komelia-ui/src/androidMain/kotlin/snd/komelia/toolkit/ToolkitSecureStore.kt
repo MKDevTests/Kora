@@ -87,6 +87,15 @@ object ToolkitSecureStore {
         prefs(context)?.edit()?.remove(KEY_CODE_HASH)?.apply()
     }
 
+    // -- Perimeter: category -> Komga library id ------------------------------
+
+    fun getCategoryLibrary(context: Context, category: String): String? =
+        prefs(context)?.getString("lib_$category", null)?.takeIf { it.isNotBlank() }
+
+    fun setCategoryLibrary(context: Context, category: String, libraryId: String?) {
+        prefs(context)?.edit()?.putString("lib_$category", libraryId.orEmpty())?.apply()
+    }
+
     private fun hash(code: String): String =
         java.security.MessageDigest.getInstance("SHA-256")
             .digest(code.encodeToByteArray())

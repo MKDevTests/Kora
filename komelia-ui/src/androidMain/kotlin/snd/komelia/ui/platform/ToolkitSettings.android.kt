@@ -38,6 +38,19 @@ actual fun rememberToolkitSettings(): ToolkitSettingsState? {
             override fun clearCode() {
                 ToolkitSecureStore.clearCode(context); _hasCode = false
             }
+
+            // Reactive per-category library mapping.
+            private val libByCategory = androidx.compose.runtime.mutableStateMapOf<String, String>().apply {
+                snd.komelia.toolkit.ToolkitCategory.entries.forEach { cat ->
+                    ToolkitSecureStore.getCategoryLibrary(context, cat.name)?.let { put(cat.name, it) }
+                }
+            }
+            override fun libraryFor(category: snd.komelia.toolkit.ToolkitCategory): String? =
+                libByCategory[category.name]
+            override fun setLibraryFor(category: snd.komelia.toolkit.ToolkitCategory, libraryId: String?) {
+                if (libraryId == null) libByCategory.remove(category.name) else libByCategory[category.name] = libraryId
+                ToolkitSecureStore.setCategoryLibrary(context, category.name, libraryId)
+            }
         }
     }
 }

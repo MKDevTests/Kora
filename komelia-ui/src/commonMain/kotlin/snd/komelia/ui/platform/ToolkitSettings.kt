@@ -22,6 +22,10 @@ interface ToolkitSettingsState {
     fun setCode(code: String)
     fun verifyCode(code: String): Boolean
     fun clearCode()
+
+    /** Perimeter: the Komga library id bound to a category, or null. */
+    fun libraryFor(category: snd.komelia.toolkit.ToolkitCategory): String?
+    fun setLibraryFor(category: snd.komelia.toolkit.ToolkitCategory, libraryId: String?)
 }
 
 @Composable

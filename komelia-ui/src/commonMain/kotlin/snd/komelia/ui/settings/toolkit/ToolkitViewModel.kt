@@ -49,6 +49,9 @@ class ToolkitViewModel(
     fun startPreview(function: ToolkitFunction, source: ToolkitSource, libraryId: String) =
         ToolkitJobRunner.startPreview(api, function, source, libraryId)
 
+    fun startRun(function: ToolkitFunction, source: ToolkitSource, libraryId: String) =
+        ToolkitJobRunner.startRun(api, function, source, libraryId)
+
     fun confirm() = ToolkitJobRunner.confirm(api)
     fun cancel() = ToolkitJobRunner.cancel(api)
     fun reset() = ToolkitJobRunner.reset()

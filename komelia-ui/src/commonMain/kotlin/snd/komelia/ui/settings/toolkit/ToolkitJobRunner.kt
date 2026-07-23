@@ -49,6 +49,22 @@ object ToolkitJobRunner {
         }
     }
 
+    /**
+     * Fire-and-apply (/run): analyses AND writes in one job. Used by
+     * next-releases (no preview exists). The caller shows a confirmation dialog
+     * BEFORE calling this — once launched there is nothing more to validate.
+     */
+    fun startRun(api: ToolkitApi, function: ToolkitFunction, source: ToolkitSource, libraryId: String) {
+        pollJob?.cancel()
+        _state.value = ToolkitFlowState.Working(function, source, Phase.APPLY, 0, 0, "")
+        pollJob = scope.launch {
+            when (val started = api.run(function, source, libraryId)) {
+                is ToolkitResult.Success -> pollUntilDone(api, function, source, Phase.APPLY, started.value.id)
+                else -> _state.value = errorState(function, source, started)
+            }
+        }
+    }
+
     /** Confirms the current preview (must be in [ToolkitFlowState.PreviewReady]). */
     fun confirm(api: ToolkitApi) {
         val ready = _state.value as? ToolkitFlowState.PreviewReady ?: return
