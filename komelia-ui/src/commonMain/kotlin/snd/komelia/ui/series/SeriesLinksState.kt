@@ -77,6 +77,14 @@ class SeriesLinksState(
     private val mutableState = MutableStateFlow<LoadState<Unit>>(LoadState.Uninitialized)
     val state = mutableState.asStateFlow()
 
+    /**
+     * When true, the next [load] re-fetches the current series' Komga metadata
+     * instead of trusting the (possibly stale-after-write) cached `series` value.
+     * Set after a link/unlink here so the change shows immediately, while normal
+     * opens skip that ~round-trip. See [load].
+     */
+    private var refetchMetadataOnce = false
+
     var versions by mutableStateOf<List<KomgaSeries>>(emptyList())
         private set
 
@@ -128,9 +136,16 @@ class SeriesLinksState(
             // pre-write metadata after an admin link/unlink.
             val sharedRelations =
                 if (shareEnabled) {
-                    val freshLinks = runCatching { seriesApi.getOneSeries(current.id).metadata.links }
-                        .getOrDefault(current.metadata.links)
-                    freshLinks.mapNotNull { KoraLinkCodec.parse(it) }
+                    // Fast path: parse the already-loaded metadata — no round-trip.
+                    // Only re-fetch right after a link/unlink here, when the cached
+                    // `series` value can still be pre-write; links the user just
+                    // added are also in the local repo, so they show either way.
+                    val links = if (refetchMetadataOnce) {
+                        refetchMetadataOnce = false
+                        runCatching { seriesApi.getOneSeries(current.id).metadata.links }
+                            .getOrDefault(current.metadata.links)
+                    } else current.metadata.links
+                    links.mapNotNull { KoraLinkCodec.parse(it) }
                 } else emptyList()
             sharedRelationIds = sharedRelations.map { it.target.value }.toSet()
 
@@ -214,6 +229,9 @@ class SeriesLinksState(
         val current = series.value?.id ?: return
         screenModelScope.launch {
             notifications.runCatchingToNotifications { block(current) }
+            // This write may have changed the shared links; make the next reload
+            // re-read fresh Komga metadata (normal opens skip that round-trip).
+            refetchMetadataOnce = true
             // Drives a reload on this screen AND every other open Links screen.
             SeriesLinksChanges.notifyChanged()
         }
