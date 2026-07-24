@@ -112,11 +112,17 @@ class SeriesLinksState(
             versions = linksRepository.versionsOf(current.id).mapNotNull { resolve(it) }
 
             val localRelations = linksRepository.relationsOf(current.id)
+            // Read the toggle FRESH (suspending) here, not shareLinksEnabled.value:
+            // that StateFlow starts at its `false` initial value and the real
+            // DataStore-backed value arrives async, so an early load() (on first
+            // open) would read `false`, drop the shared links, and show nothing
+            // until some unrelated reload — the "links take forever to appear" bug.
+            val shareEnabled = settingsRepository.getShareLinksViaKomga().first()
             // Re-fetch the current series so freshly-written shared links (and the
             // 🌐 badge) show right away — the `series` flow can still hold the
             // pre-write metadata after an admin link/unlink.
             val sharedRelations =
-                if (shareLinksEnabled.value) {
+                if (shareEnabled) {
                     val freshLinks = runCatching { seriesApi.getOneSeries(current.id).metadata.links }
                         .getOrDefault(current.metadata.links)
                     freshLinks.mapNotNull { KoraLinkCodec.parse(it) }
