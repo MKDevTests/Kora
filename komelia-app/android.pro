@@ -1,5 +1,13 @@
 -dontobfuscate
 
+# R8 shrinks dead code (the big win: ~76% dex) but its OPTIMIZATION pass
+# (inlining/reordering) can expose a native-interop race — observed as a
+# Bitmap.recycle() double-free SIGSEGV in libhwui when tearing down the reader
+# on volume exit. Keep shrinking, drop optimization. If a later pass proves the
+# crash is a pre-existing race (reproduces with this OFF, or on the non-R8
+# build), this can be revisited.
+-dontoptimize
+
 -dontwarn java.sql.JDBCType
 -dontwarn org.jboss.vfs.**
 -dontwarn org.osgi.framework.**
