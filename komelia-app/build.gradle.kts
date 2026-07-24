@@ -195,6 +195,20 @@ android {
                 "android.pro"
             )
         }
+        // R8 SANDBOX — installs as a SEPARATE app ("KoraR8", appId suffix
+        // .r8test) so R8 can be validated without ever touching the real Kora
+        // (io.github.mkdevtests.kora) install. Inherits the release build's R8
+        // config via initWith(release): minify on, shrink off, same proguard.
+        // Debug-signed + debuggable so `adb install` works directly and
+        // `run-as` is available. Not for shipping — testing only.
+        create("releaseTest") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".r8test"
+            manifestPlaceholders["appLabel"] = "KoraR8"
+            isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
