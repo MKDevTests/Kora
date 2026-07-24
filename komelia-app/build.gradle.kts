@@ -166,11 +166,28 @@ android {
             manifestPlaceholders["appLabel"] = "KoraDebug"
         }
         release {
-            // Public release: NON-debuggable. Minify/shrink stay off for now —
-            // proguard breaks native interop, so re-enabling R8 is a separate,
-            // careful task. Pass -PdebuggableRelease for a debuggable release
-            // build (one-off run-as KoraDebug -> Kora data migration).
-            isMinifyEnabled = false
+            // Public release: NON-debuggable.
+            //
+            // R8 ENABLEMENT — Step A (perf/r8-enable): minify ON, resource
+            // shrinking still OFF. This is the risk-first order:
+            //  - android.pro keeps all app code (`snd.komelia.**`,
+            //    `io.github.snd_r.komelia.**`, `org.sqlite.**`) and uses
+            //    `-dontobfuscate`, so R8 tree-shakes/optimizes libs only and
+            //    stack traces stay readable (no retrace needed).
+            //  - isShrinkResources stays false: it can strip the Flyway SQL
+            //    migrations (composeResources, read by name). That is Step B,
+            //    validated separately.
+            // Rollback levers, cheapest first: (1) set
+            //   android.enableR8.fullMode=false in gradle.properties (less
+            //   aggressive); (2) flip isMinifyEnabled back to false; (3) revert
+            //   this branch. R8 mapping is at
+            //   komelia-app/build/outputs/mapping/release/mapping.txt.
+            // Later optimization pass: run the official android/skills
+            // r8-analyzer to narrow the broad app-wide keeps.
+            //
+            // Pass -PdebuggableRelease for a debuggable release build (one-off
+            // run-as KoraDebug -> Kora data migration).
+            isMinifyEnabled = true
             isShrinkResources = false
             isDebuggable = project.hasProperty("debuggableRelease")
             proguardFiles(
