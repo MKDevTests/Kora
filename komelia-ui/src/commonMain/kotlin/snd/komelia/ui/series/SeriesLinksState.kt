@@ -5,6 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,7 +112,9 @@ class SeriesLinksState(
         notifications.runCatchingToNotifications {
             mutableState.value = LoadState.Loading
             val current = series.filterNotNull().first()
-            versions = linksRepository.versionsOf(current.id).mapNotNull { resolve(it) }
+            versions = coroutineScope {
+                linksRepository.versionsOf(current.id).map { async { resolve(it) } }.awaitAll()
+            }.filterNotNull()
 
             val localRelations = linksRepository.relationsOf(current.id)
             // Read the toggle FRESH (suspending) here, not shareLinksEnabled.value:
@@ -141,12 +146,15 @@ class SeriesLinksState(
             localRelations.forEach { byId[it.series.value] = it.series to it.type }
             sharedRelations.forEach { byId[it.target.value] = it.target to it.type }
 
-            relations = byId.values
-                .mapNotNull { (id, type) ->
-                    val resolved = resolve(id)
-                    if (resolved == null) logger.info { "KORALINKS resolve=null id=${id.value}" }
-                    resolved?.let { type to it }
-                }
+            relations = coroutineScope {
+                byId.values.map { (id, type) ->
+                    async {
+                        val resolved = resolve(id)
+                        if (resolved == null) logger.info { "KORALINKS resolve=null id=${id.value}" }
+                        resolved?.let { type to it }
+                    }
+                }.awaitAll()
+            }.filterNotNull()
                 .groupBy({ it.first }, { it.second })
                 .filterValues { it.isNotEmpty() }
             logger.info { "KORALINKS shown=${relations.mapValues { it.value.size }}" }
