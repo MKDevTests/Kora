@@ -121,12 +121,19 @@ class SeriesLinksState(
             // Re-fetch the current series so freshly-written shared links (and the
             // 🌐 badge) show right away — the `series` flow can still hold the
             // pre-write metadata after an admin link/unlink.
+            logger.info { "KORALINKS series=${current.id.value} shareEnabled=$shareEnabled local=${localRelations.size}" }
             val sharedRelations =
                 if (shareEnabled) {
                     val freshLinks = runCatching { seriesApi.getOneSeries(current.id).metadata.links }
                         .getOrDefault(current.metadata.links)
-                    freshLinks.mapNotNull { KoraLinkCodec.parse(it) }
+                    logger.info { "KORALINKS freshLinks=${freshLinks.size} urls=${freshLinks.map { it.url }}" }
+                    freshLinks.mapNotNull { link ->
+                        KoraLinkCodec.parse(link).also {
+                            if (it == null) logger.info { "KORALINKS parse=null url=${link.url}" }
+                        }
+                    }
                 } else emptyList()
+            logger.info { "KORALINKS parsedShared=${sharedRelations.size} targets=${sharedRelations.map { it.target.value + ":" + it.type }}" }
             sharedRelationIds = sharedRelations.map { it.target.value }.toSet()
 
             // Merge local + shared by target id (shared type wins on conflict).
@@ -135,9 +142,14 @@ class SeriesLinksState(
             sharedRelations.forEach { byId[it.target.value] = it.target to it.type }
 
             relations = byId.values
-                .mapNotNull { (id, type) -> resolve(id)?.let { type to it } }
+                .mapNotNull { (id, type) ->
+                    val resolved = resolve(id)
+                    if (resolved == null) logger.info { "KORALINKS resolve=null id=${id.value}" }
+                    resolved?.let { type to it }
+                }
                 .groupBy({ it.first }, { it.second })
                 .filterValues { it.isNotEmpty() }
+            logger.info { "KORALINKS shown=${relations.mapValues { it.value.size }}" }
             mutableState.value = LoadState.Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
