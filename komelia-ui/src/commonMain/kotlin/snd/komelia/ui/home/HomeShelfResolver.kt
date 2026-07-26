@@ -1,5 +1,10 @@
 package snd.komelia.ui.home
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
@@ -92,9 +97,19 @@ class HomeShelfResolver(
 
             is SeriesHomeScreenFilter.Favorites -> {
                 // Local favorites: resolve a bounded sample by id (getOneSeries is
-                // not filtered), sorted by title.
-                val resolved = favoriteIds().take(filter.pageSize).mapNotNull { id ->
-                    runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+                // not filtered), sorted by title. Resolve concurrently — one call
+                // at a time meant pageSize round-trips in series on the home
+                // screen. Bounded to four in flight for the same reason as the
+                // favorites screen: unbounded fan-out saturates Komga's pool.
+                val limit = Semaphore(4)
+                val resolved = coroutineScope {
+                    favoriteIds().take(filter.pageSize).map { id ->
+                        async {
+                            limit.withPermit {
+                                runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+                            }
+                        }
+                    }.awaitAll().filterNotNull()
                 }.sortedBy { it.metadata.title.lowercase() }
                 SeriesFilterData(series = resolved, filter = filter)
             }
