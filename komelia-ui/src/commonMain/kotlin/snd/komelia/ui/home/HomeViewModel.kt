@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
@@ -172,10 +174,39 @@ class HomeViewModel(
             // stays silent behind the snapshot instead of blanking it.
             if (state.value !is LoadState.Success) mutableState.value = LoadState.Loading
 
-            val fresh = withFavorites
-                .map { screenModelScope.async { fetchFilterData(it, force) } }
-                .awaitAll()
-                .filterNotNull()
+            // Publish each shelf the moment IT resolves instead of waiting on the
+            // slowest one. The shelves already load in parallel, but a single
+            // assignment after awaitAll meant a fast shelf ("Keep reading" after
+            // closing the reader) stayed stale until the slowest of them all came
+            // back — measured 7.3s for 11 shelves.
+            //
+            // Slots start from what is currently on screen (the disk snapshot, or
+            // the previous load's data) so a shelf never blanks while its refresh
+            // is in flight; each one is swapped in place, keeping shelf order.
+            val slots = withFavorites.map { filter ->
+                currentFilters.value.find {
+                    HomeShelfCache.shelfKey(it.filter) == HomeShelfCache.shelfKey(filter)
+                }
+            }.toMutableList()
+            // Guards both the slot write and the publish: the shelves resolve on
+            // different threads and would otherwise race on the list.
+            val publishLock = Mutex()
+
+            withFavorites.mapIndexed { index, filter ->
+                screenModelScope.async {
+                    val data = fetchFilterData(filter, force) ?: return@async
+                    publishLock.withLock {
+                        slots[index] = data
+                        currentFilters.value = slots.filterNotNull()
+                        // First shelf home wins the spinner: with no disk snapshot
+                        // to paint (first ever start) the screen would otherwise
+                        // stay on Loading until every shelf had answered.
+                        mutableState.value = LoadState.Success(Unit)
+                    }
+                }
+            }.awaitAll()
+
+            val fresh = slots.filterNotNull()
             currentFilters.value = fresh
 
             mutableState.value = LoadState.Success(Unit)
