@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.AppNotifications
 import snd.komelia.anilist.AniListClient
 import snd.komelia.anilist.AniListLinkSuggestion
@@ -600,15 +602,26 @@ class SeriesLinksState(
                 // metadata write per member (batched) with all its franchise links.
                 if (shareViaKomga()) {
                     val memberIds = members.map { it.value }.toSet()
-                    members.forEach { m ->
-                        val s = seriesApi.getOneSeries(m)
-                        val nonKora = s.metadata.links.filterNot { KoraLinkCodec.isKoraLink(it) }
-                        val keptKora = s.metadata.links.filter {
-                            KoraLinkCodec.isKoraLink(it) && KoraLinkCodec.parse(it)?.target?.value !in memberIds
-                        }
-                        val mesh = members.filter { it.value != m.value }
-                            .map { other -> KoraLinkCodec.relationLink(other, typeBetween(m, other)) }
-                        seriesApi.update(m, linksUpdate(s, nonKora + keptKora + mesh))
+                    // One read-modify-write per member, run concurrently: members
+                    // is already distinct, so each iteration touches a DIFFERENT
+                    // series and the writes can't interleave on the same metadata.
+                    // Bounded to four in flight like every other Komga fan-out.
+                    val limit = Semaphore(4)
+                    coroutineScope {
+                        members.map { m ->
+                            async {
+                                limit.withPermit {
+                                    val s = seriesApi.getOneSeries(m)
+                                    val nonKora = s.metadata.links.filterNot { KoraLinkCodec.isKoraLink(it) }
+                                    val keptKora = s.metadata.links.filter {
+                                        KoraLinkCodec.isKoraLink(it) && KoraLinkCodec.parse(it)?.target?.value !in memberIds
+                                    }
+                                    val mesh = members.filter { it.value != m.value }
+                                        .map { other -> KoraLinkCodec.relationLink(other, typeBetween(m, other)) }
+                                    seriesApi.update(m, linksUpdate(s, nonKora + keptKora + mesh))
+                                }
+                            }
+                        }.awaitAll()
                     }
                 }
             }

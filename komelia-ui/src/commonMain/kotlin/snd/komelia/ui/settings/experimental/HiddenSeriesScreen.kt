@@ -26,7 +26,12 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.core.screen.Screen
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.hidden.HiddenSeriesController
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.ui.LocalViewModelFactory
@@ -119,8 +124,18 @@ class HiddenSeriesViewModel(
     private suspend fun loadHidden() {
         val ids = controller?.hiddenIds?.value ?: emptySet()
         // getOneSeries is not hidden-filtered, so a hidden series still resolves.
-        hidden = ids.mapNotNull { id ->
-            runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+        // Resolve concurrently (the list is unbounded — one call at a time meant
+        // one round-trip per hidden series), bounded to four in flight so a long
+        // list doesn't saturate Komga's connection pool.
+        val limit = Semaphore(4)
+        hidden = coroutineScope {
+            ids.map { id ->
+                async {
+                    limit.withPermit {
+                        runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
+                    }
+                }
+            }.awaitAll().filterNotNull()
         }.sortedBy { it.metadata.title.lowercase() }
     }
 

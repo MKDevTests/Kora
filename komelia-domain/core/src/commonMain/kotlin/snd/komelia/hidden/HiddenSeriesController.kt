@@ -7,11 +7,16 @@ import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.komga.api.KomgaApi
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.patchLists
@@ -107,16 +112,26 @@ class HiddenSeriesController(
     private suspend fun setHidden(ids: Collection<String>, hidden: Boolean) {
         if (ids.isEmpty()) return
         val seriesApi = rawApi.value.seriesApi
-        ids.forEach { value ->
-            runCatching {
-                val id = KomgaSeriesId(value)
-                val current = seriesApi.getOneSeries(id).metadata.tags
-                val updated = if (hidden) (current + HIDDEN_TAG).distinct()
-                else current.filterNot { it == HIDDEN_TAG }
-                if (updated.toSet() != current.toSet()) {
-                    seriesApi.update(id, KomgaSeriesMetadataUpdateRequest(tags = patchLists(current, updated)))
+        // One read-modify-write per series, run concurrently: distinct ids mean
+        // no two coroutines touch the same metadata. Bounded to four in flight so
+        // hiding a large selection doesn't saturate Komga's connection pool.
+        val limit = Semaphore(4)
+        coroutineScope {
+            ids.distinct().map { value ->
+                async {
+                    limit.withPermit {
+                        runCatching {
+                            val id = KomgaSeriesId(value)
+                            val current = seriesApi.getOneSeries(id).metadata.tags
+                            val updated = if (hidden) (current + HIDDEN_TAG).distinct()
+                            else current.filterNot { it == HIDDEN_TAG }
+                            if (updated.toSet() != current.toSet()) {
+                                seriesApi.update(id, KomgaSeriesMetadataUpdateRequest(tags = patchLists(current, updated)))
+                            }
+                        }
+                    }
                 }
-            }
+            }.awaitAll()
         }
         refresh()
     }
