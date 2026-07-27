@@ -19,13 +19,23 @@ data class AppVersion(
     companion object {
         val current = AppVersion(1, 2, 4)
 
-        fun fromString(value: String): AppVersion {
-            val sanitized = value.removePrefix("v")
-            val version = sanitized.split(".")
-            return when (version.size) {
-                3 -> AppVersion(version[0].toInt(), version[1].toInt(), version[2].toInt())
-                2 -> AppVersion(version[0].toInt(), version[1].toInt(), 0)
-                else -> error("Can't parse version number")
+        fun fromString(value: String): AppVersion =
+            fromStringOrNull(value) ?: error("Can't parse version number")
+
+        /**
+         * Lenient parse: null when [value] isn't a version at all.
+         *
+         * A repository may carry releases that aren't app builds — an asset pack
+         * tagged `genre-covers`, for instance. Those used to make the whole
+         * update check throw, so ONE non-version release hid every real one.
+         */
+        fun fromStringOrNull(value: String): AppVersion? {
+            val version = value.removePrefix("v").split(".")
+            val numbers = version.map { part -> part.takeWhile { it.isDigit() }.toIntOrNull() ?: return null }
+            return when (numbers.size) {
+                3 -> AppVersion(numbers[0], numbers[1], numbers[2])
+                2 -> AppVersion(numbers[0], numbers[1], 0)
+                else -> null
             }
         }
     }

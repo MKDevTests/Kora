@@ -43,11 +43,17 @@ class AndroidAppUpdater(
     private var inProgress = AtomicBoolean(false)
 
     override suspend fun getReleases(): List<AppRelease> {
-        return githubClient.getKomeliaReleases().map { it.toAppRelease() }
+        // mapNotNull, not map: the repository also hosts releases that aren't app
+        // builds (the genre cover pack, tagged `genre-covers`). Parsing their tag
+        // as a version used to throw and take the whole update check down with
+        // it, so a single asset release hid every real one.
+        return githubClient.getKomeliaReleases().mapNotNull { it.toAppReleaseOrNull() }
     }
 
     override suspend fun updateToLatest(): Flow<UpdateProgress>? {
-        val latest = githubClient.getKomeliaLatestRelease().toAppRelease()
+        // Same reason: GitHub's "latest" can be a non-version release.
+        val latest = githubClient.getKomeliaLatestRelease().toAppReleaseOrNull()
+            ?: getReleases().maxByOrNull { it.version } ?: return null
         return updateTo(latest)
     }
 
@@ -100,11 +106,13 @@ class AndroidAppUpdater(
         }
     }
 
-    private fun GithubRelease.toAppRelease(): AppRelease {
+    /** Null when the tag isn't a version — i.e. not an app release at all. */
+    private fun GithubRelease.toAppReleaseOrNull(): AppRelease? {
+        val version = AppVersion.fromStringOrNull(tagName) ?: return null
         val asset = assets.firstOrNull { it.name.endsWith(".apk") }
 
         return AppRelease(
-            version = AppVersion.fromString(tagName),
+            version = version,
             publishDate = publishedAt,
             releaseNotesBody = body.replace("\r", ""),
             htmlUrl = htmlUrl,
