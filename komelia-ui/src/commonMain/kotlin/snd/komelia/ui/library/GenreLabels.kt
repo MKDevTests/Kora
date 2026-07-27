@@ -80,6 +80,37 @@ object GenreLabels {
                 ?.let { matchNormalised(it) }
     }
 
+    /**
+     * The leading LIBRARY token of a cover file name — "BD_Action" -> "BD",
+     * "Comics Fantasy" -> "Comics" — or null when the name carries no library
+     * prefix ("Espionnage", "Tranche_de_vie").
+     *
+     * Needed because the same genre exists in several libraries: Bd_Action,
+     * Comics_Action and Manga_Action all resolve to `action`, so without the
+     * prefix an import would apply all three and the last one would win.
+     *
+     * A separator only counts as a prefix boundary when what FOLLOWS it is
+     * itself a recognisable genre — otherwise the separator belongs to the genre
+     * ("Tranche_de_vie" is not library "Tranche").
+     */
+    fun libraryTokenOfFileName(fileName: String): String? {
+        val base = fileName.substringBeforeLast('.')
+        val idx = base.indexOfFirst { it == '_' || it == ' ' || it == '-' }
+        if (idx <= 0) return null
+        return if (matchNormalised(base.substring(idx + 1)) != null) base.substring(0, idx) else null
+    }
+
+    /**
+     * Whether a cover file's library token belongs to [libraryName]. Tolerant of
+     * singular/plural and case ("Manga" matches a "Mangas" library).
+     */
+    fun libraryTokenMatches(token: String, libraryName: String): Boolean {
+        val a = normalise(token)
+        val b = normalise(libraryName)
+        if (a.isEmpty() || b.isEmpty()) return false
+        return a.startsWith(b) || b.startsWith(a)
+    }
+
     private fun matchNormalised(raw: String): String? {
         val key = normalise(raw)
         if (key.isBlank()) return null
@@ -99,6 +130,7 @@ object GenreLabels {
         "tranchedevie" to "tranche-de-vie",
         "documentaires" to "documentaire-biographie",
         "documentaire" to "documentaire-biographie",
+        "doc" to "documentaire-biographie",
         "biographie" to "documentaire-biographie",
         "crime" to "policier-crime",
         "suspense" to "thriller-suspense",

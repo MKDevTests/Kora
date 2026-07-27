@@ -312,6 +312,7 @@ class LibraryGenreTabState(
     fun importCovers(files: List<Pair<String, ByteArray>>, onDone: (CoverImportReport) -> Unit) {
         screenModelScope.launch {
             val knownSlugs = genres.map { it.slug }.toSet()
+            val libraryName = library.value?.name
             val map = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
             val applied = mutableListOf<String>()
             val unmatched = mutableListOf<String>()
@@ -319,9 +320,17 @@ class LibraryGenreTabState(
 
             for ((fileName, bytes) in files) {
                 val slug = GenreLabels.slugForFileName(fileName)
+                // A file named for ANOTHER library is skipped, not applied: the
+                // same genre exists in several libraries (Bd_Action /
+                // Comics_Action / Manga_Action all mean `action`) and without
+                // this the last file processed would win. A file with no library
+                // prefix ("Espionnage") is accepted for whichever library is open.
+                val token = GenreLabels.libraryTokenOfFileName(fileName)
+                val wrongLibrary = token != null && libraryName != null &&
+                    !GenreLabels.libraryTokenMatches(token, libraryName)
                 when {
                     slug == null -> unmatched += fileName
-                    slug !in knownSlugs -> notInLibrary += fileName
+                    wrongLibrary || slug !in knownSlugs -> notInLibrary += fileName
                     else -> {
                         val key = overrideKey(slug)
                         val path = saveCoverBytes(key, bytes)
