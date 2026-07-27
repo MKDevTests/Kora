@@ -593,6 +593,7 @@ class LibraryScreen(
                         textBelow = appearance.textBelow,
                         showCount = appearance.showCount,
                         beforeContent = beforeContent,
+                        onImportCovers = genreTabState::importCovers,
                     )
                 }
             }

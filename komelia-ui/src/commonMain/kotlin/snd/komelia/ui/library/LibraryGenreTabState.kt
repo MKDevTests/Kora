@@ -27,6 +27,7 @@ import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
+import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaReferentialApi
@@ -309,7 +310,7 @@ class LibraryGenreTabState(
      * Only genres present in the CURRENT library are touched. Returns a report so
      * the UI can tell the user exactly what matched and what didn't.
      */
-    fun importCovers(files: List<Pair<String, ByteArray>>, onDone: (CoverImportReport) -> Unit) {
+    fun importCovers(files: List<Pair<String, ByteArray>>) {
         screenModelScope.launch {
             val knownSlugs = genres.map { it.slug }.toSet()
             val libraryName = library.value?.name
@@ -345,7 +346,12 @@ class LibraryGenreTabState(
 
             settingsRepository.putGenreCoverOverrides(map)
             loadGenres()
-            onDone(CoverImportReport(applied.sorted(), unmatched.sorted(), notInLibrary.sorted()))
+
+            val report = CoverImportReport(applied.sorted(), unmatched.sorted(), notInLibrary.sorted())
+            appNotifications.add(
+                if (report.applied.isEmpty()) AppNotification.Error(report.summary())
+                else AppNotification.Normal(report.summary())
+            )
         }
     }
 
@@ -449,6 +455,17 @@ data class CoverImportReport(
     val notInLibrary: List<String>,
 ) {
     val total: Int get() = applied.size + unmatched.size + notInLibrary.size
+
+    /** One-line outcome for the notification, naming what failed to match. */
+    fun summary(): String = buildString {
+        append("${applied.size}/$total couverture(s) appliquée(s)")
+        if (notInLibrary.isNotEmpty()) append(" · ${notInLibrary.size} pour une autre bibliothèque")
+        if (unmatched.isNotEmpty()) {
+            append(" · non reconnu(s) : ")
+            append(unmatched.take(5).joinToString(", "))
+            if (unmatched.size > 5) append("…")
+        }
+    }
 }
 
 /** Resolved appearance for the genre tiles. [textBelow] null = inherit global. */

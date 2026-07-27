@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +46,7 @@ import androidx.compose.ui.window.Dialog
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,6 +74,8 @@ fun GenreGridContent(
     showCount: Boolean = true,
     modifier: Modifier = Modifier,
     beforeContent: @Composable () -> Unit = {},
+    /** Non-null shows the bulk cover import button. Receives (file name, bytes). */
+    onImportCovers: ((List<Pair<String, ByteArray>>) -> Unit)? = null,
 ) {
     val useNewLibraryUI = LocalUseNewLibraryUI.current
     val cardSpacing = if (useNewLibraryUI) 7.dp else 15.dp
@@ -91,6 +96,12 @@ fun GenreGridContent(
         modifier = modifier.fillMaxSize(),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) { beforeContent() }
+
+        if (onImportCovers != null) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                GenreCoverImportButton(onImportCovers)
+            }
+        }
 
         if (genres.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -203,6 +214,35 @@ private fun GenreCard(
  * Pick a cover for a genre. Shows the genre's own series by default, and a live
  * full-text search of the whole library by name (the user names their files).
  */
+/**
+ * Bulk cover import: pick many images at once and let the file NAMES decide
+ * which genre each one belongs to (see GenreLabels.slugForFileName). Setting 50+
+ * covers one dialog at a time is unusable, and these images are not in the JSON
+ * backup — they live in private app storage — so this is also how a lost set is
+ * restored from the source files.
+ */
+@Composable
+private fun GenreCoverImportButton(onImportCovers: (List<Pair<String, ByteArray>>) -> Unit) {
+    val scope = rememberCoroutineScope()
+    val picker = rememberFilePickerLauncher(
+        type = FileKitType.Image,
+        mode = FileKitMode.Multiple(),
+    ) { files ->
+        val picked = files ?: return@rememberFilePickerLauncher
+        scope.launch { onImportCovers(picked.map { it.name to it.readBytes() }) }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(onClick = { picker.launch() }) {
+            Text("Importer des couvertures…")
+        }
+    }
+}
+
 @Composable
 fun GenreCoverPickerDialog(
     genreLabel: String,
