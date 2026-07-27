@@ -299,6 +299,47 @@ class LibraryGenreTabState(
         }
     }
 
+    /**
+     * Bulk-applies genre covers from picked image files, matching each file NAME
+     * to a genre (see [GenreLabels.slugForFileName]). Exists because re-doing 50+
+     * covers one dialog at a time is unusable — and because losing the app's data
+     * means losing the images, which live in private storage and are not in the
+     * JSON backup. Keep the source files somewhere safe; this re-applies them.
+     *
+     * Only genres present in the CURRENT library are touched. Returns a report so
+     * the UI can tell the user exactly what matched and what didn't.
+     */
+    fun importCovers(files: List<Pair<String, ByteArray>>, onDone: (CoverImportReport) -> Unit) {
+        screenModelScope.launch {
+            val knownSlugs = genres.map { it.slug }.toSet()
+            val map = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
+            val applied = mutableListOf<String>()
+            val unmatched = mutableListOf<String>()
+            val notInLibrary = mutableListOf<String>()
+
+            for ((fileName, bytes) in files) {
+                val slug = GenreLabels.slugForFileName(fileName)
+                when {
+                    slug == null -> unmatched += fileName
+                    slug !in knownSlugs -> notInLibrary += fileName
+                    else -> {
+                        val key = overrideKey(slug)
+                        val path = saveCoverBytes(key, bytes)
+                        if (path == null) unmatched += fileName
+                        else {
+                            map[key] = "$FILE_PREFIX$path"
+                            applied += GenreLabels.label(slug)
+                        }
+                    }
+                }
+            }
+
+            settingsRepository.putGenreCoverOverrides(map)
+            loadGenres()
+            onDone(CoverImportReport(applied.sorted(), unmatched.sorted(), notInLibrary.sorted()))
+        }
+    }
+
     private suspend fun saveCoverBytes(key: String, bytes: ByteArray): String? = runCatching {
         val safe = key.replace(Regex("[^A-Za-z0-9_-]"), "_")
         val dir = FileKit.filesDir / "genre_covers"
@@ -388,6 +429,18 @@ class LibraryGenreTabState(
 }
 
 private const val FILE_PREFIX = "file:"
+
+/** Outcome of a bulk cover import, so the UI can report it precisely. */
+data class CoverImportReport(
+    /** Display labels of the genres whose cover was set. */
+    val applied: List<String>,
+    /** File names whose genre could not be recognised. */
+    val unmatched: List<String>,
+    /** Recognised genres that this library doesn't use — skipped, not an error. */
+    val notInLibrary: List<String>,
+) {
+    val total: Int get() = applied.size + unmatched.size + notInLibrary.size
+}
 
 /** Resolved appearance for the genre tiles. [textBelow] null = inherit global. */
 data class GenreTileAppearance(

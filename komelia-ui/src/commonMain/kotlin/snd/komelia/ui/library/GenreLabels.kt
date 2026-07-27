@@ -61,6 +61,72 @@ object GenreLabels {
             .joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
 
     /**
+     * Maps a cover image's FILE NAME to a genre slug, for the bulk cover import.
+     *
+     * Accepts the naming the covers were authored with — "BD_Action.png",
+     * "Comics Fantasy.png", "Mangas_SuperHéros.png" — by normalising away case,
+     * accents and separators, then, if that fails, dropping a leading library
+     * name ("BD_", "Comics ", …) and retrying.
+     *
+     * Returns null when nothing matches, so the caller can report the file as
+     * unrecognised instead of guessing wrong.
+     */
+    fun slugForFileName(fileName: String): String? {
+        val base = fileName.substringBeforeLast('.')
+        return matchNormalised(base)
+            ?: base.dropWhile { it != '_' && it != ' ' && it != '-' }
+                .drop(1)
+                .takeIf { it.isNotBlank() }
+                ?.let { matchNormalised(it) }
+    }
+
+    private fun matchNormalised(raw: String): String? {
+        val key = normalise(raw)
+        if (key.isBlank()) return null
+        allSlugs.firstOrNull { normalise(it) == key }?.let { return it }
+        fileNameAliases[key]?.let { return it }
+        // "Policier" -> policier-crime, "Guerre" -> guerre-militaire, …: the file
+        // uses the short form of a compound slug.
+        return allSlugs.firstOrNull { normalise(it).startsWith(key) && key.length >= 4 }
+    }
+
+    /** Short forms that aren't a prefix of their slug, so can't be inferred. */
+    private val fileNameAliases: Map<String, String> = mapOf(
+        "sf" to "science-fiction",
+        "sciencefiction" to "science-fiction",
+        "histoire" to "historique",
+        "tranchevie" to "tranche-de-vie",
+        "tranchedevie" to "tranche-de-vie",
+        "documentaires" to "documentaire-biographie",
+        "documentaire" to "documentaire-biographie",
+        "biographie" to "documentaire-biographie",
+        "crime" to "policier-crime",
+        "suspense" to "thriller-suspense",
+        "surnaturel" to "fantastique-surnaturel",
+        "militaire" to "guerre-militaire",
+        "martiaux" to "sport-arts-martiaux",
+        "sport" to "sport-arts-martiaux",
+        "heros" to "super-heros",
+    )
+
+    /** Lowercase, strip accents, drop everything that isn't a letter or digit. */
+    private fun normalise(value: String): String = buildString {
+        for (ch in value.lowercase()) {
+            val folded = ACCENTS[ch] ?: ch
+            if (folded.isLetterOrDigit()) append(folded)
+        }
+    }
+
+    private val ACCENTS: Map<Char, Char> = buildMap {
+        "àâäá".forEach { put(it, 'a') }
+        "éèêë".forEach { put(it, 'e') }
+        "îïí".forEach { put(it, 'i') }
+        "ôöó".forEach { put(it, 'o') }
+        "ûüù".forEach { put(it, 'u') }
+        put('ç', 'c')
+    }
+
+    /**
      * Display-ready genre names extracted from a series' tags: only the
      * `kora:genre:*` ones, mapped to their pretty label, in tag order, de-duped.
      * Used by the series detail screen to show a "Genres : …" line.
