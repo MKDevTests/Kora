@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.Navigator
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -162,6 +163,21 @@ class ViewModelFactory(
         )
     }
 
+    /**
+     * Favorites minus the libraries the user excluded from the "All" view, so
+     * the Home shelf shows the same set as the Favorites screen does. An id
+     * whose library isn't known yet is kept: the cache fills in as entries are
+     * resolved, and hiding it meanwhile would look like data loss.
+     */
+    private fun scopedFavoriteSeriesIds(): Flow<Set<String>> = combine(
+        appRepositories.settingsRepository.getFavoriteSeriesIds(),
+        appRepositories.settingsRepository.getExcludedLibraryIds(),
+        appRepositories.settingsRepository.getSeriesLibraryIds(),
+    ) { ids, excluded, seriesLibrary ->
+        if (excluded.isEmpty()) ids
+        else ids.filterTo(mutableSetOf()) { seriesLibrary[it] !in excluded }
+    }
+
     fun getHomeViewModel(): HomeViewModel {
         return HomeViewModel(
             seriesApi = komgaApi.seriesApi,
@@ -171,7 +187,7 @@ class ViewModelFactory(
             filterRepository = appRepositories.homeScreenFilterRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             cardWidthFlow = getGridCardWidth(),
-            favoriteIdsFlow = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+            favoriteIdsFlow = scopedFavoriteSeriesIds(),
         )
     }
 
@@ -183,7 +199,7 @@ class ViewModelFactory(
             bookApi = komgaApi.bookApi,
             notifications = dependencies.appNotifications,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
-            favoriteIdsFlow = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+            favoriteIdsFlow = scopedFavoriteSeriesIds(),
         )
     }
 
