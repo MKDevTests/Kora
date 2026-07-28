@@ -1,12 +1,12 @@
 -dontobfuscate
 
-# R8 shrinks dead code (the big win: ~76% dex) but its OPTIMIZATION pass
-# (inlining/reordering) can expose a native-interop race — observed as a
-# Bitmap.recycle() double-free SIGSEGV in libhwui when tearing down the reader
-# on volume exit. Keep shrinking, drop optimization. If a later pass proves the
-# crash is a pre-existing race (reproduces with this OFF, or on the non-R8
-# build), this can be revisited.
--dontoptimize
+# NOTE: -dontoptimize used to sit here, blamed for a Bitmap.recycle()
+# double-free SIGSEGV seen on KoraR8. That build was `isDebuggable = true`,
+# which makes AGP disable R8's optimization pass anyway — so the crash happened
+# with optimization already OFF and the flag never fixed anything, while costing
+# dex 25 MB -> 52 MB. Removed, and KoraR8 is now non-debuggable so it actually
+# exercises the optimized code. If the teardown crash comes back on a
+# non-debuggable optimized build, put it back and reopen the race instead.
 
 -dontwarn java.sql.JDBCType
 -dontwarn org.jboss.vfs.**

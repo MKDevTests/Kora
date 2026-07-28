@@ -199,13 +199,19 @@ android {
         // .r8test) so R8 can be validated without ever touching the real Kora
         // (io.github.mkdevtests.kora) install. Inherits the release build's R8
         // config via initWith(release): minify on, shrink off, same proguard.
-        // Debug-signed + debuggable so `adb install` works directly and
-        // `run-as` is available. Not for shipping — testing only.
+        // Debug-signed so `adb install` works directly, but NOT debuggable:
+        // AGP disables every R8 optimization for debuggable builds ("All code
+        // optimizations and obfuscation are disabled for debuggable builds"),
+        // so a debuggable KoraR8 silently tested something the real release
+        // never runs — which is exactly how the Bitmap.recycle crash got
+        // blamed on the optimization pass that was already off.
+        // `run-as` is lost; logcat and native tombstones still work, and
+        // -dontobfuscate keeps traces readable. Not for shipping — testing only.
         create("releaseTest") {
             initWith(getByName("release"))
             applicationIdSuffix = ".r8test"
             manifestPlaceholders["appLabel"] = "KoraR8"
-            isDebuggable = true
+            isDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
         }
