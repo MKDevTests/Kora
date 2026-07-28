@@ -247,8 +247,13 @@ fun GenreCoverPickerDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    // File(), NOT Image: Image opens the system PHOTO picker, which only lists
+    // the media gallery — a cover sitting in Download or any other folder is
+    // invisible there. File() opens the document picker, which browses anywhere.
+    // No extension filter: filtering maps extensions to MIME types and silently
+    // hid images that were right there in the folder.
     val imagePicker = rememberFilePickerLauncher(
-        type = FileKitType.Image,
+        type = FileKitType.File(),
         mode = FileKitMode.Single,
     ) { file ->
         file?.let { picked -> scope.launch { onPickLocal(picked.readBytes()) } }
