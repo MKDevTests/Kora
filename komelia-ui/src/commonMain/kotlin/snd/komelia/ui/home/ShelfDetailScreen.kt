@@ -177,12 +177,24 @@ class ShelfDetailViewModel(
     private val notifications: AppNotifications,
     private val taskEmitter: OfflineTaskEmitter,
     favoriteIdsFlow: kotlinx.coroutines.flow.Flow<Set<String>>,
+    excludedLibraryIdsFlow: kotlinx.coroutines.flow.Flow<Set<String>> =
+        kotlinx.coroutines.flow.flowOf(emptySet()),
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
 
     private val favoriteIds: StateFlow<Set<String>> =
         favoriteIdsFlow.stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
 
-    private val resolver = HomeShelfResolver(seriesApi, bookApi) { favoriteIds.value }
+    private val excludedLibraryIds: StateFlow<Set<String>> =
+        excludedLibraryIdsFlow.stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
+
+    // Named arguments on purpose: the resolver takes two lambdas now, and a
+    // trailing-lambda call would silently bind to the last one.
+    private val resolver = HomeShelfResolver(
+        seriesApi = seriesApi,
+        bookApi = bookApi,
+        favoriteIds = { favoriteIds.value },
+        excludedLibraryIds = { excludedLibraryIds.value },
+    )
 
     val cardWidth: StateFlow<Dp> = settingsRepository.getCardWidth()
         .map { Dp(it.toFloat()) }

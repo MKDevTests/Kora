@@ -201,6 +201,7 @@ class ViewModelFactory(
             notifications = dependencies.appNotifications,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             favoriteIdsFlow = scopedFavoriteSeriesIds(),
+            excludedLibraryIdsFlow = appRepositories.settingsRepository.getExcludedLibraryIds(),
         )
     }
 
