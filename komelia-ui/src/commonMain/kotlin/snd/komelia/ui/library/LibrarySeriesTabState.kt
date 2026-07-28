@@ -67,6 +67,9 @@ private val logger = KotlinLogging.logger { }
 
 private const val SERIES_RANDOM_SORT = "random"
 
+/** Random draws that added nothing new before we stop trying to fill a page. */
+private const val MAX_BARREN_RANDOM_DRAWS = 3
+
 /**
  * Reserved key under which the genre drill-down persists its single,
  * shared-across-all-genres filter + sort, reusing the per-library filters table.
@@ -276,6 +279,8 @@ class LibrarySeriesTabState(
     }
 
     fun reload() {
+        // An explicit refresh is the one moment a random order SHOULD change.
+        resetRandomPool()
         screenModelScope.launch {
             loadSeriesPage(1)
         }
@@ -386,7 +391,27 @@ class LibrarySeriesTabState(
         notifications.runCatchingToNotifications {
             val loadStateDelay = delayLoadState()
             currentSeriesPage = page
-            val seriesPage = getAllSeries(page, filterState.state.value)
+            val currentFilter = filterState.state.value
+
+            if (currentFilter.sortOrder == SeriesSort.RANDOM) {
+                val size = pageLoadSize.value
+                val lastDrawn = fillRandomPool(upTo = page * size, filter = currentFilter)
+                loadStateDelay.cancel()
+
+                currentSeriesPage = page
+                lastDrawn?.let { totalSeriesCount = it.totalElements }
+                val poolPages = if (size > 0) (randomPool.size + size - 1) / size else 1
+                // Keep one page of headroom while more can still be drawn, so the
+                // user can page on; once exhausted the pool IS the whole result.
+                totalSeriesPages = if (randomPoolExhausted) poolPages else maxOf(poolPages, page + 1)
+                series = randomPool.drop((page - 1) * size).take(size)
+                downloadedSeriesIds = bookApi.getDownloadedSeriesIds(series.map { it.id })
+                mutableState.value = LoadState.Success(Unit)
+                cacheFirstPage(page)
+                return@runCatchingToNotifications
+            }
+
+            val seriesPage = getAllSeries(page, currentFilter)
 
             loadStateDelay.cancel()
 
@@ -447,6 +472,55 @@ class LibrarySeriesTabState(
         totalSeriesCount = snapshot.totalSeriesCount
         currentSeriesPage = 1
         mutableState.value = LoadState.Success(Unit)
+    }
+
+    // ---- Stable random ordering -------------------------------------------
+    // Komga reshuffles on every request, so asking it for "page 2" of a random
+    // sort actually drew from a NEW shuffle: the same series could appear twice
+    // across pages while others were unreachable, and any reload re-rolled the
+    // lot. Draw into a session pool instead and page through that, so the order
+    // only changes when the user asks for it.
+    private val randomPool = mutableListOf<KomgaSeries>()
+    private var randomPoolSignature: String? = null
+    private var randomPoolExhausted = false
+
+    /** Forget the drawn order; the next random load reshuffles. */
+    private fun resetRandomPool() {
+        randomPool.clear()
+        randomPoolSignature = null
+        randomPoolExhausted = false
+    }
+
+    /**
+     * Draws until the pool holds [upTo] series, keeping only ones not already
+     * drawn. Returns the last server page (for the counts), or null when the
+     * pool already sufficed — i.e. paging back costs nothing.
+     *
+     * Overlap grows as the pool approaches the library size, so give up after a
+     * few barren draws rather than looping: the last page is then simply short.
+     */
+    private suspend fun fillRandomPool(upTo: Int, filter: SeriesFilter): Page<KomgaSeries>? {
+        val signature = filterSignature(filter)
+        if (randomPoolSignature != signature) {
+            randomPool.clear()
+            randomPoolExhausted = false
+            randomPoolSignature = signature
+        }
+
+        var lastPage: Page<KomgaSeries>? = null
+        var barrenDraws = 0
+        while (randomPool.size < upTo && !randomPoolExhausted && barrenDraws < MAX_BARREN_RANDOM_DRAWS) {
+            val drawn = getAllSeries(1, filter)
+            lastPage = drawn
+            val known = randomPool.mapTo(HashSet(randomPool.size)) { it.id.value }
+            val fresh = drawn.content.filter { it.id.value !in known }
+            if (fresh.isEmpty()) barrenDraws++ else {
+                barrenDraws = 0
+                randomPool += fresh
+            }
+            if (randomPool.size >= drawn.totalElements) randomPoolExhausted = true
+        }
+        return lastPage
     }
 
     private fun filterSignature(filter: SeriesFilter): String =
