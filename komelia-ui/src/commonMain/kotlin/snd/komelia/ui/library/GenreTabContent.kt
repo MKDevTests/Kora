@@ -52,6 +52,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
 import snd.komelia.ui.LocalFloatingToolbarPadding
+import snd.komelia.ui.platform.rememberGenreCoverFolderPicker
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import androidx.compose.runtime.CompositionLocalProvider
 import snd.komelia.ui.LocalCardLayoutBelow
@@ -215,30 +216,23 @@ private fun GenreCard(
  * full-text search of the whole library by name (the user names their files).
  */
 /**
- * Bulk cover import: pick many images at once and let the file NAMES decide
- * which genre each one belongs to (see GenreLabels.slugForFileName). Setting 50+
- * covers one dialog at a time is unusable, and these images are not in the JSON
- * backup — they live in private app storage — so this is also how a lost set is
- * restored from the source files.
+ * Bulk cover import: pick the FOLDER holding the covers and let the file NAMES
+ * decide which genre each one belongs to (see GenreLabels.slugForFileName).
+ * Setting 50+ covers one dialog at a time is unusable, and these images are not
+ * in the JSON backup — they live in private app storage — so this is also how a
+ * lost set is restored from the source files.
  */
 @Composable
 private fun GenreCoverImportButton(onImportCovers: (List<Pair<String, ByteArray>>) -> Unit) {
-    val scope = rememberCoroutineScope()
-    val picker = rememberFilePickerLauncher(
-        type = FileKitType.Image,
-        mode = FileKitMode.Multiple(),
-    ) { files ->
-        val picked = files ?: return@rememberFilePickerLauncher
-        scope.launch { onImportCovers(picked.map { it.name to it.readBytes() }) }
-    }
+    val pickFolder = rememberGenreCoverFolderPicker(onImportCovers)
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedButton(onClick = { picker.launch() }) {
-            Text("Importer des couvertures…")
+        OutlinedButton(onClick = pickFolder) {
+            Text("Importer des couvertures (dossier)…")
         }
     }
 }

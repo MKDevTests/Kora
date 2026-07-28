@@ -100,6 +100,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.palette)
             implementation(libs.androidx.activity.compose)
+            // Reading a user-picked folder (genre cover import) goes through SAF.
+            implementation(libs.androidx.documentfile)
             implementation(libs.androidx.security.crypto)
             implementation(libs.androidx.datastore)
             implementation(libs.commons.compress)
