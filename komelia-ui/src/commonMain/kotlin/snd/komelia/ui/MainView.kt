@@ -253,7 +253,6 @@ fun MainView(
                     favoriteIds = repo.getFavoriteSeriesIds().stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
                     settingsRepository = repo,
                     scope = ignoreScope,
-                    onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
                 )
             }
             val plannedController = remember(dependencies, viewModelFactory) {
@@ -262,7 +261,6 @@ fun MainView(
                     plannedIds = repo.getPlannedSeriesIds().stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
                     settingsRepository = repo,
                     scope = ignoreScope,
-                    onChanged = { viewModelFactory.screenReloadEvents.tryEmit(Unit) },
                 )
             }
 

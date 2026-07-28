@@ -11,14 +11,17 @@ import snd.komga.client.series.KomgaSeriesId
  * via [LocalPlanned] so any series menu / bulk action can toggle a series
  * without threading callbacks. Backed by per-server settings (a local
  * series-id set, never sent to the server), independent from [FavoritesController]
- * — a series can be both favorited and planned. [onChanged] nudges the current
- * screen to reload so the Planned view reflects the change immediately.
+ * — a series can be both favorited and planned.
+ *
+ * Deliberately fires NO screen-reload broadcast, for the same reason as
+ * [FavoritesController]: the server knows nothing about this list, so
+ * re-querying the visible listing is waste, and on a randomly-sorted library it
+ * re-rolled the whole order. Views read [plannedIds] and update on their own.
  */
 class PlannedController(
     val plannedIds: StateFlow<Set<String>>,
     private val settingsRepository: CommonSettingsRepository,
     private val scope: CoroutineScope,
-    private val onChanged: () -> Unit,
 ) {
     fun isPlanned(id: KomgaSeriesId): Boolean = id.value in plannedIds.value
 
@@ -26,7 +29,6 @@ class PlannedController(
         if (ids.isEmpty()) return
         scope.launch {
             settingsRepository.putPlannedSeriesIds(plannedIds.value + ids.map { it.value })
-            onChanged()
         }
     }
 
@@ -35,7 +37,6 @@ class PlannedController(
         val remove = ids.map { it.value }.toSet()
         scope.launch {
             settingsRepository.putPlannedSeriesIds(plannedIds.value - remove)
-            onChanged()
         }
     }
 

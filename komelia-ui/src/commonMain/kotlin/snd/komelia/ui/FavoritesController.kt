@@ -10,14 +10,18 @@ import snd.komga.client.series.KomgaSeriesId
  * App-wide handle for the local per-user Favorites, exposed via [LocalFavorites]
  * so any series menu / bulk action can favorite or unfavorite a series without
  * threading callbacks. Backed by per-server settings (a local series-id set,
- * never sent to the server). [onChanged] nudges the current screen to reload so
- * the Favorites view reflects the change immediately.
+ * never sent to the server).
+ *
+ * Deliberately fires NO screen-reload broadcast. Favoriting changes nothing the
+ * server knows about, so re-querying the visible listing is pure waste — and on
+ * a randomly-sorted library it re-rolled the whole order, which looked like the
+ * app shuffling itself for no reason. Everything that shows favorites reads
+ * [favoriteIds] and updates on its own.
  */
 class FavoritesController(
     val favoriteIds: StateFlow<Set<String>>,
     private val settingsRepository: CommonSettingsRepository,
     private val scope: CoroutineScope,
-    private val onChanged: () -> Unit,
 ) {
     fun isFavorite(id: KomgaSeriesId): Boolean = id.value in favoriteIds.value
 
@@ -25,7 +29,6 @@ class FavoritesController(
         if (ids.isEmpty()) return
         scope.launch {
             settingsRepository.putFavoriteSeriesIds(favoriteIds.value + ids.map { it.value })
-            onChanged()
         }
     }
 
@@ -34,7 +37,6 @@ class FavoritesController(
         val remove = ids.map { it.value }.toSet()
         scope.launch {
             settingsRepository.putFavoriteSeriesIds(favoriteIds.value - remove)
-            onChanged()
         }
     }
 

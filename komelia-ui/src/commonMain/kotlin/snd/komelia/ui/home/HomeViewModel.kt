@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -114,6 +115,17 @@ class HomeViewModel(
 
         load()
         startKomgaEventListener()
+
+        // The Favorites shelf reads the favorite ids at resolve time, so it used
+        // to depend on the global screen-reload that favoriting broadcast. That
+        // broadcast is gone (it also re-rolled randomly-sorted library listings
+        // for nothing), so this shelf now watches the ids itself — and only
+        // bothers when such a shelf is actually on screen.
+        favoriteIds.drop(1).onEach {
+            if (currentFilters.value.any { data -> data.filter is SeriesHomeScreenFilter.Favorites }) {
+                load(force = false)
+            }
+        }.launchIn(screenModelScope)
 
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
