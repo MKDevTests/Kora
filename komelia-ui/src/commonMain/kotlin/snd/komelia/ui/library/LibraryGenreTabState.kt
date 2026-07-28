@@ -307,47 +307,68 @@ class LibraryGenreTabState(
      * means losing the images, which live in private storage and are not in the
      * JSON backup. Keep the source files somewhere safe; this re-applies them.
      *
-     * Only genres present in the CURRENT library are touched. Returns a report so
-     * the UI can tell the user exactly what matched and what didn't.
+     * Only genres present in the CURRENT library are touched. Reports what it
+     * did as a notification.
+     *
+     * Exactly ONE file wins per genre, chosen by how well its name fits the open
+     * library:
+     *  - named for THIS library ("Bd_Action" in BD) — always wins;
+     *  - no library prefix ("Espionnage") — fallback, used only when no
+     *    prefixed file covers that genre;
+     *  - named for ANOTHER library ("Manga_Action" in BD) — never applied.
+     *
+     * Without this the plain file order decided, so an unprefixed file could
+     * overwrite the right one and one library's artwork landed on another's.
      */
     fun importCovers(files: List<Pair<String, ByteArray>>) {
         screenModelScope.launch {
             val knownSlugs = genres.map { it.slug }.toSet()
             val libraryName = library.value?.name
             val map = settingsRepository.getGenreCoverOverrides().first().toMutableMap()
-            val applied = mutableListOf<String>()
             val unmatched = mutableListOf<String>()
-            val notInLibrary = mutableListOf<String>()
 
+            // slug -> (bytes, whether the file names this library)
+            val chosen = LinkedHashMap<String, Pair<ByteArray, Boolean>>()
             for ((fileName, bytes) in files) {
                 val slug = GenreLabels.slugForFileName(fileName)
-                // A file named for ANOTHER library is skipped, not applied: the
-                // same genre exists in several libraries (Bd_Action /
-                // Comics_Action / Manga_Action all mean `action`) and without
-                // this the last file processed would win. A file with no library
-                // prefix ("Espionnage") is accepted for whichever library is open.
-                val token = GenreLabels.libraryTokenOfFileName(fileName)
-                val wrongLibrary = token != null && libraryName != null &&
-                    !GenreLabels.libraryTokenMatches(token, libraryName)
-                when {
-                    slug == null -> unmatched += fileName
-                    wrongLibrary || slug !in knownSlugs -> notInLibrary += fileName
-                    else -> {
-                        val key = overrideKey(slug)
-                        val path = saveCoverBytes(key, bytes)
-                        if (path == null) unmatched += fileName
-                        else {
-                            map[key] = "$FILE_PREFIX$path"
-                            applied += GenreLabels.label(slug)
-                        }
-                    }
+                if (slug == null) {
+                    unmatched += fileName
+                    continue
                 }
+                val token = GenreLabels.libraryTokenOfFileName(fileName)
+                val namesThisLibrary = token != null && libraryName != null &&
+                    GenreLabels.libraryTokenMatches(token, libraryName)
+                // Another library's file, or a genre this library doesn't use:
+                // silently not our business.
+                if (token != null && !namesThisLibrary) continue
+                if (slug !in knownSlugs) continue
+                val existing = chosen[slug]
+                // Keep the first candidate, unless this one names the library and
+                // the incumbent doesn't.
+                if (existing == null || (namesThisLibrary && !existing.second)) {
+                    chosen[slug] = bytes to namesThisLibrary
+                }
+            }
+
+            val applied = mutableListOf<String>()
+            for ((slug, candidate) in chosen) {
+                val key = overrideKey(slug)
+                val path = saveCoverBytes(key, candidate.first)
+                if (path == null) continue
+                map[key] = "$FILE_PREFIX$path"
+                applied += GenreLabels.label(slug)
             }
 
             settingsRepository.putGenreCoverOverrides(map)
             loadGenres()
 
-            val report = CoverImportReport(applied.sorted(), unmatched.sorted(), notInLibrary.sorted())
+            val report = CoverImportReport(
+                applied = applied.sorted(),
+                unmatched = unmatched.sorted(),
+                // Genres of this library still without a cover after the import —
+                // the useful thing to name, far more than the skipped file count.
+                missing = (knownSlugs - chosen.keys).map { GenreLabels.label(it) }.sorted(),
+            )
             appNotifications.add(
                 if (report.applied.isEmpty()) AppNotification.Error(report.summary())
                 else AppNotification.Normal(report.summary())
@@ -451,19 +472,25 @@ data class CoverImportReport(
     val applied: List<String>,
     /** File names whose genre could not be recognised. */
     val unmatched: List<String>,
-    /** Recognised genres that this library doesn't use — skipped, not an error. */
-    val notInLibrary: List<String>,
+    /**
+     * Genres of this library left without a cover. Named rather than counted:
+     * this is what tells the user a file is missing from the pack (or misnamed),
+     * which a raw "n skipped" number never did.
+     */
+    val missing: List<String>,
 ) {
-    val total: Int get() = applied.size + unmatched.size + notInLibrary.size
-
-    /** One-line outcome for the notification, naming what failed to match. */
+    /** One-line outcome for the notification. */
     fun summary(): String = buildString {
-        append("${applied.size}/$total couverture(s) appliquée(s)")
-        if (notInLibrary.isNotEmpty()) append(" · ${notInLibrary.size} pour une autre bibliothèque")
+        append("${applied.size} couverture(s) appliquée(s)")
+        if (missing.isNotEmpty()) {
+            append(" · sans image : ")
+            append(missing.take(6).joinToString(", "))
+            if (missing.size > 6) append("…")
+        }
         if (unmatched.isNotEmpty()) {
-            append(" · non reconnu(s) : ")
-            append(unmatched.take(5).joinToString(", "))
-            if (unmatched.size > 5) append("…")
+            append(" · nom non reconnu : ")
+            append(unmatched.take(4).joinToString(", "))
+            if (unmatched.size > 4) append("…")
         }
     }
 }
