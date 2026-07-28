@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
+import snd.komelia.homefilters.SeriesHomeScreenFilter
+import snd.komelia.ui.favorites.FavoritesScreen
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
@@ -150,7 +152,17 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     },
                                     selectedSeries = vm.selectedSeries.collectAsState().value,
                                     onSeriesSelect = vm::onSeriesSelect,
-                                    onShelfClick = { navigator push ShelfDetailScreen(it) },
+                                    onShelfClick = { shelf ->
+                                        // Favorites has a real screen of its own,
+                                        // with the per-library filter and its own
+                                        // actions; the generic shelf detail is a
+                                        // read-only "top N" view. Send the user to
+                                        // the full one.
+                                        navigator.push(
+                                            if (shelf is SeriesHomeScreenFilter.Favorites) FavoritesScreen()
+                                            else ShelfDetailScreen(shelf)
+                                        )
+                                    },
                                 )
 
                         }
