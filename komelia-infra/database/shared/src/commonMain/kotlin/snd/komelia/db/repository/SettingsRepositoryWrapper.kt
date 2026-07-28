@@ -90,6 +90,22 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(plannedSeriesIds = ids) }
     }
 
+    override fun getSeriesLibraryIds(): Flow<Map<String, String>> =
+        wrapper.state.map { it.seriesLibraryIds }.distinctUntilChanged()
+
+    /** Merges: callers record what they just learned without dropping the rest. */
+    override suspend fun putSeriesLibraryIds(mapping: Map<String, String>) {
+        if (mapping.isEmpty()) return
+        wrapper.transform { it.copy(seriesLibraryIds = it.seriesLibraryIds + mapping) }
+    }
+
+    override fun getExcludedLibraryIds(): Flow<Set<String>> =
+        wrapper.state.map { it.excludedLibraryIds }.distinctUntilChanged()
+
+    override suspend fun putExcludedLibraryIds(ids: Set<String>) {
+        wrapper.transform { it.copy(excludedLibraryIds = ids) }
+    }
+
     override fun getGenreTilesCustomAppearance(): Flow<Boolean> =
         wrapper.state.map { it.genreTilesCustomAppearance }.distinctUntilChanged()
 

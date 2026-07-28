@@ -93,6 +93,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V81__next_releases_bottom_nav.sql",
         "V82__invert_speech_bubbles.sql",
         "V83__webtoon_smart_scroll.sql",
+        "V84__personal_lists_library_scope.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

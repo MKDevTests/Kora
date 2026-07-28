@@ -222,6 +222,21 @@ data class AppSettings(
     val plannedSeriesIds: Set<String> = emptySet(),
 
     /**
+     * Local cache of `seriesId -> libraryId`, so the personal lists (Favorites /
+     * Planned) can be filtered by library WITHOUT resolving every entry over the
+     * network first. Filled in as entries are resolved or added; a missing id is
+     * simply resolved once and recorded. Never a source of truth.
+     */
+    val seriesLibraryIds: Map<String, String> = emptyMap(),
+
+    /**
+     * Libraries kept OUT of the "All" view of the personal lists — e.g. a
+     * "Divers" library you only want to browse on its own tab. Still reachable
+     * by selecting that library explicitly. Shared by Favorites and Planned.
+     */
+    val excludedLibraryIds: Set<String> = emptySet(),
+
+    /**
      * Experimental Genre tab: when true the genre tiles use their own
      * appearance (below) instead of inheriting the global card style. Size +
      * text only, per the user's choice.

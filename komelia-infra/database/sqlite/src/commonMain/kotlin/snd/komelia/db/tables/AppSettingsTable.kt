@@ -66,6 +66,8 @@ object AppSettingsTable : Table("AppSettings") {
     val ignoredSeriesIds = text("ignored_series_ids").default("[]")
     val favoriteSeriesIds = text("favorite_series_ids").default("[]")
     val plannedSeriesIds = text("planned_series_ids").default("[]")
+    val seriesLibraryIds = text("series_library_ids").default("{}")
+    val excludedLibraryIds = text("excluded_library_ids").default("[]")
     val genreTilesCustomAppearance = bool("genre_tiles_custom_appearance").default(false)
     val genreTileWidth = integer("genre_tile_width").default(170)
     val genreTileTextBelow = bool("genre_tile_text_below").default(false)

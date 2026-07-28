@@ -49,6 +49,18 @@ interface CommonSettingsRepository {
     fun getPlannedSeriesIds(): Flow<Set<String>>
     suspend fun putPlannedSeriesIds(ids: Set<String>)
 
+    /**
+     * Cached `seriesId -> libraryId` for the personal lists, so they can be
+     * filtered by library before any network call. Merged into, never replaced
+     * wholesale, by [putSeriesLibraryIds].
+     */
+    fun getSeriesLibraryIds(): Flow<Map<String, String>>
+    suspend fun putSeriesLibraryIds(mapping: Map<String, String>)
+
+    /** Libraries excluded from the "All" view of Favorites and Planned. */
+    fun getExcludedLibraryIds(): Flow<Set<String>>
+    suspend fun putExcludedLibraryIds(ids: Set<String>)
+
     /** One-shot flag: local Ignore List pushed to the server as kora:hidden. */
     fun getIgnoreListMigratedToServerHidden(): Flow<Boolean>
     suspend fun putIgnoreListMigratedToServerHidden(value: Boolean)

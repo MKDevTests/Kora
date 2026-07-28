@@ -98,6 +98,12 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[plannedSeriesIds] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.plannedSeriesIds.toList()
                 )
+                it[seriesLibraryIds] = Json.encodeToString(
+                    MapSerializer(String.serializer(), String.serializer()), settings.seriesLibraryIds
+                )
+                it[excludedLibraryIds] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.excludedLibraryIds.toList()
+                )
                 it[genreTilesCustomAppearance] = settings.genreTilesCustomAppearance
                 it[genreTileWidth] = settings.genreTileWidth
                 it[genreTileTextBelow] = settings.genreTileTextBelow
@@ -194,6 +200,18 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 Json.decodeFromString(
                     ListSerializer(String.serializer()),
                     get(AppSettingsTable.plannedSeriesIds)
+                ).toSet()
+            }.getOrDefault(emptySet()),
+            seriesLibraryIds = runCatching {
+                Json.decodeFromString(
+                    MapSerializer(String.serializer(), String.serializer()),
+                    get(AppSettingsTable.seriesLibraryIds)
+                )
+            }.getOrDefault(emptyMap()),
+            excludedLibraryIds = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.excludedLibraryIds)
                 ).toSet()
             }.getOrDefault(emptySet()),
             genreTilesCustomAppearance = get(AppSettingsTable.genreTilesCustomAppearance),
