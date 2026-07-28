@@ -28,11 +28,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -47,6 +44,9 @@ import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.LoadState.Error
+import snd.komelia.ui.common.lists.LibraryScopeFilterRow
+import snd.komelia.ui.common.lists.PersonalListLoader
+import snd.komga.client.library.KomgaLibrary
 import snd.komelia.ui.LocalRawStatusBarHeight
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.cards.defaultCardWidth
@@ -103,9 +103,19 @@ class FavoritesScreen : Screen {
                             }
                         }
                     }
+                    LibraryScopeFilterRow(
+                        libraries = vm.availableLibraries.collectAsState().value,
+                        selectedLibraryId = vm.selectedLibraryId.collectAsState().value,
+                        excludedLibraryIds = vm.excludedLibraryIds.collectAsState().value,
+                        onSelect = vm::selectLibrary,
+                        onToggleExcluded = vm::toggleLibraryExcluded,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    )
                     if (vm.series.isEmpty() && vm.state.collectAsState().value is LoadState.Success) {
                         Text(
-                            "Aucun favori. Appui long sur une série → « Ajouter aux favoris ».",
+                            if (vm.selectedLibraryId.collectAsState().value != null)
+                                "Aucun favori dans cette bibliothèque."
+                            else "Aucun favori. Appui long sur une série → « Ajouter aux favoris ».",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 20.dp),
@@ -139,15 +149,54 @@ class FavoritesScreen : Screen {
 }
 
 class FavoritesViewModel(
-    settingsRepository: CommonSettingsRepository,
+    private val settingsRepository: CommonSettingsRepository,
     private val seriesApi: KomgaSeriesApi,
     private val bookApi: KomgaBookApi,
     private val notifications: AppNotifications,
     private val taskEmitter: OfflineTaskEmitter,
+    private val libraries: StateFlow<List<KomgaLibrary>>,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
 
     private val favoriteIds: StateFlow<Set<String>> =
         settingsRepository.getFavoriteSeriesIds().stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
+
+    private val loader = PersonalListLoader(seriesApi, settingsRepository)
+
+    private val seriesLibraryIds: StateFlow<Map<String, String>> =
+        settingsRepository.getSeriesLibraryIds().stateIn(screenModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Libraries kept out of "All". Shared with the Planned list. */
+    val excludedLibraryIds: StateFlow<Set<String>> =
+        settingsRepository.getExcludedLibraryIds().stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
+
+    /** null = "All libraries". Session-scoped: reopening the screen starts on All. */
+    val selectedLibraryId = MutableStateFlow<String?>(null)
+
+    /**
+     * Libraries the filter row offers: those actually holding a favorite, in the
+     * server's library order. Derived from the cache, so a library only appears
+     * once at least one of its favorites has been resolved — which the first
+     * load does for all of them.
+     */
+    val availableLibraries: StateFlow<List<KomgaLibrary>> =
+        combine(favoriteIds, seriesLibraryIds, libraries) { ids, cache, all ->
+            val present = ids.mapNotNull { cache[it] }.toSet()
+            all.filter { it.id.value in present }
+        }.stateIn(screenModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun selectLibrary(libraryId: String?) {
+        selectedLibraryId.value = libraryId
+    }
+
+    /** Toggles whether [libraryId] is part of the "All" view (both lists). */
+    fun toggleLibraryExcluded(libraryId: String) {
+        screenModelScope.launch {
+            val current = excludedLibraryIds.value
+            settingsRepository.putExcludedLibraryIds(
+                if (libraryId in current) current - libraryId else current + libraryId
+            )
+        }
+    }
 
     val cardWidth: StateFlow<Dp> = settingsRepository.getCardWidth()
         .map { Dp(it.toFloat()) }
@@ -160,32 +209,27 @@ class FavoritesViewModel(
 
     fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
-        // Re-resolve whenever the favorites set changes (incl. unfavorite here).
-        favoriteIds.onEach { load(it) }.launchIn(screenModelScope)
+        // Re-resolve whenever the favorites set, the chosen library or the
+        // exclusions change (incl. unfavorite here).
+        combine(favoriteIds, selectedLibraryId, excludedLibraryIds) { ids, selected, excluded ->
+            Triple(ids, selected, excluded)
+        }.onEach { (ids, selected, excluded) -> load(ids, selected, excluded) }
+            .launchIn(screenModelScope)
     }
 
     fun reload() {
-        screenModelScope.launch { load(favoriteIds.value) }
+        screenModelScope.launch {
+            load(favoriteIds.value, selectedLibraryId.value, excludedLibraryIds.value)
+        }
     }
 
-    private suspend fun load(ids: Set<String>) {
+    private suspend fun load(ids: Set<String>, selected: String?, excluded: Set<String>) {
         notifications.runCatchingToNotifications {
             if (state.value is LoadState.Uninitialized) mutableState.value = LoadState.Loading
-            // getOneSeries is not filtered, so favorites resolve one id at a
-            // time. Bound the concurrency: a large favorites set used to fire one
-            // getOneSeries per id at once, saturating Komga's DB connection pool
-            // and stalling every other request (same class of stampede as the
-            // genre-tab counts). Four in flight keeps it responsive.
-            val limit = Semaphore(4)
-            val resolved = coroutineScope {
-                ids.map { id ->
-                    async {
-                        limit.withPermit {
-                            runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull()
-                        }
-                    }
-                }.awaitAll().filterNotNull()
-            }.sortedBy { it.metadata.title.lowercase() }
+            // The loader applies the library scope before fetching wherever the
+            // series' library is already known, so switching libraries doesn't
+            // re-resolve the whole favorites set.
+            val resolved = loader.resolve(ids, selected, excluded, seriesLibraryIds.value)
             series = resolved
             downloadedSeriesIds = bookApi.getDownloadedSeriesIds(resolved.map { it.id })
             mutableState.value = LoadState.Success(Unit)

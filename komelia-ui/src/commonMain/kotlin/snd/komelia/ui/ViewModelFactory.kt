@@ -897,6 +897,7 @@ class ViewModelFactory(
             bookApi = komgaApi.bookApi,
             notifications = dependencies.appNotifications,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
+            libraries = dependencies.komgaSharedState.libraries,
         )
     }
 
@@ -907,6 +908,7 @@ class ViewModelFactory(
             bookApi = komgaApi.bookApi,
             notifications = dependencies.appNotifications,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
+            libraries = dependencies.komgaSharedState.libraries,
         )
     }
 

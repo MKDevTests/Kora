@@ -28,9 +28,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -49,6 +48,9 @@ import snd.komelia.ui.LocalRawStatusBarHeight
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.components.ErrorContent
+import snd.komelia.ui.common.lists.LibraryScopeFilterRow
+import snd.komelia.ui.common.lists.PersonalListLoader
+import snd.komga.client.library.KomgaLibrary
 import snd.komelia.ui.common.itemlist.SeriesLazyCardGrid
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.BackPressHandler
@@ -102,9 +104,19 @@ class PlannedScreen : Screen {
                             }
                         }
                     }
+                    LibraryScopeFilterRow(
+                        libraries = vm.availableLibraries.collectAsState().value,
+                        selectedLibraryId = vm.selectedLibraryId.collectAsState().value,
+                        excludedLibraryIds = vm.excludedLibraryIds.collectAsState().value,
+                        onSelect = vm::selectLibrary,
+                        onToggleExcluded = vm::toggleLibraryExcluded,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    )
                     if (vm.series.isEmpty() && vm.state.collectAsState().value is LoadState.Success) {
                         Text(
-                            "Rien à lire pour l'instant. Appui long sur une série → « Marquer à lire ».",
+                            if (vm.selectedLibraryId.collectAsState().value != null)
+                                "Rien à lire dans cette bibliothèque."
+                            else "Rien à lire pour l'instant. Appui long sur une série → « Marquer à lire ».",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 20.dp),
@@ -138,15 +150,49 @@ class PlannedScreen : Screen {
 }
 
 class PlannedViewModel(
-    settingsRepository: CommonSettingsRepository,
+    private val settingsRepository: CommonSettingsRepository,
     private val seriesApi: KomgaSeriesApi,
     private val bookApi: KomgaBookApi,
     private val notifications: AppNotifications,
     private val taskEmitter: OfflineTaskEmitter,
+    private val libraries: StateFlow<List<KomgaLibrary>>,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
 
     private val plannedIds: StateFlow<Set<String>> =
         settingsRepository.getPlannedSeriesIds().stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
+
+    private val loader = PersonalListLoader(seriesApi, settingsRepository)
+
+    private val seriesLibraryIds: StateFlow<Map<String, String>> =
+        settingsRepository.getSeriesLibraryIds().stateIn(screenModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Libraries kept out of "All". Shared with the Favorites list. */
+    val excludedLibraryIds: StateFlow<Set<String>> =
+        settingsRepository.getExcludedLibraryIds().stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
+
+    /** null = "All libraries". Session-scoped. */
+    val selectedLibraryId = MutableStateFlow<String?>(null)
+
+    /** Libraries actually holding a planned series, in the server's order. */
+    val availableLibraries: StateFlow<List<KomgaLibrary>> =
+        combine(plannedIds, seriesLibraryIds, libraries) { ids, cache, all ->
+            val present = ids.mapNotNull { cache[it] }.toSet()
+            all.filter { it.id.value in present }
+        }.stateIn(screenModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun selectLibrary(libraryId: String?) {
+        selectedLibraryId.value = libraryId
+    }
+
+    /** Toggles whether [libraryId] is part of the "All" view (both lists). */
+    fun toggleLibraryExcluded(libraryId: String) {
+        screenModelScope.launch {
+            val current = excludedLibraryIds.value
+            settingsRepository.putExcludedLibraryIds(
+                if (libraryId in current) current - libraryId else current + libraryId
+            )
+        }
+    }
 
     val cardWidth: StateFlow<Dp> = settingsRepository.getCardWidth()
         .map { Dp(it.toFloat()) }
@@ -159,23 +205,27 @@ class PlannedViewModel(
 
     fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
-        // Re-resolve whenever the planned set changes (incl. un-planning here).
-        plannedIds.onEach { load(it) }.launchIn(screenModelScope)
+        // Re-resolve whenever the planned set, the chosen library or the
+        // exclusions change (incl. un-planning here).
+        combine(plannedIds, selectedLibraryId, excludedLibraryIds) { ids, selected, excluded ->
+            Triple(ids, selected, excluded)
+        }.onEach { (ids, selected, excluded) -> load(ids, selected, excluded) }
+            .launchIn(screenModelScope)
     }
 
     fun reload() {
-        screenModelScope.launch { load(plannedIds.value) }
+        screenModelScope.launch {
+            load(plannedIds.value, selectedLibraryId.value, excludedLibraryIds.value)
+        }
     }
 
-    private suspend fun load(ids: Set<String>) {
+    private suspend fun load(ids: Set<String>, selected: String?, excluded: Set<String>) {
         notifications.runCatchingToNotifications {
             if (state.value is LoadState.Uninitialized) mutableState.value = LoadState.Loading
-            // getOneSeries is not filtered; resolve planned series in parallel, sort by title.
-            val resolved = coroutineScope {
-                ids.map { id ->
-                    async { runCatching { seriesApi.getOneSeries(KomgaSeriesId(id)) }.getOrNull() }
-                }.awaitAll().filterNotNull()
-            }.sortedBy { it.metadata.title.lowercase() }
+            // Applies the library scope before fetching where the library is
+            // already known, and bounds concurrency (this used to fan out one
+            // getOneSeries per id at once, unbounded).
+            val resolved = loader.resolve(ids, selected, excluded, seriesLibraryIds.value)
             series = resolved
             downloadedSeriesIds = bookApi.getDownloadedSeriesIds(resolved.map { it.id })
             mutableState.value = LoadState.Success(Unit)
