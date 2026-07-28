@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -92,10 +93,17 @@ class HomeViewModel(
     private val taskEmitter: OfflineTaskEmitter,
     cardWidthFlow: Flow<Dp>,
     favoriteIdsFlow: Flow<Set<String>>,
+    excludedLibraryIdsFlow: Flow<Set<String>> = flowOf(emptySet()),
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
     private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
-    private val shelfResolver = HomeShelfResolver(seriesApi, bookApi) { favoriteIds.value }
+    private val excludedLibraryIds = excludedLibraryIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
+    private val shelfResolver = HomeShelfResolver(
+        seriesApi = seriesApi,
+        bookApi = bookApi,
+        favoriteIds = { favoriteIds.value },
+        excludedLibraryIds = { excludedLibraryIds.value },
+    )
 
     private val reloadEventsEnabled = MutableStateFlow(true)
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, DROP_OLDEST)

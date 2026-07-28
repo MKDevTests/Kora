@@ -37,6 +37,7 @@ class HomeShelfResolver(
     private val seriesApi: KomgaSeriesApi,
     private val bookApi: KomgaBookApi,
     private val favoriteIds: () -> Set<String>,
+    private val excludedLibraryIds: () -> Set<String> = { emptySet() },
 ) {
 
     suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? =
@@ -110,7 +111,12 @@ class HomeShelfResolver(
                             }
                         }
                     }.awaitAll().filterNotNull()
-                }.sortedBy { it.metadata.title.lowercase() }
+                }
+                    // Filter on the RESOLVED library, not the id->library cache:
+                    // a just-added favorite isn't in that cache yet, so it would
+                    // slip onto the shelf until some other screen resolved it.
+                    .filter { it.libraryId.value !in excludedLibraryIds() }
+                    .sortedBy { it.metadata.title.lowercase() }
                 SeriesFilterData(series = resolved, filter = filter)
             }
 

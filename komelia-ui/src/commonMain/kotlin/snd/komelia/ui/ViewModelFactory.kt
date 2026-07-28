@@ -188,6 +188,7 @@ class ViewModelFactory(
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             cardWidthFlow = getGridCardWidth(),
             favoriteIdsFlow = scopedFavoriteSeriesIds(),
+            excludedLibraryIdsFlow = appRepositories.settingsRepository.getExcludedLibraryIds(),
         )
     }
 
