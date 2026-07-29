@@ -282,6 +282,15 @@ class LibraryViewModel(
         }
     }
 
+    /**
+     * Re-reads the "Keep reading" shelf only — one request, no spinner. Called
+     * on the way back from the reader: the progress of the book just read has
+     * changed even when no other volume was opened.
+     */
+    fun refreshKeepReading() {
+        screenModelScope.launch { loadKeepReadingBooks() }
+    }
+
     fun toggleContinueReading() {
         screenModelScope.launch {
             settingsRepository.putShowContinueReading(!showContinueReading.value)
@@ -326,6 +335,12 @@ class LibraryViewModel(
                 is CollectionAdded, is CollectionDeleted -> reloadJobsFlow.tryEmit(Unit)
                 is KomgaEvent.ReadProgressSeriesChanged,
                 is KomgaEvent.ReadProgressSeriesDeleted -> reloadJobsFlow.tryEmit(Unit)
+                // Book-level progress too: finishing a volume elsewhere (series
+                // screen, another device) has to drop it from "Keep reading"
+                // without waiting for a manual refresh. The collector already
+                // throttles, so a burst of page pushes costs one reload.
+                is KomgaEvent.ReadProgressChanged,
+                is KomgaEvent.ReadProgressDeleted -> reloadJobsFlow.tryEmit(Unit)
 
                 else -> {}
             }

@@ -302,9 +302,15 @@ class LibraryScreen(
                                                     book = book,
                                                     markReadProgress = mark,
                                                     onExit = { lastReadBook ->
-                                                        if (lastReadBook.id != book.id) {
-                                                            vm.reload()
-                                                        }
+                                                        // Progress changed whether or not the reader
+                                                        // moved on to another volume, so the shelf has
+                                                        // to be re-read either way — guarding on "a
+                                                        // different book" is what left it stale until
+                                                        // a manual refresh. A different book means the
+                                                        // rest of the screen moved too, hence the full
+                                                        // reload there.
+                                                        if (lastReadBook.id != book.id) vm.reload()
+                                                        else vm.refreshKeepReading()
                                                     }
                                                 )
                                             )

@@ -645,6 +645,22 @@ class ReaderState(
             updateCurrentSeriesAndReaderType(booksState.nextBook)
             onProgressChange(1)
         } else {
+            // LAST volume of the series: there is nothing to move on to, but
+            // moving on is exactly what the user just did — same rule as above,
+            // and the only place it was missing. Without this, finishing a
+            // series' last volume left the book "in progress" forever: it stayed
+            // on the Keep-reading shelf and the series never counted as read,
+            // and it had to be marked by hand.
+            if (markReadProgress) {
+                finalFlushScope.launch {
+                    runCatching {
+                        bookApi.markReadProgress(
+                            booksState.currentBook.id,
+                            KomgaBookReadProgressUpdateRequest(completed = true),
+                        )
+                    }
+                }
+            }
             navigator replace MainScreen(
                 if (booksState.currentBook.oneshot) OneshotScreen(booksState.currentBook, bookSiblingsContext)
                 else SeriesScreen(booksState.currentBook.seriesId)
@@ -886,8 +902,25 @@ class ReaderState(
         // CONFLATED progressUpdateChannel never drained its final value.
         if (markReadProgress && booksState.value != null) {
             logger.debug { "[ReadProgress] onDispose flush page=${readProgressPage.value} book=${booksState.value?.currentBook?.id?.value}" }
+            val state = booksState.value
+            val lastPageReached = state != null &&
+                state.currentBookPages.isNotEmpty() &&
+                readProgressPage.value >= state.currentBookPages.size
             finalFlushScope.launch {
                 runCatching { updateCacheAndPush() }
+                // Leaving on the last page = finished, said explicitly instead of
+                // left for the server to infer from the progression. On a series'
+                // LAST volume nothing else ever said it: the book stayed "in
+                // progress" on the Keep-reading shelf and the series never counted
+                // as read. Idempotent, and only fires on the last page.
+                if (lastPageReached && state != null) {
+                    runCatching {
+                        bookApi.markReadProgress(
+                            state.currentBook.id,
+                            KomgaBookReadProgressUpdateRequest(completed = true),
+                        )
+                    }
+                }
             }
         }
         currentBookId.value = null

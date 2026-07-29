@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import snd.komelia.ui.LocalFloatingToolbarPadding
+import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.common.cards.SeriesImageCard
 import snd.komelia.ui.library.ForYouSuggestion
 import snd.komelia.ui.library.LibraryForYouTabState
@@ -43,11 +45,21 @@ fun ForYouContent(
 ) {
     LaunchedEffect(Unit) { state.onOpened() }
     val cardWidth = state.cardWidth.collectAsState().value
+    // Same insets as every other grid on this screen: without the toolbar
+    // padding the first row slides under the floating top bar and hides the
+    // library name.
+    val toolbarPadding = LocalFloatingToolbarPadding.current
+    val extraBottomPadding = LocalTransparentNavBarPadding.current
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(cardWidth),
         horizontalArrangement = Arrangement.spacedBy(15.dp),
-        contentPadding = PaddingValues(10.dp),
+        contentPadding = PaddingValues(
+            start = 10.dp,
+            end = 10.dp,
+            top = toolbarPadding,
+            bottom = 15.dp + extraBottomPadding,
+        ),
         modifier = Modifier.fillMaxWidth(),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) { beforeContent() }
