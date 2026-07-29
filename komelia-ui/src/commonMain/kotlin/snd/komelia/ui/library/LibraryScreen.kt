@@ -106,9 +106,11 @@ import snd.komelia.ui.common.menus.LibraryActionsMenu
 import snd.komelia.ui.common.menus.LibraryMenuActions
 import snd.komelia.ui.topbar.NewTopAppBar
 import snd.komelia.ui.library.LibraryTab.COLLECTIONS
+import snd.komelia.ui.library.LibraryTab.FOR_YOU
 import snd.komelia.ui.library.LibraryTab.GENRE
 import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
+import snd.komelia.ui.library.view.ForYouContent
 import snd.komelia.ui.library.view.LibraryCollectionsContent
 import snd.komelia.ui.library.view.LibraryReadListsContent
 import snd.komelia.ui.platform.BackPressHandler
@@ -202,6 +204,15 @@ class LibraryScreen(
                                 50
                             ) to { _: Int -> }
                         }
+
+                        FOR_YOU -> {
+                            val count = vm.forYouTabState.suggestions.size
+                            Triple(
+                                count,
+                                if (count > 1) "suggestions" else "suggestion",
+                                50
+                            ) to { _: Int -> }
+                        }
                     }
                     val (totalCount, countLabel, pageSize) = totalCountInfo
 
@@ -227,7 +238,8 @@ class LibraryScreen(
                             onBrowseClick = vm::toBrowseTab,
                             onCollectionsClick = vm::toCollectionsTab,
                             onReadListsClick = vm::toReadListsTab,
-                            onGenreClick = vm::toGenreTab
+                            onGenreClick = vm::toGenreTab,
+                            onForYouClick = vm::toForYouTab
                         )
                     }
 
@@ -272,6 +284,7 @@ class LibraryScreen(
                                     onCollectionsClick = vm::toCollectionsTab,
                                     onReadListsClick = vm::toReadListsTab,
                                     onGenreClick = vm::toGenreTab,
+                                    onForYouClick = vm::toForYouTab,
                                     randomSeriesEnabled = vm.seriesTabState.totalSeriesCount > 0,
                                     onRandomSeriesClick = {
                                         vm.seriesTabState.openRandomSeries { navigator.push(seriesScreen(it)) }
@@ -312,6 +325,11 @@ class LibraryScreen(
                             COLLECTIONS -> CollectionsTab(vm.collectionsTabState, beforeContent)
                             READ_LISTS -> ReadListsTab(vm.readListsTabState, beforeContent)
                             GENRE -> GenreTab(vm.genreTabState, beforeContent)
+                            FOR_YOU -> ForYouContent(
+                                state = vm.forYouTabState,
+                                onSeriesClick = { navigator.push(seriesScreen(it)) },
+                                beforeContent = beforeContent,
+                            )
                         }
                     }
 
@@ -746,6 +764,7 @@ private fun LibraryTabChips(
     onCollectionsClick: () -> Unit,
     onReadListsClick: () -> Unit,
     onGenreClick: () -> Unit = {},
+    onForYouClick: () -> Unit = {},
     randomSeriesEnabled: Boolean = false,
     onRandomSeriesClick: () -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -756,7 +775,10 @@ private fun LibraryTabChips(
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (collectionsCount > 0 || readListsCount > 0 || genresCount > 0) {
+        // "For you" exists in every library, so the Series chip is now always
+        // shown too — otherwise a library without collections would offer no way
+        // back from the suggestions.
+        run {
             item {
                 FilterChip(
                     selected = currentTab == SERIES,
@@ -802,6 +824,16 @@ private fun LibraryTabChips(
                         border = AppFilterChipDefaults.filterChipBorder(currentTab == GENRE),
                     )
                 }
+            }
+            item {
+                FilterChip(
+                    selected = currentTab == FOR_YOU,
+                    onClick = onForYouClick,
+                    label = { Text("For you") },
+                    colors = chipColors,
+                    shape = AppFilterChipDefaults.shape(),
+                    border = AppFilterChipDefaults.filterChipBorder(currentTab == FOR_YOU),
+                )
             }
         }
 
@@ -935,8 +967,11 @@ private fun LibrarySegmentedButtons(
     onCollectionsClick: () -> Unit,
     onReadListsClick: () -> Unit,
     onGenreClick: () -> Unit = {},
+    onForYouClick: () -> Unit = {},
 ) {
-    if (collectionsCount > 0 || readListsCount > 0 || genresCount > 0) {
+    // Always rendered now: every library has a "For you" tab, so the row is
+    // never empty and Series always has a way back.
+    run {
         val tabCount = getTabCount(collectionsCount, readListsCount, genresCount)
         val accentColor = LocalAccentColor.current
         val colors = if (accentColor != null) {
@@ -983,17 +1018,25 @@ private fun LibrarySegmentedButtons(
                 SegmentedButton(
                     selected = currentTab == GENRE,
                     onClick = onGenreClick,
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = tabCount),
+                    shape = SegmentedButtonDefaults.itemShape(index = index++, count = tabCount),
                     label = { Text("Genres") },
                     colors = colors
                 )
             }
+            SegmentedButton(
+                selected = currentTab == FOR_YOU,
+                onClick = onForYouClick,
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = tabCount),
+                label = { Text("For you") },
+                colors = colors
+            )
         }
     }
 }
 
 private fun getTabCount(collectionsCount: Int, readListsCount: Int, genresCount: Int = 0): Int {
-    var count = 1
+    // Series + For you always exist; the rest depend on the library's content.
+    var count = 2
     if (collectionsCount > 0) count++
     if (readListsCount > 0) count++
     if (genresCount > 0) count++

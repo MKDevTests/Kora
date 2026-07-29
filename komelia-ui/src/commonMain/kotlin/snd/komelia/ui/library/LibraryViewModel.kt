@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -40,6 +42,7 @@ import snd.komelia.ui.LoadState.Uninitialized
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.LibraryMenuActions
 import snd.komelia.ui.library.LibraryTab.COLLECTIONS
+import snd.komelia.ui.library.LibraryTab.FOR_YOU
 import snd.komelia.ui.library.LibraryTab.GENRE
 import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
@@ -87,6 +90,10 @@ class LibraryViewModel(
     private val libraryId: KomgaLibraryId?,
     private val settingsRepository: CommonSettingsRepository,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
+    similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
+    similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
+    seriesRatingsRepository: snd.komelia.ratings.SeriesRatingsRepository,
+    hiddenSeriesIds: StateFlow<Set<String>>,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val library = libraryFlow.onEach { settingsRepository.putLastSelectedLibraryId(it?.id) }
         .stateIn(screenModelScope, SharingStarted.Eagerly, null)
@@ -146,6 +153,24 @@ class LibraryViewModel(
         library = library,
         cardWidth = cardWidth,
     )
+    val forYouTabState = LibraryForYouTabState(
+        library = library,
+        notifications = appNotifications,
+        seriesApi = seriesApi,
+        repository = similarityIndexRepository,
+        indexBuilder = similarityIndexBuilder,
+        ratingsRepository = seriesRatingsRepository,
+        favoriteSeriesIds = settingsRepository.getFavoriteSeriesIds(),
+        // Same rule as the series "Similar" tab: hidden and ignored series are
+        // indexed but never proposed.
+        excludedSeriesIds = combine(
+            settingsRepository.getIgnoreListEnabled(),
+            settingsRepository.getIgnoredSeriesIds(),
+            hiddenSeriesIds,
+        ) { enabled, ignored, hidden -> (if (enabled) ignored else emptySet()) + hidden },
+        screenModelScope = screenModelScope,
+        cardWidth = cardWidth,
+    )
     val showToolbar = seriesTabState.isInEditMode.map { !it }
         .stateIn(screenModelScope, SharingStarted.Eagerly, true)
 
@@ -178,6 +203,7 @@ class LibraryViewModel(
                 COLLECTIONS -> collectionsTabState.reload()
                 READ_LISTS -> readListsTabState.reload()
                 GENRE -> genreTabState.reload()
+                FOR_YOU -> forYouTabState.reload()
             }
         }
     }
@@ -278,6 +304,10 @@ class LibraryViewModel(
         currentTab = GENRE
     }
 
+    fun toForYouTab() {
+        currentTab = FOR_YOU
+    }
+
     fun libraryActions() = LibraryMenuActions(libraryApi, appNotifications, taskEmitter, screenModelScope)
 
     fun stopKomgaEventHandler() {
@@ -307,6 +337,7 @@ enum class LibraryTab {
     SERIES,
     COLLECTIONS,
     READ_LISTS,
-    GENRE
+    GENRE,
+    FOR_YOU
 }
 

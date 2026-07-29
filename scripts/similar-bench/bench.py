@@ -42,6 +42,7 @@ from kora_similar import (
     Weights,
     is_junk_author_name,
     is_marker_tag,
+    taste_affinities,
     terms_of_series,
 )
 
@@ -220,7 +221,21 @@ def cmd_emit_expected(args) -> None:
     """
     fixture = json.loads((HERE / "fixture.json").read_text(encoding="utf-8"))
     engine = SimilarityEngine(fixture["series"], Weights())
+    for_you = fixture["forYou"]
     expected = {
+        "_forYou": [
+            {
+                "seriesId": result.series_id,
+                "score": round(result.score, 12),
+                "reasons": [describe(f) for f in result.reasons],
+            }
+            for result in engine.recommend(
+                taste_affinities(for_you["evidence"]),
+                limit=fixture.get("limit", 5),
+                exclude=set(for_you["exclude"]),
+            )
+        ],
+    } | {
         query: [
             {
                 "seriesId": result.series_id,

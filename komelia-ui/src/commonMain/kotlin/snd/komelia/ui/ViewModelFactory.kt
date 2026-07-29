@@ -144,6 +144,10 @@ class ViewModelFactory(
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
+            similarityIndexRepository = appRepositories.similarityIndexRepository,
+            similarityIndexBuilder = dependencies.similarityIndexBuilder,
+            seriesRatingsRepository = appRepositories.seriesRatingsRepository,
+            hiddenSeriesIds = dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),
         )
     }
 

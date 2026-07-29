@@ -2,6 +2,16 @@
   "_comment": "Cross-check fixture for the Kotlin engine and its Python port. Small on purpose, but it exercises the parts that are easy to get subtly wrong: rarity (action is common, espionnage is rare), the per-author cap (kishimoto carries four series), role weighting (a colorist credit must count less than a writer one), a term carried by EVERY series (bd, which the engine skips outright), and book tags. Regenerate the expected file with: python bench.py emit-expected",
   "limit": 5,
   "queries": ["s1", "s7"],
+  "_forYouComment": "Taste profile: two liked (one favourite, one 4-star), one disliked at 1 star. The disliked one shares the action genre with the liked ones, so 'action' must survive while what is specific to it goes negative.",
+  "forYou": {
+    "evidence": [
+      {"seriesId": "s1", "stars": 5},
+      {"seriesId": "s5", "isFavorite": true},
+      {"seriesId": "s6", "read": true},
+      {"seriesId": "s8", "stars": 1}
+    ],
+    "exclude": ["s1", "s5", "s6", "s8"]
+  },
   "series": [
     {
       "seriesId": "s1",

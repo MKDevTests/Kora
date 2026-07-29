@@ -2,6 +2,7 @@ package snd.komelia.similarity
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -36,6 +37,11 @@ class SimilarityEngineFixtureTest {
     private val json = Json { ignoreUnknownKeys = true }
     private val benchDir = File("../../scripts/similar-bench")
 
+    private companion object {
+        /** The "For you" row of the expectations, scored from a taste profile. */
+        const val FOR_YOU_KEY = "_forYou"
+    }
+
     @Test
     fun matchesTheBench() {
         val fixture = json.parseToJsonElement(read("fixture.json")).jsonObject
@@ -53,7 +59,13 @@ class SimilarityEngineFixtureTest {
 
         assertTrue(expected.isNotEmpty(), "the fixture expectations are empty")
         for ((queryId, expectedResults) in expected) {
-            val actual = engine.similarTo(queryId, limit = limit)
+            val actual =
+                if (queryId == FOR_YOU_KEY) engine.recommend(
+                    affinities = tasteAffinities(fixture.evidence()),
+                    limit = limit,
+                    exclude = fixture.forYouExclusions(),
+                )
+                else engine.similarTo(queryId, limit = limit)
             val wanted = (expectedResults as JsonArray).map { it.jsonObject }
 
             assertEquals(
@@ -77,6 +89,24 @@ class SimilarityEngineFixtureTest {
         }
     }
 
+    /** The taste profile the "For you" expectations were produced from. */
+    private fun JsonObject.evidence(): List<SeriesEvidence> =
+        getValue("forYou").jsonObject.getValue("evidence").jsonArray.map { element ->
+            val row = element.jsonObject
+            SeriesEvidence(
+                seriesId = row.getValue("seriesId").jsonPrimitive.content,
+                read = row["read"]?.jsonPrimitive?.content?.toBoolean() ?: false,
+                inProgress = row["inProgress"]?.jsonPrimitive?.content?.toBoolean() ?: false,
+                isFavorite = row["isFavorite"]?.jsonPrimitive?.content?.toBoolean() ?: false,
+                stars = row["stars"]?.jsonPrimitive?.content?.toInt(),
+            )
+        }
+
+    private fun JsonObject.forYouExclusions(): Set<String> =
+        getValue("forYou").jsonObject.getValue("exclude").jsonArray
+            .map { it.jsonPrimitive.content }
+            .toSet()
+
     private fun read(name: String): String {
         val file = File(benchDir, name)
         assertTrue(file.exists(), "missing ${file.absolutePath} — run `python bench.py emit-expected`")
@@ -94,6 +124,27 @@ class SimilarityEngineFixtureTest {
         assertEquals(setOf("ninja"), terms.tags)
         assertEquals(setOf("shonen"), terms.bookTags)
         assertEquals("kana", terms.publisher)
+    }
+
+    /**
+     * The two rules that decide whether "For you" is usable: an unrated series
+     * is engagement, not a zero (most series here are never rated), and a rating
+     * counts even when the series is unfinished.
+     */
+    @Test
+    fun unratedIsNotAZeroAndRatingsCountUnfinished() {
+        val affinities = tasteAffinities(
+            listOf(
+                SeriesEvidence("read-unrated", read = true),
+                SeriesEvidence("started-rated", inProgress = true, stars = 5),
+                SeriesEvidence("disliked", read = true, stars = 1),
+                SeriesEvidence("untouched"),
+            )
+        )
+        assertEquals(TasteWeights().read, affinities["read-unrated"])
+        assertEquals(TasteWeights().stars.getValue(5), affinities["started-rated"])
+        assertTrue((affinities.getValue("disliked")) < 0.0, "a 1-star series must push its terms down")
+        assertFalse(affinities.containsKey("untouched"))
     }
 
     /**

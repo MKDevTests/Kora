@@ -108,6 +108,72 @@ class SimilarityEngine(
     }
 
     /**
+     * Series that fit a taste profile, best first — what the library's "For you"
+     * tab shows.
+     *
+     * [affinities] maps a series id to how much the user liked it: positive for
+     * liked, **negative for disliked**. The profile is the weighted sum of those
+     * series' term vectors, so the signal ends up per TERM, not per genre: a
+     * genre carried by many liked series survives a couple of bad ratings, while
+     * a tag specific to the disliked ones goes negative and pushes its series
+     * down. Penalising a whole genre because one series in it was rated 1 star
+     * is exactly what this avoids.
+     *
+     * Each source series is divided by its own vector length before being added,
+     * otherwise a series carrying 200 tags would drown fifty others.
+     */
+    fun recommend(
+        affinities: Map<String, Double>,
+        limit: Int = 20,
+        exclude: Set<String> = emptySet(),
+    ): List<SimilarSeries> {
+        val profile = HashMap<String, Double>()
+        for ((seriesId, affinity) in affinities) {
+            if (affinity == 0.0) continue
+            val features = termsBySeries[seriesId] ?: continue
+            val norm = norms[seriesId] ?: continue
+            if (norm <= 0.0) continue
+            for (feature in features) {
+                val weight = termWeight[feature.key] ?: continue
+                if (weight <= 0.0) continue
+                profile[feature.key] = (profile[feature.key] ?: 0.0) + affinity * weight / norm
+            }
+        }
+        val profileNorm = sqrt(profile.values.sumOf { it * it })
+        if (profileNorm <= 0.0) return emptyList()
+
+        // Candidates come from the LIKED terms only — walking the postings of
+        // every term would touch the whole library for nothing. A candidate is
+        // then scored over its own full vector, so the disliked terms it carries
+        // still count against it.
+        val candidates = HashSet<String>()
+        for ((key, weight) in profile) {
+            if (weight <= 0.0) continue
+            val postings = seriesByTerm[key] ?: continue
+            if (postings.size >= total) continue
+            for (candidate in postings) {
+                if (candidate !in exclude) candidates += candidate
+            }
+        }
+
+        val ranked = candidates.asSequence()
+            .mapNotNull { candidate ->
+                val features = termsBySeries[candidate] ?: return@mapNotNull null
+                val norm = norms[candidate] ?: return@mapNotNull null
+                if (norm <= 0.0) return@mapNotNull null
+                val dot = features.sumOf { (profile[it.key] ?: 0.0) * (termWeight[it.key] ?: 0.0) }
+                if (dot <= 0.0) return@mapNotNull null
+                val reasons = features
+                    .filter { (profile[it.key] ?: 0.0) > 0.0 }
+                    .sortedByDescending { (profile[it.key] ?: 0.0) * (termWeight[it.key] ?: 0.0) }
+                SimilarSeries(candidate, dot / (profileNorm * norm), reasons)
+            }
+            .sortedWith(compareByDescending<SimilarSeries> { it.score }.thenBy { it.seriesId })
+
+        return capPerAuthor(ranked, limit)
+    }
+
+    /**
      * Keeps at most [SimilarityWeights.maxPerAuthor] entries per SHARED author,
      * so one prolific author can't fill the list — the case that makes this
      * feature redundant with the author filter.

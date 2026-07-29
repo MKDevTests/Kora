@@ -183,6 +183,42 @@ class Weights:
         return self.publisher
 
 
+@dataclass
+class TasteWeights:
+    """Mirrors TasteWeights.kt — how much each kind of evidence says."""
+
+    read: float = 1.0
+    in_progress: float = 0.6
+    favorite: float = 3.0
+    stars: dict[int, float] = field(default_factory=lambda: {5: 3.0, 4: 2.0, 3: 1.0, 2: -1.0, 1: -2.0})
+
+
+def taste_affinities(evidence: list[dict], weights: TasteWeights | None = None) -> dict[str, float]:
+    """Mirrors tasteAffinities() in TasteProfile.kt.
+
+    An unrated series is NOT a zero (most series are never rated, and treating
+    that as 0 stars would drag the profile down), and a rating counts even when
+    the series is unfinished.
+    """
+    weights = weights or TasteWeights()
+    out: dict[str, float] = {}
+    for item in evidence:
+        stars = item.get("stars")
+        if stars is not None:
+            affinity = weights.stars.get(stars, 0.0)
+        elif item.get("isFavorite"):
+            affinity = weights.favorite
+        elif item.get("read"):
+            affinity = weights.read
+        elif item.get("inProgress"):
+            affinity = weights.in_progress
+        else:
+            affinity = 0.0
+        if affinity != 0.0:
+            out[item["seriesId"]] = affinity
+    return out
+
+
 def idf(total_series: int, document_frequency: int) -> float:
     """Smoothed rarity weight — the single biggest quality lever in the feature."""
     if total_series <= 0 or document_frequency <= 0:
@@ -262,6 +298,65 @@ class SimilarityEngine:
                 continue
             reasons = sorted(shared.get(candidate, []), key=lambda f: -self.term_weight.get(f.key, 0.0))
             ranked.append(SimilarSeries(candidate, dot / (source_norm * norm), reasons))
+        ranked.sort(key=lambda s: (-s.score, s.series_id))
+        return self._cap_per_author(ranked, limit)
+
+    def recommend(
+        self,
+        affinities: dict[str, float],
+        limit: int = 20,
+        exclude: set[str] | None = None,
+    ) -> list[SimilarSeries]:
+        """Series fitting a taste profile — mirrors SimilarityEngine.recommend().
+
+        Negative affinities (a 1-2 star series) push their terms down, so the
+        signal lands per TERM rather than per genre: a genre carried by many
+        liked series survives, a tag specific to the disliked ones goes negative.
+        """
+        exclude = exclude or set()
+        profile: dict[str, float] = {}
+        for series_id, affinity in affinities.items():
+            if affinity == 0.0:
+                continue
+            features = self.terms_by_series.get(series_id)
+            norm = self.norms.get(series_id, 0.0)
+            if features is None or norm <= 0.0:
+                continue
+            for feature in features:
+                weight = self.term_weight.get(feature.key, 0.0)
+                if weight <= 0.0:
+                    continue
+                # Divided by the series' own length, or a series with 200 tags
+                # would drown fifty others.
+                profile[feature.key] = profile.get(feature.key, 0.0) + affinity * weight / norm
+
+        profile_norm = math.sqrt(sum(w * w for w in profile.values()))
+        if profile_norm <= 0.0:
+            return []
+
+        candidates: set[str] = set()
+        for key, weight in profile.items():
+            if weight <= 0.0:
+                continue
+            postings = self.series_by_term.get(key)
+            if not postings or len(postings) >= self.total:
+                continue
+            candidates.update(c for c in postings if c not in exclude)
+
+        ranked: list[SimilarSeries] = []
+        for candidate in candidates:
+            features = self.terms_by_series.get(candidate)
+            norm = self.norms.get(candidate, 0.0)
+            if features is None or norm <= 0.0:
+                continue
+            dot = sum(profile.get(f.key, 0.0) * self.term_weight.get(f.key, 0.0) for f in features)
+            if dot <= 0.0:
+                continue
+            reasons = sorted(
+                (f for f in features if profile.get(f.key, 0.0) > 0.0),
+                key=lambda f: -(profile.get(f.key, 0.0) * self.term_weight.get(f.key, 0.0)),
+            )
+            ranked.append(SimilarSeries(candidate, dot / (profile_norm * norm), reasons))
         ranked.sort(key=lambda s: (-s.score, s.series_id))
         return self._cap_per_author(ranked, limit)
 

@@ -1,4 +1,29 @@
 {
+  "_forYou": [
+    {
+      "seriesId": "s2",
+      "score": 0.768423109672,
+      "reasons": [
+        "g:aventure",
+        "a:kishimoto",
+        "g:action",
+        "bt:shonen",
+        "t:ninja",
+        "t:bd",
+        "p:kana"
+      ]
+    },
+    {
+      "seriesId": "s3",
+      "score": 0.452932898811,
+      "reasons": [
+        "a:kishimoto",
+        "g:action",
+        "t:bd",
+        "p:kana"
+      ]
+    }
+  ],
   "s1": [
     {
       "seriesId": "s2",
