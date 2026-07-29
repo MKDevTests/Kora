@@ -2,19 +2,28 @@
   "s1": [
     {
       "seriesId": "s2",
-      "score": 0.952458173221,
+      "score": 0.960784430841,
       "reasons": [
         "g:aventure",
-        "g:action",
         "a:kishimoto",
+        "g:action",
         "t:ninja",
         "bt:shonen",
         "p:kana"
       ]
     },
     {
+      "seriesId": "s3",
+      "score": 0.618408682076,
+      "reasons": [
+        "a:kishimoto",
+        "g:action",
+        "p:kana"
+      ]
+    },
+    {
       "seriesId": "s5",
-      "score": 0.522545737927,
+      "score": 0.390623120146,
       "reasons": [
         "g:aventure",
         "g:action",
@@ -22,17 +31,8 @@
       ]
     },
     {
-      "seriesId": "s3",
-      "score": 0.503819578952,
-      "reasons": [
-        "g:action",
-        "a:kishimoto",
-        "p:kana"
-      ]
-    },
-    {
       "seriesId": "s6",
-      "score": 0.311329282796,
+      "score": 0.195169299348,
       "reasons": [
         "g:action",
         "t:ninja",
@@ -41,7 +41,7 @@
     },
     {
       "seriesId": "s8",
-      "score": 0.212409312281,
+      "score": 0.14962173911,
       "reasons": [
         "g:action",
         "t:ninja"
@@ -51,10 +51,10 @@
   "s7": [
     {
       "seriesId": "s8",
-      "score": 0.748569151223,
+      "score": 0.704003692096,
       "reasons": [
-        "g:espionnage",
         "a:morvan",
+        "g:espionnage",
         "p:delcourt"
       ]
     }

@@ -17,12 +17,15 @@ import kotlin.math.ln
  */
 data class SimilarityWeights(
     /**
-     * Settled at the bench on the real libraries. It started at 1.2 (author
-     * first), but once the per-author cap actually capped, the ranking barely
-     * moved between 1.2 and 0.6 — while 0.6 leaves more room for the
-     * genre/tag matches under the two same-author entries.
+     * Settled at the bench on the real libraries, and 0.6 was tried and
+     * rejected: in the manga library, where series carry dozens of free tags,
+     * it dropped "Planètes" from first to **18th** for Vinland Saga — behind
+     * series that merely shared five generic tags, though both are by Makoto
+     * Yukimura. Sharing an author has to outweigh sharing loose tags. The
+     * per-author cap, not this weight, is what keeps it from becoming a
+     * bibliography.
      */
-    val author: Double = 0.6,
+    val author: Double = 1.0,
     val genre: Double = 1.0,
     val tag: Double = 0.6,
     val bookTag: Double = 0.4,

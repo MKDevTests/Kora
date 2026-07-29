@@ -21,6 +21,23 @@ private const val TAG_PREFIX = "kora:tag:"
  * two series sharing an author. `kora:hidden` is on 57 manga series and means
  * "an admin hid this", which is not a genre.
  */
+/**
+ * Author credits that name nobody.
+ *
+ * The bench found a credit literally named "a" on 140 series across the two
+ * libraries — enough to make it a strong shared term, and it was ranking
+ * unrelated series first while stealing the per-author cap from the real
+ * author. One-letter names are never real credits here; the placeholders below
+ * are what Komga/Komf leave behind when a source has no author.
+ */
+fun isJunkAuthorName(name: String): Boolean {
+    val trimmed = name.trim()
+    if (trimmed.length <= 1) return true
+    return foldTerm(trimmed) in JUNK_AUTHOR_NAMES
+}
+
+private val JUNK_AUTHOR_NAMES = setOf("n/a", "na", "unknown", "inconnu", "anonyme", "anonymous", "various", "divers", "?", "-", "--")
+
 fun isSimilarityMarkerTag(tag: String): Boolean = tag.lowercase().let {
     it.startsWith("nextrelease:") ||
         (it.startsWith("kora:") && !it.startsWith(GENRE_PREFIX) && !it.startsWith(TAG_PREFIX))
@@ -52,7 +69,7 @@ fun KomgaSeries.toSimilarityTerms(): SeriesTerms {
     val authors = booksMetadata.authors
         .mapNotNull { author ->
             val name = author.name.trim()
-            if (name.isEmpty()) null else name to author.role.trim().lowercase()
+            if (isJunkAuthorName(name)) null else name to author.role.trim().lowercase()
         }
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, roles) -> roles.minByOrNull { ROLE_RANK[it] ?: ROLE_RANK.size } ?: roles.first() }

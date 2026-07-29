@@ -37,7 +37,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from kora_similar import SimilarityEngine, Weights, is_marker_tag, terms_of_series
+from kora_similar import (
+    SimilarityEngine,
+    Weights,
+    is_junk_author_name,
+    is_marker_tag,
+    terms_of_series,
+)
 
 HERE = Path(__file__).resolve().parent
 PAGE_SIZE = 100
@@ -126,6 +132,7 @@ def load_index(library: str) -> list[dict]:
     # silently mistuning the weights.
     for entry in entries:
         entry["terms"]["t"] = [t for t in entry["terms"]["t"] if not is_marker_tag(t)]
+        entry["terms"]["a"] = {n: r for n, r in entry["terms"]["a"].items() if not is_junk_author_name(n)}
     return entries
 
 

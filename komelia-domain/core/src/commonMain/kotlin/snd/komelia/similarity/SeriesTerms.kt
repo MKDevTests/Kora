@@ -34,6 +34,10 @@ data class SeriesTerms(
         bookTags.forEach { add(Feature(TermFamily.BOOK_TAG, it)) }
         publisher?.takeIf { it.isNotBlank() }?.let { add(Feature(TermFamily.PUBLISHER, it)) }
     }
+        // One series credits "Kentaro Miura" AND "Kentarô MIURA": the same key
+        // twice, which counted that author twice in the score and listed him
+        // twice in the reasons. First spelling wins.
+        .distinctBy { it.key }
 
     fun isEmpty(): Boolean =
         authors.isEmpty() && genres.isEmpty() && tags.isEmpty() && bookTags.isEmpty() && publisher == null
@@ -45,9 +49,46 @@ data class Feature(
     val value: String,
     val role: String? = null,
 ) {
-    /** Namespaced key, so families never collide in the inverted index. */
-    val key: String get() = "${family.prefix}:$value"
+    /**
+     * Namespaced, normalised key — what the inverted index matches on. [value]
+     * keeps the spelling to display.
+     *
+     * The normalisation is not cosmetic: the manga library spells the same
+     * author 126 different ways by case alone ("Leiji MATSUMOTO" vs "Leiji
+     * Matsumoto") and 35 more by accent ("Kentaro Miura" vs "Kentarô MIURA"),
+     * and each spelling was scoring as a different person.
+     */
+    val key: String get() = "${family.prefix}:${foldTerm(value)}"
 }
+
+/**
+ * Lowercase + strip the diacritics this library actually contains (French,
+ * romanised Japanese macrons, a few Slavic names).
+ *
+ * An explicit table rather than a Unicode normaliser: there is none in common
+ * Kotlin, and the Python bench has to fold **identically** or the two sides
+ * would score differently — which the fixture test would catch, loudly, but
+ * only after the tuning had already gone astray.
+ */
+fun foldTerm(value: String): String {
+    val lower = value.lowercase()
+    if (lower.all { it.code < 0x80 }) return lower
+    return buildString(lower.length) {
+        for (char in lower) {
+            val index = ACCENTED.indexOf(char)
+            when {
+                index >= 0 -> append(PLAIN[index])
+                char == 'œ' -> append("oe")
+                char == 'æ' -> append("ae")
+                char == 'ß' -> append("ss")
+                else -> append(char)
+            }
+        }
+    }
+}
+
+private const val ACCENTED = "àáâãäåāăçćčđďèéêëēĕėęěìíîïĩīĭįñńňòóôõöøōŏőùúûüũūŭůýÿŷšśşžźżřŕţťļłğ"
+private const val PLAIN = /*     */ "aaaaaaaacccddeeeeeeeeeiiiiiiiinnnooooooooouuuuuuuuyyyssszzzrrttllg"
 
 enum class TermFamily(val prefix: String) {
     AUTHOR("a"),

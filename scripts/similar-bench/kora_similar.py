@@ -47,6 +47,39 @@ FAMILY_PUBLISHER = "p"
 # SeriesTermsExtractor.ROLE_RANK — most significant first.
 ROLE_RANK = ["writer", "artist", "penciller", "inker", "colorist", "letterer", "translator"]
 
+# Credits that name nobody — mirrors isJunkAuthorName() in SeriesTermsExtractor.kt.
+JUNK_AUTHOR_NAMES = {"n/a", "na", "unknown", "inconnu", "anonyme", "anonymous", "various", "divers", "?", "-", "--"}
+
+
+def is_junk_author_name(name: str) -> bool:
+    """A credit literally named "a" sits on 140 series here — a strong shared
+    term naming nobody, which also stole the per-author cap from the real author.
+    """
+    trimmed = name.strip()
+    return len(trimmed) <= 1 or fold_term(trimmed) in JUNK_AUTHOR_NAMES
+
+
+# Diacritics this library actually contains (French, romanised Japanese macrons,
+# a few Slavic names). An explicit table, NOT unicodedata: common Kotlin has no
+# normaliser, so the app folds with this exact table and the bench must match it
+# character for character.
+_ACCENTED = "àáâãäåāăçćčđďèéêëēĕėęěìíîïĩīĭįñńňòóôõöøōŏőùúûüũūŭůýÿŷšśşžźżřŕţťļłğ"
+_PLAIN = "aaaaaaaacccddeeeeeeeeeiiiiiiiinnnooooooooouuuuuuuuyyyssszzzrrttllg"
+_FOLD = {a: p for a, p in zip(_ACCENTED, _PLAIN)}
+_FOLD.update({"œ": "oe", "æ": "ae", "ß": "ss"})
+
+
+def fold_term(value: str) -> str:
+    """Mirrors foldTerm() in SeriesTerms.kt — the inverted index matches on this.
+
+    The manga library spells the same author 126 ways by case alone and 35 more
+    by accent; each spelling was scoring as a different person.
+    """
+    lower = value.lower()
+    if lower.isascii():
+        return lower
+    return "".join(_FOLD.get(c, c) for c in lower)
+
 
 @dataclass(frozen=True)
 class Feature:
@@ -56,7 +89,7 @@ class Feature:
 
     @property
     def key(self) -> str:
-        return f"{self.family}:{self.value}"
+        return f"{self.family}:{fold_term(self.value)}"
 
 
 def features_of(terms: dict) -> list[Feature]:
@@ -73,7 +106,10 @@ def features_of(terms: dict) -> list[Feature]:
     publisher = terms.get("p")
     if publisher and publisher.strip():
         out.append(Feature(FAMILY_PUBLISHER, publisher))
-    return out
+    # One series credits "Kentaro Miura" AND "Kentarô MIURA": the same key twice,
+    # counting that author twice in the score. First spelling wins.
+    seen: set[str] = set()
+    return [f for f in out if not (f.key in seen or seen.add(f.key))]
 
 
 def terms_of_series(series: dict) -> dict:
@@ -96,7 +132,7 @@ def terms_of_series(series: dict) -> dict:
     by_name: dict[str, list[str]] = {}
     for author in books_metadata.get("authors") or []:
         name = (author.get("name") or "").strip()
-        if not name:
+        if is_junk_author_name(name):
             continue
         by_name.setdefault(name, []).append((author.get("role") or "").strip().lower())
     authors = {
@@ -117,9 +153,9 @@ def terms_of_series(series: dict) -> dict:
 
 @dataclass
 class Weights:
-    # Settled at the bench: once the per-author cap actually capped, 1.2 and 0.6
-    # ranked almost identically, and 0.6 leaves more room for genre/tag matches.
-    author: float = 0.6
+    # Settled at the bench; 0.6 was tried and rejected (it dropped "Planètes"
+    # from 1st to 18th for Vinland Saga, behind series sharing generic tags).
+    author: float = 1.0
     genre: float = 1.0
     tag: float = 0.6
     book_tag: float = 0.4
