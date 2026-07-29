@@ -10,6 +10,7 @@ import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -93,5 +94,20 @@ class SimilarityEngineFixtureTest {
         assertEquals(setOf("ninja"), terms.tags)
         assertEquals(setOf("shonen"), terms.bookTags)
         assertEquals("kana", terms.publisher)
+    }
+
+    /**
+     * Marker tags carry app state, not taste. `nextrelease:` is the dangerous
+     * one: one tag per series means the highest rarity weight of all, so two
+     * series sharing a release date would outrank two sharing an author.
+     */
+    @Test
+    fun markerTagsAreNotScored() {
+        assertTrue(isSimilarityMarkerTag("nextrelease:23-03.09.2026"))
+        assertTrue(isSimilarityMarkerTag("kora:hidden"))
+        assertTrue(isSimilarityMarkerTag("KORA:Hidden"), "the check is case-insensitive")
+        assertFalse(isSimilarityMarkerTag("kora:genre:action"))
+        assertFalse(isSimilarityMarkerTag("kora:tag:seinen"))
+        assertFalse(isSimilarityMarkerTag("adapted to anime"))
     }
 }

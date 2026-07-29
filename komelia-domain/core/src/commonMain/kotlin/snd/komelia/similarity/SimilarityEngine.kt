@@ -108,19 +108,30 @@ class SimilarityEngine(
     }
 
     /**
-     * Keeps at most [SimilarityWeights.maxPerAuthor] entries per author, so one
-     * prolific author can't fill the list — the case that makes this feature
-     * redundant with the author filter.
+     * Keeps at most [SimilarityWeights.maxPerAuthor] entries per SHARED author,
+     * so one prolific author can't fill the list — the case that makes this
+     * feature redundant with the author filter.
+     *
+     * Two details the bench proved necessary on the real library:
+     *
+     *  - the cap counts only authors **shared with the source**, not every
+     *    author of the candidate. Anthologies here credit up to 151 people;
+     *    counting all of them would exhaust the cap on names that had nothing
+     *    to do with the match.
+     *  - a candidate is dropped as soon as **one** shared author is at the cap.
+     *    Requiring all of them was equivalent to no cap at all: series credit 3
+     *    to 5 authors, so there was always a fresh name and 44% of suggestions
+     *    still shared an author with the source.
      */
     private fun capPerAuthor(ranked: Sequence<SimilarSeries>, limit: Int): List<SimilarSeries> {
         val perAuthor = HashMap<String, Int>()
         val kept = ArrayList<SimilarSeries>(limit)
         for (candidate in ranked) {
-            val authors = termsBySeries[candidate.seriesId].orEmpty()
+            val sharedAuthors = candidate.reasons
                 .filter { it.family == TermFamily.AUTHOR }
                 .map { it.value }
-            if (authors.isNotEmpty() && authors.all { (perAuthor[it] ?: 0) >= weights.maxPerAuthor }) continue
-            authors.forEach { perAuthor[it] = (perAuthor[it] ?: 0) + 1 }
+            if (sharedAuthors.any { (perAuthor[it] ?: 0) >= weights.maxPerAuthor }) continue
+            sharedAuthors.forEach { perAuthor[it] = (perAuthor[it] ?: 0) + 1 }
             kept += candidate
             if (kept.size >= limit) break
         }

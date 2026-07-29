@@ -21,6 +21,20 @@ from dataclasses import dataclass, field
 # --- SeriesTerms.kt ---------------------------------------------------------
 
 GENRE_PREFIX = "kora:genre:"
+TAG_PREFIX = "kora:tag:"
+
+
+def is_marker_tag(tag: str) -> bool:
+    """App-state tags that must never be scored — see SeriesTermsExtractor.
+
+    `nextrelease:<vol>-<date>` is one per series, so its rarity weight is the
+    highest of any term: two series sharing a release date would outrank two
+    sharing an author. `kora:hidden` means "an admin hid this", not a taste.
+    """
+    tag = tag.lower()
+    return tag.startswith("nextrelease:") or (
+        tag.startswith("kora:") and not tag.startswith(GENRE_PREFIX) and not tag.startswith(TAG_PREFIX)
+    )
 
 # TermFamily.prefix — namespaced so an author named "Action" can never collide
 # with the Action genre.
@@ -68,7 +82,7 @@ def terms_of_series(series: dict) -> dict:
     books_metadata = series.get("booksMetadata") or {}
 
     series_tags = [t.strip() for t in (metadata.get("tags") or [])]
-    series_tags = [t for t in series_tags if t]
+    series_tags = [t for t in series_tags if t and not is_marker_tag(t)]
 
     # dict.fromkeys, not a set: Kotlin's toSet() keeps insertion order, and term
     # order decides the reasons list and the float accumulation order.
@@ -103,7 +117,9 @@ def terms_of_series(series: dict) -> dict:
 
 @dataclass
 class Weights:
-    author: float = 1.2
+    # Settled at the bench: once the per-author cap actually capped, 1.2 and 0.6
+    # ranked almost identically, and 0.6 leaves more room for genre/tag matches.
+    author: float = 0.6
     genre: float = 1.0
     tag: float = 0.6
     book_tag: float = 0.4
@@ -214,13 +230,19 @@ class SimilarityEngine:
         return self._cap_per_author(ranked, limit)
 
     def _cap_per_author(self, ranked: list[SimilarSeries], limit: int) -> list[SimilarSeries]:
+        """Cap on the SHARED authors, dropping as soon as one is full.
+
+        Counting every author of the candidate exhausted the cap on names that
+        had nothing to do with the match (anthologies credit up to 151 people),
+        and requiring ALL of them to be full was equivalent to no cap at all.
+        """
         per_author: dict[str, int] = {}
         kept: list[SimilarSeries] = []
         for candidate in ranked:
-            authors = [f.value for f in self.terms_by_series.get(candidate.series_id, []) if f.family == FAMILY_AUTHOR]
-            if authors and all(per_author.get(a, 0) >= self.weights.max_per_author for a in authors):
+            shared = [f.value for f in candidate.reasons if f.family == FAMILY_AUTHOR]
+            if any(per_author.get(a, 0) >= self.weights.max_per_author for a in shared):
                 continue
-            for author in authors:
+            for author in shared:
                 per_author[author] = per_author.get(author, 0) + 1
             kept.append(candidate)
             if len(kept) >= limit:

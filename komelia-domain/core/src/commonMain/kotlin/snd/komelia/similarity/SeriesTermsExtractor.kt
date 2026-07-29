@@ -9,6 +9,23 @@ import snd.komga.client.series.KomgaSeries
  */
 private const val GENRE_PREFIX = "kora:genre:"
 
+/** The curated tag namespace. Everything else under `kora:` is a marker. */
+private const val TAG_PREFIX = "kora:tag:"
+
+/**
+ * Tags that carry app state instead of taste, and must never be scored.
+ *
+ * They looked harmless until the bench ran on the real library: `nextrelease:`
+ * tags are one per series (volume + date), so their rarity weight is the
+ * highest of any term — two series sharing a release date would have outranked
+ * two series sharing an author. `kora:hidden` is on 57 manga series and means
+ * "an admin hid this", which is not a genre.
+ */
+fun isSimilarityMarkerTag(tag: String): Boolean = tag.lowercase().let {
+    it.startsWith("nextrelease:") ||
+        (it.startsWith("kora:") && !it.startsWith(GENRE_PREFIX) && !it.startsWith(TAG_PREFIX))
+}
+
 /**
  * Turns a series into the handful of terms the scorer needs.
  *
@@ -18,7 +35,8 @@ private const val GENRE_PREFIX = "kora:genre:"
  * would turn an index build into a memory spike on a tablet.
  */
 fun KomgaSeries.toSimilarityTerms(): SeriesTerms {
-    val seriesTags = metadata.tags.map { it.trim() }.filter { it.isNotEmpty() }
+    val seriesTags = metadata.tags.map { it.trim() }
+        .filter { it.isNotEmpty() && !isSimilarityMarkerTag(it) }
 
     // `kora:genre:*` is the curated taxonomy and scores highest; everything else
     // is a plain tag. Splitting here keeps the weighting honest.

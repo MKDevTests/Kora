@@ -37,7 +37,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from kora_similar import SimilarityEngine, Weights, terms_of_series
+from kora_similar import SimilarityEngine, Weights, is_marker_tag, terms_of_series
 
 HERE = Path(__file__).resolve().parent
 PAGE_SIZE = 100
@@ -120,7 +120,13 @@ def load_index(library: str) -> list[dict]:
     path = index_path(library)
     if not path.exists():
         raise SystemExit(f"No local index for {library!r}. Run: python bench.py fetch --library {library!r}")
-    return json.loads(path.read_text(encoding="utf-8"))["series"]
+    entries = json.loads(path.read_text(encoding="utf-8"))["series"]
+    # Defensive: an index fetched before marker tags were excluded still holds
+    # them. Strip on load so an old cache scores like the app instead of
+    # silently mistuning the weights.
+    for entry in entries:
+        entry["terms"]["t"] = [t for t in entry["terms"]["t"] if not is_marker_tag(t)]
+    return entries
 
 
 def weights_from(args) -> Weights:

@@ -16,7 +16,13 @@ import kotlin.math.ln
  *  - publisher barely counts: it captures an imprint's line, not a taste.
  */
 data class SimilarityWeights(
-    val author: Double = 1.2,
+    /**
+     * Settled at the bench on the real libraries. It started at 1.2 (author
+     * first), but once the per-author cap actually capped, the ranking barely
+     * moved between 1.2 and 0.6 — while 0.6 leaves more room for the
+     * genre/tag matches under the two same-author entries.
+     */
+    val author: Double = 0.6,
     val genre: Double = 1.0,
     val tag: Double = 0.6,
     val bookTag: Double = 0.4,
