@@ -949,13 +949,32 @@ class ReaderState(
         if (!markReadProgress) return
         val state = booksState.value ?: return
         val totalPages = state.currentBookPages.size
+        logger.debug {
+            "[ReadProgress] completion check page=${readProgressPage.value}/$totalPages " +
+                "book=${state.currentBook.id.value}"
+        }
         if (totalPages == 0 || readProgressPage.value < totalPages) return
+        markCurrentBookCompleted()
+    }
+
+    /**
+     * Marks the book being read completed, now.
+     *
+     * Called by the readers the moment the end-of-book page is reached, so the
+     * server (and every screen listening to its events) knows the volume is
+     * finished BEFORE the user leaves — instead of depending on which exit path
+     * they take. Also called on exit as a safety net. Idempotent.
+     */
+    suspend fun markCurrentBookCompleted() {
+        if (!markReadProgress) return
+        val state = booksState.value ?: return
+        logger.debug { "[ReadProgress] mark completed book=${state.currentBook.id.value}" }
         runCatching {
             bookApi.markReadProgress(
                 state.currentBook.id,
                 KomgaBookReadProgressUpdateRequest(completed = true),
             )
-        }
+        }.onFailure { logger.warn(it) { "[ReadProgress] mark completed FAILED" } }
     }
 
     private suspend fun initialSync() {

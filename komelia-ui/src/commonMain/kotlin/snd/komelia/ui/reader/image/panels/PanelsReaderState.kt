@@ -362,6 +362,9 @@ class PanelsReaderState(
                     currentBook = bookState.currentBook,
                     nextBook = bookState.nextBook
                 )
+                // Same as the paged reader: the end page means finished, and a
+                // last volume has no "next book" step to carry the mark.
+                stateScope.launch { readerState.markCurrentBookCompleted() }
             }
 
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {

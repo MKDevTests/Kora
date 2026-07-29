@@ -331,6 +331,10 @@ class ContinuousReaderState(
                     // not back at the top of a tall webtoon page.
                     endOfBookAcked.value = true
                     readerState.onProgressChange(booksState.currentBookPages.size)
+                    // Consuming the last page IS finishing the book. Said here so
+                    // it also holds for a series' LAST volume, which has no
+                    // "next book" step to carry the mark.
+                    readerState.markCurrentBookCompleted()
                     snapToEndOfCurrentBook(booksState)
                     notifications.add(
                         AppNotification.Normal("End of book — swipe again to continue")

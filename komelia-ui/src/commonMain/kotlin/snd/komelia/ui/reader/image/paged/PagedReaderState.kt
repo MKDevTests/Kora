@@ -340,6 +340,11 @@ class PagedReaderState(
                     currentBook = bookState.currentBook,
                     nextBook = bookState.nextBook
                 )
+                // Reaching the end page IS finishing the book — say so now,
+                // not on the way out. A last volume has nothing to move on to,
+                // so its completion used to depend on which exit path the user
+                // took, and it stayed on the Keep-reading shelf.
+                stateScope.launch { readerState.markCurrentBookCompleted() }
             }
 
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
