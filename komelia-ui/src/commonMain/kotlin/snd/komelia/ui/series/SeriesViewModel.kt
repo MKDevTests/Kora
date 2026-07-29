@@ -57,6 +57,9 @@ class SeriesViewModel(
     collectionApi: KomgaCollectionsApi,
     referentialApi: KomgaReferentialApi,
     seriesLinksRepository: snd.komelia.links.SeriesLinksRepository,
+    similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
+    similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
+    hiddenSeriesIds: StateFlow<Set<String>>,
     settingsRepository: CommonSettingsRepository,
     aniListClient: snd.komelia.anilist.AniListClient,
     authenticatedUser: StateFlow<snd.komga.client.user.KomgaUser?>,
@@ -95,6 +98,28 @@ class SeriesViewModel(
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
     )
+    /**
+     * Never suggest a series the user has hidden or ignored. The list APIs strip
+     * those for us, but suggestions are resolved one id at a time (Komga has no
+     * id-list condition), so the filter has to be applied explicitly.
+     */
+    private val excludedFromSuggestions = combine(
+        settingsRepository.getIgnoreListEnabled(),
+        settingsRepository.getIgnoredSeriesIds(),
+        hiddenSeriesIds,
+    ) { ignoreEnabled, ignored, hidden -> (if (ignoreEnabled) ignored else emptySet()) + hidden }
+
+    val similarState = SimilarSeriesState(
+        series = this.series,
+        notifications = notifications,
+        seriesApi = seriesApi,
+        repository = similarityIndexRepository,
+        indexBuilder = similarityIndexBuilder,
+        excludedSeriesIds = excludedFromSuggestions,
+        screenModelScope = screenModelScope,
+        cardWidth = cardWidth,
+    )
+
     val linksState = SeriesLinksState(
         series = this.series,
         notifications = notifications,

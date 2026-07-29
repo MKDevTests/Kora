@@ -98,6 +98,7 @@ import snd.komelia.ui.series.view.SeriesLinksContent
 import snd.komelia.ui.series.view.SeriesChipTags
 import snd.komelia.ui.series.view.SeriesDescriptionRow
 import snd.komelia.ui.series.view.SeriesSummary
+import snd.komelia.ui.series.view.SimilarSeriesContent
 import snd.komelia.utils.removeParentheses
 import snd.komga.client.collection.KomgaCollection
 import snd.komga.client.library.KomgaLibrary
@@ -111,7 +112,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 
-private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS, LINKS }
+private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS, LINKS, SIMILAR }
 
 @Composable
 fun ImmersiveSeriesContent(
@@ -128,6 +129,7 @@ fun ImmersiveSeriesContent(
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
     collectionsState: SeriesCollectionsState,
     linksState: snd.komelia.ui.series.SeriesLinksState,
+    similarState: snd.komelia.ui.series.SimilarSeriesState,
     onCollectionClick: (KomgaCollection) -> Unit,
     onSeriesClick: (KomgaSeries) -> Unit,
     onBackClick: () -> Unit,
@@ -192,12 +194,14 @@ fun ImmersiveSeriesContent(
             ImmersiveTab.COLLECTIONS -> onTabChange(SeriesTab.COLLECTIONS)
             ImmersiveTab.TAGS -> Unit
             ImmersiveTab.LINKS -> Unit
+            ImmersiveTab.SIMILAR -> Unit
         }
     }
 
     // Keep in sync if something external changes the VM tab
     LaunchedEffect(currentTab) {
-        if (immersiveTab != ImmersiveTab.TAGS && immersiveTab != ImmersiveTab.LINKS) {
+        // Tabs with no VM counterpart must not be reset by an external tab change.
+        if (immersiveTab !in setOf(ImmersiveTab.TAGS, ImmersiveTab.LINKS, ImmersiveTab.SIMILAR)) {
             immersiveTab = when (currentTab) {
                 SeriesTab.BOOKS -> ImmersiveTab.BOOKS
                 SeriesTab.COLLECTIONS -> ImmersiveTab.COLLECTIONS
@@ -547,6 +551,10 @@ fun ImmersiveSeriesContent(
                     ImmersiveTab.LINKS -> item(span = { GridItemSpan(maxLineSpan) }) {
                         SeriesLinksContent(state = linksState, onSeriesClick = onSeriesClick)
                     }
+
+                    ImmersiveTab.SIMILAR -> item(span = { GridItemSpan(maxLineSpan) }) {
+                        SimilarSeriesContent(state = similarState, onSeriesClick = onSeriesClick)
+                    }
                 }
             }
         }
@@ -591,6 +599,7 @@ private fun SeriesImmersiveTabRow(
         ImmersiveTab.COLLECTIONS -> 1
         ImmersiveTab.TAGS -> if (showCollectionsTab) 2 else 1
         ImmersiveTab.LINKS -> if (showCollectionsTab) 3 else 2
+        ImmersiveTab.SIMILAR -> if (showCollectionsTab) 4 else 3
     }
     PrimaryTabRow(
         selectedTabIndex = selectedTabIndex,
@@ -625,6 +634,11 @@ private fun SeriesImmersiveTabRow(
             selected = currentTab == ImmersiveTab.LINKS,
             onClick = { onTabChange(ImmersiveTab.LINKS) },
             text = { Text("Links") },
+        )
+        Tab(
+            selected = currentTab == ImmersiveTab.SIMILAR,
+            onClick = { onTabChange(ImmersiveTab.SIMILAR) },
+            text = { Text("Similaire") },
         )
     }
 }

@@ -273,6 +273,11 @@ class ViewModelFactory(
         settingsRepository = appRepositories.settingsRepository,
         referentialApi = komgaApi.referentialApi,
         seriesLinksRepository = appRepositories.seriesLinksRepository,
+        similarityIndexRepository = appRepositories.similarityIndexRepository,
+        similarityIndexBuilder = dependencies.similarityIndexBuilder,
+        // Empty when the platform has no hidden-series controller: suggestions
+        // then only exclude the local Ignore List, which is the correct fallback.
+        hiddenSeriesIds = dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),
         aniListClient = dependencies.aniListClient,
         authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
         defaultTab = defaultTab ?: SeriesTab.BOOKS,
