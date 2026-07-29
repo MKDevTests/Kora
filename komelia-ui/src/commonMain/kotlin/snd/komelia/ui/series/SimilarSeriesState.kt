@@ -12,9 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -28,7 +26,6 @@ import snd.komelia.similarity.SimilarityIndexBuilder
 import snd.komelia.similarity.SimilarityIndexRepository
 import snd.komelia.similarity.TermFamily
 import snd.komelia.similarity.toIndexedSeries
-import snd.komelia.ui.LoadState
 import snd.komelia.ui.library.GenreLabels
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
@@ -38,12 +35,12 @@ private val logger = KotlinLogging.logger {}
 /** One suggestion: the series to show, and why it was picked. */
 data class SimilarSuggestion(
     val series: KomgaSeries,
-    /** Already-readable labels ("Même auteur : Miura", "Fantasy"), strongest first. */
+    /** Already-readable labels ("Same author: Miura", "Fantasy"), strongest first. */
     val reasons: List<String>,
 )
 
 /**
- * State for the series "Similaire" tab.
+ * State for the series "Similar" tab.
  *
  * Scoring is entirely local (see [SimilarityEngine]) and costs milliseconds; the
  * only expensive step is building the library's term index, about one request
@@ -67,9 +64,6 @@ class SimilarSeriesState(
     private val screenModelScope: CoroutineScope,
     val cardWidth: StateFlow<Dp>,
 ) {
-    private val mutableState = MutableStateFlow<LoadState<Unit>>(LoadState.Uninitialized)
-    val state = mutableState.asStateFlow()
-
     var suggestions by mutableStateOf<List<SimilarSuggestion>>(emptyList())
         private set
 
@@ -81,9 +75,23 @@ class SimilarSeriesState(
     var indexedCount by mutableStateOf(0)
         private set
 
+    var isLoading by mutableStateOf(false)
+        private set
+
+    var failed by mutableStateOf(false)
+        private set
+
+    /**
+     * Snapshot state rather than a LoadState flow, unlike the sibling tabs:
+     * this content is emitted from the lazy grid's builder lambda, which cannot
+     * call `collectAsState`.
+     */
+    private var started = false
+
     /** Called when the tab becomes visible. Idempotent. */
     fun onOpened() {
-        if (mutableState.value != LoadState.Uninitialized) return
+        if (started) return
+        started = true
         screenModelScope.launch { load(forceRebuild = false) }
     }
 
@@ -94,7 +102,8 @@ class SimilarSeriesState(
 
     private suspend fun load(forceRebuild: Boolean) {
         notifications.runCatchingToNotifications {
-            mutableState.value = LoadState.Loading
+            isLoading = true
+            failed = false
             val current = series.filterNotNull().first()
             val libraryId = current.libraryId
 
@@ -107,7 +116,7 @@ class SimilarSeriesState(
             if (needsBuild) {
                 val builder = indexBuilder
                 if (builder == null) {
-                    mutableState.value = LoadState.Success(Unit)
+                    isLoading = false
                     return@runCatchingToNotifications
                 }
                 buildProgress = 0f
@@ -131,10 +140,11 @@ class SimilarSeriesState(
                 exclude = excludedSeriesIds.first(),
             )
             suggestions = resolve(scored.map { it.seriesId to it.reasons })
-            mutableState.value = LoadState.Success(Unit)
+            isLoading = false
         }.onFailure {
             logger.error(it) { "Similar-series tab failed" }
-            mutableState.value = LoadState.Error(it)
+            isLoading = false
+            failed = true
         }
     }
 
@@ -169,11 +179,14 @@ class SimilarSeriesState(
  * "kora:tag:seinen" or a bare slug would read as a bug.
  */
 private fun Feature.label(): String = when (family) {
-    TermFamily.AUTHOR -> "Même auteur : $value"
+    TermFamily.AUTHOR -> "Same author: $value"
+    // Genre labels are the curated French ones the rest of the app already
+    // shows (the taxonomy is hand-written in French); everything else is English
+    // like the rest of the UI.
     TermFamily.GENRE -> GenreLabels.label(value)
     TermFamily.TAG -> value.removePrefix("kora:tag:").replaceFirstChar { it.uppercaseChar() }
     TermFamily.BOOK_TAG -> value.replaceFirstChar { it.uppercaseChar() }
-    TermFamily.PUBLISHER -> "Éditeur : ${value.replaceFirstChar { it.uppercaseChar() }}"
+    TermFamily.PUBLISHER -> "Publisher: ${value.replaceFirstChar { it.uppercaseChar() }}"
 }
 
 private const val MAX_SUGGESTIONS = 20

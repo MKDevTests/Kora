@@ -552,9 +552,12 @@ fun ImmersiveSeriesContent(
                         SeriesLinksContent(state = linksState, onSeriesClick = onSeriesClick)
                     }
 
-                    ImmersiveTab.SIMILAR -> item(span = { GridItemSpan(maxLineSpan) }) {
-                        SimilarSeriesContent(state = similarState, onSeriesClick = onSeriesClick)
-                    }
+                    // Emitted into the grid itself (like Books), so suggestions
+                    // land on the same columns as the volumes.
+                    ImmersiveTab.SIMILAR -> SimilarSeriesContent(
+                        state = similarState,
+                        onSeriesClick = onSeriesClick,
+                    )
                 }
             }
         }
@@ -638,7 +641,7 @@ private fun SeriesImmersiveTabRow(
         Tab(
             selected = currentTab == ImmersiveTab.SIMILAR,
             onClick = { onTabChange(ImmersiveTab.SIMILAR) },
-            text = { Text("Similaire") },
+            text = { Text("Similar") },
         )
     }
 }
