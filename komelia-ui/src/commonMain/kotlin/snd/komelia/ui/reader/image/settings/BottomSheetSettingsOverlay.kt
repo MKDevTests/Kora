@@ -359,7 +359,16 @@ fun BottomSheetSettingsOverlay(
                     onNextBook = { coroutineScope.launch { commonReaderState.loadNextBook() } },
                     hasPreviousBook = commonReaderState.booksState.collectAsState().value?.previousBook != null,
                     hasNextBook = commonReaderState.booksState.collectAsState().value?.nextBook != null,
-                    onReturnBook = onBackPress,
+                    onReturnBook = {
+                        // Same reason as the two below: the destination re-reads
+                        // Komga as soon as we pop, so the progress — and the
+                        // "completed" mark when leaving on a last page — has to
+                        // land before the navigation, not after.
+                        coroutineScope.launch {
+                            commonReaderState.flushProgressNow()
+                            onBackPress()
+                        }
+                    },
                     onReturnSeries = {
                         book?.let {
                             // Push current progress synchronously before
