@@ -231,6 +231,14 @@ abstract class AppModule(
             cacheKey = serverId?.toString() ?: "default",
         )
 
+        // "Similar series" term index. Built on the RAW api on purpose: hidden and
+        // ignored series stay in the index and are filtered when results are read,
+        // so hiding or unhiding one doesn't require a rebuild.
+        val similarityIndexBuilder = snd.komelia.similarity.SimilarityIndexBuilder(
+            rawApi = rawKomgaApi,
+            repository = appRepositories.similarityIndexRepository,
+        )
+
         // Series removed from every list response = locally ignored ∪ server-hidden.
         val filterIds = combine(ignoredSeriesFlow, hiddenSeriesController.hiddenIds) { ignored, hidden ->
             ignored + hidden
@@ -337,6 +345,7 @@ abstract class AppModule(
 
             komgaApi = komgaApi,
             hiddenSeriesController = hiddenSeriesController,
+            similarityIndexBuilder = similarityIndexBuilder,
             isOffline = isOffline,
             komfClientFactory = komfClientFactory,
             appNotifications = appNotifications,

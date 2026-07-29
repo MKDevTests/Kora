@@ -48,6 +48,8 @@ data class DependencyContainer(
     val komgaApi: StateFlow<KomgaApi>,
     /** Admin "hide for everyone" (kora:hidden) handle; null on platforms without it. */
     val hiddenSeriesController: HiddenSeriesController? = null,
+    /** Builds/refreshes the local term index behind "Similar series". */
+    val similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder? = null,
 
     val isOffline: StateFlow<Boolean>,
     val komfClientFactory: KomfClientFactory,

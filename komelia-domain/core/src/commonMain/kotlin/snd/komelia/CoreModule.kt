@@ -16,6 +16,7 @@ import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.settings.KomfSettingsRepository
 import snd.komelia.settings.SecretsRepository
 import snd.komelia.settings.TranscriptionSettingsRepository
+import snd.komelia.similarity.SimilarityIndexRepository
 import snd.komelia.stats.ReadingEventsRepository
 
 import snd.komelia.sync.ReaderSyncService
@@ -49,4 +50,6 @@ data class AppRepositories(
     val readingEventsRepository: ReadingEventsRepository,
     val seriesRatingsRepository: SeriesRatingsRepository,
     val seriesLinksRepository: SeriesLinksRepository,
+    /** Local term index behind "Similar series" — derived data, never backed up. */
+    val similarityIndexRepository: SimilarityIndexRepository,
 )

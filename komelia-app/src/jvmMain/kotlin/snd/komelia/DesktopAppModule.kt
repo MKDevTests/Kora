@@ -220,6 +220,7 @@ class DesktopAppModule(
             readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app, currentUserId),
             seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app, currentUserId),
             seriesLinksRepository = snd.komelia.db.links.ExposedSeriesLinksRepository(databases.app),
+            similarityIndexRepository = snd.komelia.db.similarity.ExposedSimilarityIndexRepository(databases.app),
         )
     }
 
