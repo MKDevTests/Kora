@@ -40,3 +40,6 @@ sipurraP-data.tar
 *.b64
 v2.sqlite
 stable.sqlite
+
+# Similar-series bench: local scratch index pulled from the server
+scripts/similar-bench/index_*.json
