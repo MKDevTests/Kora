@@ -968,7 +968,16 @@ class ReaderState(
     suspend fun markCurrentBookCompleted() {
         if (!markReadProgress) return
         val state = booksState.value ?: return
-        logger.debug { "[ReadProgress] mark completed book=${state.currentBook.id.value}" }
+        val totalPages = state.currentBookPages.size
+        logger.debug { "[ReadProgress] mark completed book=${state.currentBook.id.value} pages=$totalPages" }
+        // Pin the page to the last one FIRST. Komga recomputes "completed" from
+        // every progression push, and the reader's last reachable page is not
+        // always the book's last page — a blank final page is skipped, and a
+        // trailing page can be grouped into the previous spread. On a 276-page
+        // volume the reader sits at 275, so the pushes that follow this mark
+        // (the conflated channel draining, the onDispose flush) were sending
+        // 0.996 and silently UN-completing the book a second after we marked it.
+        if (totalPages > 0) readProgressPage.value = totalPages
         runCatching {
             bookApi.markReadProgress(
                 state.currentBook.id,
