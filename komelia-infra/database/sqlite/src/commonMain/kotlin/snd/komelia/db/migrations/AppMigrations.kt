@@ -94,6 +94,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V82__invert_speech_bubbles.sql",
         "V83__webtoon_smart_scroll.sql",
         "V84__personal_lists_library_scope.sql",
+        "V85__series_similarity_index.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {
