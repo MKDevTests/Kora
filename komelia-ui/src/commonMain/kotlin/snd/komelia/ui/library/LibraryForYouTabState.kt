@@ -31,7 +31,7 @@ import snd.komelia.similarity.tasteAffinities
 import snd.komelia.similarity.toIndexedSeries
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
-import snd.komga.client.common.KomgaReadStatus
+import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
