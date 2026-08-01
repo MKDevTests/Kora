@@ -21,6 +21,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -99,6 +100,7 @@ fun MainView(
     var cardCornerRadius by remember { mutableStateOf(8.0f) }
     var useFloatingNavigationBar by remember { mutableStateOf(false) }
     var hideParenthesesInNames by remember { mutableStateOf(false) }
+    var hiddenAuthorRoles by remember { mutableStateOf<Set<String>?>(null) }
     var showLanguageOnCovers by remember { mutableStateOf(false) }
     var languageBadgeScale by remember { mutableStateOf(1.0f) }
     var languageBadgeAtBottom by remember { mutableStateOf(false) }
@@ -168,6 +170,14 @@ fun MainView(
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getUseNewLibraryUI2()
             ?.collect { useNewLibraryUI2 = it }
+    }
+    LaunchedEffect(dependencies) {
+        val settings = dependencies?.appRepositories?.settingsRepository ?: return@LaunchedEffect
+        // The hidden set only applies while the filter is on, so resolve the two
+        // into the single value the display code reads.
+        combine(settings.getAuthorRolesFilterEnabled(), settings.getHiddenAuthorRoles()) { enabled, roles ->
+            if (enabled) roles else null
+        }.collect { hiddenAuthorRoles = it }
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getUseImmersiveMorphingCover()
@@ -293,6 +303,7 @@ fun MainView(
                 LocalImmersiveColorAlpha provides immersiveColorAlpha,
                 LocalShowImmersiveNavBar provides showImmersiveNavBar,
                 LocalHideParenthesesInNames provides hideParenthesesInNames,
+                LocalHiddenAuthorRoles provides hiddenAuthorRoles,
                 LocalShowLanguageOnCovers provides showLanguageOnCovers,
                 LocalLanguageBadgeScale provides languageBadgeScale,
                 LocalLanguageBadgeAtBottom provides languageBadgeAtBottom,

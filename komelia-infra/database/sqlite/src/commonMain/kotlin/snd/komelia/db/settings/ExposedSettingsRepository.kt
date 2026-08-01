@@ -108,6 +108,10 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[genreTileWidth] = settings.genreTileWidth
                 it[genreTileTextBelow] = settings.genreTileTextBelow
                 it[genreTileShowCount] = settings.genreTileShowCount
+                it[authorRolesFilterEnabled] = settings.authorRolesFilterEnabled
+                it[hiddenAuthorRoles] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.hiddenAuthorRoles.toList()
+                )
             }
         }
     }
@@ -218,6 +222,13 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             genreTileWidth = get(AppSettingsTable.genreTileWidth),
             genreTileTextBelow = get(AppSettingsTable.genreTileTextBelow),
             genreTileShowCount = get(AppSettingsTable.genreTileShowCount),
+            authorRolesFilterEnabled = get(AppSettingsTable.authorRolesFilterEnabled),
+            hiddenAuthorRoles = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.hiddenAuthorRoles)
+                ).toSet()
+            }.getOrDefault(emptySet()),
         )
     }
 }

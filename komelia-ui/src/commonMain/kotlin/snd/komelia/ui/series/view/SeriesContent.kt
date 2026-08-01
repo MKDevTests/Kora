@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.ui.LoadState
+import snd.komelia.ui.LocalHiddenAuthorRoles
 import snd.komelia.ui.LocalHideParenthesesInNames
 import snd.komelia.ui.LocalKomgaState
 import snd.komelia.ui.LocalOfflineMode
@@ -57,6 +58,8 @@ import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.collection.SeriesCollectionsContent
 import snd.komelia.ui.collection.SeriesCollectionsState
 import snd.komelia.ui.common.TagList
+import snd.komelia.ui.common.authorRoleLabel
+import snd.komelia.ui.common.authorRolesOrder
 import snd.komelia.ui.common.components.AppFilterChipDefaults
 import snd.komelia.ui.common.components.DescriptionChips
 import snd.komelia.ui.common.components.LabeledEntry
@@ -484,29 +487,22 @@ fun SeriesChipTags(
 
         Spacer(Modifier.height(2.dp))
 
-        series.booksMetadata.authors
-            .filter { it.role == "writer" }
-            .groupBy { it.role }
-            .forEach { (_, author) ->
-                DescriptionChips(
-                    label = "Writers",
-                    chipValues = author.map { LabeledEntry(it, it.name) },
-                    onChipClick = { onFilterClick(SeriesScreenFilter(authors = listOf(it))) },
-                    modifier = Modifier.cursorForHand()
-                )
-            }
-
-        series.booksMetadata.authors
-            .filter { it.role == "penciller" }
-            .groupBy { it.role }
-            .forEach { (_, author) ->
-                DescriptionChips(
-                    label = "Pencillers",
-                    chipValues = author.map { LabeledEntry(it, it.name) },
-                    onChipClick = { onFilterClick(SeriesScreenFilter(authors = listOf(it))) },
-                    modifier = Modifier.cursorForHand()
-                )
-            }
+        // Filter off (null): the historical two rows. Filter on: every role the
+        // user kept, so "which credits do I care about" is answered in one place
+        // for the book page and the series pages alike.
+        val hiddenRoles = LocalHiddenAuthorRoles.current
+        val shownRoles = if (hiddenRoles == null) listOf("writer", "penciller")
+        else authorRolesOrder.filterNot { it in hiddenRoles }
+        shownRoles.forEach { role ->
+            val credits = series.booksMetadata.authors.filter { it.role.lowercase() == role }
+            if (credits.isEmpty()) return@forEach
+            DescriptionChips(
+                label = authorRoleLabel(role),
+                chipValues = credits.map { LabeledEntry(it, it.name) },
+                onChipClick = { onFilterClick(SeriesScreenFilter(authors = listOf(it))) },
+                modifier = Modifier.cursorForHand()
+            )
+        }
         Spacer(Modifier.height(2.dp))
     }
 }

@@ -61,6 +61,7 @@ import snd.komelia.ui.LocalCardSpacingBelow
 import snd.komelia.ui.LocalCardWidthScale
 import snd.komelia.ui.LocalCardShadowLevel
 import snd.komelia.ui.LocalCardCornerRadius
+import snd.komelia.ui.LocalHiddenAuthorRoles
 import snd.komelia.ui.LocalHideParenthesesInNames
 import snd.komelia.ui.LocalKomgaEvents
 import snd.komelia.ui.LocalToggleImmersiveMorphingCover
@@ -71,6 +72,7 @@ import snd.komelia.ui.collection.SeriesCollectionsContent
 import snd.komelia.ui.collection.SeriesCollectionsState
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.common.ThumbnailConstants.CARD_SCALE
+import snd.komelia.ui.common.authorRolesOrder
 import snd.komelia.ui.common.components.AppFilterChipDefaults
 import snd.komelia.ui.common.images.ThumbnailImage
 import coil3.compose.rememberAsyncImagePainter
@@ -230,9 +232,15 @@ fun ImmersiveSeriesContent(
 
     val publisherLogo = rememberPublisherLogo(series.metadata.publisher)
 
-    val writers = remember(series.booksMetadata.authors) {
+    // Filter off (null): writers only, as always. Filter on: every role the
+    // user kept, in the canonical order.
+    val hiddenAuthorRoles = LocalHiddenAuthorRoles.current
+    val writers = remember(series.booksMetadata.authors, hiddenAuthorRoles) {
+        val roles = if (hiddenAuthorRoles == null) listOf("writer")
+        else authorRolesOrder.filterNot { it in hiddenAuthorRoles }
         series.booksMetadata.authors
-            .filter { it.role.lowercase() == "writer" }
+            .filter { it.role.lowercase() in roles }
+            .distinctBy { it.name }
             .joinToString(", ") { it.name }
     }
     val year = series.booksMetadata.releaseDate?.year

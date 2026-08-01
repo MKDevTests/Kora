@@ -382,6 +382,20 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(shareLinksViaKomga = enabled) }
     }
 
+    override fun getAuthorRolesFilterEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.authorRolesFilterEnabled }.distinctUntilChanged()
+
+    override suspend fun putAuthorRolesFilterEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(authorRolesFilterEnabled = enabled) }
+    }
+
+    override fun getHiddenAuthorRoles(): Flow<Set<String>> =
+        wrapper.state.map { it.hiddenAuthorRoles }.distinctUntilChanged()
+
+    override suspend fun putHiddenAuthorRoles(roles: Set<String>) {
+        wrapper.transform { it.copy(hiddenAuthorRoles = roles) }
+    }
+
     override fun getShowLanguageOnCovers(): Flow<Boolean> =
         wrapper.state.map { it.showLanguageOnCovers }.distinctUntilChanged()
 

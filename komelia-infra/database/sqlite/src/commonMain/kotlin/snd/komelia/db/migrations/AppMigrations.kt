@@ -95,6 +95,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V83__webtoon_smart_scroll.sql",
         "V84__personal_lists_library_scope.sql",
         "V85__series_similarity_index.sql",
+        "V86__author_roles_and_continuous_zoom.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

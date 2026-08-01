@@ -384,6 +384,13 @@ private fun ColumnScope.ContinuousReaderSettingsContent(state: ContinuousReaderS
         inputFieldColor = MaterialTheme.colorScheme.surfaceVariant
     )
 
+    SwitchWithLabel(
+        checked = state.tapToZoom.collectAsState().value,
+        onCheckedChange = state::onTapToZoomChange,
+        label = { Text("Tap to zoom") },
+        contentPadding = PaddingValues(horizontal = 10.dp)
+    )
+
     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         val padding = state.sidePaddingFraction.collectAsState().value
         NumberFieldWithIncrements(

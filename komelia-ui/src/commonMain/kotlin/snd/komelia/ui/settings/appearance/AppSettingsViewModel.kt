@@ -29,6 +29,8 @@ class AppSettingsViewModel(
     var immersiveColorAlpha by mutableStateOf(0.12f)
     var showImmersiveNavBar by mutableStateOf(false)
     var hideParenthesesInNames by mutableStateOf(false)
+    var authorRolesFilterEnabled by mutableStateOf(false)
+    var hiddenAuthorRoles by mutableStateOf(emptySet<String>())
     var showLanguageOnCovers by mutableStateOf(false)
     var languageBadgeScale by mutableStateOf(1.0f)
     var languageBadgeAtBottom by mutableStateOf(false)
@@ -56,6 +58,8 @@ class AppSettingsViewModel(
         immersiveColorAlpha = settingsRepository.getImmersiveColorAlpha().first()
         showImmersiveNavBar = settingsRepository.getShowImmersiveNavBar().first()
         hideParenthesesInNames = settingsRepository.getHideParenthesesInNames().first()
+        authorRolesFilterEnabled = settingsRepository.getAuthorRolesFilterEnabled().first()
+        hiddenAuthorRoles = settingsRepository.getHiddenAuthorRoles().first()
         showLanguageOnCovers = settingsRepository.getShowLanguageOnCovers().first()
         languageBadgeScale = settingsRepository.getLanguageBadgeScale().first()
         languageBadgeAtBottom = settingsRepository.getLanguageBadgeAtBottom().first()
@@ -161,6 +165,18 @@ class AppSettingsViewModel(
     fun onHideParenthesesInNamesChange(hide: Boolean) {
         this.hideParenthesesInNames = hide
         screenModelScope.launch { settingsRepository.putHideParenthesesInNames(hide) }
+    }
+
+    fun onAuthorRolesFilterEnabledChange(enabled: Boolean) {
+        this.authorRolesFilterEnabled = enabled
+        screenModelScope.launch { settingsRepository.putAuthorRolesFilterEnabled(enabled) }
+    }
+
+    /** [visible] is what the switch shows, so a role is hidden when it's off. */
+    fun onAuthorRoleVisibilityChange(role: String, visible: Boolean) {
+        val updated = if (visible) hiddenAuthorRoles - role else hiddenAuthorRoles + role
+        this.hiddenAuthorRoles = updated
+        screenModelScope.launch { settingsRepository.putHiddenAuthorRoles(updated) }
     }
 
     fun onShowLanguageOnCoversChange(enabled: Boolean) {

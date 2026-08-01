@@ -188,6 +188,16 @@ interface CommonSettingsRepository {
     fun getShareLinksViaKomga(): Flow<Boolean>
     suspend fun putShareLinksViaKomga(enabled: Boolean)
 
+    /**
+     * Author-role display filter, applied everywhere credits are listed (book
+     * page, series pages). Off by default → every role is shown, as before.
+     * The HIDDEN roles are stored, so a role Komga adds later still appears.
+     */
+    fun getAuthorRolesFilterEnabled(): Flow<Boolean>
+    suspend fun putAuthorRolesFilterEnabled(enabled: Boolean)
+    fun getHiddenAuthorRoles(): Flow<Set<String>>
+    suspend fun putHiddenAuthorRoles(roles: Set<String>)
+
     /** Optional FR/EN language pill on series covers, with size + position. */
     fun getShowLanguageOnCovers(): Flow<Boolean>
     suspend fun putShowLanguageOnCovers(enabled: Boolean)

@@ -131,6 +131,10 @@ interface ImageReaderSettingsRepository {
     fun getWebtoonSmartScroll(): Flow<Boolean>
     suspend fun putWebtoonSmartScroll(enabled: Boolean)
 
+    /** Double-tap zoom in the continuous reader (webtoons included). */
+    fun getContinuousReaderTapToZoom(): Flow<Boolean>
+    suspend fun putContinuousReaderTapToZoom(enabled: Boolean)
+
     fun getContinuousReaderStopAtEnd(): Flow<Boolean>
     suspend fun putContinuousReaderStopAtEnd(enabled: Boolean)
 

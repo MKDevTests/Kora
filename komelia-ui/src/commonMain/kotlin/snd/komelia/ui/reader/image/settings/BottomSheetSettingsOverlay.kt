@@ -834,6 +834,15 @@ private fun ContinuousModeSettings(
             )
         }
 
+        // Continuous reading (webtoons included) had no way to turn double-tap
+        // zoom off — the toggle existed for the paged reader only.
+        SwitchWithLabel(
+            checked = state.tapToZoom.collectAsState().value,
+            onCheckedChange = state::onTapToZoomChange,
+            label = { Text("Tap to zoom") },
+            contentPadding = PaddingValues(horizontal = 10.dp),
+        )
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             val sidePadding = state.sidePaddingFraction.collectAsState().value
             val paddingPercentage = remember(sidePadding) { (sidePadding * 200).roundToInt() }

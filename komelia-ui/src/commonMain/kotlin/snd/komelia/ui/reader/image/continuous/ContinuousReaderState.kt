@@ -121,6 +121,7 @@ class ContinuousReaderState(
     val lazyListState = LazyListState(0, 0)
 
     val readingDirection = MutableStateFlow(TOP_TO_BOTTOM)
+    val tapToZoom = MutableStateFlow(true)
     val sidePaddingFraction = MutableStateFlow(.3f)
     val sidePaddingPx = MutableStateFlow(0)
     val pageSpacing = MutableStateFlow(0)
@@ -192,6 +193,7 @@ class ContinuousReaderState(
         sidePaddingFraction.value = settingsRepository.getContinuousReaderPadding().first()
         pageSpacing.value = settingsRepository.getContinuousReaderPageSpacing().first().coerceAtMost(99999)
         stopAtEnd = settingsRepository.getContinuousReaderStopAtEnd().first()
+        tapToZoom.value = settingsRepository.getContinuousReaderTapToZoom().first()
 
         screenScaleState.setScrollState(lazyListState)
         when (readingDirection.value) {
@@ -1009,6 +1011,11 @@ class ContinuousReaderState(
         applyPadding()
         screenScaleState.setZoom(0f, updateBase = true)
         stateScope.launch { settingsRepository.putContinuousReaderPadding(fraction) }
+    }
+
+    fun onTapToZoomChange(enabled: Boolean) {
+        this.tapToZoom.value = enabled
+        stateScope.launch { settingsRepository.putContinuousReaderTapToZoom(enabled) }
     }
 
     fun onPageSpacingChange(distance: Int) {

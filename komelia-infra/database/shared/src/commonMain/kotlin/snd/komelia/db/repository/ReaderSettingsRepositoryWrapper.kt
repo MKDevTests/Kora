@@ -335,6 +335,14 @@ class ReaderSettingsRepositoryWrapper(
         wrapper.transform { it.copy(invertSpeechBubbles = enabled) }
     }
 
+    override fun getContinuousReaderTapToZoom(): Flow<Boolean> {
+        return wrapper.mapState { it.continuousReaderTapToZoom }
+    }
+
+    override suspend fun putContinuousReaderTapToZoom(enabled: Boolean) {
+        wrapper.transform { it.copy(continuousReaderTapToZoom = enabled) }
+    }
+
     override fun getContinuousReaderStopAtEnd(): Flow<Boolean> {
         return wrapper.mapState { it.continuousReaderStopAtEnd }
     }

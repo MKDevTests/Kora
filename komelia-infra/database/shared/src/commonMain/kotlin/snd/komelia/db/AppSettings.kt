@@ -246,4 +246,17 @@ data class AppSettings(
     /** false = title overlaid on the cover, true = title below it. */
     val genreTileTextBelow: Boolean = false,
     val genreTileShowCount: Boolean = true,
+
+    /**
+     * When true, only the author roles the user kept are displayed (book page,
+     * series pages). Off by default → every credit is shown, as before.
+     */
+    val authorRolesFilterEnabled: Boolean = false,
+
+    /**
+     * Roles hidden when the filter above is on, lowercase ("letterer", …).
+     * The HIDDEN set is stored rather than the visible one, so a role Komga
+     * adds later shows up instead of silently vanishing.
+     */
+    val hiddenAuthorRoles: Set<String> = emptySet(),
 )

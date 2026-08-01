@@ -30,7 +30,9 @@ import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDateTime
 import snd.komelia.DefaultDateTimeFormats.localDateTimeFormat
 import snd.komelia.komga.api.model.KomeliaBook
+import snd.komelia.ui.LocalHiddenAuthorRoles
 import snd.komelia.ui.LocalHideParenthesesInNames
+import snd.komelia.ui.common.withoutHiddenRoles
 import snd.komelia.ui.common.TagList
 import snd.komelia.ui.common.components.DescriptionChips
 import snd.komelia.ui.common.components.LabeledEntry
@@ -107,8 +109,12 @@ fun BookInfoColumn(
         )
 
         Spacer(Modifier.size(0.dp))
-        val authorEntries = remember(authors) {
+        // One row per role adds up fast (Komga fills up to eight); the user
+        // decides which ones are worth the space in Settings -> Appearance.
+        val hiddenRoles = LocalHiddenAuthorRoles.current
+        val authorEntries = remember(authors, hiddenRoles) {
             authors
+                .withoutHiddenRoles(hiddenRoles)
                 .groupBy { it.role }
                 .map { (role, authors) ->
                     role.replaceFirstChar { it.uppercase() } to authors.map { LabeledEntry(it, it.name) }

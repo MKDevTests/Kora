@@ -75,6 +75,16 @@ val LocalCardSpacingBelow = compositionLocalOf { 0.0f }
 val LocalCardShadowLevel = compositionLocalOf { 2.0f }
 val LocalCardCornerRadius = compositionLocalOf { 8.0f }
 val LocalHideParenthesesInNames = compositionLocalOf { false }
+/**
+ * Author roles the user chose NOT to display, lowercase, or null when the
+ * filter is off. Read wherever credits are listed, so one setting covers the
+ * book page and both series screens.
+ *
+ * Null and empty differ on purpose: null keeps each screen's historical
+ * behaviour (the series screens only ever showed writers/pencillers), while an
+ * empty set means "filter on, nothing hidden" = show every role.
+ */
+val LocalHiddenAuthorRoles = compositionLocalOf<Set<String>?> { null }
 val LocalShowLanguageOnCovers = compositionLocalOf { false }
 val LocalLanguageBadgeScale = compositionLocalOf { 1.0f }
 val LocalLanguageBadgeAtBottom = compositionLocalOf { false }

@@ -40,6 +40,8 @@ import snd.komelia.ui.LocalLanguageBadgeAtBottom
 import snd.komelia.ui.LocalLanguageBadgeScale
 import snd.komelia.ui.LocalShowLanguageOnCovers
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.common.authorRoleLabel
+import snd.komelia.ui.common.authorRolesOrder
 import snd.komelia.ui.common.cards.LibraryItemCard
 import snd.komelia.ui.common.components.AppSlider
 import snd.komelia.ui.common.components.AppSliderDefaults
@@ -98,6 +100,10 @@ fun AppearanceSettingsContent(
     onShowImmersiveNavBarChange: (Boolean) -> Unit,
     hideParenthesesInNames: Boolean,
     onHideParenthesesInNamesChange: (Boolean) -> Unit,
+    authorRolesFilterEnabled: Boolean,
+    onAuthorRolesFilterEnabledChange: (Boolean) -> Unit,
+    hiddenAuthorRoles: Set<String>,
+    onAuthorRoleVisibilityChange: (String, Boolean) -> Unit,
     showLanguageOnCovers: Boolean,
     onShowLanguageOnCoversChange: (Boolean) -> Unit,
     languageBadgeScale: Float,
@@ -373,6 +379,31 @@ fun AppearanceSettingsContent(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
+
+        HorizontalDivider()
+
+        // ii. Which author credits are worth the space. Komga fills up to eight
+        // roles and the book page prints a row per role; off by default so
+        // nothing changes for anyone who doesn't care.
+        SwitchWithLabel(
+            checked = authorRolesFilterEnabled,
+            onCheckedChange = onAuthorRolesFilterEnabledChange,
+            label = { Text("Choose which author roles to show") },
+            supportingText = { Text("Applies to book and series pages. Off = every role Komga provides") },
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+        )
+        if (authorRolesFilterEnabled) {
+            authorRolesOrder.forEach { role ->
+                SwitchWithLabel(
+                    checked = role !in hiddenAuthorRoles,
+                    onCheckedChange = { visible -> onAuthorRoleVisibilityChange(role, visible) },
+                    label = { Text(authorRoleLabel(role)) },
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                )
+            }
+        }
 
         HorizontalDivider()
 

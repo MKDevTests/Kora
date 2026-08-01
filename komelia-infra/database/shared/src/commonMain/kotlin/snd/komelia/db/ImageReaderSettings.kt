@@ -65,6 +65,12 @@ data class ImageReaderSettings(
     val webtoonSmartScroll: Boolean = true,
     val continuousReaderStopAtEnd: Boolean = true,
     /**
+     * Double-tap zoom in the continuous reader. The paged reader has had its
+     * own toggle forever; webtoon reading was stuck with zoom on because this
+     * one did not exist. Defaults to on = the previous behaviour.
+     */
+    val continuousReaderTapToZoom: Boolean = true,
+    /**
      * Accessibility: detect speech bubbles and invert only their pixels
      * (white bubble + black text -> black bubble + white text), leaving the
      * artwork untouched. Reduces glare for light-sensitive readers. Off by

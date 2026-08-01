@@ -67,6 +67,7 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val invertSpeechBubbles = bool("invert_speech_bubbles").default(false)
     val webtoonSmartScroll = bool("webtoon_smart_scroll").default(true)
     val continuousReaderStopAtEnd = bool("continuous_reader_stop_at_end").default(true)
+    val continuousReaderTapToZoom = bool("continuous_reader_tap_to_zoom").default(true)
 
     /** Minimal-UI-while-reading toggle (v1.0.11). See V67 migration. */
     val keepProgressBarVisibleWhileReading =
