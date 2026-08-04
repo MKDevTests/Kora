@@ -117,6 +117,8 @@ class SeriesScreen(
                 },
                 collectionsState = vm.collectionsState,
                 linksState = vm.linksState,
+                readingOrderState = vm.readingOrderState,
+                onSeriesIdClick = { navigator.push(SeriesScreen(it)) },
                 similarState = vm.similarState,
                 onCollectionClick = { navigator.push(CollectionScreen(it.id)) },
                 onSeriesClick = { s ->

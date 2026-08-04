@@ -10,6 +10,7 @@ import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.offline.OfflineModule
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
+import snd.komelia.readingorder.ReadingOrderRepository
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.EpubReaderSettingsRepository
 import snd.komelia.settings.ImageReaderSettingsRepository
@@ -52,4 +53,6 @@ data class AppRepositories(
     val seriesLinksRepository: SeriesLinksRepository,
     /** Local term index behind "Similar series" — derived data, never backed up. */
     val similarityIndexRepository: SimilarityIndexRepository,
+    /** Designated original series + cached reading-order graphs. */
+    val readingOrderRepository: ReadingOrderRepository,
 )

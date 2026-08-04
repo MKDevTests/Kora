@@ -277,6 +277,7 @@ class ViewModelFactory(
         settingsRepository = appRepositories.settingsRepository,
         referentialApi = komgaApi.referentialApi,
         seriesLinksRepository = appRepositories.seriesLinksRepository,
+        readingOrderRepository = appRepositories.readingOrderRepository,
         similarityIndexRepository = appRepositories.similarityIndexRepository,
         similarityIndexBuilder = dependencies.similarityIndexBuilder,
         // Empty when the platform has no hidden-series controller: suggestions

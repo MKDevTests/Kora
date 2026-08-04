@@ -79,7 +79,9 @@ private fun SeriesRelationType.label(): String = when (this) {
 @Composable
 fun SeriesLinksContent(
     state: SeriesLinksState,
+    readingOrderState: snd.komelia.ui.series.ReadingOrderState,
     onSeriesClick: (KomgaSeries) -> Unit,
+    onSeriesIdClick: (snd.komga.client.series.KomgaSeriesId) -> Unit,
 ) {
     val cardWidth = state.cardWidth.collectAsState().value
     var showAdd by remember { mutableStateOf(false) }
@@ -89,6 +91,10 @@ fun SeriesLinksContent(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // The picture goes first: "where do I start" is the question the lists
+        // below cannot answer at a glance.
+        ReadingOrderContent(readingOrderState, onSeriesIdClick)
+
         Button(onClick = { showAdd = true }) {
             Icon(Icons.Default.Add, null)
             Spacer(Modifier.width(8.dp))

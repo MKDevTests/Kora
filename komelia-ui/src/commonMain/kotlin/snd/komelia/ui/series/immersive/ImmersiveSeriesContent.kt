@@ -131,6 +131,8 @@ fun ImmersiveSeriesContent(
     onBookReadClick: (KomeliaBook, Boolean) -> Unit,
     collectionsState: SeriesCollectionsState,
     linksState: snd.komelia.ui.series.SeriesLinksState,
+    readingOrderState: snd.komelia.ui.series.ReadingOrderState,
+    onSeriesIdClick: (snd.komga.client.series.KomgaSeriesId) -> Unit,
     similarState: snd.komelia.ui.series.SimilarSeriesState,
     onCollectionClick: (KomgaCollection) -> Unit,
     onSeriesClick: (KomgaSeries) -> Unit,
@@ -557,7 +559,12 @@ fun ImmersiveSeriesContent(
                     }
 
                     ImmersiveTab.LINKS -> item(span = { GridItemSpan(maxLineSpan) }) {
-                        SeriesLinksContent(state = linksState, onSeriesClick = onSeriesClick)
+                        SeriesLinksContent(
+                            state = linksState,
+                            readingOrderState = readingOrderState,
+                            onSeriesClick = onSeriesClick,
+                            onSeriesIdClick = onSeriesIdClick,
+                        )
                     }
 
                     // Emitted into the grid itself (like Books), so suggestions

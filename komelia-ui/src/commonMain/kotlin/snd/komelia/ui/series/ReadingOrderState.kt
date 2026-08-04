@@ -1,0 +1,191 @@
+package snd.komelia.ui.series
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.links.SeriesLinksRepository
+import snd.komelia.links.SeriesRelationEdge
+import snd.komelia.links.SeriesRelationType
+import snd.komelia.readingorder.ReadingOrderGraph
+import snd.komelia.readingorder.ReadingOrderRepository
+import snd.komelia.readingorder.buildReadingOrder
+import snd.komga.client.series.KomgaSeriesId
+
+private val logger = KotlinLogging.logger {}
+
+/**
+ * State for the "Reading order" picture at the top of the series Links tab.
+ *
+ * The graph is always drawn from the franchise's ORIGINAL series, never from
+ * the series being viewed: that is what makes the picture the same wherever you
+ * open it from, and what answers "where do I start". The user designates the
+ * original; until they do, the head of the sequel chain is used.
+ */
+class ReadingOrderState(
+    private val series: StateFlow<snd.komga.client.series.KomgaSeries?>,
+    private val linksRepository: SeriesLinksRepository,
+    private val repository: ReadingOrderRepository,
+    private val seriesApi: KomgaSeriesApi,
+    private val screenModelScope: CoroutineScope,
+) {
+    var graph by mutableStateOf<ReadingOrderGraph?>(null)
+        private set
+
+    var isLoading by mutableStateOf(false)
+        private set
+
+    /** True when the series being viewed is the designated original. */
+    var currentIsOriginal by mutableStateOf(false)
+        private set
+
+    private var started = false
+
+    fun onOpened() {
+        if (started) return
+        started = true
+        load(forceRefresh = false)
+        // Any link change anywhere reshapes franchises, including this one.
+        SeriesLinksChanges.changes.onEach {
+            repository.invalidateAll()
+            load(forceRefresh = true)
+        }.launchIn(screenModelScope)
+    }
+
+    /** Explicit rebuild — the escape hatch when the picture looks wrong. */
+    fun refresh() = load(forceRefresh = true)
+
+    /** Designates (or clears) the current series as the franchise's original. */
+    fun toggleOriginal() {
+        val current = series.value ?: return
+        screenModelScope.launch {
+            val next = !currentIsOriginal
+            repository.setOriginal(current.id, next)
+            // The whole franchise is drawn from that decision, so every cached
+            // picture is stale, not just this one.
+            repository.invalidateAll()
+            currentIsOriginal = next
+            load(forceRefresh = true)
+        }
+    }
+
+    private fun load(forceRefresh: Boolean) {
+        screenModelScope.launch {
+            isLoading = true
+            try {
+                val current = series.filterNotNull().first()
+                val relations = linksRepository.getAllRelations()
+                val versions = linksRepository.getAllVersions()
+                currentIsOriginal = repository.isOriginal(current.id)
+
+                val component = franchiseOf(current.id.value, relations, versions)
+                if (component.size <= 1) {
+                    graph = null
+                    return@launch
+                }
+                val originalId = KomgaSeriesId(pickOriginal(component, relations, repository.originals()))
+
+                if (!forceRefresh) {
+                    val cached = repository.getCached(originalId)
+                    if (cached != null) {
+                        graph = cached.takeIf { it.isWorthShowing }
+                        return@launch
+                    }
+                }
+
+                // Titles are the only expensive part: one lookup per box, four
+                // in flight. A failed lookup falls back to the id rather than
+                // dropping the box, so the shape of the graph stays honest.
+                val titles = resolveTitles(component)
+                val built = buildReadingOrder(originalId, relations, versions, titles)
+                repository.putCached(built)
+                graph = built.takeIf { it.isWorthShowing }
+            } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
+                logger.warn(t) { "Reading order graph failed" }
+                graph = null
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    private suspend fun resolveTitles(seriesIds: Set<String>): Map<String, String> {
+        val limit = Semaphore(4)
+        return coroutineScope {
+            seriesIds.map { id ->
+                async {
+                    limit.withPermit {
+                        val title = try {
+                            seriesApi.getOneSeries(KomgaSeriesId(id)).metadata.title
+                        } catch (t: Throwable) {
+                            currentCoroutineContext().ensureActive()
+                            null
+                        }
+                        title?.let { id to it }
+                    }
+                }
+            }.awaitAll().filterNotNull().toMap()
+        }
+    }
+}
+
+/** Every series reachable from [seriesId] through any link, editions included. */
+private fun franchiseOf(
+    seriesId: String,
+    relations: List<SeriesRelationEdge>,
+    versions: Map<KomgaSeriesId, String>,
+): Set<String> {
+    val neighbours = mutableMapOf<String, MutableSet<String>>()
+    fun connect(a: String, b: String) {
+        neighbours.getOrPut(a) { mutableSetOf() } += b
+        neighbours.getOrPut(b) { mutableSetOf() } += a
+    }
+    relations.forEach { connect(it.from.value, it.to.value) }
+    versions.entries.groupBy({ it.value }, { it.key.value }).values.forEach { members ->
+        members.forEach { m -> members.forEach { other -> if (m != other) connect(m, other) } }
+    }
+
+    val seen = mutableSetOf<String>()
+    val queue = ArrayDeque(listOf(seriesId))
+    while (queue.isNotEmpty()) {
+        val current = queue.removeFirst()
+        if (!seen.add(current)) continue
+        neighbours[current].orEmpty().forEach { if (it !in seen) queue += it }
+    }
+    return seen
+}
+
+/**
+ * The series to draw from: the user's designated original if the franchise has
+ * one, otherwise the head of the sequel chain — the series no other series
+ * points to as its sequel. Ties (or none) break on the lowest id so the picture
+ * never flickers between two equally valid answers.
+ */
+private fun pickOriginal(
+    component: Set<String>,
+    relations: List<SeriesRelationEdge>,
+    designated: Set<String>,
+): String {
+    component.firstOrNull { it in designated }?.let { return it }
+    val hasSequelPointingAtIt = relations
+        .filter { it.type == SeriesRelationType.SEQUEL && it.to.value in component }
+        .mapTo(mutableSetOf()) { it.to.value }
+    return component.filterNot { it in hasSequelPointingAtIt }.minOrNull()
+        ?: component.min()
+}

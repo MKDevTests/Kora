@@ -57,6 +57,7 @@ class SeriesViewModel(
     collectionApi: KomgaCollectionsApi,
     referentialApi: KomgaReferentialApi,
     seriesLinksRepository: snd.komelia.links.SeriesLinksRepository,
+    readingOrderRepository: snd.komelia.readingorder.ReadingOrderRepository,
     similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
     hiddenSeriesIds: StateFlow<Set<String>>,
@@ -118,6 +119,14 @@ class SeriesViewModel(
         excludedSeriesIds = excludedFromSuggestions,
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
+    )
+
+    val readingOrderState = ReadingOrderState(
+        series = this.series,
+        linksRepository = seriesLinksRepository,
+        repository = readingOrderRepository,
+        seriesApi = seriesApi,
+        screenModelScope = screenModelScope,
     )
 
     val linksState = SeriesLinksState(

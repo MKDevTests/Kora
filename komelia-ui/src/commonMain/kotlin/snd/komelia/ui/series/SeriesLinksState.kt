@@ -52,7 +52,9 @@ private val logger = KotlinLogging.logger {}
  * refreshes after a link/unlink anywhere — both sides of a relation update
  * live, even when the other series' screen is already on the back stack.
  */
-private object SeriesLinksChanges {
+// internal, not private: the reading-order graph is derived from these links
+// and drops its cache on the same signal.
+internal object SeriesLinksChanges {
     val changes = MutableSharedFlow<Unit>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     fun notifyChanged() {
         changes.tryEmit(Unit)
