@@ -86,6 +86,11 @@ class SeriesFilterEditState(
                     initialSeries = initialSeries,
                 )
 
+                is SeriesHomeScreenFilter.ForYou -> SeriesForYouFilterState(
+                    initial = initialFilter,
+                    initialSeries = initialSeries,
+                )
+
                 is SeriesHomeScreenFilter.Favorites -> SeriesFavoritesFilterState(
                     initial = initial,
                     initialSeries = initialSeries,
@@ -113,6 +118,7 @@ class SeriesFilterEditState(
             is SeriesRecentlyAddedFilterState -> FilterType.RecentlyAdded
             is SeriesRecentlyUpdatedFilterState -> FilterType.RecentlyUpdated
             is SeriesAlmostFinishedFilterState -> FilterType.AlmostFinished
+            is SeriesForYouFilterState -> FilterType.ForYou
             is SeriesFavoritesFilterState -> FilterType.Favorites
         }
     }.stateIn(coroutineScope, SharingStarted.Eagerly, FilterType.Custom)
@@ -154,6 +160,14 @@ class SeriesFilterEditState(
                 excludedLibraryIds = editState.excludedLibraryIds.value,
             )
 
+            is SeriesForYouFilterState -> SeriesHomeScreenFilter.ForYou(
+                order = order,
+                label = label.value,
+                enabled = enabled.value,
+                pageSize = editState.pageSize.value,
+                libraryId = editState.libraryId.value,
+            )
+
             is SeriesFavoritesFilterState -> SeriesHomeScreenFilter.Favorites(
                 order = order,
                 label = label.value,
@@ -193,12 +207,13 @@ class SeriesFilterEditState(
                 initialSeries = null,
             )
 
+            FilterType.ForYou -> SeriesForYouFilterState(initial = null, initialSeries = null)
             FilterType.Favorites -> SeriesFavoritesFilterState(initial = null, initialSeries = null)
         }
     }
 
 
-    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished, Favorites }
+    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished, ForYou, Favorites }
 }
 
 sealed interface SeriesFilterStateType {
@@ -567,6 +582,23 @@ enum class SeriesSort {
     BookCount,
     Random,
     Unsorted,
+}
+
+/**
+ * Minimal edit state for the "For you" shelf — a page-size knob, and the library
+ * it draws from (null = the one last opened). No preview: the suggestions are
+ * computed on Home from the local index.
+ */
+class SeriesForYouFilterState(
+    initial: SeriesHomeScreenFilter.ForYou?,
+    initialSeries: List<KomgaSeries>?,
+) : SeriesFilterStateType {
+    val pageSize = MutableStateFlow(initial?.pageSize ?: 12)
+    val libraryId = MutableStateFlow(initial?.libraryId)
+    override val series = MutableStateFlow(initialSeries ?: emptyList())
+    fun onPageSizeChange(value: Int) {
+        this.pageSize.value = value
+    }
 }
 
 /**

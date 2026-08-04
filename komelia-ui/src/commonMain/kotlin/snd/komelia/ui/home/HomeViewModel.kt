@@ -94,15 +94,21 @@ class HomeViewModel(
     cardWidthFlow: Flow<Dp>,
     favoriteIdsFlow: Flow<Set<String>>,
     excludedLibraryIdsFlow: Flow<Set<String>> = flowOf(emptySet()),
+    /** Same pipeline as the library "For you" tab; null where it isn't available. */
+    private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
+    lastSelectedLibraryIdFlow: Flow<String?> = flowOf(null),
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
     private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
     private val excludedLibraryIds = excludedLibraryIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
+    private val lastSelectedLibraryId = lastSelectedLibraryIdFlow.stateIn(screenModelScope, Eagerly, null)
     private val shelfResolver = HomeShelfResolver(
         seriesApi = seriesApi,
         bookApi = bookApi,
         favoriteIds = { favoriteIds.value },
         excludedLibraryIds = { excludedLibraryIds.value },
+        forYouSuggester = forYouSuggester,
+        lastSelectedLibraryId = { lastSelectedLibraryId.value },
     )
 
     private val reloadEventsEnabled = MutableStateFlow(true)
@@ -184,12 +190,23 @@ class HomeViewModel(
                 else listOf(
                     SeriesHomeScreenFilter.Favorites(order = -1, label = "Favoris", enabled = true, pageSize = 20)
                 ) + persisted
+            // Same treatment for the suggestions shelf: it only earns its keep on
+            // the screen people actually open, and it stays editable (reorder,
+            // rename, disable) like any other.
+            val withForYou =
+                if (withFavorites.any { it is SeriesHomeScreenFilter.ForYou }) withFavorites
+                else withFavorites + SeriesHomeScreenFilter.ForYou(
+                    order = withFavorites.size,
+                    label = "For you",
+                    enabled = true,
+                    pageSize = 12,
+                )
 
             // Paint the last known shelves from disk BEFORE touching the network.
             // Every shelf costs a server round-trip and the awaitAll below waits on
             // the slowest, so without this a cold start stares at an empty screen
             // for the full duration (measured: 7.3s for 11 shelves).
-            if (!force) paintPersistedShelves(withFavorites)
+            if (!force) paintPersistedShelves(withForYou)
             // Only spin when there was nothing to paint — otherwise the refresh
             // stays silent behind the snapshot instead of blanking it.
             if (state.value !is LoadState.Success) mutableState.value = LoadState.Loading
@@ -203,7 +220,7 @@ class HomeViewModel(
             // Slots start from what is currently on screen (the disk snapshot, or
             // the previous load's data) so a shelf never blanks while its refresh
             // is in flight; each one is swapped in place, keeping shelf order.
-            val slots = withFavorites.map { filter ->
+            val slots = withForYou.map { filter ->
                 currentFilters.value.find {
                     HomeShelfCache.shelfKey(it.filter) == HomeShelfCache.shelfKey(filter)
                 }
@@ -212,7 +229,7 @@ class HomeViewModel(
             // different threads and would otherwise race on the list.
             val publishLock = Mutex()
 
-            withFavorites.mapIndexed { index, filter ->
+            withForYou.mapIndexed { index, filter ->
                 screenModelScope.async {
                     val data = fetchFilterData(filter, force) ?: return@async
                     publishLock.withLock {

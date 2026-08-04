@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.cards.SeriesImageCard
+import snd.komelia.ui.suggestions.ReasonPill
 import snd.komelia.ui.series.SimilarSeriesState
 import snd.komelia.ui.series.SimilarSuggestion
 import snd.komga.client.series.KomgaSeries
@@ -110,15 +111,8 @@ private fun SuggestionCard(
             onSeriesClick = { onSeriesClick(suggestion.series) },
         )
         // The reason is what makes a suggestion trustworthy instead of magic —
-        // and what lets a bad one be diagnosed rather than just endured.
-        Text(
-            text = suggestion.reasons.take(3).joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+        // one pill keeps that without burying the covers under grey text.
+        ReasonPill(suggestion.reasons, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(15.dp))
     }
 }

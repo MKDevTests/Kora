@@ -38,6 +38,10 @@ class HomeShelfResolver(
     private val bookApi: KomgaBookApi,
     private val favoriteIds: () -> Set<String>,
     private val excludedLibraryIds: () -> Set<String> = { emptySet() },
+    /** Same pipeline as the library's "For you" tab; null on platforms without it. */
+    private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
+    /** Library the "For you" shelf falls back to when it isn't pinned to one. */
+    private val lastSelectedLibraryId: () -> String? = { null },
 ) {
 
     suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? =
@@ -94,6 +98,26 @@ class HomeShelfResolver(
                     series = series,
                     filter = filter
                 )
+            }
+
+            is SeriesHomeScreenFilter.ForYou -> {
+                // The shelf follows the library last opened unless it was pinned
+                // to one: suggestions are per-library, and a shelf stuck on the
+                // library the user has stopped reading is worse than no shelf.
+                val libraryId = filter.libraryId ?: lastSelectedLibraryId()
+                val suggester = forYouSuggester
+                if (libraryId == null || suggester == null) SeriesFilterData(emptyList(), filter)
+                else {
+                    // No index building from Home: that is a one-off burst of
+                    // requests the user did not ask for. The shelf stays empty
+                    // until the library tab has indexed once.
+                    val suggestions = suggester.suggest(
+                        libraryId = KomgaLibraryId(libraryId),
+                        limit = filter.pageSize,
+                        indexIfMissing = false,
+                    )
+                    SeriesFilterData(series = suggestions.results.map { it.series }, filter = filter)
+                }
             }
 
             is SeriesHomeScreenFilter.Favorites -> {

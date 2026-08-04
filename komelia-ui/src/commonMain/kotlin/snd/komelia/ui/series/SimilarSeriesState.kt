@@ -189,4 +189,8 @@ private fun Feature.label(): String = when (family) {
     TermFamily.PUBLISHER -> "Publisher: ${value.replaceFirstChar { it.uppercaseChar() }}"
 }
 
-private const val MAX_SUGGESTIONS = 20
+/**
+ * Twelve, not twenty: past the first screenful the scores have flattened and the
+ * list stops being a recommendation and becomes a second library view.
+ */
+private const val MAX_SUGGESTIONS = 12

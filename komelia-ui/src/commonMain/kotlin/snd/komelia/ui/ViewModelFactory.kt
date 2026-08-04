@@ -193,6 +193,28 @@ class ViewModelFactory(
             cardWidthFlow = getGridCardWidth(),
             favoriteIdsFlow = scopedFavoriteSeriesIds(),
             excludedLibraryIdsFlow = appRepositories.settingsRepository.getExcludedLibraryIds(),
+            forYouSuggester = forYouSuggester,
+            lastSelectedLibraryIdFlow = appRepositories.settingsRepository
+                .getLastSelectedLibraryId().map { it?.value },
+        )
+    }
+
+    /**
+     * One suggester for the whole session: it holds no state, and the library
+     * tab and the Home shelf must agree on what "for you" means.
+     */
+    private val forYouSuggester by lazy {
+        snd.komelia.ui.suggestions.ForYouSuggester(
+            seriesApi = komgaApi.seriesApi,
+            repository = appRepositories.similarityIndexRepository,
+            indexBuilder = dependencies.similarityIndexBuilder,
+            ratingsRepository = appRepositories.seriesRatingsRepository,
+            favoriteSeriesIds = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+            excludedSeriesIds = combine(
+                appRepositories.settingsRepository.getIgnoreListEnabled(),
+                appRepositories.settingsRepository.getIgnoredSeriesIds(),
+                dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),
+            ) { enabled, ignored, hidden -> (if (enabled) ignored else emptySet()) + hidden },
         )
     }
 

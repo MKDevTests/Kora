@@ -427,6 +427,11 @@ private fun SeriesFilterEditContent(state: SeriesFilterEditState) {
                 )
             }
 
+            is snd.komelia.ui.home.edit.SeriesForYouFilterState -> PageSizeSettingsContent(
+                pageSize = editState.pageSize.collectAsState().value,
+                onPageSizeChange = editState::onPageSizeChange,
+            )
+
             is SeriesFavoritesFilterState -> PageSizeSettingsContent(
                 pageSize = filter.pageSize.collectAsState().value,
                 onPageSizeChange = filter::onPageSizeChange,

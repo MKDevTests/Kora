@@ -140,6 +140,25 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
     }
 
+    /**
+     * Suggestions for one library, from what the user has read and rated there.
+     *
+     * [libraryId] null means "the library last opened", so the shelf follows the
+     * user around instead of being pinned to whichever library happened to be
+     * selected when it was created.
+     */
+    @Serializable
+    @SerialName("io.github.snd_r.komelia.ui.home.SeriesHomeScreenFilter.ForYou")
+    data class ForYou(
+        override val order: Int,
+        override val label: String,
+        override val enabled: Boolean = true,
+        val pageSize: Int = 12,
+        val libraryId: String? = null,
+    ) : SeriesHomeScreenFilter {
+        override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
+    }
+
     /** The user's local Favorites, resolved client-side from the favorite ids. */
     @Serializable
     @SerialName("io.github.snd_r.komelia.ui.home.SeriesHomeScreenFilter.Favorites")

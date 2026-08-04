@@ -153,9 +153,7 @@ class LibraryViewModel(
         library = library,
         cardWidth = cardWidth,
     )
-    val forYouTabState = LibraryForYouTabState(
-        library = library,
-        notifications = appNotifications,
+    private val forYouSuggester = snd.komelia.ui.suggestions.ForYouSuggester(
         seriesApi = seriesApi,
         repository = similarityIndexRepository,
         indexBuilder = similarityIndexBuilder,
@@ -168,6 +166,12 @@ class LibraryViewModel(
             settingsRepository.getIgnoredSeriesIds(),
             hiddenSeriesIds,
         ) { enabled, ignored, hidden -> (if (enabled) ignored else emptySet()) + hidden },
+    )
+
+    val forYouTabState = LibraryForYouTabState(
+        library = library,
+        notifications = appNotifications,
+        suggester = forYouSuggester,
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
     )

@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,10 +24,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.common.cards.SeriesImageCard
+import snd.komelia.ui.suggestions.ReasonPill
 import snd.komelia.ui.library.ForYouSuggestion
 import snd.komelia.ui.library.LibraryForYouTabState
 import snd.komga.client.series.KomgaSeries
@@ -65,8 +70,29 @@ fun ForYouContent(
         item(span = { GridItemSpan(maxLineSpan) }) { beforeContent() }
         item(span = { GridItemSpan(maxLineSpan) }) { ForYouHeader(state) }
 
-        items(state.suggestions.size) { index ->
-            SuggestionCard(state.suggestions[index], onSeriesClick)
+        // A flat grid of forty covers says the last one is as good as the first,
+        // though its score is often five times lower. The best few get their own
+        // band; the rest keep the grid.
+        val top = state.suggestions.take(TOP_MATCHES)
+        val rest = state.suggestions.drop(TOP_MATCHES)
+        if (top.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Closest matches", style = MaterialTheme.typography.titleSmall)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(top.size) { index ->
+                            SuggestionCard(
+                                suggestion = top[index],
+                                onSeriesClick = onSeriesClick,
+                                width = cardWidth * 1.35f,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        items(rest.size) { index ->
+            SuggestionCard(rest[index], onSeriesClick)
         }
     }
 }
@@ -130,20 +156,18 @@ private fun ForYouHeader(state: LibraryForYouTabState) {
 private fun SuggestionCard(
     suggestion: ForYouSuggestion,
     onSeriesClick: (KomgaSeries) -> Unit,
+    width: Dp? = null,
 ) {
-    Column {
+    Column(modifier = if (width != null) Modifier.width(width) else Modifier) {
         SeriesImageCard(
             series = suggestion.series,
             onSeriesClick = { onSeriesClick(suggestion.series) },
+            modifier = if (width != null) Modifier.width(width) else Modifier,
         )
-        Text(
-            text = suggestion.reasons.take(3).joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+        ReasonPill(suggestion.reasons, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(15.dp))
     }
 }
+
+/** Enough to read as "start here", few enough to stay one screen wide. */
+private const val TOP_MATCHES = 4
