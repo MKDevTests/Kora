@@ -4,6 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.automirrored.rounded.LabelOff
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
@@ -11,8 +13,12 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.ViewQuilt
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import snd.komelia.ui.common.components.AnimatedDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,14 +32,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaBookApi
+import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.komga.api.model.KomeliaBook
+import snd.komga.client.series.KomgaSeriesId
 import snd.komelia.offline.tasks.OfflineTaskEmitter
+import snd.komelia.ui.LocalFavorites
 import snd.komelia.ui.LocalKomgaState
+import snd.komelia.ui.LocalPlanned
 import snd.komelia.ui.LocalOfflineMode
 import snd.komelia.ui.LocalUseImmersiveMorphingCover
 import snd.komelia.ui.dialogs.ConfirmationDialog
@@ -69,6 +81,25 @@ fun BookActionsMenu(
             },
             onDialogDismiss = {
                 showDeleteDialog = false
+                onDismissRequest()
+            },
+            buttonConfirmColor = MaterialTheme.colorScheme.errorContainer
+        )
+    }
+
+    var showDeleteSeriesDialog by remember { mutableStateOf(false) }
+    if (showDeleteSeriesDialog) {
+        ConfirmationDialog(
+            title = "Delete series",
+            body = "The whole series \"${book.seriesTitle}\" will be removed from this server, " +
+                "with every volume and its media files. This cannot be undone. Continue?",
+            confirmText = "Yes, delete the series \"${book.seriesTitle}\"",
+            onDialogConfirm = {
+                actions.deleteSeries?.invoke(book.seriesId)
+                onDismissRequest()
+            },
+            onDialogDismiss = {
+                showDeleteSeriesDialog = false
                 onDismissRequest()
             },
             buttonConfirmColor = MaterialTheme.colorScheme.errorContainer
@@ -228,6 +259,66 @@ fun BookActionsMenu(
             )
         }
 
+        // Series-level actions, reachable from inside a volume: the reader is
+        // where you decide you like (or are done with) the whole series, and
+        // going back to the series page just to star it was the friction.
+        val favorites = LocalFavorites.current
+        val planned = LocalPlanned.current
+        if (favorites != null || planned != null || (isAdmin && !isOffline && actions.deleteSeries != null)) {
+            HorizontalDivider()
+            Text(
+                text = book.seriesTitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+        if (favorites != null) {
+            val isFavorite = book.seriesId.value in favorites.favoriteIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isFavorite) "Retirer la serie des favoris" else "Ajouter la serie aux favoris",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = { Icon(if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder, null) },
+                onClick = {
+                    favorites.toggle(book.seriesId)
+                    onDismissRequest()
+                }
+            )
+        }
+        if (planned != null) {
+            val isPlanned = book.seriesId.value in planned.plannedIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isPlanned) "Retirer la serie de « a lire »" else "Marquer la serie « a lire »",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = { Icon(if (isPlanned) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null) },
+                onClick = {
+                    planned.toggle(book.seriesId)
+                    onDismissRequest()
+                }
+            )
+        }
+        if (isAdmin && !isOffline && actions.deleteSeries != null) {
+            DropdownMenuItem(
+                text = { Text("Delete series from server", style = MaterialTheme.typography.labelLarge) },
+                leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
+                onClick = { showDeleteSeriesDialog = true },
+                colors = MenuDefaults.itemColors(
+                    textColor = MaterialTheme.colorScheme.error,
+                    leadingIconColor = MaterialTheme.colorScheme.error
+                )
+            )
+        }
+
         if (onToggleImmersiveMode != null) {
             val useImmersiveMorphingCover = LocalUseImmersiveMorphingCover.current
             DropdownMenuItem(
@@ -255,12 +346,19 @@ data class BookMenuActions(
     val delete: (KomeliaBook) -> Unit,
     val download: (KomeliaBook) -> Unit,
     val deleteDownloaded: (KomeliaBook) -> Unit,
+    /**
+     * Deletes the book's SERIES from the server. Null where the surface has no
+     * series api to call, which is why the menu entry is conditional rather
+     * than always present.
+     */
+    val deleteSeries: ((KomgaSeriesId) -> Unit)? = null,
 ) {
     constructor(
         bookApi: KomgaBookApi,
         notifications: AppNotifications,
         scope: CoroutineScope,
-        taskEmitter: OfflineTaskEmitter
+        taskEmitter: OfflineTaskEmitter,
+        seriesApi: KomgaSeriesApi? = null,
     ) : this(
         analyze = {
             notifications.runCatchingToNotifications(scope) {
@@ -289,6 +387,11 @@ data class BookMenuActions(
             notifications.runCatchingToNotifications(scope) { bookApi.deleteBook(it.id) }
         },
         download = { scope.launch { taskEmitter.downloadBook(it.id) } },
-        deleteDownloaded = { scope.launch { taskEmitter.deleteBook(it.id) } }
+        deleteDownloaded = { scope.launch { taskEmitter.deleteBook(it.id) } },
+        deleteSeries = seriesApi?.let { api ->
+            { seriesId: KomgaSeriesId ->
+                notifications.runCatchingToNotifications(scope) { api.delete(seriesId) }
+            }
+        },
     )
 }

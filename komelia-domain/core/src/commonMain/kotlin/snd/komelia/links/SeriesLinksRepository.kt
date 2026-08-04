@@ -16,7 +16,20 @@ enum class SeriesRelationType {
     PREQUEL,
     SPIN_OFF,
     MAIN_STORY,
-    RELATED;
+    RELATED,
+
+    /**
+     * Same work in another language. Symmetric, like [RELATED]: neither side is
+     * the "original".
+     *
+     * Overlaps with "Other versions" on purpose — that one is an unlabelled
+     * group, this one says WHY the two are versions of each other, which is
+     * what the shelf of French/English editions needed.
+     */
+    LANGUAGE,
+
+    /** Colour edition of a black-and-white one, or the reverse. Symmetric. */
+    COLORED;
 
     fun inverse(): SeriesRelationType = when (this) {
         SEQUEL -> PREQUEL
@@ -24,6 +37,8 @@ enum class SeriesRelationType {
         SPIN_OFF -> MAIN_STORY
         MAIN_STORY -> SPIN_OFF
         RELATED -> RELATED
+        LANGUAGE -> LANGUAGE
+        COLORED -> COLORED
     }
 }
 

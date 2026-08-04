@@ -61,6 +61,8 @@ private val relationDisplayOrder = listOf(
     SeriesRelationType.SEQUEL,
     SeriesRelationType.SPIN_OFF,
     SeriesRelationType.MAIN_STORY,
+    SeriesRelationType.LANGUAGE,
+    SeriesRelationType.COLORED,
     SeriesRelationType.RELATED,
 )
 
@@ -69,6 +71,8 @@ private fun SeriesRelationType.label(): String = when (this) {
     SeriesRelationType.SEQUEL -> "Sequel"
     SeriesRelationType.SPIN_OFF -> "Spin-offs"
     SeriesRelationType.MAIN_STORY -> "Main series"
+    SeriesRelationType.LANGUAGE -> "Other languages"
+    SeriesRelationType.COLORED -> "Colour editions"
     SeriesRelationType.RELATED -> "Related"
 }
 
@@ -264,6 +268,8 @@ private fun AddLinkDialog(
                         KindButton("Sequel") { state.linkRelation(sel.id, SeriesRelationType.SEQUEL); onDismiss() }
                         KindButton("Prequel") { state.linkRelation(sel.id, SeriesRelationType.PREQUEL); onDismiss() }
                         KindButton("Spin-off") { state.linkRelation(sel.id, SeriesRelationType.SPIN_OFF); onDismiss() }
+                        KindButton("Other language") { state.linkRelation(sel.id, SeriesRelationType.LANGUAGE); onDismiss() }
+                        KindButton("Colour edition") { state.linkRelation(sel.id, SeriesRelationType.COLORED); onDismiss() }
                         KindButton("Related") { state.linkRelation(sel.id, SeriesRelationType.RELATED); onDismiss() }
                         TextButton(onClick = { selected = null }) { Text("Back to results") }
                     }
@@ -295,6 +301,8 @@ private val relationTypeOptions = listOf(
     LabeledEntry(SeriesRelationType.PREQUEL, "Prequel"),
     LabeledEntry(SeriesRelationType.SPIN_OFF, "Spin-off"),
     LabeledEntry(SeriesRelationType.MAIN_STORY, "Main series"),
+    LabeledEntry(SeriesRelationType.LANGUAGE, "Other language"),
+    LabeledEntry(SeriesRelationType.COLORED, "Colour edition"),
     LabeledEntry(SeriesRelationType.RELATED, "Related"),
 )
 

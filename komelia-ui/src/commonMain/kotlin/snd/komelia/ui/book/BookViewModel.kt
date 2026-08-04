@@ -82,7 +82,10 @@ class BookViewModel(
 
     val siblingBooks = MutableStateFlow<List<KomeliaBook>>(emptyList())
 
-    val bookMenuActions = BookMenuActions(bookApi, notifications, screenModelScope, taskEmitter)
+    // seriesApi passed on purpose: the volume menu offers series-level actions
+    // (favorite / to read / delete the whole series), which is where the user
+    // actually decides those things.
+    val bookMenuActions = BookMenuActions(bookApi, notifications, screenModelScope, taskEmitter, seriesApi)
 
     suspend fun initialize() {
         if (state.value != Uninitialized) return
