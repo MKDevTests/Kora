@@ -40,8 +40,13 @@ class HomeShelfResolver(
     private val excludedLibraryIds: () -> Set<String> = { emptySet() },
     /** Same pipeline as the library's "For you" tab; null on platforms without it. */
     private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
-    /** Library the "For you" shelf falls back to when it isn't pinned to one. */
-    private val lastSelectedLibraryId: () -> String? = { null },
+    /**
+     * Library the "For you" shelf falls back to when it isn't pinned to one.
+     * Suspending on purpose: the setting is DataStore-backed and arrives after
+     * the first emission, and Home resolves its shelves immediately at startup —
+     * reading a StateFlow's seeded value returned null and left the shelf empty.
+     */
+    private val lastSelectedLibraryId: suspend () -> String? = { null },
 ) {
 
     suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? =

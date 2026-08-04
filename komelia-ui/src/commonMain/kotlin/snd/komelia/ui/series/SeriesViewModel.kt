@@ -126,6 +126,7 @@ class SeriesViewModel(
         linksRepository = seriesLinksRepository,
         repository = readingOrderRepository,
         seriesApi = seriesApi,
+        settingsRepository = settingsRepository,
         screenModelScope = screenModelScope,
     )
 

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.links.KoraLinkCodec
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationEdge
 import snd.komelia.readingorder.ReadingOrderGraph
@@ -27,6 +28,9 @@ import snd.komelia.readingorder.buildReadingOrder
 import snd.komga.client.series.KomgaSeriesId
 
 private val logger = KotlinLogging.logger {}
+
+/** Shared links are readable one series at a time; cap the crawl. */
+private const val MAX_SHARED_WALK = 12
 
 /**
  * State for the "Reading order" picture at the top of the series Links tab.
@@ -41,6 +45,7 @@ class ReadingOrderState(
     private val linksRepository: SeriesLinksRepository,
     private val repository: ReadingOrderRepository,
     private val seriesApi: KomgaSeriesApi,
+    private val settingsRepository: snd.komelia.settings.CommonSettingsRepository,
     private val screenModelScope: CoroutineScope,
 ) {
     var graph by mutableStateOf<ReadingOrderGraph?>(null)
@@ -88,10 +93,22 @@ class ReadingOrderState(
             isLoading = true
             try {
                 val current = series.filterNotNull().first()
-                val relations = linksRepository.getAllRelations()
+                val localRelations = linksRepository.getAllRelations()
                 val versions = linksRepository.getAllVersions()
                 currentIsOriginal = repository.isOriginal(current.id)
 
+                // Links can live in TWO places, and reading only one of them is
+                // what made the graph work in debug and fail in release: the
+                // local table is per app install, while links shared through
+                // Komga travel with the server. The Links tab has always merged
+                // both; the graph now does too.
+                val fetched = mutableMapOf<String, snd.komga.client.series.KomgaSeries>()
+                val sharedRelations =
+                    if (settingsRepository.getShareLinksViaKomga().first()) {
+                        walkSharedLinks(current, fetched)
+                    } else emptyList()
+
+                val relations = (localRelations + sharedRelations).distinct()
                 val component = franchiseOf(current.id.value, relations, versions)
                 if (component.size <= 1) {
                     graph = null
@@ -107,10 +124,7 @@ class ReadingOrderState(
                     }
                 }
 
-                // Titles are the only expensive part: one lookup per box, four
-                // in flight. A failed lookup falls back to the id rather than
-                // dropping the box, so the shape of the graph stays honest.
-                val titles = resolveTitles(component)
+                val titles = resolveTitles(component, fetched)
                 val built = buildReadingOrder(originalId, relations, versions, titles)
                 // A one-box graph is never worth caching: it would be served
                 // back as "nothing to show" forever, even after the links that
@@ -127,10 +141,61 @@ class ReadingOrderState(
         }
     }
 
-    private suspend fun resolveTitles(seriesIds: Set<String>): Map<String, String> {
+    /**
+     * Follows the Kora links written in Komga metadata, breadth-first from the
+     * current series.
+     *
+     * Shared links are only readable series by series, so this is a bounded walk
+     * — [MAX_SHARED_WALK] fetches, four in flight — and every series it fetches
+     * is kept for the title pass, which would otherwise fetch them all again.
+     */
+    private suspend fun walkSharedLinks(
+        start: snd.komga.client.series.KomgaSeries,
+        fetched: MutableMap<String, snd.komga.client.series.KomgaSeries>,
+    ): List<SeriesRelationEdge> {
+        val edges = mutableListOf<SeriesRelationEdge>()
+        val seen = mutableSetOf(start.id.value)
+        var frontier = listOf(start)
+        fetched[start.id.value] = start
+
+        while (frontier.isNotEmpty() && fetched.size < MAX_SHARED_WALK) {
+            val nextIds = mutableSetOf<String>()
+            for (series in frontier) {
+                series.metadata.links.mapNotNull { KoraLinkCodec.parse(it) }.forEach { parsed ->
+                    edges += SeriesRelationEdge(series.id, parsed.target, parsed.type)
+                    if (seen.add(parsed.target.value)) nextIds += parsed.target.value
+                }
+            }
+            if (nextIds.isEmpty()) break
+            val limit = Semaphore(4)
+            frontier = coroutineScope {
+                nextIds.take(MAX_SHARED_WALK - fetched.size).map { id ->
+                    async {
+                        limit.withPermit {
+                            try {
+                                seriesApi.getOneSeries(KomgaSeriesId(id))
+                            } catch (t: Throwable) {
+                                currentCoroutineContext().ensureActive()
+                                null
+                            }
+                        }
+                    }
+                }.awaitAll().filterNotNull()
+            }
+            frontier.forEach { fetched[it.id.value] = it }
+        }
+        return edges
+    }
+
+    private suspend fun resolveTitles(
+        seriesIds: Set<String>,
+        known: Map<String, snd.komga.client.series.KomgaSeries>,
+    ): Map<String, String> {
+        val alreadyKnown = known.filterKeys { it in seriesIds }.mapValues { it.value.metadata.title }
+        val missing = seriesIds - alreadyKnown.keys
         val limit = Semaphore(4)
-        return coroutineScope {
-            seriesIds.map { id ->
+        return alreadyKnown + coroutineScope {
+            missing.map { id ->
                 async {
                     limit.withPermit {
                         val title = try {

@@ -101,14 +101,13 @@ class HomeViewModel(
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
     private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
     private val excludedLibraryIds = excludedLibraryIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
-    private val lastSelectedLibraryId = lastSelectedLibraryIdFlow.stateIn(screenModelScope, Eagerly, null)
     private val shelfResolver = HomeShelfResolver(
         seriesApi = seriesApi,
         bookApi = bookApi,
         favoriteIds = { favoriteIds.value },
         excludedLibraryIds = { excludedLibraryIds.value },
         forYouSuggester = forYouSuggester,
-        lastSelectedLibraryId = { lastSelectedLibraryId.value },
+        lastSelectedLibraryId = { lastSelectedLibraryIdFlow.first() },
     )
 
     private val reloadEventsEnabled = MutableStateFlow(true)
