@@ -21,7 +21,6 @@ import kotlinx.coroutines.sync.withPermit
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationEdge
-import snd.komelia.links.SeriesRelationType
 import snd.komelia.readingorder.ReadingOrderGraph
 import snd.komelia.readingorder.ReadingOrderRepository
 import snd.komelia.readingorder.buildReadingOrder
@@ -98,7 +97,7 @@ class ReadingOrderState(
                     graph = null
                     return@launch
                 }
-                val originalId = KomgaSeriesId(pickOriginal(component, relations, repository.originals()))
+                val originalId = KomgaSeriesId(pickOriginal(current.id.value, component, repository.originals()))
 
                 if (!forceRefresh) {
                     val cached = repository.getCached(originalId)
@@ -113,7 +112,10 @@ class ReadingOrderState(
                 // dropping the box, so the shape of the graph stays honest.
                 val titles = resolveTitles(component)
                 val built = buildReadingOrder(originalId, relations, versions, titles)
-                repository.putCached(built)
+                // A one-box graph is never worth caching: it would be served
+                // back as "nothing to show" forever, even after the links that
+                // would have filled it were added.
+                if (built.isWorthShowing) repository.putCached(built)
                 graph = built.takeIf { it.isWorthShowing }
             } catch (t: Throwable) {
                 currentCoroutineContext().ensureActive()
@@ -172,20 +174,20 @@ private fun franchiseOf(
 }
 
 /**
- * The series to draw from: the user's designated original if the franchise has
- * one, otherwise the head of the sequel chain — the series no other series
- * points to as its sequel. Ties (or none) break on the lowest id so the picture
- * never flickers between two equally valid answers.
+ * The series to draw from: the user's designated original when the franchise has
+ * one, otherwise the series being viewed.
+ *
+ * Falling back to the viewed series is deliberate. Relations are stored in BOTH
+ * directions — "Zero is the prequel of Fairy Tail" is also "Fairy Tail is the
+ * sequel of Zero" — so no structural rule can tell the start of a franchise
+ * from its prequel. The first attempt tried "the series nothing points to as a
+ * sequel" and picked the spin-off, whose only edge leads back to the main
+ * series: a one-box graph, which is why nothing was drawn. Drawing from where
+ * the user stands always produces a real picture, and the chip is right there
+ * to pin it down for good.
  */
 private fun pickOriginal(
+    viewedSeriesId: String,
     component: Set<String>,
-    relations: List<SeriesRelationEdge>,
     designated: Set<String>,
-): String {
-    component.firstOrNull { it in designated }?.let { return it }
-    val hasSequelPointingAtIt = relations
-        .filter { it.type == SeriesRelationType.SEQUEL && it.to.value in component }
-        .mapTo(mutableSetOf()) { it.to.value }
-    return component.filterNot { it in hasSequelPointingAtIt }.minOrNull()
-        ?: component.min()
-}
+): String = component.firstOrNull { it in designated } ?: viewedSeriesId

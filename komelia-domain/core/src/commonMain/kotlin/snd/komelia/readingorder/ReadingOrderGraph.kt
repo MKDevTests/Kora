@@ -29,6 +29,13 @@ enum class ReadingOrderKind {
      * graph — unlike editions, it is something else to read.
      */
     RELATED,
+
+    /**
+     * The series this one is a spin-off OF. Only ever appears when the graph is
+     * drawn from a spin-off — which happens while no original is designated.
+     * Following it is what keeps such a graph from being a single dead-end box.
+     */
+    MAIN_STORY,
 }
 
 /**
@@ -210,16 +217,15 @@ private fun SeriesRelationType.toKind(): ReadingOrderKind? = when (this) {
     SeriesRelationType.PREQUEL -> ReadingOrderKind.PREQUEL
     SeriesRelationType.SPIN_OFF -> ReadingOrderKind.SPIN_OFF
     SeriesRelationType.RELATED -> ReadingOrderKind.RELATED
-    // A main story reached FROM a spin-off would walk backwards up the
-    // franchise; the original is the anchor, so it is not followed.
-    SeriesRelationType.MAIN_STORY -> null
+    SeriesRelationType.MAIN_STORY -> ReadingOrderKind.MAIN_STORY
     SeriesRelationType.LANGUAGE, SeriesRelationType.COLORED -> null
 }
 
 private fun kindOrder(type: SeriesRelationType): Int = when (type) {
     SeriesRelationType.SEQUEL -> 0
-    SeriesRelationType.PREQUEL -> 1
-    SeriesRelationType.SPIN_OFF -> 2
-    SeriesRelationType.RELATED -> 3
-    else -> 4
+    SeriesRelationType.MAIN_STORY -> 1
+    SeriesRelationType.PREQUEL -> 2
+    SeriesRelationType.SPIN_OFF -> 3
+    SeriesRelationType.RELATED -> 4
+    else -> 5
 }

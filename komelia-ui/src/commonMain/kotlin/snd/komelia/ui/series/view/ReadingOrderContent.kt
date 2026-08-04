@@ -137,5 +137,6 @@ private fun ReadingOrderKind.hint(): String = when (this) {
     ReadingOrderKind.PREQUEL -> "prequel · read after"
     ReadingOrderKind.SPIN_OFF -> "spin-off · anytime"
     ReadingOrderKind.RELATED -> "same world · anytime"
+    ReadingOrderKind.MAIN_STORY -> "main series · start here"
     ReadingOrderKind.SEQUEL, ReadingOrderKind.ORIGINAL -> ""
 }
