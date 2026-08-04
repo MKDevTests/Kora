@@ -54,6 +54,13 @@ data class ReadingOrderNode(
     @SerialName("e") val editionCount: Int = 0,
     /** Node this one hangs from — the original, or a sequel further along. */
     @SerialName("p") val parentSeriesId: String? = null,
+    /**
+     * One of several sequels of the same series with no declared order between
+     * them (Naruto's two Boruto series, until one is marked the sequel of the
+     * other). Drawn side by side rather than chained: putting them in a row
+     * would claim an order nobody stated.
+     */
+    @SerialName("f") val forked: Boolean = false,
 )
 
 /** The computed graph, as displayed and as cached. */
@@ -69,6 +76,9 @@ data class ReadingOrderGraph(
     @SerialName("cut") val truncated: Boolean = false,
 ) {
     val isWorthShowing: Boolean get() = nodes.size > 1
+
+    /** True when some sequels are drawn side by side for lack of a declared order. */
+    val hasFork: Boolean get() = nodes.any { it.forked }
 }
 
 /** Past these the picture stops being readable — the lists below it are better. */
@@ -88,9 +98,11 @@ private val EDITION_TYPES = setOf(SeriesRelationType.LANGUAGE, SeriesRelationTyp
  * [versionGroups] is seriesId -> group id, the symmetric "other versions" set;
  * those are editions too and fold into their series' node.
  *
- * The walk is deliberately breadth-first from the original: depth is what the
- * layout uses, and taking the shortest path to each series keeps a spin-off of
- * a sequel from being drawn as a spin-off of the original.
+ * The spine is walked along SEQUEL edges first, then the branches hang off the
+ * nodes it placed. It is NOT a plain breadth-first search: with both
+ * "Naruto -> Boruto TBV" and "Boruto NG -> Boruto TBV" recorded, the shortest
+ * path would put TBV next to NG as a second sequel of Naruto, hiding the order
+ * the user had just declared. The longer chain is the more informative one.
  */
 fun buildReadingOrder(
     originalSeriesId: KomgaSeriesId,
@@ -122,8 +134,10 @@ fun buildReadingOrder(
         .filterNot { (from, to, _) -> from == to }
         .distinct()
     val outgoing = storyEdges.groupBy({ it.first }, { it.second to it.third })
+    val sequelsOf: (String) -> List<String> = { id ->
+        outgoing[id].orEmpty().filter { it.second == SeriesRelationType.SEQUEL }.map { it.first }
+    }
 
-    // 3. Breadth-first from the original.
     val nodes = mutableListOf(
         ReadingOrderNode(
             seriesId = rootId,
@@ -133,45 +147,105 @@ fun buildReadingOrder(
             editionCount = editionCounts[rootId] ?: 0,
         )
     )
-    val visited = mutableSetOf(rootId)
-    var frontier = listOf(rootId)
-    var depth = 1
+    val placed = mutableSetOf(rootId)
     var truncated = false
 
-    while (frontier.isNotEmpty() && depth <= MAX_DEPTH) {
-        val next = mutableListOf<String>()
-        for (parent in frontier) {
-            val neighbours = outgoing[parent].orEmpty()
-                // Stable order: the spine first, then the optional branches, so
-                // two runs on the same data draw the same picture.
-                .sortedWith(compareBy({ kindOrder(it.second) }, { titles[it.first] ?: it.first }))
-            for ((childId, type) in neighbours) {
-                if (childId in visited) continue
-                val kind = type.toKind() ?: continue
-                if (nodes.size >= MAX_NODES) {
-                    truncated = true
-                    break
-                }
-                visited += childId
-                next += childId
+    // 3. The spine: follow the sequels while there is exactly one way forward.
+    //    Several candidates that are ordered among themselves collapse to the
+    //    first of the chain; several genuinely unordered ones become a fork and
+    //    end the spine, because there is nothing left to chain them by.
+    var current = rootId
+    var depth = 1
+    val forkNodes = mutableListOf<Pair<String, String>>()
+    while (depth <= MAX_DEPTH) {
+        val candidates = sequelsOf(current).filterNot { it in placed }
+        if (candidates.isEmpty()) break
+        val heads = candidates.filterNot { candidate ->
+            candidates.any { other -> other != candidate && reachesBySequel(other, candidate, sequelsOf) }
+        }.ifEmpty { candidates }
+
+        if (heads.size == 1) {
+            val next = heads.single()
+            if (nodes.size >= MAX_NODES) { truncated = true; break }
+            placed += next
+            nodes += ReadingOrderNode(
+                seriesId = next,
+                title = titles[next] ?: next,
+                kind = ReadingOrderKind.SEQUEL,
+                depth = depth,
+                editionCount = editionCounts[next] ?: 0,
+                parentSeriesId = current,
+            )
+            current = next
+            depth++
+        } else {
+            heads.sortedBy { titles[it] ?: it }.forEach { candidate ->
+                if (nodes.size >= MAX_NODES) { truncated = true; return@forEach }
+                placed += candidate
+                forkNodes += candidate to current
                 nodes += ReadingOrderNode(
-                    seriesId = childId,
-                    title = titles[childId] ?: childId,
-                    kind = kind,
+                    seriesId = candidate,
+                    title = titles[candidate] ?: candidate,
+                    kind = ReadingOrderKind.SEQUEL,
                     depth = depth,
-                    editionCount = editionCounts[childId] ?: 0,
-                    parentSeriesId = parent,
+                    editionCount = editionCounts[candidate] ?: 0,
+                    parentSeriesId = current,
+                    forked = true,
                 )
             }
-            if (nodes.size >= MAX_NODES) break
+            break
         }
-        if (nodes.size >= MAX_NODES && next.isNotEmpty()) truncated = true
-        frontier = next
-        depth++
     }
-    if (frontier.isNotEmpty()) truncated = true
+
+    // 4. Branches: everything that is not a sequel, hanging off any placed node
+    //    (including the forked ones, so a spin-off of Boruto still shows).
+    val spineIds = nodes.map { it.seriesId }
+    for (parent in spineIds) {
+        val parentDepth = nodes.first { it.seriesId == parent }.depth
+        if (parentDepth >= MAX_DEPTH) continue
+        val branches = outgoing[parent].orEmpty()
+            .filterNot { it.second == SeriesRelationType.SEQUEL }
+            .filterNot { it.first in placed }
+            .sortedWith(compareBy({ kindOrder(it.second) }, { titles[it.first] ?: it.first }))
+        for ((childId, type) in branches) {
+            val kind = type.toKind() ?: continue
+            if (nodes.size >= MAX_NODES) { truncated = true; break }
+            placed += childId
+            nodes += ReadingOrderNode(
+                seriesId = childId,
+                title = titles[childId] ?: childId,
+                kind = kind,
+                depth = parentDepth + 1,
+                editionCount = editionCounts[childId] ?: 0,
+                parentSeriesId = parent,
+            )
+        }
+    }
+
+    // Anything reachable but left out means the picture is a summary.
+    val reachable = storyEdges.filter { it.first in placed }.map { it.second }.toSet()
+    if (reachable.any { it !in placed }) truncated = true
 
     return ReadingOrderGraph(originalSeriesId = rootId, nodes = nodes, truncated = truncated)
+}
+
+/** Is [target] reachable from [start] by following sequel edges? Depth-bounded. */
+private fun reachesBySequel(
+    start: String,
+    target: String,
+    sequelsOf: (String) -> List<String>,
+): Boolean {
+    val seen = mutableSetOf(start)
+    val queue = ArrayDeque(sequelsOf(start))
+    var steps = 0
+    while (queue.isNotEmpty() && steps < 32) {
+        val next = queue.removeFirst()
+        steps++
+        if (next == target) return true
+        if (!seen.add(next)) continue
+        queue += sequelsOf(next)
+    }
+    return false
 }
 
 /**

@@ -47,9 +47,14 @@ fun ReadingOrderContent(
     LaunchedEffect(Unit) { state.onOpened() }
     val graph = state.graph ?: return
 
-    val spine = graph.nodes.filter { it.kind == ReadingOrderKind.ORIGINAL || it.kind == ReadingOrderKind.SEQUEL }
+    // Forked sequels leave the row on purpose: side by side they read as
+    // alternatives, in a row they would claim an order nobody declared.
+    val spine = graph.nodes
+        .filter { (it.kind == ReadingOrderKind.ORIGINAL || it.kind == ReadingOrderKind.SEQUEL) && !it.forked }
         .sortedBy { it.depth }
-    val branches = graph.nodes.filterNot { it.kind == ReadingOrderKind.ORIGINAL || it.kind == ReadingOrderKind.SEQUEL }
+    val branches = graph.nodes.filterNot {
+        (it.kind == ReadingOrderKind.ORIGINAL || it.kind == ReadingOrderKind.SEQUEL) && !it.forked
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -78,11 +83,19 @@ fun ReadingOrderContent(
                 Text("└╴", style = MaterialTheme.typography.bodyMedium)
                 NodeCard(node, highlighted = false, onSeriesIdClick)
                 Text(
-                    node.kind.hint(),
+                    node.hint(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+
+        if (graph.hasFork) {
+            Text(
+                "Two sequels, no order between them. Mark one as the sequel of the other to chain them.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         if (graph.truncated) {
@@ -132,6 +145,9 @@ private fun NodeCard(
         }
     }
 }
+
+private fun ReadingOrderNode.hint(): String =
+    if (forked) "sequel · order not declared" else kind.hint()
 
 private fun ReadingOrderKind.hint(): String = when (this) {
     ReadingOrderKind.PREQUEL -> "prequel · read after"
