@@ -87,7 +87,7 @@ class SeriesFilterEditState(
                 )
 
                 is SeriesHomeScreenFilter.ForYou -> SeriesForYouFilterState(
-                    initial = initialFilter,
+                    initial = initial,
                     initialSeries = initialSeries,
                 )
 

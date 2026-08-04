@@ -220,6 +220,7 @@ fun HomeScreenFilter.withPageSize(size: Int): HomeScreenFilter = when (this) {
     is SeriesHomeScreenFilter.RecentlyUpdated -> copy(pageSize = size)
     is SeriesHomeScreenFilter.AlmostFinished -> copy(pageSize = size)
     is SeriesHomeScreenFilter.Favorites -> copy(pageSize = size)
+    is SeriesHomeScreenFilter.ForYou -> copy(pageSize = size)
     is SeriesHomeScreenFilter.CustomFilter ->
         copy(pageRequest = (pageRequest ?: KomgaPageRequest()).copy(size = size))
 
