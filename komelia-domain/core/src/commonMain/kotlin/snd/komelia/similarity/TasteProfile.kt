@@ -26,6 +26,13 @@ data class TasteWeights(
         2 to -1.0,
         1 to -2.0,
     ),
+    /**
+     * "Not interested". Negative, between a 2 and a 1 star: the user judged the
+     * series without reading it, which is weaker than a rating but far from
+     * neutral — and hiding the cover without learning anything would make them
+     * repeat the tap on every near-identical series the same terms produce.
+     */
+    val dismissed: Double = -1.5,
 )
 
 /** What the app knows about one series the user has met. */
@@ -36,6 +43,8 @@ data class SeriesEvidence(
     val isFavorite: Boolean = false,
     /** 1..5, or null when the user never rated it. */
     val stars: Int? = null,
+    /** The user answered "not interested" on a suggestion. */
+    val dismissed: Boolean = false,
 )
 
 /**
@@ -60,8 +69,11 @@ fun tasteAffinities(
     for (item in evidence) {
         val stars = item.stars
         val affinity = when {
+            // An explicit rating outranks everything else, including a
+            // dismissal: rating a series is the stronger statement of the two.
             stars != null -> weights.stars[stars] ?: 0.0
             item.isFavorite -> weights.favorite
+            item.dismissed -> weights.dismissed
             item.read -> weights.read
             item.inProgress -> weights.inProgress
             else -> 0.0

@@ -11,6 +11,41 @@
         "t:ninja",
         "t:bd",
         "p:kana"
+      ],
+      "becauseOf": [
+        {
+          "seriesId": "s1",
+          "share": 0.628599186085,
+          "reasons": [
+            "g:aventure",
+            "a:kishimoto",
+            "g:action",
+            "t:ninja",
+            "bt:shonen",
+            "t:bd",
+            "p:kana"
+          ]
+        },
+        {
+          "seriesId": "s5",
+          "share": 0.318394009554,
+          "reasons": [
+            "g:aventure",
+            "g:action",
+            "bt:shonen",
+            "t:bd"
+          ]
+        },
+        {
+          "seriesId": "s6",
+          "share": 0.053006804361,
+          "reasons": [
+            "g:action",
+            "t:ninja",
+            "t:bd",
+            "p:kana"
+          ]
+        }
       ]
     },
     {
@@ -21,6 +56,35 @@
         "g:action",
         "t:bd",
         "p:kana"
+      ],
+      "becauseOf": [
+        {
+          "seriesId": "s1",
+          "share": 0.700406964221,
+          "reasons": [
+            "a:kishimoto",
+            "g:action",
+            "t:bd",
+            "p:kana"
+          ]
+        },
+        {
+          "seriesId": "s5",
+          "share": 0.215536234727,
+          "reasons": [
+            "g:action",
+            "t:bd"
+          ]
+        },
+        {
+          "seriesId": "s6",
+          "share": 0.084056801052,
+          "reasons": [
+            "g:action",
+            "t:bd",
+            "p:kana"
+          ]
+        }
       ]
     }
   ],

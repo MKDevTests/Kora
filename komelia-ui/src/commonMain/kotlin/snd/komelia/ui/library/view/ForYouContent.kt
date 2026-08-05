@@ -18,6 +18,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,6 +31,7 @@ import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.common.cards.SeriesImageCard
 import snd.komelia.ui.suggestions.ReasonPill
+import snd.komelia.ui.suggestions.SuggestionActions
 import snd.komelia.ui.library.ForYouSuggestion
 import snd.komelia.ui.library.LibraryForYouTabState
 import snd.komga.client.series.KomgaSeries
@@ -70,11 +72,7 @@ fun ForYouContent(
         item(span = { GridItemSpan(maxLineSpan) }) { beforeContent() }
         item(span = { GridItemSpan(maxLineSpan) }) { ForYouHeader(state) }
 
-        // A flat grid of forty covers says the last one is as good as the first,
-        // though its score is often five times lower. The best few get their own
-        // band; the rest keep the grid.
-        val top = state.suggestions.take(TOP_MATCHES)
-        val rest = state.suggestions.drop(TOP_MATCHES)
+        val top = state.topMatches
         if (top.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -84,6 +82,7 @@ fun ForYouContent(
                             SuggestionCard(
                                 suggestion = top[index],
                                 onSeriesClick = onSeriesClick,
+                                onDismiss = state::dismiss,
                                 width = cardWidth * 1.35f,
                             )
                         }
@@ -91,8 +90,22 @@ fun ForYouContent(
                 }
             }
         }
-        items(rest.size) { index ->
-            SuggestionCard(rest[index], onSeriesClick)
+        state.sections.forEach { section ->
+            if (section.title != null) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "header:${section.title}") {
+                    Text(
+                        section.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    )
+                }
+            }
+            items(
+                count = section.items.size,
+                key = { index -> "${section.title}:${section.items[index].series.id.value}" },
+            ) { index ->
+                SuggestionCard(section.items[index], onSeriesClick, state::dismiss)
+            }
         }
     }
 }
@@ -139,6 +152,13 @@ private fun ForYouHeader(state: LibraryForYouTabState) {
                 onClick = { state.toggleIncludeRead() },
                 label = { Text("Show read") },
             )
+            if (state.dismissedCount > 0) {
+                // An irreversible one-tap action needs a way back in sight of
+                // where it is taken.
+                TextButton(onClick = { state.resetDismissed() }) {
+                    Text("Reset not interested (${state.dismissedCount})")
+                }
+            }
             if (state.profileSize > 0) {
                 Text(
                     // Says what the suggestions are based on, so a surprising
@@ -156,6 +176,7 @@ private fun ForYouHeader(state: LibraryForYouTabState) {
 private fun SuggestionCard(
     suggestion: ForYouSuggestion,
     onSeriesClick: (KomgaSeries) -> Unit,
+    onDismiss: (snd.komga.client.series.KomgaSeriesId) -> Unit,
     width: Dp? = null,
 ) {
     Column(modifier = if (width != null) Modifier.width(width) else Modifier) {
@@ -165,9 +186,7 @@ private fun SuggestionCard(
             modifier = if (width != null) Modifier.width(width) else Modifier,
         )
         ReasonPill(suggestion.reasons, modifier = Modifier.padding(top = 4.dp))
+        SuggestionActions(suggestion.series.id, onDismiss)
         Spacer(Modifier.height(15.dp))
     }
 }
-
-/** Enough to read as "start here", few enough to stay one screen wide. */
-private const val TOP_MATCHES = 4

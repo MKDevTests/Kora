@@ -215,7 +215,10 @@ class SeriesFilterState(
             // the latency when this ran on the critical path).
             coroutineScope {
                 val genres = async { referentialApi.getGenres(libraryIds = libraryIds) }
-                val tags = async { referentialApi.getSeriesTags(libraryId = library.value?.id) }
+                // getTags, not getSeriesTags: a tag carried by the BOOKS of a
+                // series is still a tag of that series to the user, and leaving
+                // those out made the filter miss most of them (upstream #133).
+                val tags = async { referentialApi.getTags(libraryIds = libraryIds) }
                 val releaseDates = async { referentialApi.getSeriesReleaseDates(libraryIds = libraryIds) }
                 val ageRatings = async { referentialApi.getAgeRatings(libraryIds = libraryIds) }
                 val publishers = async { referentialApi.getPublishers(libraryIds = libraryIds) }

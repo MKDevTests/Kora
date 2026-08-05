@@ -60,6 +60,7 @@ class SeriesViewModel(
     readingOrderRepository: snd.komelia.readingorder.ReadingOrderRepository,
     similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
+    suggestionFeedbackRepository: snd.komelia.similarity.SuggestionFeedbackRepository,
     hiddenSeriesIds: StateFlow<Set<String>>,
     settingsRepository: CommonSettingsRepository,
     aniListClient: snd.komelia.anilist.AniListClient,
@@ -117,6 +118,7 @@ class SeriesViewModel(
         repository = similarityIndexRepository,
         indexBuilder = similarityIndexBuilder,
         excludedSeriesIds = excludedFromSuggestions,
+        feedbackRepository = suggestionFeedbackRepository,
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
     )

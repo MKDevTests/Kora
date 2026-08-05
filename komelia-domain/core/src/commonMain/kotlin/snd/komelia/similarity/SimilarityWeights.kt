@@ -44,6 +44,22 @@ data class SimilarityWeights(
         "translator" to 0.2,
     ),
     /**
+     * How much a profile series' own length counts against it when explaining a
+     * suggestion — see the attribution in [SimilarityEngine]. 1.0 is the plain
+     * cosine, which buries every well-tagged series; 0.5 was measured at the
+     * bench as the point where a rated, richly tagged series heads sections
+     * without monopolising them.
+     */
+    val attributionNormExponent: Double = 0.5,
+    /**
+     * Floor on a profile series' vector length, as a fraction of the library
+     * average — see [SimilarityEngine]. 0.5 measured at the bench: on a normal
+     * profile it changes nothing (top 20 identical on the manga library, 17/20
+     * on the BD one), and it only bites when a nearly-untagged series sits in
+     * the profile, which is exactly the case it exists for.
+     */
+    val minSourceNormRatio: Double = 0.5,
+    /**
      * At most this many results from the same author. Without it "similar to X"
      * degenerates into that author's bibliography, which the author filter
      * already does better.

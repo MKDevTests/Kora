@@ -228,6 +228,14 @@ def cmd_emit_expected(args) -> None:
                 "seriesId": result.series_id,
                 "score": round(result.score, 12),
                 "reasons": [describe(f) for f in result.reasons],
+                "becauseOf": [
+                    {
+                        "seriesId": source.series_id,
+                        "share": round(source.share, 12),
+                        "reasons": [describe(f) for f in source.reasons],
+                    }
+                    for source in result.because_of
+                ],
             }
             for result in engine.recommend(
                 taste_affinities(for_you["evidence"]),

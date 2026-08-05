@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.cards.SeriesImageCard
 import snd.komelia.ui.suggestions.ReasonPill
+import snd.komelia.ui.suggestions.SuggestionActions
 import snd.komelia.ui.series.SimilarSeriesState
 import snd.komelia.ui.series.SimilarSuggestion
 import snd.komga.client.series.KomgaSeries
@@ -49,7 +50,7 @@ fun LazyGridScope.SimilarSeriesContent(
     }
 
     items(state.suggestions, key = { it.series.id.value }) { suggestion ->
-        SuggestionCard(suggestion, onSeriesClick)
+        SuggestionCard(suggestion, onSeriesClick, state::dismiss)
     }
 
     if (state.buildProgress == null && !state.isLoading && !state.failed) {
@@ -102,6 +103,7 @@ private fun SimilarHeader(state: SimilarSeriesState) {
 private fun SuggestionCard(
     suggestion: SimilarSuggestion,
     onSeriesClick: (KomgaSeries) -> Unit,
+    onDismiss: (snd.komga.client.series.KomgaSeriesId) -> Unit,
 ) {
     // No width modifier: the grid cell sizes the card, the same way the Books
     // tab does. Forcing cardWidth here is what made the tab look off-grid.
@@ -113,6 +115,7 @@ private fun SuggestionCard(
         // The reason is what makes a suggestion trustworthy instead of magic —
         // one pill keeps that without burying the covers under grey text.
         ReasonPill(suggestion.reasons, modifier = Modifier.padding(top = 4.dp))
+        SuggestionActions(suggestion.series.id, onDismiss)
         Spacer(Modifier.height(15.dp))
     }
 }

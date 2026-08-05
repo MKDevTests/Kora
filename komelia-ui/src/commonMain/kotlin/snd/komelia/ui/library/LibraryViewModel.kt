@@ -93,6 +93,7 @@ class LibraryViewModel(
     similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
     seriesRatingsRepository: snd.komelia.ratings.SeriesRatingsRepository,
+    suggestionFeedbackRepository: snd.komelia.similarity.SuggestionFeedbackRepository,
     hiddenSeriesIds: StateFlow<Set<String>>,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val library = libraryFlow.onEach { settingsRepository.putLastSelectedLibraryId(it?.id) }
@@ -166,12 +167,14 @@ class LibraryViewModel(
             settingsRepository.getIgnoredSeriesIds(),
             hiddenSeriesIds,
         ) { enabled, ignored, hidden -> (if (enabled) ignored else emptySet()) + hidden },
+        feedbackRepository = suggestionFeedbackRepository,
     )
 
     val forYouTabState = LibraryForYouTabState(
         library = library,
         notifications = appNotifications,
         suggester = forYouSuggester,
+        feedbackRepository = suggestionFeedbackRepository,
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
     )

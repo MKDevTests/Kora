@@ -85,6 +85,31 @@ class SimilarityEngineFixtureTest {
                     actual[index].reasons.map { "${it.family.prefix}:${it.value}" },
                     "reasons for $queryId #${index + 1}",
                 )
+                // Attribution drives the "Because you liked X" headings and the
+                // per-section reasons; a divergence there means the bench no
+                // longer explains what the app shows, even when the ranking
+                // still matches.
+                want["becauseOf"]?.let { becauseOf ->
+                    val wantedSources = becauseOf.jsonArray.map { it.jsonObject }
+                    val gotSources = actual[index].becauseOf
+                    assertEquals(
+                        wantedSources.map { it.getValue("seriesId").jsonPrimitive.content },
+                        gotSources.map { it.seriesId },
+                        "becauseOf for $queryId #${index + 1}",
+                    )
+                    wantedSources.forEachIndexed { sourceIndex, wantSource ->
+                        val wantShare = wantSource.getValue("share").jsonPrimitive.content.toDouble()
+                        assertTrue(
+                            abs(wantShare - gotSources[sourceIndex].share) < 1e-9,
+                            "share for $queryId #${index + 1} source ${sourceIndex + 1}",
+                        )
+                        assertEquals(
+                            wantSource.getValue("reasons").jsonArray.map { it.jsonPrimitive.content },
+                            gotSources[sourceIndex].reasons.map { "${it.family.prefix}:${it.value}" },
+                            "shared reasons for $queryId #${index + 1} source ${sourceIndex + 1}",
+                        )
+                    }
+                }
             }
         }
     }

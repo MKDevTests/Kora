@@ -222,6 +222,7 @@ class DesktopAppModule(
             seriesLinksRepository = snd.komelia.db.links.ExposedSeriesLinksRepository(databases.app),
             similarityIndexRepository = snd.komelia.db.similarity.ExposedSimilarityIndexRepository(databases.app),
             readingOrderRepository = snd.komelia.db.readingorder.ExposedReadingOrderRepository(databases.app),
+            suggestionFeedbackRepository = snd.komelia.db.similarity.ExposedSuggestionFeedbackRepository(databases.app),
         )
     }
 

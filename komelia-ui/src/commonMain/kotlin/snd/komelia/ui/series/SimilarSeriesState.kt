@@ -61,6 +61,7 @@ class SimilarSeriesState(
     private val indexBuilder: SimilarityIndexBuilder?,
     /** Locally ignored + admin-hidden ids; read per load, never cached here. */
     private val excludedSeriesIds: Flow<Set<String>>,
+    private val feedbackRepository: snd.komelia.similarity.SuggestionFeedbackRepository,
     private val screenModelScope: CoroutineScope,
     val cardWidth: StateFlow<Dp>,
 ) {
@@ -93,6 +94,16 @@ class SimilarSeriesState(
         if (started) return
         started = true
         screenModelScope.launch { load(forceRebuild = false) }
+    }
+
+    /**
+     * "Not interested": drops the card now and keeps the series out for good.
+     * The list is recomputed, not queried, so the card is removed in place
+     * rather than paying a second of engine work for one tap.
+     */
+    fun dismiss(seriesId: KomgaSeriesId) {
+        suggestions = suggestions.filterNot { it.series.id == seriesId }
+        screenModelScope.launch { feedbackRepository.dismiss(seriesId) }
     }
 
     /** Explicit "rebuild the index" — the server is the authority, we are a cache. */
@@ -136,8 +147,9 @@ class SimilarSeriesState(
                 seriesId = current.id.value,
                 limit = MAX_SUGGESTIONS,
                 // The index holds hidden/ignored series on purpose (so hiding one
-                // doesn't force a rebuild); they are dropped here instead.
-                exclude = excludedSeriesIds.first(),
+                // doesn't force a rebuild); they are dropped here instead, along
+                // with everything the user said "not interested" to.
+                exclude = excludedSeriesIds.first() + feedbackRepository.dismissed(),
             )
             suggestions = resolve(scored.map { it.seriesId to it.reasons })
             isLoading = false

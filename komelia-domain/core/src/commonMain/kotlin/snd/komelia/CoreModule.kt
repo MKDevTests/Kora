@@ -18,6 +18,7 @@ import snd.komelia.settings.KomfSettingsRepository
 import snd.komelia.settings.SecretsRepository
 import snd.komelia.settings.TranscriptionSettingsRepository
 import snd.komelia.similarity.SimilarityIndexRepository
+import snd.komelia.similarity.SuggestionFeedbackRepository
 import snd.komelia.stats.ReadingEventsRepository
 
 import snd.komelia.sync.ReaderSyncService
@@ -55,4 +56,6 @@ data class AppRepositories(
     val similarityIndexRepository: SimilarityIndexRepository,
     /** Designated original series + cached reading-order graphs. */
     val readingOrderRepository: ReadingOrderRepository,
+    /** "Not interested" answers, which also weigh on the taste profile. */
+    val suggestionFeedbackRepository: SuggestionFeedbackRepository,
 )

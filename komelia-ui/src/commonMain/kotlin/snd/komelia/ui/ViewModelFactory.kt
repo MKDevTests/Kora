@@ -147,6 +147,7 @@ class ViewModelFactory(
             similarityIndexRepository = appRepositories.similarityIndexRepository,
             similarityIndexBuilder = dependencies.similarityIndexBuilder,
             seriesRatingsRepository = appRepositories.seriesRatingsRepository,
+            suggestionFeedbackRepository = appRepositories.suggestionFeedbackRepository,
             hiddenSeriesIds = dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),
         )
     }
@@ -280,6 +281,7 @@ class ViewModelFactory(
         readingOrderRepository = appRepositories.readingOrderRepository,
         similarityIndexRepository = appRepositories.similarityIndexRepository,
         similarityIndexBuilder = dependencies.similarityIndexBuilder,
+        suggestionFeedbackRepository = appRepositories.suggestionFeedbackRepository,
         // Empty when the platform has no hidden-series controller: suggestions
         // then only exclude the local Ignore List, which is the correct fallback.
         hiddenSeriesIds = dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),

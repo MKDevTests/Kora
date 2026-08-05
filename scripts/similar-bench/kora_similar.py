@@ -170,6 +170,12 @@ class Weights:
         "translator": 0.2,
     })
     max_per_author: int = 2
+    # Floor on a profile series' vector length, as a fraction of the library
+    # average. Keeps a nearly-untagged series from dictating the whole profile.
+    min_source_norm_ratio: float = 0.5
+    # How much a profile series own length counts against it when explaining a
+    # suggestion. 1.0 = plain cosine, which buries every well-tagged series.
+    attribution_norm_exponent: float = 0.5
 
     def family_weight(self, feature: Feature) -> float:
         if feature.family == FAMILY_AUTHOR:
@@ -191,6 +197,8 @@ class TasteWeights:
     in_progress: float = 0.6
     favorite: float = 3.0
     stars: dict[int, float] = field(default_factory=lambda: {5: 3.0, 4: 2.0, 3: 1.0, 2: -1.0, 1: -2.0})
+    # "Not interested": judged without reading, weaker than a rating, far from neutral.
+    dismissed: float = -1.5
 
 
 def taste_affinities(evidence: list[dict], weights: TasteWeights | None = None) -> dict[str, float]:
@@ -208,6 +216,8 @@ def taste_affinities(evidence: list[dict], weights: TasteWeights | None = None) 
             affinity = weights.stars.get(stars, 0.0)
         elif item.get("isFavorite"):
             affinity = weights.favorite
+        elif item.get("dismissed"):
+            affinity = weights.dismissed
         elif item.get("read"):
             affinity = weights.read
         elif item.get("inProgress"):
@@ -230,10 +240,28 @@ def idf(total_series: int, document_frequency: int) -> float:
 
 
 @dataclass
+class SourceAttribution:
+    series_id: str
+    # Share of the suggestion's positive score this source accounts for, 0..1.
+    share: float
+    # The terms actually shared with that source, strongest first.
+    reasons: list[Feature]
+
+
+@dataclass
 class SimilarSeries:
     series_id: str
     score: float
     reasons: list[Feature]
+    # recommend() only: the liked series this pick was extrapolated from.
+    because_of: list[SourceAttribution] = field(default_factory=list)
+
+
+# Enough for the UI to group by the first and fall back to the next.
+MAX_ATTRIBUTIONS = 3
+
+# Below this a series is too thin to explain another one.
+MIN_SOURCE_TERMS = 3
 
 
 class SimilarityEngine:
@@ -262,6 +290,9 @@ class SimilarityEngine:
             series_id: math.sqrt(sum(self.term_weight.get(f.key, 0.0) ** 2 for f in features))
             for series_id, features in self.terms_by_series.items()
         }
+        positives = [n for n in self.norms.values() if n > 0.0]
+        self.average_norm = sum(positives) / len(positives) if positives else 0.0
+        self.min_source_norm = self.average_norm * self.weights.min_source_norm_ratio
 
     def similar_to(self, series_id: str, limit: int = 20, exclude: set[str] | None = None) -> list[SimilarSeries]:
         exclude = exclude or set()
@@ -301,6 +332,19 @@ class SimilarityEngine:
         ranked.sort(key=lambda s: (-s.score, s.series_id))
         return self._cap_per_author(ranked, limit)
 
+    def _source_norm(self, series_id: str) -> float:
+        """Own vector length, floored at a fraction of the library average.
+
+        A source's terms enter the profile divided by its own length, so a
+        series carrying ONE term puts its entire affinity on that term. 5% of
+        the manga library carries a single term, and one of them made
+        'Publisher: Kurokawa' the headline reason of nine suggestions out of ten.
+        """
+        norm = self.norms.get(series_id, 0.0)
+        if norm <= 0.0:
+            return 0.0
+        return max(norm, self.min_source_norm)
+
     def recommend(
         self,
         affinities: dict[str, float],
@@ -319,7 +363,7 @@ class SimilarityEngine:
             if affinity == 0.0:
                 continue
             features = self.terms_by_series.get(series_id)
-            norm = self.norms.get(series_id, 0.0)
+            norm = self._source_norm(series_id)
             if features is None or norm <= 0.0:
                 continue
             for feature in features:
@@ -358,7 +402,62 @@ class SimilarityEngine:
             )
             ranked.append(SimilarSeries(candidate, dot / (profile_norm * norm), reasons))
         ranked.sort(key=lambda s: (-s.score, s.series_id))
-        return self._cap_per_author(ranked, limit)
+        kept = self._cap_per_author(ranked, limit)
+        for suggestion in kept:
+            suggestion.because_of = self._attribute(suggestion.series_id, affinities)
+        return kept
+
+    def _attribute(self, candidate_id: str, affinities: dict[str, float]) -> list[SourceAttribution]:
+        """Which liked series pulled a candidate in — mirrors _attribute() in Kotlin.
+
+        A candidate's score is a sum over the profile and the profile is a sum
+        over the liked series, so it splits back per source exactly and the
+        shares are that split. Constant denominators cancel out in the ratio.
+        """
+        features = self.terms_by_series.get(candidate_id)
+        if features is None:
+            return []
+        by_key = {f.key: f for f in features}
+        scored: list[tuple[SourceAttribution, float]] = []
+        total = 0.0
+        for source_id, affinity in affinities.items():
+            if affinity <= 0.0 or source_id == candidate_id:
+                continue
+            source_features = self.terms_by_series.get(source_id)
+            # A series with two tags and no author explains nothing.
+            if source_features is None or len(source_features) < MIN_SOURCE_TERMS:
+                continue
+            norm = self._source_norm(source_id)
+            if norm <= 0.0:
+                continue
+            overlap = 0.0
+            shared: list[Feature] = []
+            for feature in source_features:
+                own = by_key.get(feature.key)
+                weight = self.term_weight.get(feature.key, 0.0)
+                if own is None or weight <= 0.0:
+                    continue
+                overlap += weight * weight
+                shared.append(own)
+            # The imprint is not a taste: sharing only a publisher is the one
+            # overlap that must never be presented as a reason.
+            if overlap <= 0.0 or all(f.family == FAMILY_PUBLISHER for f in shared):
+                continue
+            # Not the plain cosine denominator: dividing by the full length
+            # makes a source need shared terms proportional to the SQUARE ROOT
+            # of its own size to compete, so richly tagged series never explain
+            # anything. 0.5 measured on the manga library.
+            contribution = affinity * overlap / norm ** self.weights.attribution_norm_exponent
+            total += contribution
+            shared.sort(key=lambda f: -self.term_weight.get(f.key, 0.0))
+            scored.append((SourceAttribution(source_id, 0.0, shared), contribution))
+        if total <= 0.0:
+            return []
+        scored.sort(key=lambda entry: (-entry[1], entry[0].series_id))
+        return [
+            SourceAttribution(attribution.series_id, contribution / total, attribution.reasons)
+            for attribution, contribution in scored[:MAX_ATTRIBUTIONS]
+        ]
 
     def _cap_per_author(self, ranked: list[SimilarSeries], limit: int) -> list[SimilarSeries]:
         """Cap on the SHARED authors, dropping as soon as one is full.
