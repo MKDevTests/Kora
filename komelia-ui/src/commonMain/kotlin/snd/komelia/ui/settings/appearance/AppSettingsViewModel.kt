@@ -22,6 +22,7 @@ class AppSettingsViewModel(
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
     var cardWidth by mutableStateOf(defaultCardWidth.dp)
     var currentTheme by mutableStateOf(AppTheme.DARK)
+    var uiLanguage by mutableStateOf(snd.komelia.ui.i18n.AppLanguage.SYSTEM)
     var accentColor by mutableStateOf<Color?>(null)
     var useNewLibraryUI by mutableStateOf(true)
     var cardLayoutBelow by mutableStateOf(false)
@@ -51,6 +52,7 @@ class AppSettingsViewModel(
         mutableState.value = LoadState.Loading
         cardWidth = settingsRepository.getCardWidth().map { it.dp }.first()
         currentTheme = settingsRepository.getAppTheme().first()
+        uiLanguage = snd.komelia.ui.i18n.AppLanguage.of(settingsRepository.getUiLanguage().first())
         accentColor = settingsRepository.getAccentColor().first()?.let { Color(it.toInt()) }
         useNewLibraryUI = settingsRepository.getUseNewLibraryUI().first()
         cardLayoutBelow = settingsRepository.getCardLayoutBelow().first()
@@ -160,6 +162,11 @@ class AppSettingsViewModel(
     fun onShowImmersiveNavBarChange(enabled: Boolean) {
         this.showImmersiveNavBar = enabled
         screenModelScope.launch { settingsRepository.putShowImmersiveNavBar(enabled) }
+    }
+
+    fun onUiLanguageChange(language: snd.komelia.ui.i18n.AppLanguage) {
+        this.uiLanguage = language
+        screenModelScope.launch { settingsRepository.putUiLanguage(language.tag) }
     }
 
     fun onHideParenthesesInNamesChange(hide: Boolean) {

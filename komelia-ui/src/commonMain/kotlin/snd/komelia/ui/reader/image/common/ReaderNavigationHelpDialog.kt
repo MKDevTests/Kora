@@ -32,6 +32,7 @@ import snd.komelia.ui.platform.WindowSizeClass.COMPACT
 import snd.komelia.ui.platform.WindowSizeClass.EXPANDED
 import snd.komelia.ui.platform.WindowSizeClass.FULL
 import snd.komelia.ui.platform.WindowSizeClass.MEDIUM
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun PagedReaderHelpDialog(
@@ -189,11 +190,11 @@ private fun KeyDescriptionColumn(
         Text(title, style = MaterialTheme.typography.titleLarge)
         Row {
             Text(
-                text = "Key",
+                text = LocalStrings.current.ui.key,
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "Description",
+                text = LocalStrings.current.ui.description,
                 modifier = Modifier.weight(1f)
             )
         }

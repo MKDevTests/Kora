@@ -30,6 +30,7 @@ import snd.komelia.ui.dialogs.book.editbulk.BookBulkEditDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.readlistadd.AddToReadListDialog
 import snd.komga.client.book.KomgaBookReadProgressUpdateRequest
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BooksBulkActionsContent(
@@ -71,7 +72,7 @@ fun BookBulkActionDialogs(state: BookBulkActionsState) {
         }
 
         ConfirmationDialog(
-            title = "Delete downloaded books",
+            title = LocalStrings.current.ui.deleteDownloadedBooks,
             body = textBody,
             onDialogConfirm = {
                 coroutineScope.launch {
@@ -131,7 +132,7 @@ fun BookBulkActionDialogs(state: BookBulkActionsState) {
             }
         }
         ConfirmationDialog(
-            title = "Delete Books",
+            title = LocalStrings.current.ui.deleteBooks,
             body = textBody,
             confirmText = confirmationText,
             onDialogConfirm = {

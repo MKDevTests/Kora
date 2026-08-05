@@ -39,6 +39,7 @@ import snd.komelia.offline.user.model.OfflineUser
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun OfflineUserSettingsContent(
@@ -71,9 +72,9 @@ fun OfflineUserSettingsContent(
             }
 
             if (isOffline) {
-                FilledTonalButton(onClick = { goOnline() }) { Text("Go online") }
+                FilledTonalButton(onClick = { goOnline() }) { Text(LocalStrings.current.ui.goOnline) }
             } else if (canGoOffline) {
-                FilledTonalButton(onClick = { currentUser?.let { loginAs(it.id) } }) { Text("Go offline as current user") }
+                FilledTonalButton(onClick = { currentUser?.let { loginAs(it.id) } }) { Text(LocalStrings.current.ui.goOfflineAsCurrentUser) }
             }
         }
 
@@ -181,7 +182,7 @@ private fun UserCard(
         }
 
         FilledTonalButton(onClick = { goOffline(user.id) }) {
-            Text("login")
+            Text(LocalStrings.current.ui.login2)
         }
 
         IconButton(
@@ -222,16 +223,16 @@ fun RootUserCard(goOffline: () -> Unit) {
                     null,
                     tint = MaterialTheme.colorScheme.tertiaryContainer
                 )
-                Text("root")
+                Text(LocalStrings.current.ui.root)
             }
 
-            Text("Special user that has access to all downloaded books")
-            Text("Read progress will not be synced")
+            Text(LocalStrings.current.ui.specialUserThatHasAccess)
+            Text(LocalStrings.current.ui.readProgressWillNotBe)
         }
 
 
         FilledTonalButton(onClick = { goOffline() }) {
-            Text("login")
+            Text(LocalStrings.current.ui.login2)
         }
     }
 }

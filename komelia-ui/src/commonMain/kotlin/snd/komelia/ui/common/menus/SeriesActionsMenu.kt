@@ -67,6 +67,7 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun SeriesActionsMenu(
@@ -86,7 +87,7 @@ fun SeriesActionsMenu(
     var showDeleteDialog by remember { mutableStateOf(false) }
     if (showDeleteDialog) {
         ConfirmationDialog(
-            title = "Delete Series",
+            title = LocalStrings.current.ui.deleteSeries2,
             body = "The Series ${series.metadata.title} will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
             confirmText = "Yes, delete series \"${series.metadata.title}\"",
             onDialogConfirm = {
@@ -104,7 +105,7 @@ fun SeriesActionsMenu(
     var showDeleteDownloadedDialog by remember { mutableStateOf(false) }
     if (showDeleteDownloadedDialog) {
         ConfirmationDialog(
-            title = "Delete downloaded series",
+            title = LocalStrings.current.ui.deleteDownloadedSeries,
             body = "The series ${series.metadata.title} will be removed from this device",
             onDialogConfirm = {
                 actions.deleteDownloaded(series)
@@ -185,7 +186,7 @@ fun SeriesActionsMenu(
     ) {
         if (onSelect != null) {
             DropdownMenuItem(
-                text = { Text("Select", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.select, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Checklist, null) },
                 onClick = {
                     onSelect()
@@ -292,7 +293,7 @@ fun SeriesActionsMenu(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
-            Text("Rate", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.ui.rate, style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.weight(1f))
             RatingStars(
                 rating = currentRating?.stars ?: 0,
@@ -309,7 +310,7 @@ fun SeriesActionsMenu(
 
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Analyze", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.analyze, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = {
                     actions.analyze(series)
@@ -318,7 +319,7 @@ fun SeriesActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Refresh metadata", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.refreshMetadata, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = {
                     actions.refreshMetadata(series)
@@ -327,7 +328,7 @@ fun SeriesActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Add to collection", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.addToCollection, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Add, null) },
                 onClick = { showAddToCollectionDialog = true },
             )
@@ -337,7 +338,7 @@ fun SeriesActionsMenu(
         val isUnread = remember { series.booksUnreadCount == series.booksCount }
         if (!isRead) {
             DropdownMenuItem(
-                text = { Text("Mark as read", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.markAsRead, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Label, null) },
                 onClick = {
                     actions.markAsRead(series)
@@ -348,7 +349,7 @@ fun SeriesActionsMenu(
 
         if (!isUnread) {
             DropdownMenuItem(
-                text = { Text("Mark as unread", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.markAsUnread, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Rounded.LabelOff, null) },
                 onClick = {
                     actions.markAsUnread(series)
@@ -359,7 +360,7 @@ fun SeriesActionsMenu(
 
         if (isAdmin && !isOffline && showEditOption) {
             DropdownMenuItem(
-                text = { Text("Edit", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.edit, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Edit, null) },
                 onClick = { showEditDialog = true },
             )
@@ -367,7 +368,7 @@ fun SeriesActionsMenu(
 
         if (!isOffline && showDownloadOption) {
             DropdownMenuItem(
-                text = { Text("Download", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.download, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Download, null) },
                 onClick = { showDownloadDialog = true },
             )
@@ -375,7 +376,7 @@ fun SeriesActionsMenu(
 
         if (isOffline) {
             DropdownMenuItem(
-                text = { Text("Delete downloaded", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteDownloaded, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Delete, null) },
                 onClick = { showDeleteDownloadedDialog = true },
                 colors = MenuDefaults.itemColors(
@@ -389,13 +390,13 @@ fun SeriesActionsMenu(
         val komfIntegration = LocalKomfIntegration.current.collectAsState(false)
         if (komfIntegration.value) {
             DropdownMenuItem(
-                text = { Text("Identify (Komf)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.identifyKomf, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = { showKomfDialog = true },
             )
 
             DropdownMenuItem(
-                text = { Text("Reset Metadata (Komf)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.resetMetadataKomf, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = { showKomfResetDialog = true },
             )
@@ -403,7 +404,7 @@ fun SeriesActionsMenu(
 
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Delete from server", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteFromServer, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
                 onClick = { showDeleteDialog = true },
                 colors = MenuDefaults.itemColors(
@@ -432,7 +433,7 @@ fun SeriesActionsMenu(
 
         if (onOpenInKomga != null) {
             DropdownMenuItem(
-                text = { Text("Open in Komga", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.openInKomga, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.OpenInNew, null) },
                 onClick = {
                     onOpenInKomga()

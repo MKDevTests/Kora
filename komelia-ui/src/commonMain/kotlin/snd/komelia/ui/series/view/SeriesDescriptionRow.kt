@@ -85,7 +85,7 @@ fun SeriesDescriptionRow(
         }
 
         if (showReleaseYear && releaseDate != null)
-            Text("Release Year: ${releaseDate.year}", style = MaterialTheme.typography.labelSmall)
+            Text(LocalStrings.current.counts.releaseYear(releaseDate.year), style = MaterialTheme.typography.labelSmall)
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SuggestionChip(
@@ -147,7 +147,7 @@ fun SeriesDescriptionRow(
             if (deleted) {
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("Unavailable") },
+                    label = { Text(LocalStrings.current.ui.unavailable) },
                     border = null,
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -171,14 +171,14 @@ fun SeriesDescriptionRow(
             totalPagesCount?.let { pagesCount ->
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("$pagesCount Pages") },
+                    label = { Text(LocalStrings.current.counts.pages(pagesCount)) },
                 )
             }
 
             pagesLeftCount?.let { pagesLeft ->
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("$pagesLeft pages left") },
+                    label = { Text(LocalStrings.current.counts.pagesLeft(pagesLeft)) },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         labelColor = accentColor ?: MaterialTheme.colorScheme.onSurfaceVariant
                     ),
@@ -195,7 +195,7 @@ fun SeriesDescriptionRow(
         // don't pass them (oneshots / books).
         if (genres.isNotEmpty()) {
             Text(
-                text = "Genres : " + genres.joinToString(", "),
+                text = LocalStrings.current.ui.genres2 + genres.joinToString(", "),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -203,7 +203,7 @@ fun SeriesDescriptionRow(
         if (alternateTitles.isNotEmpty()) {
             SelectionContainer {
                 Column {
-                    Text("Alternative titles", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(LocalStrings.current.ui.alternativeTitles, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     alternateTitles.forEach {
                         Row {
                             Text(

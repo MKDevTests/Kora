@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import snd.komelia.annotations.BookAnnotation
 import snd.komelia.ui.LocalTheme
 import snd.komelia.ui.Theme
+import snd.komelia.ui.LocalStrings
 
 /**
  * Shared annotation dialog used for create and edit in both EPUB3 and comic readers.
@@ -117,7 +118,7 @@ fun AnnotationDialog(
                             onDelete()
                         }
                     }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.delete)
                     }
                 }
             }
@@ -127,7 +128,7 @@ fun AnnotationDialog(
                 value = note,
                 onValueChange = { note = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Add a note…") },
+                placeholder = { Text(LocalStrings.current.ui.addANote) },
                 minLines = 3,
                 maxLines = 6,
             )
@@ -144,7 +145,7 @@ fun AnnotationDialog(
                         onClick = { onPrevious?.invoke() },
                         enabled = hasPrevious,
                     ) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Previous")
+                        Icon(Icons.Default.ChevronLeft, contentDescription = LocalStrings.current.ui.previous)
                     }
 
                     IconButton(onClick = {
@@ -153,14 +154,14 @@ fun AnnotationDialog(
                             onShowList?.invoke()
                         }
                     }) {
-                        Icon(Icons.Default.List, contentDescription = "List")
+                        Icon(Icons.Default.List, contentDescription = LocalStrings.current.ui.list)
                     }
 
                     IconButton(
                         onClick = { onNext?.invoke() },
                         enabled = hasNext,
                     ) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = "Next")
+                        Icon(Icons.Default.ChevronRight, contentDescription = LocalStrings.current.ui.next)
                     }
                 }
                 Spacer(Modifier.weight(1f))
@@ -169,14 +170,14 @@ fun AnnotationDialog(
                         sheetState.hide()
                         onDismiss()
                     }
-                }) { Text("Cancel") }
+                }) { Text(LocalStrings.current.ui.cancel) }
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = {
                     coroutineScope.launch {
                         sheetState.hide()
                         onSave(note.ifBlank { null }, selectedColor)
                     }
-                }) { Text("Save") }
+                }) { Text(LocalStrings.current.ui.save) }
             }
 
             Spacer(Modifier.height(8.dp))

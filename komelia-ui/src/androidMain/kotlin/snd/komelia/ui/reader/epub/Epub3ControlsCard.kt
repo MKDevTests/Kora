@@ -60,6 +60,7 @@ import snd.komelia.ui.common.components.AppSlider
 import snd.komelia.ui.common.components.AppSliderDefaults
 import snd.komelia.ui.reader.ReaderControlsCard
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun Epub3ControlsCardNewUI(
@@ -163,11 +164,11 @@ fun Epub3ControlsCardNewUI(
             )
 
             IconButton(onClick = { state.openContentDialog(3) }) {
-                Icon(Icons.Default.Search, contentDescription = "Search", tint = accentColor ?: MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.Search, contentDescription = LocalStrings.current.ui.search, tint = accentColor ?: MaterialTheme.colorScheme.primary)
             }
 
             IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Tune, contentDescription = "Reader settings", tint = accentColor ?: MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.Tune, contentDescription = LocalStrings.current.ui.readerSettings, tint = accentColor ?: MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -296,11 +297,11 @@ fun Epub3ControlsCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onSettingsClick) {
-                    Icon(Icons.Default.Tune, contentDescription = "Reader settings", tint = accentColor ?: MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Tune, contentDescription = LocalStrings.current.ui.readerSettings, tint = accentColor ?: MaterialTheme.colorScheme.primary)
                 }
                 
                 IconButton(onClick = { state.openContentDialog(3) }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = accentColor ?: MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Search, contentDescription = LocalStrings.current.ui.search, tint = accentColor ?: MaterialTheme.colorScheme.primary)
                 }
                 
                 VerticalDivider(
@@ -338,7 +339,7 @@ fun Epub3BookmarkToggleButton(
         IconButton(onClick = onClick) {
             Icon(
                 if (isBookmarked) Icons.Filled.Bookmark else Icons.Default.BookmarkAdd,
-                contentDescription = "Toggle Bookmark",
+                contentDescription = LocalStrings.current.ui.toggleBookmark,
                 tint = if (isBookmarked) selectedIconTint else (accentColor ?: MaterialTheme.colorScheme.onSurfaceVariant)
             )
         }
@@ -388,7 +389,7 @@ fun Epub3PageNavigatorRow(
                 onClick = { navigate((sliderDraft.roundToInt() - 1).coerceAtLeast(0)) },
                 enabled = sliderDraft.roundToInt() > 0,
             ) {
-                Icon(Icons.Filled.Remove, contentDescription = "Previous page")
+                Icon(Icons.Filled.Remove, contentDescription = LocalStrings.current.ui.previousPage)
             }
             AppSlider(
                 value = sliderDraft,
@@ -404,7 +405,7 @@ fun Epub3PageNavigatorRow(
                 onClick = { navigate((sliderDraft.roundToInt() + 1).coerceAtMost(positions.size - 1)) },
                 enabled = sliderDraft.roundToInt() < positions.size - 1,
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Next page")
+                Icon(Icons.Filled.Add, contentDescription = LocalStrings.current.ui.nextPage)
             }
         }
     }

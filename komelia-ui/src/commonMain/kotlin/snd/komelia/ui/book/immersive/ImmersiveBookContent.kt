@@ -111,6 +111,7 @@ import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.readlist.KomgaReadList
 import snd.komga.client.series.KomgaSeriesId
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
@@ -607,13 +608,13 @@ private fun BookImmersiveTabRow(
         Tab(
             selected = currentTab == BookImmersiveTab.TAGS,
             onClick = { onTabChange(BookImmersiveTab.TAGS) },
-            text = { Text("Tags") },
+            text = { Text(LocalStrings.current.ui.tags) },
         )
         if (showReadListsTab) {
             Tab(
                 selected = currentTab == BookImmersiveTab.READ_LISTS,
                 onClick = { onTabChange(BookImmersiveTab.READ_LISTS) },
-                text = { Text("Read Lists") },
+                text = { Text(LocalStrings.current.ui.readLists) },
             )
         }
     }

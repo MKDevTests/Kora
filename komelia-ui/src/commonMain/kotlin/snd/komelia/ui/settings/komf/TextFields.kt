@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.HttpTextField
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.common.components.PasswordTextField
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -90,7 +91,7 @@ fun SavableTextField(
                         textFieldValue = ""
                     },
                 ) {
-                    Text("Edit")
+                    Text(LocalStrings.current.ui.edit)
                 }
             }
 
@@ -104,7 +105,7 @@ fun SavableTextField(
                             textFieldValue = currentValue
                         },
                     ) {
-                        Text("Discard")
+                        Text(LocalStrings.current.ui.discard)
                     }
                     FilledTonalButton(
                         onClick = {
@@ -114,7 +115,7 @@ fun SavableTextField(
                         },
                         enabled = isChanged,
                     ) {
-                        Text("Save")
+                        Text(LocalStrings.current.ui.save)
                     }
                 }
             }
@@ -158,7 +159,7 @@ fun SavableHttpTextField(
                     textFieldValue = currentValue
                 },
             ) {
-                Text("Discard")
+                Text(LocalStrings.current.ui.discard)
             }
             FilledTonalButton(
                 onClick = {
@@ -246,7 +247,7 @@ fun LanguageSelectionField(
             },
             enabled = isChanged,
         ) {
-            Text("Save")
+            Text(LocalStrings.current.ui.save)
         }
     }
 }

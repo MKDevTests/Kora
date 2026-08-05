@@ -35,6 +35,7 @@ import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
 import snd.komga.client.collection.KomgaCollection
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AddToCollectionDialog(
@@ -66,7 +67,7 @@ private fun Header(onDismissRequest: () -> Unit) {
             modifier = Modifier.padding(horizontal = 15.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Add to collection", style = MaterialTheme.typography.titleLarge)
+            Text(LocalStrings.current.ui.addToCollection, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onDismissRequest) { Icon(Icons.Default.Close, null) }
         }
@@ -93,11 +94,11 @@ private fun DialogContent(
             TextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Search or create collection") },
+                label = { Text(LocalStrings.current.ui.searchOrCreateCollection) },
                 supportingText = {
                     if (collectionExistsForQuery.value)
                         Text(
-                            "A collection with this name already exists",
+                            LocalStrings.current.ui.aCollectionWithThisName,
                             color = MaterialTheme.colorScheme.error
                         )
                 },
@@ -106,7 +107,7 @@ private fun DialogContent(
             FilledTonalButton(
                 onClick = { coroutineScope.launch { onCreateNewCollection(query) } },
                 enabled = query.isNotBlank() && !collectionExistsForQuery.value,
-                content = { Text("Create") },
+                content = { Text(LocalStrings.current.ui.create) },
             )
         }
 
@@ -147,9 +148,9 @@ private fun CollectionEntry(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("${collection.seriesIds.size} series", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.counts.seriesCount(collection.seriesIds.size), style = MaterialTheme.typography.labelLarge)
             if (alreadyContainsSeries) Text(
-                "already contains this series",
+                LocalStrings.current.ui.alreadyContainsThisSeries,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.tertiary
             )

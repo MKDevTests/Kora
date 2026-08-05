@@ -65,6 +65,7 @@ import snd.komelia.ui.reader.image.common.ReaderControlsOverlay
 import snd.komelia.ui.reader.image.common.ReaderImageContent
 import snd.komelia.ui.reader.image.common.ScalableContainer
 import snd.komelia.ui.reader.image.continuous.ContinuousReaderState.BookPagesInterval
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BoxScope.ContinuousReaderContent(
@@ -313,7 +314,7 @@ private fun LazyListScope.continuousPagesLayout(
             modifier = Modifier.sizeIn(minHeight = 300.dp, minWidth = 300.dp).fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text("Reached the start of the series", style = MaterialTheme.typography.titleLarge)
+            Text(LocalStrings.current.ui.reachedTheStartOfThe, style = MaterialTheme.typography.titleLarge)
         }
     }
     pageIntervals.forEachIndexed { index, interval ->
@@ -326,7 +327,7 @@ private fun LazyListScope.continuousPagesLayout(
                 ) {
                     pageIntervals.getOrNull(index - 1)?.let { previous ->
                         Column {
-                            Text("Previous:", style = MaterialTheme.typography.bodyMedium)
+                            Text(LocalStrings.current.ui.previous2, style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 previous.book.metadata.title,
                                 style = MaterialTheme.typography.titleLarge
@@ -335,7 +336,7 @@ private fun LazyListScope.continuousPagesLayout(
                     }
                     Spacer(Modifier.size(50.dp))
                     Column {
-                        Text("Current:", style = MaterialTheme.typography.bodyMedium)
+                        Text(LocalStrings.current.ui.current, style = MaterialTheme.typography.bodyMedium)
                         Text(
                             interval.book.metadata.title,
                             style = MaterialTheme.typography.titleLarge
@@ -351,7 +352,7 @@ private fun LazyListScope.continuousPagesLayout(
         Box(
             modifier = Modifier.sizeIn(minHeight = 300.dp, minWidth = 300.dp).fillMaxSize(),
             contentAlignment = Alignment.Center
-        ) { Text("No next series with the current filters", style = MaterialTheme.typography.titleLarge) }
+        ) { Text(LocalStrings.current.ui.noNextSeriesWithThe, style = MaterialTheme.typography.titleLarge) }
     }
 
 }

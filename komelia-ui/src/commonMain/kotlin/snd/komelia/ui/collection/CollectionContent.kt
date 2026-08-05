@@ -49,6 +49,7 @@ import snd.komelia.ui.platform.WindowSizeClass.FULL
 import snd.komelia.ui.platform.WindowSizeClass.MEDIUM
 import snd.komga.client.collection.KomgaCollection
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun CollectionContent(
@@ -165,7 +166,7 @@ private fun CollectionToolbar(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "collection",
+                LocalStrings.current.ui.collection,
                 style = MaterialTheme.typography.labelMedium,
                 fontStyle = FontStyle.Italic
             )
@@ -238,7 +239,7 @@ private fun ContinueReadingSeriesHeader(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Continue reading",
+                    LocalStrings.current.ui.continueReading2,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -276,8 +277,8 @@ private fun BulkActionsToolbar(
     ) {
         when (LocalWindowWidth.current) {
             FULL -> {
-                if (collection.ordered) Text("Click to select, drag to change order")
-                else Text("Click on items to select or deselect them")
+                if (collection.ordered) Text(LocalStrings.current.ui.clickToSelectDragTo)
+                else Text(LocalStrings.current.ui.clickOnItemsToSelect)
                 if (selectedSeries.isNotEmpty()) {
                     Spacer(Modifier.weight(1f))
 
@@ -287,8 +288,8 @@ private fun BulkActionsToolbar(
 
             EXPANDED -> {
                 if (selectedSeries.isEmpty()) {
-                    if (collection.ordered) Text("Click to select, drag to change order")
-                    else Text("Click on items to select or deselect them")
+                    if (collection.ordered) Text(LocalStrings.current.ui.clickToSelectDragTo)
+                    else Text(LocalStrings.current.ui.clickOnItemsToSelect)
                 } else {
                     Spacer(Modifier.weight(1f))
                     CollectionBulkActionsContent(collection, selectedSeries, false)

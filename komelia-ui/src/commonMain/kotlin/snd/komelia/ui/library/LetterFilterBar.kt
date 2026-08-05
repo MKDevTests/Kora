@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import snd.komelia.ui.LocalStrings
 
 /**
  * Komga-style A-Z filter bar. Tap a letter to narrow the displayed series to
@@ -44,7 +45,7 @@ fun LetterFilterBar(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        LetterChip(label = "ALL", isSelected = selected == null, onClick = { onLetterClick(null) })
+        LetterChip(label = LocalStrings.current.ui.all2, isSelected = selected == null, onClick = { onLetterClick(null) })
         LetterChip(label = "#", isSelected = selected == "#", onClick = { onLetterClick("#") })
         ('A'..'Z').forEach { c ->
             val s = c.toString()

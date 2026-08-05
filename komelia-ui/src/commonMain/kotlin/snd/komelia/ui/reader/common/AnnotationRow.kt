@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import snd.komelia.annotations.AnnotationLocation
 import snd.komelia.annotations.BookAnnotation
+import snd.komelia.ui.LocalStrings
 
 /**
  * A row in the Annotations management tab. Works for both EPUB and comic annotations.
@@ -103,7 +104,7 @@ fun AnnotationRow(
         }
 
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete annotation")
+            Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.deleteAnnotation)
         }
     }
 }

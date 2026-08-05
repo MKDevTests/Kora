@@ -10,6 +10,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class EpubReaderSettingsScreen : Screen {
 
@@ -20,7 +21,7 @@ class EpubReaderSettingsScreen : Screen {
         LaunchedEffect(Unit) {
             vm.initialize()
         }
-        SettingsScreenContainer(title = "Epub Reader Settings") {
+        SettingsScreenContainer(title = LocalStrings.current.ui.epubReaderSettings) {
             when (val result = vm.state.collectAsState().value) {
                 is LoadState.Error -> ErrorContent(result.exception)
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()

@@ -15,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalPlanned
+import snd.komelia.ui.LocalStrings
 import snd.komga.client.series.KomgaSeriesId
 
 /**
@@ -31,13 +32,14 @@ fun SuggestionActions(
     modifier: Modifier = Modifier,
 ) {
     val planned = LocalPlanned.current
+    val strings = LocalStrings.current.suggestions
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         if (planned != null) {
             val isPlanned = seriesId.value in planned.plannedIds.collectAsState().value
             IconButton(onClick = { planned.toggle(seriesId) }, modifier = Modifier.size(28.dp)) {
                 Icon(
                     imageVector = if (isPlanned) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                    contentDescription = if (isPlanned) "Remove from to read" else "Mark as to read",
+                    contentDescription = if (isPlanned) strings.unmarkPlanned else strings.markPlanned,
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -46,7 +48,7 @@ fun SuggestionActions(
         IconButton(onClick = { onDismiss(seriesId) }, modifier = Modifier.size(28.dp)) {
             Icon(
                 imageVector = Icons.Rounded.Close,
-                contentDescription = "Not interested",
+                contentDescription = strings.notInterested,
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

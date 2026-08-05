@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.automirrored.rounded.ManageSearch
 import androidx.compose.material3.MenuDefaults
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun LibraryActionsMenu(
@@ -54,7 +55,7 @@ fun LibraryActionsMenu(
     var showAnalyzeDialog by remember { mutableStateOf(false) }
     if (showAnalyzeDialog)
         ConfirmationDialog(
-            title = "Analyze library",
+            title = LocalStrings.current.ui.analyzeLibrary,
             body = "Analyzes all the media files in the library. The analysis captures information about the media. Depending on your library size, this may take a long time.",
             onDialogConfirm = { actions.analyze(library) },
             onDialogDismiss = { showAnalyzeDialog = false }
@@ -63,7 +64,7 @@ fun LibraryActionsMenu(
     var refreshMetadataDialog by remember { mutableStateOf(false) }
     if (refreshMetadataDialog)
         ConfirmationDialog(
-            title = "Refresh metadata for library",
+            title = LocalStrings.current.ui.refreshMetadataForLibrary,
             body = "Refreshes metadata for all the media files in the library. Depending on your library size, this may take a long time.",
             onDialogConfirm = { actions.refresh(library) },
             onDialogDismiss = { refreshMetadataDialog = false }
@@ -72,7 +73,7 @@ fun LibraryActionsMenu(
     var emptyTrashDialog by remember { mutableStateOf(false) }
     if (emptyTrashDialog)
         ConfirmationDialog(
-            title = "Empty trash for library",
+            title = LocalStrings.current.ui.emptyTrashForLibrary,
             body = """
                     By default the media server doesn't remove information for media right away.
                     This helps if a drive is temporarily disconnected. 
@@ -84,7 +85,7 @@ fun LibraryActionsMenu(
     var deleteLibraryDialog by remember { mutableStateOf(false) }
     if (deleteLibraryDialog)
         ConfirmationDialog(
-            title = "Delete Library",
+            title = LocalStrings.current.ui.deleteLibrary,
             body = "The library ${library.name} will be removed from this server. Your media files will not be affected. This cannot be undone. Continue?",
             confirmText = "Yes, delete the library \"${library.name}\"",
             onDialogConfirm = { actions.delete(library) },
@@ -94,7 +95,7 @@ fun LibraryActionsMenu(
     var deleteOfflineLibraryDialog by remember { mutableStateOf(false) }
     if (deleteOfflineLibraryDialog)
         ConfirmationDialog(
-            title = "Delete downloaded Library",
+            title = LocalStrings.current.ui.deleteDownloadedLibrary,
             body = "The library ${library.name} will be removed from this device only.",
             onDialogConfirm = { actions.deleteOffline(library) },
             onDialogDismiss = { deleteOfflineLibraryDialog = false },
@@ -117,7 +118,7 @@ fun LibraryActionsMenu(
     AnimatedDropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Scan library files", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.scanLibraryFiles, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = {
                     actions.scan(library)
@@ -126,7 +127,7 @@ fun LibraryActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Scan library files (deep)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.scanLibraryFilesDeep, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ManageSearch, null) },
                 onClick = {
                     actions.deepScan(library)
@@ -134,7 +135,7 @@ fun LibraryActionsMenu(
                 }
             )
             DropdownMenuItem(
-                text = { Text("Analyze", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.analyze, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = {
                     showAnalyzeDialog = true
@@ -142,7 +143,7 @@ fun LibraryActionsMenu(
                 }
             )
             DropdownMenuItem(
-                text = { Text("Refresh metadata", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.refreshMetadata, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = {
                     refreshMetadataDialog = true
@@ -150,7 +151,7 @@ fun LibraryActionsMenu(
                 }
             )
             DropdownMenuItem(
-                text = { Text("Empty trash", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.emptyTrash, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.DeleteSweep, null) },
                 onClick = {
                     emptyTrashDialog = true
@@ -158,7 +159,7 @@ fun LibraryActionsMenu(
                 }
             )
             DropdownMenuItem(
-                text = { Text("Edit", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.edit, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Edit, null) },
                 onClick = {
                     showLibraryEditDialog = true
@@ -174,7 +175,7 @@ fun LibraryActionsMenu(
                 vmFactory.getKomfLibraryIdentifyViewModel(library)
             }
             DropdownMenuItem(
-                text = { Text("Auto-Identify (Komf)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.autoIdentifyKomf, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = {
                     autoIdentifyVm.autoIdentify()
@@ -183,7 +184,7 @@ fun LibraryActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Reset Metadata (Komf)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.resetMetadataKomf, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = { showKomfResetDialog = true },
             )
@@ -191,7 +192,7 @@ fun LibraryActionsMenu(
 
         if (!isOffline && isAdmin) {
             DropdownMenuItem(
-                text = { Text("Delete", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.delete, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
                 onClick = {
                     deleteLibraryDialog = true
@@ -205,7 +206,7 @@ fun LibraryActionsMenu(
         }
         if (isOffline) {
             DropdownMenuItem(
-                text = { Text("Delete downloaded", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteDownloaded, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Delete, null) },
                 onClick = {
                     deleteOfflineLibraryDialog = true

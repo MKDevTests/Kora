@@ -25,6 +25,7 @@ import snd.komelia.ui.common.components.withTextFieldNavigation
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
 import snd.komga.client.series.KomgaAlternativeTitle
+import snd.komelia.ui.LocalStrings
 
 internal class AlternativeTitlesTab(
     private val vm: SeriesEditMetadataState,
@@ -68,7 +69,7 @@ private fun AlternativeTitlesTabContent(
                 TextField(
                     value = altTitle.label,
                     onValueChange = { onTitleChange(index, altTitle.copy(label = it)) },
-                    label = { Text("Label") },
+                    label = { Text(LocalStrings.current.ui.label) },
                     maxLines = 1,
                     modifier = Modifier.weight(.3f).withTextFieldNavigation(onTitleAdd)
                 )
@@ -78,7 +79,7 @@ private fun AlternativeTitlesTabContent(
                 TextField(
                     value = altTitle.title,
                     onValueChange = { onTitleChange(index, altTitle.copy(title = it)) },
-                    label = { Text("Alternate title") },
+                    label = { Text(LocalStrings.current.ui.alternateTitle) },
                     maxLines = 1,
                     modifier = Modifier.weight(.7f).withTextFieldNavigation()
                 )

@@ -282,11 +282,11 @@ fun ChangesConfirmationPopup(
                     modifier = Modifier.padding(10.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("You have unsaved changes")
+                    Text(LocalStrings.current.ui.youHaveUnsavedChanges)
                     Spacer(Modifier.weight(1f))
 
                     TextButton(onClick = onDiscard) {
-                        Text("Discard")
+                        Text(LocalStrings.current.ui.discard)
                     }
                     Spacer(Modifier.width(20.dp))
 
@@ -296,7 +296,7 @@ fun ChangesConfirmationPopup(
                             onSave()
                         },
                     ) {
-                        Text("Save Changes")
+                        Text(LocalStrings.current.ui.saveChanges)
 
                     }
                 }

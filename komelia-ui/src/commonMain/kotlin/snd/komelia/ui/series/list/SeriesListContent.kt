@@ -238,7 +238,7 @@ fun SeriesListContent(
                                 tint = if (filterState.isChanged) Color(0xFFFFD600) else fabContentColor,
                             )
                         },
-                        text = { Text("Filter") },
+                        text = { Text(LocalStrings.current.ui.filter) },
                     )
                 }
             }
@@ -265,7 +265,7 @@ private fun BulkActionsToolbar(
         when (LocalWindowWidth.current) {
             FULL, EXPANDED -> {
                 if (selectedSeries.isEmpty()) {
-                    Text("Click on items to select or deselect them")
+                    Text(LocalStrings.current.ui.clickOnItemsToSelect)
                 } else {
                     Spacer(Modifier.weight(1f))
                     SeriesBulkActionsContent(selectedSeries, false)

@@ -382,6 +382,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(shareLinksViaKomga = enabled) }
     }
 
+    override fun getUiLanguage(): Flow<String> =
+        wrapper.state.map { it.uiLanguage }.distinctUntilChanged()
+
+    override suspend fun putUiLanguage(language: String) {
+        wrapper.transform { it.copy(uiLanguage = language) }
+    }
+
     override fun getAuthorRolesFilterEnabled(): Flow<Boolean> =
         wrapper.state.map { it.authorRolesFilterEnabled }.distinctUntilChanged()
 

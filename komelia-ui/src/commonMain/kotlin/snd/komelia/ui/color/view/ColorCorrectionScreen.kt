@@ -29,6 +29,7 @@ import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.platform.PlatformTitleBar
 import snd.komga.client.book.KomgaBookId
+import snd.komelia.ui.LocalStrings
 
 class ColorCorrectionScreen(
     val bookId: KomgaBookId,
@@ -64,7 +65,7 @@ class ColorCorrectionScreen(
                 }
                 Spacer(Modifier.width(10.dp).align(Alignment.Start).nonInteractive())
                 Text(
-                    text = "Color Correction",
+                    text = LocalStrings.current.ui.colorCorrection,
                     modifier = Modifier.heightIn(max = 32.dp).align(Alignment.Start).nonInteractive()
                 )
 

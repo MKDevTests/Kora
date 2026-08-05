@@ -61,6 +61,7 @@ import snd.komelia.ui.common.cards.LibraryItemCard
 import snd.komelia.ui.common.images.ThumbnailImage
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun GenreGridContent(
@@ -111,7 +112,7 @@ fun GenreGridContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        "No genres found in this library. Add kora:genre:* tags to your series in Komga.",
+                        LocalStrings.current.ui.noGenresFoundInThis,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -185,14 +186,14 @@ private fun GenreCard(
         )
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
-                text = { Text("Choisir la couverture") },
+                text = { Text(LocalStrings.current.ui.choisirLaCouverture) },
                 onClick = {
                     menuExpanded = false
                     onChooseCover()
                 },
             )
             DropdownMenuItem(
-                text = { Text("Renommer") },
+                text = { Text(LocalStrings.current.ui.renommer) },
                 onClick = {
                     menuExpanded = false
                     onRename()
@@ -200,7 +201,7 @@ private fun GenreCard(
             )
             if (hasOverride) {
                 DropdownMenuItem(
-                    text = { Text("Réinitialiser") },
+                    text = { Text(LocalStrings.current.ui.rInitialiser) },
                     onClick = {
                         menuExpanded = false
                         onResetOverride()
@@ -232,7 +233,7 @@ private fun GenreCoverImportButton(onImportCovers: (List<Pair<String, ByteArray>
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedButton(onClick = pickFolder) {
-            Text("Importer des couvertures (dossier)…")
+            Text(LocalStrings.current.ui.importerDesCouverturesDossier)
         }
     }
 }
@@ -284,12 +285,12 @@ fun GenreCoverPickerDialog(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text("Search a series by name") },
+                    label = { Text(LocalStrings.current.ui.searchASeriesByName) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TextButton(onClick = { imagePicker.launch() }) {
-                    Text("Import an image…")
+                    Text(LocalStrings.current.ui.importAnImage)
                 }
                 Spacer(Modifier.height(12.dp))
                 val list = series
@@ -348,16 +349,16 @@ fun GenreRenameDialog(
     var text by remember { mutableStateOf(current) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename genre") },
+        title = { Text(LocalStrings.current.ui.renameGenre) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                label = { Text("Displayed name (empty = default)") },
+                label = { Text(LocalStrings.current.ui.displayedNameEmptyDefault) },
             )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(LocalStrings.current.ui.ok) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.cancel) } },
     )
 }

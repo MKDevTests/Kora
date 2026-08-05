@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import snd.komelia.image.UpscaleMode
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.UpdateProgress
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun UpscalerSettings(
@@ -74,7 +75,7 @@ fun MangaJaNaiSettings(
 
     val uriHandler = LocalUriHandler.current
     Column {
-        Text("MangaJaNai ONNX models preset", style = MaterialTheme.typography.titleMedium)
+        Text(LocalStrings.current.ui.mangajanaiOnnxModelsPreset, style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(5.dp))
         Text(
             """
@@ -100,7 +101,7 @@ fun MangaJaNaiSettings(
                 onClick = { uriHandler.openUri("https://github.com/the-database/mangajanai") },
                 modifier = Modifier.cursorForHand()
             ) {
-                Text("Project on Github")
+                Text(LocalStrings.current.ui.projectOnGithub)
             }
         }
     }

@@ -81,6 +81,7 @@ import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.common.components.AppSlider
 import snd.komelia.ui.common.components.AppSliderDefaults
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,17 +145,17 @@ fun Epub3SettingsCard(
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = { Text("Appearance") },
+                    text = { Text(LocalStrings.current.ui.appearance) },
                 )
                 Tab(
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = { Text("Font & Text") },
+                    text = { Text(LocalStrings.current.ui.fontText) },
                 )
                 Tab(
                     selected = pagerState.currentPage == 2,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
-                    text = { Text("Audio") },
+                    text = { Text(LocalStrings.current.ui.audio) },
                 )
             }
 
@@ -213,19 +214,19 @@ private fun AppearanceTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text("Reading Mode", style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
+            Text(LocalStrings.current.ui.readingMode2, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
             SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(0, 2),
                     selected = !settings.scroll,
                     onClick = { onSettingsChange(settings.copy(scroll = false)) },
-                    label = { Text("Page") },
+                    label = { Text(LocalStrings.current.ui.page) },
                 )
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(1, 2),
                     selected = settings.scroll,
                     onClick = { onSettingsChange(settings.copy(scroll = true)) },
-                    label = { Text("Scroll") },
+                    label = { Text(LocalStrings.current.ui.scroll) },
                 )
             }
         }
@@ -237,7 +238,7 @@ private fun AppearanceTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text("Columns", style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
+            Text(LocalStrings.current.ui.columns, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
             val colOptions = listOf(
                 Epub3ColumnCount.AUTO to "Auto",
                 Epub3ColumnCount.ONE  to "1",
@@ -257,7 +258,7 @@ private fun AppearanceTab(
 
         // Page margins slider
         SliderRow(
-            label = "Margins",
+            label = LocalStrings.current.ui.margins,
             valueLabel = "${"%.1f".format(settings.pageMargins)}×",
             value = settings.pageMargins.toFloat(),
             onValueChange = { onSettingsChange(settings.copy(pageMargins = it.toDouble())) },
@@ -270,7 +271,7 @@ private fun AppearanceTab(
 
         // Top margin slider
         SliderRow(
-            label = "Top margin",
+            label = LocalStrings.current.ui.topMargin,
             valueLabel = "${settings.topMargin.toInt()}dp",
             value = settings.topMargin,
             onValueChange = { onSettingsChange(settings.copy(topMargin = it)) },
@@ -280,7 +281,7 @@ private fun AppearanceTab(
 
         // Bottom margin slider
         SliderRow(
-            label = "Bottom margin",
+            label = LocalStrings.current.ui.bottomMargin,
             valueLabel = "${settings.bottomMargin.toInt()}dp",
             value = settings.bottomMargin,
             onValueChange = { onSettingsChange(settings.copy(bottomMargin = it)) },
@@ -290,7 +291,7 @@ private fun AppearanceTab(
 
         // Read-aloud highlight
         Text(
-            text = "Read-aloud highlight",
+            text = LocalStrings.current.ui.readAloudHighlight,
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier
                 .fillMaxWidth()
@@ -337,7 +338,7 @@ private fun AppearanceTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Show date & time", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.ui.showDateTime, style = MaterialTheme.typography.labelLarge)
             Switch(
                 checked = settings.showDateTimeOverlay,
                 onCheckedChange = { onSettingsChange(settings.copy(showDateTimeOverlay = it)) },
@@ -352,7 +353,7 @@ private fun AppearanceTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Show location", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.ui.showLocation, style = MaterialTheme.typography.labelLarge)
             Switch(
                 checked = settings.showLocationOverlay,
                 onCheckedChange = { onSettingsChange(settings.copy(showLocationOverlay = it)) },
@@ -385,7 +386,7 @@ private fun FontTextTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text("Font", style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
+            Text(LocalStrings.current.ui.font, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
             ExposedDropdownMenuBox(
                 expanded = dropdownExpanded,
                 onExpandedChange = { dropdownExpanded = it },
@@ -446,7 +447,7 @@ private fun FontTextTab(
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Load font…") },
+                        text = { Text(LocalStrings.current.ui.loadFont) },
                         leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             dropdownExpanded = false
@@ -465,7 +466,7 @@ private fun FontTextTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text("Align", style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
+            Text(LocalStrings.current.ui.align, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
             val alignOptions = listOf(
                 Epub3TextAlign.JUSTIFY to Icons.Default.FormatAlignJustify,
                 Epub3TextAlign.LEFT    to Icons.AutoMirrored.Filled.FormatAlignLeft,
@@ -486,7 +487,7 @@ private fun FontTextTab(
 
         // Font size slider
         SliderRow(
-            label = "Font size",
+            label = LocalStrings.current.ui.fontSize,
             valueLabel = "${(settings.fontSize * 100).roundToInt()}%",
             value = settings.fontSize.toFloat(),
             onValueChange = { onSettingsChange(settings.copy(fontSize = it.toDouble())) },
@@ -496,7 +497,7 @@ private fun FontTextTab(
 
         // Line height slider
         SliderRow(
-            label = "Line height",
+            label = LocalStrings.current.ui.lineHeight,
             valueLabel = "${"%.1f".format(settings.lineHeight)}×",
             value = settings.lineHeight.toFloat(),
             onValueChange = { onSettingsChange(settings.copy(lineHeight = it.toDouble())) },
@@ -506,7 +507,7 @@ private fun FontTextTab(
 
         // Paragraph spacing slider
         SliderRow(
-            label = "Para spacing",
+            label = LocalStrings.current.ui.paraSpacing,
             valueLabel = "${"%.1f".format(settings.paragraphSpacing)}×",
             value = settings.paragraphSpacing.toFloat(),
             onValueChange = { onSettingsChange(settings.copy(paragraphSpacing = it.toDouble())) },
@@ -522,7 +523,7 @@ private fun FontTextTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Publisher styles", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.ui.publisherStyles, style = MaterialTheme.typography.labelLarge)
             Switch(
                 checked = settings.publisherStyles,
                 onCheckedChange = { onSettingsChange(settings.copy(publisherStyles = it)) },
@@ -537,7 +538,7 @@ private fun FontTextTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Respect publisher colors", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.ui.respectPublisherColors, style = MaterialTheme.typography.labelLarge)
             Switch(
                 checked = settings.respectPublisherColors,
                 onCheckedChange = { onSettingsChange(settings.copy(respectPublisherColors = it)) },
@@ -555,7 +556,7 @@ private fun AudioTab(
     Column {
         // Playback speed slider
         SliderRow(
-            label = "Speed",
+            label = LocalStrings.current.ui.speed,
             valueLabel = "${"%.2f".format(settings.playbackSpeed)}×",
             value = settings.playbackSpeed.toFloat(),
             onValueChange = { onSettingsChange(settings.copy(playbackSpeed = it.toDouble())) },
@@ -571,7 +572,7 @@ private fun AudioTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Auto Rewind", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.ui.autoRewind, style = MaterialTheme.typography.labelLarge)
             Switch(
                 checked = settings.rewindEnabled,
                 onCheckedChange = { onSettingsChange(settings.copy(rewindEnabled = it)) },
@@ -582,7 +583,7 @@ private fun AudioTab(
         AnimatedVisibility(visible = settings.rewindEnabled) {
             Column {
                 SliderRow(
-                    label = "Interruption",
+                    label = LocalStrings.current.ui.interruption,
                     valueLabel = "${settings.rewindAfterInterruption.roundToInt()} s",
                     value = settings.rewindAfterInterruption.toFloat(),
                     onValueChange = { onSettingsChange(settings.copy(rewindAfterInterruption = it.toDouble())) },
@@ -590,7 +591,7 @@ private fun AudioTab(
                     accentColor = accentColor,
                 )
                 SliderRow(
-                    label = "Long break",
+                    label = LocalStrings.current.ui.longBreak,
                     valueLabel = "${settings.rewindAfterBreak.roundToInt()} s",
                     value = settings.rewindAfterBreak.toFloat(),
                     onValueChange = { onSettingsChange(settings.copy(rewindAfterBreak = it.toDouble())) },

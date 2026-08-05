@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalTheme
 import snd.komelia.ui.Theme
 import snd.komelia.ui.reader.common.AnnotationColorSwatches
+import snd.komelia.ui.LocalStrings
 
 /**
  * Popup context menu shown when the user selects text in the EPUB reader.
@@ -81,7 +82,7 @@ fun AnnotationContextMenu(
             HorizontalDivider()
 
             DropdownMenuItem(
-                text = { Text("Copy") },
+                text = { Text(LocalStrings.current.ui.copy) },
                 leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
                 onClick = {
                     if (!selectedText.isNullOrBlank()) {
@@ -91,7 +92,7 @@ fun AnnotationContextMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Translate") },
+                text = { Text(LocalStrings.current.ui.translate) },
                 leadingIcon = { Icon(Icons.Default.Translate, contentDescription = null) },
                 onClick = {
                     if (!selectedText.isNullOrBlank()) {
@@ -101,12 +102,12 @@ fun AnnotationContextMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Highlight") },
+                text = { Text(LocalStrings.current.ui.highlight) },
                 leadingIcon = { Icon(Icons.Default.BorderColor, contentDescription = null) },
                 onClick = onHighlight,
             )
             DropdownMenuItem(
-                text = { Text("Note") },
+                text = { Text(LocalStrings.current.ui.note) },
                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                 onClick = onNote,
             )

@@ -32,6 +32,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.PasswordTextField
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komga.client.user.KomgaUser
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun PasswordChangeDialog(
@@ -63,7 +64,7 @@ fun PasswordChangeDialog(
         modifier = Modifier.widthIn(max = 600.dp),
         header = {
             Text(
-                text = "Change Password",
+                text = LocalStrings.current.ui.changePassword,
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 15.dp, vertical = 10.dp)
             )
@@ -79,7 +80,7 @@ fun PasswordChangeDialog(
                 PasswordTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("New password") },
+                    label = { Text(LocalStrings.current.ui.newPassword) },
                     isError = passwordError != null,
                     supportingText = { passwordError?.let { Text(it) } },
                     modifier = Modifier.fillMaxWidth()
@@ -90,7 +91,7 @@ fun PasswordChangeDialog(
                 PasswordTextField(
                     value = repeatPassword,
                     onValueChange = { repeatPassword = it },
-                    label = { Text("Repeat new password") },
+                    label = { Text(LocalStrings.current.ui.repeatNewPassword) },
                     isError = repeatPasswordError != null,
                     supportingText = { repeatPasswordError?.let { Text(it) } },
                     modifier = Modifier.fillMaxWidth()
@@ -111,7 +112,7 @@ fun PasswordChangeDialog(
                     onClick = onDismiss,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
                 ) {
-                    Text("Cancel")
+                    Text(LocalStrings.current.ui.cancel)
                 }
 
                 FilledTonalButton(
@@ -127,7 +128,7 @@ fun PasswordChangeDialog(
                     },
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
                 ) {
-                    Text("Change Password")
+                    Text(LocalStrings.current.ui.changePassword)
                 }
             }
         }

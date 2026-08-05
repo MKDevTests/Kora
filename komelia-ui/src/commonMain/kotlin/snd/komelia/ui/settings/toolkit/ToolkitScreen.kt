@@ -52,6 +52,7 @@ import snd.komelia.ui.platform.ToolkitSettingsState
 import snd.komelia.ui.platform.rememberToolkitSettings
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komga.client.library.KomgaLibrary
+import snd.komelia.ui.LocalStrings
 
 /** One launchable automation. RUN writes directly (confirm first); PREVIEW opens
  *  the review-then-validate flow. */
@@ -80,9 +81,9 @@ class ToolkitScreen : Screen {
         val vm = rememberScreenModel { factory.getToolkitViewModel() }
         val libraries = LocalLibraries.current.collectAsState().value
 
-        SettingsScreenContainer("Komga Toolkit") {
+        SettingsScreenContainer(LocalStrings.current.ui.komgaToolkit) {
             if (settings == null) {
-                Text("Non disponible sur cette plateforme.")
+                Text(LocalStrings.current.ui.nonDisponibleSurCettePlateforme)
                 return@SettingsScreenContainer
             }
             Unlocked(settings, vm, libraries)
@@ -124,12 +125,12 @@ private fun Unlocked(
 
         OutlinedTextField(
             value = settings.baseUrl, onValueChange = settings::setBaseUrl,
-            label = { Text("URL Toolkit (http://hôte:port)") }, singleLine = true,
+            label = { Text(LocalStrings.current.ui.urlToolkitHttpHTe) }, singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = settings.token, onValueChange = settings::setToken,
-            label = { Text("Jeton (24 caractères min)") }, singleLine = true,
+            label = { Text(LocalStrings.current.ui.jeton24CaractResMin) }, singleLine = true,
             visualTransformation = if (tokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
@@ -143,7 +144,7 @@ private fun Unlocked(
             OutlinedButton(
                 enabled = settings.configured && test !is ToolkitViewModel.TestState.Testing,
                 onClick = { vm.testConnection() },
-            ) { Text("Tester") }
+            ) { Text(LocalStrings.current.ui.tester) }
             when (val t = test) {
                 ToolkitViewModel.TestState.Idle -> {}
                 ToolkitViewModel.TestState.Testing -> CircularProgressIndicator(Modifier.size(18.dp))
@@ -157,16 +158,16 @@ private fun Unlocked(
         val uriHandler = LocalUriHandler.current
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(enabled = settings.baseUrl.isNotBlank(), onClick = { runCatching { uriHandler.openUri(settings.baseUrl) } }) {
-                Text("Ouvrir le WebUI")
+                Text(LocalStrings.current.ui.ouvrirLeWebui)
             }
         }
 
         HorizontalDivider()
-        Text("Périmètres (bibliothèque par catégorie)", style = MaterialTheme.typography.titleSmall)
+        Text(LocalStrings.current.ui.pRimTresBibliothQue, style = MaterialTheme.typography.titleSmall)
         ToolkitCategory.entries.forEach { cat -> PerimeterRow(cat, settings, libraries) }
 
         HorizontalDivider()
-        Text("Fonctions", style = MaterialTheme.typography.titleSmall)
+        Text(LocalStrings.current.ui.fonctions, style = MaterialTheme.typography.titleSmall)
         ToolkitCategory.entries.forEach { cat ->
             val libId = settings.libraryFor(cat) ?: return@forEach
             val actions = actionsFor(cat)
@@ -201,12 +202,12 @@ private fun Unlocked(
         val libId = settings.libraryFor(categoryOf(a)) ?: return@let
         AlertDialog(
             onDismissRequest = { pendingRun = null },
-            title = { Text("Lancer et appliquer ?") },
+            title = { Text(LocalStrings.current.ui.lancerEtAppliquer) },
             text = { Text("« ${a.label} » va analyser puis écrire directement les changements. Continuer ?") },
             confirmButton = {
-                TextButton(onClick = { vm.startRun(a.function, a.source, libId); pendingRun = null }) { Text("Lancer") }
+                TextButton(onClick = { vm.startRun(a.function, a.source, libId); pendingRun = null }) { Text(LocalStrings.current.ui.lancer) }
             },
-            dismissButton = { TextButton(onClick = { pendingRun = null }) { Text("Annuler") } },
+            dismissButton = { TextButton(onClick = { pendingRun = null }) { Text(LocalStrings.current.ui.annuler) } },
         )
     }
 }
@@ -248,7 +249,7 @@ private fun PerimeterRow(category: ToolkitCategory, settings: ToolkitSettingsSta
                 Text(current?.name ?: "— choisir —")
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(text = { Text("(aucune)") }, onClick = { settings.setLibraryFor(category, null); expanded = false })
+                DropdownMenuItem(text = { Text(LocalStrings.current.ui.aucune) }, onClick = { settings.setLibraryFor(category, null); expanded = false })
                 libraries.forEach { lib ->
                     DropdownMenuItem(text = { Text(lib.name) }, onClick = { settings.setLibraryFor(category, lib.id.value); expanded = false })
                 }
@@ -285,13 +286,13 @@ private fun FlowSection(flow: ToolkitFlowState, onConfirm: () -> Unit, onCancel:
                 LinearProgressIndicator(progress = { flow.current.toFloat() / flow.total }, modifier = Modifier.fillMaxWidth())
                 Text("${flow.current}/${flow.total} ${flow.message}", style = MaterialTheme.typography.bodySmall)
             } else LinearProgressIndicator(Modifier.fillMaxWidth())
-            OutlinedButton(onClick = onCancel) { Text("Annuler") }
+            OutlinedButton(onClick = onCancel) { Text(LocalStrings.current.ui.annuler) }
         }
         is ToolkitFlowState.PreviewReady -> PreviewReview(flow, onConfirm, onCancel)
         is ToolkitFlowState.Applied -> AppliedSummary(flow, onReset)
         is ToolkitFlowState.Failed -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Échec : ${flow.message}", color = MaterialTheme.colorScheme.error)
-            OutlinedButton(onClick = onReset) { Text("Fermer") }
+            OutlinedButton(onClick = onReset) { Text(LocalStrings.current.ui.fermer2) }
         }
     }
 }
@@ -316,7 +317,7 @@ private fun AppliedSummary(flow: ToolkitFlowState.Applied, onReset: () -> Unit) 
             }
             ap != null -> Text("Appliqué ${ap.applied} · inchangé ${ap.unchanged} · garde-fou ${ap.skippedGuardrail} · échec ${ap.failed}")
         }
-        OutlinedButton(onClick = onReset) { Text("Fermer") }
+        OutlinedButton(onClick = onReset) { Text(LocalStrings.current.ui.fermer2) }
     }
 }
 
@@ -337,9 +338,9 @@ private fun PreviewReview(flow: ToolkitFlowState.PreviewReady, onConfirm: () -> 
             r.rows.size
         } else 0
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(enabled = applicable > 0, onClick = onConfirm) { Text("Confirmer et appliquer") }
-            OutlinedButton(onClick = onCancel) { Text("Annuler") }
+            Button(enabled = applicable > 0, onClick = onConfirm) { Text(LocalStrings.current.ui.confirmerEtAppliquer) }
+            OutlinedButton(onClick = onCancel) { Text(LocalStrings.current.ui.annuler) }
         }
-        if (applicable == 0) Text("Rien à appliquer.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (applicable == 0) Text(LocalStrings.current.ui.rienAppliquer, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

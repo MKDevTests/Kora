@@ -15,6 +15,7 @@ import snd.komelia.ui.MainScreen
 import snd.komelia.ui.error.formatExceptionMessage
 import snd.komelia.ui.series.seriesScreen
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class KomfJobsScreen(private val enableSeriesResolution: Boolean = true) : Screen {
 
@@ -27,7 +28,7 @@ class KomfJobsScreen(private val enableSeriesResolution: Boolean = true) : Scree
         LaunchedEffect(Unit) { vm.initialize() }
         val state = vm.state.collectAsState().value
 
-        SettingsScreenContainer(title = "Metadata Update Jobs") {
+        SettingsScreenContainer(title = LocalStrings.current.ui.metadataUpdateJobs) {
             when (state) {
                 is LoadState.Error -> Text(formatExceptionMessage(state.exception))
                 LoadState.Uninitialized, LoadState.Loading, is LoadState.Success -> KomfJobsContent(

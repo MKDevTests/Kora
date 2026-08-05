@@ -41,6 +41,7 @@ import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 class IgnoreListScreen : Screen {
 
@@ -50,13 +51,13 @@ class IgnoreListScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getIgnoreListViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer("Ignore List") {
+        SettingsScreenContainer(LocalStrings.current.ui.ignoreList) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SwitchWithLabel(
                     checked = vm.enabled,
                     onCheckedChange = vm::onEnabledChange,
-                    label = { Text("Enable ignore list") },
-                    supportingText = { Text("Ignored series and their books are hidden everywhere (libraries, collections, search, home, genres). Local only — never sent to the server.") },
+                    label = { Text(LocalStrings.current.ui.enableIgnoreList) },
+                    supportingText = { Text(LocalStrings.current.ui.ignoredSeriesAndTheirBooks) },
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                 )
@@ -73,13 +74,13 @@ class IgnoreListScreen : Screen {
                         modifier = Modifier.weight(1f),
                     )
                     if (vm.ignored.isNotEmpty()) {
-                        TextButton(onClick = vm::removeAll) { Text("Restore all") }
+                        TextButton(onClick = vm::removeAll) { Text(LocalStrings.current.ui.restoreAll) }
                     }
                 }
 
                 if (vm.ignored.isEmpty()) {
                     Text(
-                        "No ignored series. Long-press a series and choose Ignore.",
+                        LocalStrings.current.ui.noIgnoredSeriesLongPress,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 20.dp),
@@ -98,7 +99,7 @@ class IgnoreListScreen : Screen {
                                 modifier = Modifier.weight(1f),
                             )
                             IconButton(onClick = { vm.remove(series.id) }) {
-                                Icon(Icons.Default.Visibility, contentDescription = "Restore")
+                                Icon(Icons.Default.Visibility, contentDescription = LocalStrings.current.ui.restore)
                             }
                         }
                     }

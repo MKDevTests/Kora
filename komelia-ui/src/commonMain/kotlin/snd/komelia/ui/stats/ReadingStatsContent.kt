@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import snd.komelia.stats.MonthBucket
 import snd.komelia.stats.ReadingStats
 import snd.komelia.stats.RecentSeriesEntry
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ReadingStatsContent(
@@ -64,17 +65,17 @@ fun ReadingStatsContent(
 
         // --- Top stats (4 cards in 2x2 grid) -------------------------------
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(label = "This week", value = stats.booksFinishedLast7Days.toString(),
-                hint = "books finished", modifier = Modifier.weight(1f))
-            StatCard(label = "This month", value = stats.booksFinishedLast30Days.toString(),
-                hint = "books finished", modifier = Modifier.weight(1f))
+            StatCard(label = LocalStrings.current.ui.thisWeek, value = stats.booksFinishedLast7Days.toString(),
+                hint = LocalStrings.current.ui.booksFinished, modifier = Modifier.weight(1f))
+            StatCard(label = LocalStrings.current.ui.thisMonth, value = stats.booksFinishedLast30Days.toString(),
+                hint = LocalStrings.current.ui.booksFinished, modifier = Modifier.weight(1f))
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(label = "Streak", value = stats.streakDays.toString(),
+            StatCard(label = LocalStrings.current.ui.streak, value = stats.streakDays.toString(),
                 hint = if (stats.streakDays > 1) "days in a row" else "day in a row",
                 modifier = Modifier.weight(1f))
-            StatCard(label = "Lifetime", value = stats.lifetimeBooksFinished.toString(),
-                hint = "books finished", modifier = Modifier.weight(1f))
+            StatCard(label = LocalStrings.current.ui.lifetime, value = stats.lifetimeBooksFinished.toString(),
+                hint = LocalStrings.current.ui.booksFinished, modifier = Modifier.weight(1f))
         }
 
         // --- Pages read (v1.0.10+) -----------------------------------------
@@ -82,14 +83,14 @@ fun ReadingStatsContent(
         // recorded before then have no page_count attached. We show the
         // hint as a small note under the section header so the totals
         // aren't misread as lifetime-since-Kora-install.
-        SectionHeader(title = "Pages read", subtitle = "since v1.0.10")
+        SectionHeader(title = LocalStrings.current.ui.pagesRead, subtitle = LocalStrings.current.ui.sinceV1010)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(label = "This week", value = formatPages(stats.pagesReadLast7Days),
-                hint = "pages", modifier = Modifier.weight(1f))
-            StatCard(label = "This month", value = formatPages(stats.pagesReadLast30Days),
-                hint = "pages", modifier = Modifier.weight(1f))
-            StatCard(label = "Total", value = formatPages(stats.pagesReadLifetime),
-                hint = "pages", modifier = Modifier.weight(1f))
+            StatCard(label = LocalStrings.current.ui.thisWeek, value = formatPages(stats.pagesReadLast7Days),
+                hint = LocalStrings.current.ui.pages, modifier = Modifier.weight(1f))
+            StatCard(label = LocalStrings.current.ui.thisMonth, value = formatPages(stats.pagesReadLast30Days),
+                hint = LocalStrings.current.ui.pages, modifier = Modifier.weight(1f))
+            StatCard(label = LocalStrings.current.ui.total, value = formatPages(stats.pagesReadLifetime),
+                hint = LocalStrings.current.ui.pages, modifier = Modifier.weight(1f))
         }
 
         // --- History chart with window selector (v1.0.12+) ------------------
@@ -100,7 +101,7 @@ fun ReadingStatsContent(
 
         // --- Recent activity ----------------------------------------------
         if (stats.recentSeries.isNotEmpty()) {
-            SectionHeader(title = "Recently read")
+            SectionHeader(title = LocalStrings.current.ui.recentlyRead)
             stats.recentSeries.forEach { entry ->
                 RecentSeriesRow(entry)
             }
@@ -174,7 +175,7 @@ private fun SectionHeader(
         }
         if (onRefresh != null) {
             IconButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                Icon(Icons.Default.Refresh, contentDescription = LocalStrings.current.ui.refresh)
             }
         }
     }
@@ -353,17 +354,17 @@ private fun EmptyStatsState(onRefresh: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "No reading activity yet",
+            text = LocalStrings.current.ui.noReadingActivityYet,
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Finish your first book to see stats appear here.",
+            text = LocalStrings.current.ui.finishYourFirstBookTo,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         IconButton(onClick = onRefresh) {
-            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+            Icon(Icons.Default.Refresh, contentDescription = LocalStrings.current.ui.refresh)
         }
     }
 }

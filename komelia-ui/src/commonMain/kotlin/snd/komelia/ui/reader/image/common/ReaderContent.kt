@@ -78,6 +78,7 @@ import snd.komelia.ui.reader.image.panels.PanelsReaderState
 import snd.komelia.ui.reader.image.settings.SettingsOverlay
 import snd.komelia.ui.settings.imagereader.ncnn.NcnnSettingsState
 import snd.komelia.ui.settings.imagereader.onnxruntime.OnnxRuntimeSettingsState
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ReaderContent(
@@ -298,7 +299,7 @@ fun ReaderContent(
                     ) {
                         if (!ocrSettings.enabled) {
                             DropdownMenuItem(
-                                text = { Text("Select Text") },
+                                text = { Text(LocalStrings.current.ui.selectText) },
                                 leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) },
                                 onClick = {
                                     showImageContextMenu = false
@@ -312,7 +313,7 @@ fun ReaderContent(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("Save image") },
+                            text = { Text(LocalStrings.current.ui.saveImage) },
                             leadingIcon = { Icon(Icons.Rounded.Download, contentDescription = null) },
                             onClick = {
                                 showImageContextMenu = false
@@ -320,7 +321,7 @@ fun ReaderContent(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Note") },
+                            text = { Text(LocalStrings.current.ui.note) },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             onClick = {
                                 showImageContextMenu = false

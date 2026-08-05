@@ -31,6 +31,7 @@ import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komelia.ui.settings.offline.downloads.OfflineDownloadsContent
 import snd.komelia.ui.settings.offline.logs.OfflineLogsContent
 import snd.komelia.ui.settings.offline.users.OfflineUserSettingsContent
+import snd.komelia.ui.LocalStrings
 
 class OfflineSettingsScreen : Screen {
 
@@ -44,7 +45,7 @@ class OfflineSettingsScreen : Screen {
             vm.initialize(currentNavigator)
         }
 
-        SettingsScreenContainer("Offline mode") {
+        SettingsScreenContainer(LocalStrings.current.ui.offlineMode) {
             var selectedTab by rememberSaveable { mutableStateOf(0) }
 
             SecondaryTabRow(selectedTabIndex = selectedTab) {
@@ -55,7 +56,7 @@ class OfflineSettingsScreen : Screen {
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Default.Person, null)
-                        Text("Users")
+                        Text(LocalStrings.current.ui.users)
                     }
                 }
                 Tab(
@@ -65,7 +66,7 @@ class OfflineSettingsScreen : Screen {
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Default.Download, null)
-                        Text("Downloads")
+                        Text(LocalStrings.current.ui.downloads)
                     }
                 }
 
@@ -76,7 +77,7 @@ class OfflineSettingsScreen : Screen {
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Default.Cached, null)
-                        Text("Logs")
+                        Text(LocalStrings.current.ui.logs)
                     }
                 }
             }

@@ -46,6 +46,7 @@ import snd.komf.api.KomfServerLibraryId
 import snd.komf.api.KomfServerSeriesId
 import snd.komf.client.KomfMetadataClient
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 
 @Composable
@@ -78,7 +79,7 @@ fun SeriesBulkActionDialogs(
 
     if (state.showDeleteDialog) {
         ConfirmationDialog(
-            title = "Delete Series",
+            title = LocalStrings.current.ui.deleteSeries2,
             body = "${state.series.size} series will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
             confirmText = "Yes, delete ${state.series.size} series and their files",
             onDialogConfirm = {
@@ -92,7 +93,7 @@ fun SeriesBulkActionDialogs(
 
     if (state.showDeleteDownloadedDialog) {
         ConfirmationDialog(
-            title = "Delete downloaded Series",
+            title = LocalStrings.current.ui.deleteDownloadedSeries2,
             body = "${state.series.size} series will be removed from this device",
             onDialogConfirm = {
                 coroutineScope.launch { state.actions.deleteDownloaded(state.series) }
@@ -105,7 +106,7 @@ fun SeriesBulkActionDialogs(
 
     if (state.showKomfIdentifyDialog) {
         ConfirmationDialog(
-            title = "Komf series auto-identify",
+            title = LocalStrings.current.ui.komfSeriesAutoIdentify,
             body = "${state.series.size} series will be auto-identified by Komf",
             onDialogConfirm = {
                 coroutineScope.launch { state.actions.komfIdentify(state.series) }

@@ -43,6 +43,7 @@ import snd.komelia.ui.settings.komf.notifications.NotificationContextState.Alter
 import snd.komelia.ui.settings.komf.notifications.NotificationContextState.AuthorContext
 import snd.komelia.ui.settings.komf.notifications.NotificationContextState.BookContextState
 import snd.komelia.ui.settings.komf.notifications.NotificationContextState.WebLinkContext
+import snd.komelia.ui.LocalStrings
 
 
 @Composable
@@ -58,7 +59,7 @@ fun NotificationContextDialog(
             FilledTonalButton(
                 onClick = onDismissRequest,
             ) {
-                Text("Close")
+                Text(LocalStrings.current.ui.close)
             }
         },
         onDismissRequest = onDismissRequest,
@@ -71,7 +72,7 @@ fun NotificationContextDialogContent(
     state: NotificationContextState,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text("Library", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.library, style = MaterialTheme.typography.titleLarge)
         TextField(
             value = state.libraryId,
             onValueChange = state::libraryId::set,
@@ -86,7 +87,7 @@ fun NotificationContextDialogContent(
         )
         HorizontalDivider()
 
-        Text("Series", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.series, style = MaterialTheme.typography.titleLarge)
         TextField(
             value = state.seriesId,
             onValueChange = state::seriesId::set,
@@ -199,7 +200,7 @@ fun NotificationContextDialogContent(
         }
 
         HorizontalDivider()
-        Text("Books", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.books, style = MaterialTheme.typography.titleLarge)
         state.books.forEachIndexed { index, book ->
             var showBook by remember { mutableStateOf(false) }
             Column(
@@ -229,7 +230,7 @@ fun NotificationContextDialogContent(
 
         }
 
-        FilledTonalButton(onClick = state::onBookAdd) { Text("Add Book") }
+        FilledTonalButton(onClick = state::onBookAdd) { Text(LocalStrings.current.ui.addBook) }
     }
 }
 

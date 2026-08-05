@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import snd.komelia.ui.Theme
 import snd.komelia.ui.platform.HorizontalScrollbar
 import snd.komelia.ui.platform.VerticalScrollbar
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ErrorView(
@@ -90,7 +91,7 @@ fun ErrorView(
                 ) {
                     TooltipBox(
                         positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                        tooltip = { Text("Copied to clipboard") },
+                        tooltip = { Text(LocalStrings.current.ui.copiedToClipboard) },
                         state = tooltipState,
                         enableUserInput = false
                     ) {
@@ -100,21 +101,21 @@ fun ErrorView(
                                 scope.launch { tooltipState.show() }
                             },
                         ) {
-                            Text("Copy stacktrace to clipboard")
+                            Text(LocalStrings.current.ui.copyStacktraceToClipboard)
                         }
                     }
                     if (isRestartable) {
                         Button(
                             onClick = onRestart,
                         ) {
-                            Text("Restart")
+                            Text(LocalStrings.current.ui.restart)
                         }
 
                     }
                     Button(
                         onClick = onExit,
                     ) {
-                        Text("Exit")
+                        Text(LocalStrings.current.ui.exit)
                     }
                 }
             }

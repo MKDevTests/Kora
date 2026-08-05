@@ -186,7 +186,7 @@ private fun LazyGridScope.BooksContent(
 ) {
     if (books.isEmpty()) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Text("No books", modifier = Modifier.fillMaxWidth())
+            Text(LocalStrings.current.ui.noBooks, modifier = Modifier.fillMaxWidth())
         }
     } else
         when (layout) {
@@ -364,7 +364,7 @@ fun BooksBulkActionsToolbar(
         when (LocalWindowWidth.current) {
             FULL, EXPANDED -> {
                 if (selectedBooks.isEmpty()) {
-                    Text("Click on items to select or deselect them")
+                    Text(LocalStrings.current.ui.clickOnItemsToSelect)
                 } else {
                     Spacer(Modifier.weight(1f))
                     BooksBulkActionsContent(
@@ -490,7 +490,7 @@ fun BookFilterDialog(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Book Filters", modifier = Modifier.padding(start = 10.dp))
+                Text(LocalStrings.current.ui.bookFilters, modifier = Modifier.padding(start = 10.dp))
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
             }

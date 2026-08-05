@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.DescriptionChips
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.common.components.LabeledEntry.Companion.stringEntry
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun TagList(
@@ -78,7 +79,7 @@ fun TagList(
 
         if (tagEntries.size == tags.size && secondaryTags?.size == secondaryTagEntries?.size) {
             DescriptionChips(
-                label = "Tags",
+                label = LocalStrings.current.ui.tags,
                 chipValues = tagEntries,
                 secondaryValues = secondaryTagEntries,
                 onChipClick = onTagClick,
@@ -86,7 +87,7 @@ fun TagList(
         } else {
             if (parodyTags.isNotEmpty() || !secondaryParodyTags.isNullOrEmpty()) {
                 DescriptionChips(
-                    label = "Parody",
+                    label = LocalStrings.current.ui.parody,
                     chipValues = parodyTags,
                     secondaryValues = secondaryParodyTags,
                     onChipClick = onTagClick,
@@ -95,7 +96,7 @@ fun TagList(
 
             if (characterTags.isNotEmpty() || !secondaryCharacterTags.isNullOrEmpty()) {
                 DescriptionChips(
-                    label = "Character",
+                    label = LocalStrings.current.ui.character,
                     chipValues = characterTags,
                     secondaryValues = secondaryCharacterTags,
                     onChipClick = onTagClick,
@@ -104,7 +105,7 @@ fun TagList(
 
             if (groupTags.isNotEmpty() || !secondaryGroupTags.isNullOrEmpty()) {
                 DescriptionChips(
-                    label = "Group",
+                    label = LocalStrings.current.ui.group,
                     chipValues = groupTags,
                     secondaryValues = secondaryGroupTags,
                     onChipClick = onTagClick,
@@ -113,7 +114,7 @@ fun TagList(
 
             if (femaleTags.isNotEmpty() || !secondaryFemaleTags.isNullOrEmpty()) {
                 DescriptionChips(
-                    label = "Female",
+                    label = LocalStrings.current.ui.female,
                     chipValues = femaleTags,
                     secondaryValues = secondaryFemaleTags,
                     onChipClick = onTagClick,
@@ -121,7 +122,7 @@ fun TagList(
             }
             if (maleTags.isNotEmpty() || !secondaryMaleTags.isNullOrEmpty()) {
                 DescriptionChips(
-                    label = "Male",
+                    label = LocalStrings.current.ui.male,
                     chipValues = maleTags,
                     secondaryValues = secondaryMaleTags,
                     onChipClick = onTagClick,
@@ -129,14 +130,14 @@ fun TagList(
             }
             if (categoryTags.isNotEmpty() || !secondaryCategoryTags.isNullOrEmpty()) {
                 DescriptionChips(
-                    label = "Category",
+                    label = LocalStrings.current.ui.category,
                     chipValues = categoryTags,
                     secondaryValues = secondaryCategoryTags,
                     onChipClick = onTagClick,
                 )
             }
             DescriptionChips(
-                label = "Other tags",
+                label = LocalStrings.current.ui.otherTags,
                 chipValues = tagEntries,
                 secondaryValues = secondaryTagEntries,
                 onChipClick = onTagClick,

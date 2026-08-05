@@ -49,6 +49,7 @@ import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.PlatformType.DESKTOP
 import snd.komelia.ui.platform.PlatformType.MOBILE
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.ui.LocalStrings
 
 
 @Composable
@@ -77,19 +78,19 @@ fun LoginContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Button(onClick = { showAutoLoginError = false }) { Text("Login with another account") }
+                Button(onClick = { showAutoLoginError = false }) { Text(LocalStrings.current.ui.loginWithAnotherAccount) }
                 if (canGoOfflineAsCurrentUser) {
-                    Button(onClick = goOfflineAsCurrentUser) { Text("Go offline") }
+                    Button(onClick = goOfflineAsCurrentUser) { Text(LocalStrings.current.ui.goOffline2) }
                 }
 
-                Button(onClick = onAutoLoginRetry) { Text("Retry") }
+                Button(onClick = onAutoLoginRetry) { Text(LocalStrings.current.ui.retry) }
             }
         }
     } else {
         val platform = LocalPlatform.current
         when (platform) {
             MOBILE, DESKTOP -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Komga Login")
+                Text(LocalStrings.current.ui.komgaLogin)
                 LoginForm(
                     viewModel = viewModel,
                     onOfflineSelect = onOfflineSelect,
@@ -103,9 +104,9 @@ fun LoginContent(
             ) {
                 val uriHandler = LocalUriHandler.current
                 Column {
-                    Text("Full-featured web client for Komga")
+                    Text(LocalStrings.current.ui.fullFeaturedWebClientFor)
                     Text(
-                        "Requires adding this host and port to Komga CORS configuration",
+                        LocalStrings.current.ui.requiresAddingThisHostAnd,
                         color = MaterialTheme.colorScheme.secondary,
                         textDecoration = TextDecoration.Underline,
                         modifier = Modifier.clickable {
@@ -148,7 +149,7 @@ fun ColumnScope.LoginForm(
             selectedOption = selectedOption,
             options = serverOptions,
             onOptionChange = { viewModel.onServerProfileSelect(it.value) },
-            label = { Text("Server") },
+            label = { Text(LocalStrings.current.ui.server) },
             inputFieldModifier = textFieldsModifier
         )
         Spacer(Modifier.height(10.dp))
@@ -161,7 +162,7 @@ fun ColumnScope.LoginForm(
         OutlinedHttpTextField(
             value = viewModel.url,
             onValueChange = { viewModel.url = it },
-            label = { Text("Server Url") },
+            label = { Text(LocalStrings.current.ui.serverUrl) },
             modifier = textFieldsModifier
                 .withTextFieldNavigation()
                 .focusRequester(first)
@@ -172,7 +173,7 @@ fun ColumnScope.LoginForm(
         OutlinedTextField(
             value = viewModel.user,
             onValueChange = { viewModel.user = it },
-            label = { Text("Username") },
+            label = { Text(LocalStrings.current.ui.username) },
             modifier = textFieldsModifier
                 .withTextFieldNavigation()
                 .focusRequester(second)
@@ -183,7 +184,7 @@ fun ColumnScope.LoginForm(
             value = viewModel.password,
             onValueChange = { viewModel.password = it },
             visualTransformation = PasswordVisualTransformation(),
-            label = { Text("Password") },
+            label = { Text(LocalStrings.current.ui.password) },
             modifier = textFieldsModifier
                 .withTextFieldNavigation(
                     onEnterPress = { coroutineScope.launch { viewModel.loginWithCredentials() } }
@@ -196,7 +197,7 @@ fun ColumnScope.LoginForm(
             value = viewModel.password,
             onValueChange = { viewModel.password = it },
             visualTransformation = PasswordVisualTransformation(),
-            label = { Text("Password") },
+            label = { Text(LocalStrings.current.ui.password) },
             modifier = textFieldsModifier.withTextFieldNavigation(
                 onEnterPress = { viewModel.loginWithCredentials() }
             ),
@@ -210,9 +211,9 @@ fun ColumnScope.LoginForm(
 
     Row(horizontalArrangement = Arrangement.spacedBy(50.dp)) {
         if (viewModel.offlineIsAvailable.collectAsState().value) {
-            TextButton(onClick = onOfflineSelect) { Text("Offline mode") }
+            TextButton(onClick = onOfflineSelect) { Text(LocalStrings.current.ui.offlineMode) }
         }
-        Button(onClick = { viewModel.loginWithCredentials() }) { Text("Login") }
+        Button(onClick = { viewModel.loginWithCredentials() }) { Text(LocalStrings.current.ui.login) }
     }
 
     Spacer(Modifier.imePadding())
@@ -234,7 +235,7 @@ fun LoginLoadingContent(onCancel: () -> Unit) {
         CircularProgressIndicator()
         if (showCancelButton) {
             Spacer(Modifier.height(100.dp))
-            Button(onClick = onCancel) { Text("Cancel login attempt") }
+            Button(onClick = onCancel) { Text(LocalStrings.current.ui.cancelLoginAttempt) }
         }
 
     }

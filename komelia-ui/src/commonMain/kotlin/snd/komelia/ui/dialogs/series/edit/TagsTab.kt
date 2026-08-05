@@ -16,6 +16,7 @@ import snd.komelia.ui.common.components.LabeledEntry.Companion.stringEntry
 import snd.komelia.ui.common.components.LockableChipTextFieldWithSuggestions
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class TagsTab(
     private val vm: SeriesEditMetadataState,
@@ -52,7 +53,7 @@ private fun TagsContent(
         LockableChipTextFieldWithSuggestions(
             values = tags.value,
             onValuesChange = { tags.setValue(it) },
-            label = "Tags",
+            label = LocalStrings.current.ui.tags,
             suggestions = remember(allTags) { allTags.map { stringEntry(it) } },
             locked = tagsLock.value,
             onLockChange = { tagsLock.setValue(it) }
@@ -60,7 +61,7 @@ private fun TagsContent(
         LockableChipTextFieldWithSuggestions(
             values = genres.value,
             onValuesChange = { genres.setValue(it) },
-            label = "Genres",
+            label = LocalStrings.current.ui.genres,
             suggestions = remember(allGenres) { allGenres.map { stringEntry(it) } },
             locked = genresLock.value,
             onLockChange = { genresLock.setValue(it) }

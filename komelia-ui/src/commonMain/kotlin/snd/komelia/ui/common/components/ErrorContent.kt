@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ErrorContent(
@@ -51,13 +52,13 @@ fun ErrorContent(
             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 if (onReload != null) {
                     FilledTonalButton(onClick = onReload) {
-                        Text("Reload")
+                        Text(LocalStrings.current.ui.reload)
                     }
                 }
 
                 if (onExit != null) {
                     FilledTonalButton(onClick = onExit) {
-                        Text("Exit")
+                        Text(LocalStrings.current.ui.exit)
                     }
                 }
             }

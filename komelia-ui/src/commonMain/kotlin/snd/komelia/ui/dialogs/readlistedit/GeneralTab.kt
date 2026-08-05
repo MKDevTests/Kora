@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.CheckboxWithLabel
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class GeneralTab(
     private val vm: ReadListEditDialogViewModel,
@@ -33,7 +34,7 @@ internal class GeneralTab(
             TextField(
                 value = vm.name,
                 onValueChange = vm::name::set,
-                label = { Text("Name") },
+                label = { Text(LocalStrings.current.ui.name) },
                 supportingText = {
                     vm.nameValidationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 },
@@ -45,7 +46,7 @@ internal class GeneralTab(
             TextField(
                 value = vm.summary,
                 onValueChange = vm::summary::set,
-                label = { Text("Summary") },
+                label = { Text(LocalStrings.current.ui.summary) },
                 minLines = 6,
                 maxLines = 12,
                 modifier = Modifier.fillMaxWidth()
@@ -54,13 +55,13 @@ internal class GeneralTab(
             HorizontalDivider()
             Column {
                 Text(
-                    "By default, books in a read list are ordered manually. You can disable manual ordering to sort books by release date.",
+                    LocalStrings.current.ui.byDefaultBooksInA,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 CheckboxWithLabel(
                     checked = vm.manualOrdering,
                     onCheckedChange = vm::manualOrdering::set,
-                    label = { Text("Manual ordering") }
+                    label = { Text(LocalStrings.current.ui.manualOrdering) }
                 )
 
             }

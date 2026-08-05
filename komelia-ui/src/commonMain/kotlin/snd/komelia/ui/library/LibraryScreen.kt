@@ -496,7 +496,7 @@ class LibraryScreen(
                     onSearchQueryChange = collectionsTabState::onSearchQueryChange,
                     sortOrder = sortOrder,
                     onSortOrderChange = collectionsTabState::onSortOrderChange,
-                    placeholder = "Search collections",
+                    placeholder = LocalStrings.current.ui.searchCollections,
                 )
             }
         }
@@ -553,14 +553,14 @@ class LibraryScreen(
                     onSearchQueryChange = readListTabState::onSearchQueryChange,
                     sortOrder = sortOrder,
                     onSortOrderChange = readListTabState::onSortOrderChange,
-                    placeholder = "Search readlists",
+                    placeholder = LocalStrings.current.ui.searchReadlists,
                 )
             }
         }
 
         when (val state = readListTabState.state.collectAsState().value) {
             Uninitialized -> LoadingMaxSizeIndicator()
-            is Error -> Text("Error")
+            is Error -> Text(LocalStrings.current.ui.error)
             else -> {
                 val loading = state is Loading
                 LibraryReadListsContent(
@@ -668,7 +668,7 @@ private fun ContinueReadingSection(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
     ) {
         Text(
-            "Continue Reading",
+            LocalStrings.current.ui.continueReading,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.padding(start = gridPadding, end = gridPadding, bottom = 12.dp)
         )
@@ -789,7 +789,7 @@ private fun LibraryTabChips(
                 FilterChip(
                     selected = currentTab == SERIES,
                     onClick = onBrowseClick,
-                    label = { Text("Series") },
+                    label = { Text(LocalStrings.current.ui.series) },
                     colors = chipColors,
                     shape = AppFilterChipDefaults.shape(),
                     border = AppFilterChipDefaults.filterChipBorder(currentTab == SERIES),
@@ -800,7 +800,7 @@ private fun LibraryTabChips(
                     FilterChip(
                         selected = currentTab == COLLECTIONS,
                         onClick = onCollectionsClick,
-                        label = { Text("Collections") },
+                        label = { Text(LocalStrings.current.ui.collections) },
                         colors = chipColors,
                         shape = AppFilterChipDefaults.shape(),
                         border = AppFilterChipDefaults.filterChipBorder(currentTab == COLLECTIONS),
@@ -812,7 +812,7 @@ private fun LibraryTabChips(
                     FilterChip(
                         selected = currentTab == READ_LISTS,
                         onClick = onReadListsClick,
-                        label = { Text("Read Lists") },
+                        label = { Text(LocalStrings.current.ui.readLists) },
                         colors = chipColors,
                         shape = AppFilterChipDefaults.shape(),
                         border = AppFilterChipDefaults.filterChipBorder(currentTab == READ_LISTS),
@@ -824,7 +824,7 @@ private fun LibraryTabChips(
                     FilterChip(
                         selected = currentTab == GENRE,
                         onClick = onGenreClick,
-                        label = { Text("Genres") },
+                        label = { Text(LocalStrings.current.ui.genres) },
                         colors = chipColors,
                         shape = AppFilterChipDefaults.shape(),
                         border = AppFilterChipDefaults.filterChipBorder(currentTab == GENRE),
@@ -835,7 +835,7 @@ private fun LibraryTabChips(
                 FilterChip(
                     selected = currentTab == FOR_YOU,
                     onClick = onForYouClick,
-                    label = { Text("For you") },
+                    label = { Text(LocalStrings.current.ui.forYou) },
                     colors = chipColors,
                     shape = AppFilterChipDefaults.shape(),
                     border = AppFilterChipDefaults.filterChipBorder(currentTab == FOR_YOU),
@@ -847,7 +847,7 @@ private fun LibraryTabChips(
             FilterChip(
                 selected = showContinueReading,
                 onClick = onReadingClick,
-                label = { Text("Reading") },
+                label = { Text(LocalStrings.current.ui.reading) },
                 colors = chipColors,
                 shape = AppFilterChipDefaults.shape(),
                 border = AppFilterChipDefaults.filterChipBorder(showContinueReading),
@@ -998,7 +998,7 @@ private fun LibrarySegmentedButtons(
                 selected = currentTab == SERIES,
                 onClick = onBrowseClick,
                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = tabCount),
-                label = { Text("Series") },
+                label = { Text(LocalStrings.current.ui.series) },
                 colors = colors
             )
             var index = 1
@@ -1007,7 +1007,7 @@ private fun LibrarySegmentedButtons(
                     selected = currentTab == COLLECTIONS,
                     onClick = onCollectionsClick,
                     shape = SegmentedButtonDefaults.itemShape(index = index++, count = tabCount),
-                    label = { Text("Collections") },
+                    label = { Text(LocalStrings.current.ui.collections) },
                     colors = colors
                 )
             }
@@ -1016,7 +1016,7 @@ private fun LibrarySegmentedButtons(
                     selected = currentTab == READ_LISTS,
                     onClick = onReadListsClick,
                     shape = SegmentedButtonDefaults.itemShape(index = index++, count = tabCount),
-                    label = { Text("Read Lists") },
+                    label = { Text(LocalStrings.current.ui.readLists) },
                     colors = colors
                 )
             }
@@ -1025,7 +1025,7 @@ private fun LibrarySegmentedButtons(
                     selected = currentTab == GENRE,
                     onClick = onGenreClick,
                     shape = SegmentedButtonDefaults.itemShape(index = index++, count = tabCount),
-                    label = { Text("Genres") },
+                    label = { Text(LocalStrings.current.ui.genres) },
                     colors = colors
                 )
             }
@@ -1033,7 +1033,7 @@ private fun LibrarySegmentedButtons(
                 selected = currentTab == FOR_YOU,
                 onClick = onForYouClick,
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = tabCount),
-                label = { Text("For you") },
+                label = { Text(LocalStrings.current.ui.forYou) },
                 colors = colors
             )
         }

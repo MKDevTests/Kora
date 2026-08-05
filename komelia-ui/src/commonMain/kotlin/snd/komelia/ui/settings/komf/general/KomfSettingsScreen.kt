@@ -9,6 +9,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class KomfSettingsScreen(
     private val integrationToggleEnabled: Boolean = true,
@@ -28,7 +29,7 @@ class KomfSettingsScreen(
         LaunchedEffect(Unit) { vm.initialize() }
 
         val komfConnectionError = vm.komfConnectionError.collectAsState().value
-        SettingsScreenContainer(title = "Komf Settings") {
+        SettingsScreenContainer(title = LocalStrings.current.ui.komfSettings) {
             when (vmState) {
 
                 LoadState.Loading, LoadState.Uninitialized -> LoadingMaxSizeIndicator()

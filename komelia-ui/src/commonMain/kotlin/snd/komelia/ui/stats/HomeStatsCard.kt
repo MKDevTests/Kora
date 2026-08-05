@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import snd.komelia.ui.LocalStrings
 
 /**
  * Compact reading stats summary, embedded near the top of the Home screen.
@@ -93,7 +94,7 @@ fun HomeStatsCard() {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Your reading",
+                    text = LocalStrings.current.ui.yourReading,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -108,7 +109,7 @@ fun HomeStatsCard() {
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = "Open stats",
+                contentDescription = LocalStrings.current.ui.openStats,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

@@ -70,6 +70,7 @@ import snd.komelia.ui.platform.WindowSizeClass.MEDIUM
 import snd.komelia.ui.readlist.BookReadListsContent
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.readlist.KomgaReadList
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -253,7 +254,7 @@ private fun FlowRowScope.BookMainInfo(
                     onClick = onDownloadDelete,
                     border = BorderStroke(2.dp, MaterialTheme.colorScheme.errorContainer)
                 ) {
-                    Text("Delete downloaded")
+                    Text(LocalStrings.current.ui.deleteDownloaded)
                 }
             }
         }
@@ -310,7 +311,7 @@ fun DownloadButton(
             }
         }
         Spacer(Modifier.width(3.dp))
-        Text("Download")
+        Text(LocalStrings.current.ui.download)
 
 
     }

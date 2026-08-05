@@ -19,6 +19,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.login.LoginScreen
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class AppServerManagementScreen : Screen {
 
@@ -32,7 +33,7 @@ class AppServerManagementScreen : Screen {
         val activeUrl by vm.activeServerUrl.collectAsState()
         val alternateUrls by vm.alternateServerUrls.collectAsState()
 
-        SettingsScreenContainer(title = "Manage Connected Servers") {
+        SettingsScreenContainer(title = LocalStrings.current.ui.manageConnectedServers) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 serverProfiles.forEach { profile ->
                     val isCurrent = profile.id == currentServer?.id
@@ -60,7 +61,7 @@ class AppServerManagementScreen : Screen {
                     onClick = { vm.addNewServer() },
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text("Connect to a new server")
+                    Text(LocalStrings.current.ui.connectToANewServer)
                 }
             }
         }
@@ -90,23 +91,23 @@ class AppServerManagementScreen : Screen {
             if (isCurrent) {
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("Current") },
+                    label = { Text(LocalStrings.current.ui.current2) },
                     enabled = false
                 )
             } else {
                 Button(onClick = onSwitch) {
-                    Text("Switch to this server")
+                    Text(LocalStrings.current.ui.switchToThisServer)
                 }
             }
 
             IconButton(onClick = { showDeleteConfirmation = true }) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete Server")
+                Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.deleteServer)
             }
         }
 
         if (showDeleteConfirmation) {
             ConfirmationDialog(
-                title = "Delete Server Profile",
+                title = LocalStrings.current.ui.deleteServerProfile,
                 body = "Are you sure you want to delete the profile for ${profile.name}? This will also delete all local settings and offline data associated with this server.",
                 buttonConfirm = "Delete",
                 buttonConfirmColor = MaterialTheme.colorScheme.error,
@@ -137,9 +138,9 @@ class AppServerManagementScreen : Screen {
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Alternate URLs for this server", style = MaterialTheme.typography.titleSmall)
+            Text(LocalStrings.current.ui.alternateUrlsForThisServer, style = MaterialTheme.typography.titleSmall)
             Text(
-                "Add other addresses that reach the SAME Komga server (e.g. a local IP at home and a Tailscale address remotely). Switching keeps this profile, so your stats, ratings and links stay unified.",
+                LocalStrings.current.ui.addOtherAddressesThatReach,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -148,7 +149,7 @@ class AppServerManagementScreen : Screen {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SuggestionChip(onClick = {}, enabled = false, label = { Text("Active") })
+                SuggestionChip(onClick = {}, enabled = false, label = { Text(LocalStrings.current.ui.active2) })
                 Text(
                     activeUrl,
                     style = MaterialTheme.typography.bodyMedium,
@@ -171,9 +172,9 @@ class AppServerManagementScreen : Screen {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = { pendingSwitch = url }) { Text("Switch") }
+                    TextButton(onClick = { pendingSwitch = url }) { Text(LocalStrings.current.ui.switch) }
                     IconButton(onClick = { onRemove(url) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Remove URL")
+                        Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.removeUrl)
                     }
                 }
             }
@@ -196,14 +197,14 @@ class AppServerManagementScreen : Screen {
                     },
                     enabled = newUrl.isNotBlank()
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add URL")
+                    Icon(Icons.Default.Add, contentDescription = LocalStrings.current.ui.addUrl)
                 }
             }
         }
 
         pendingSwitch?.let { target ->
             ConfirmationDialog(
-                title = "Switch active URL",
+                title = LocalStrings.current.ui.switchActiveUrl,
                 body = "Reconnect to the same server using:\n\n$target\n\nYour stats, ratings and links stay unified.",
                 buttonConfirm = "Switch",
                 onDialogConfirm = {

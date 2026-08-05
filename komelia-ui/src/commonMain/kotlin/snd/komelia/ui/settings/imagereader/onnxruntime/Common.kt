@@ -56,7 +56,7 @@ fun UpscaleModeSelector(
             }
         },
         onOptionChange = { onModeChange(it.value) },
-        label = { Text("OnnxRuntime upscale mode") },
+        label = { Text(LocalStrings.current.ui.onnxruntimeUpscaleMode) },
         inputFieldModifier = Modifier.fillMaxSize()
     )
     AnimatedVisibility(currentMode == UpscaleMode.USER_SPECIFIED_MODEL) {
@@ -73,7 +73,7 @@ fun UpscaleModeSelector(
                 value = currentModelPath?.toString() ?: "",
                 onValueChange = {},
                 enabled = false,
-                label = { Text("ONNX model path") },
+                label = { Text(LocalStrings.current.ui.onnxModelPath) },
                 readOnly = true,
                 modifier = Modifier.weight(7f),
             )
@@ -82,7 +82,7 @@ fun UpscaleModeSelector(
                 onClick = { launcher.launch() },
                 modifier = Modifier.padding(horizontal = 10.dp),
             ) {
-                Text("Browse")
+                Text(LocalStrings.current.ui.browse)
             }
         }
     }
@@ -113,7 +113,7 @@ fun TileSizeSelector(
                 )
             },
             onOptionChange = { onTileSizeChange(it.value) },
-            label = { Text("Tile size") },
+            label = { Text(LocalStrings.current.ui.tileSize) },
             modifier = Modifier.weight(1f),
             inputFieldModifier = Modifier.fillMaxSize()
         )

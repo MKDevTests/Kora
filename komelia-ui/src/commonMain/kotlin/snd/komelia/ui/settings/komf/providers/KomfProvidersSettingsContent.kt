@@ -208,7 +208,7 @@ private fun AddNewProviderButton(
                 .cursorForHand()
                 .menuAnchor(PrimaryNotEditable)
         ) {
-            Text("Add provider")
+            Text(LocalStrings.current.ui.addProvider)
         }
 
         val scrollState = rememberScrollState()
@@ -261,7 +261,7 @@ private fun CommonSettingsContent(
             },
             options = remember { KomfNameMatchingMode.entries.map { LabeledEntry(it, it.name) } },
             onOptionChange = { onNameMatchingModeChange(it.value) },
-            label = { Text("Name matching mode") },
+            label = { Text(LocalStrings.current.ui.nameMatchingMode) },
             inputFieldModifier = Modifier.fillMaxWidth()
         )
 
@@ -269,17 +269,17 @@ private fun CommonSettingsContent(
             currentValue = comicVineClientId ?: "",
             onValueSave = onComicVineClientIdSave,
             useEditButton = true,
-            label = { Text("ComicVine client id") }
+            label = { Text(LocalStrings.current.ui.comicvineClientId) }
         )
         SavableTextField(
             currentValue = malClientId ?: "",
             onValueSave = onMalClientIdSave,
             useEditButton = true,
-            label = { Text("MyAnimeList client id") }
+            label = { Text(LocalStrings.current.ui.myanimelistClientId) }
         )
 
         HorizontalDivider()
-        Text("MangaBaka Offline Database", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.mangabakaOfflineDatabase, style = MaterialTheme.typography.titleLarge)
         Column {
             if (mangaBakaDbMetadata != null) {
                 val downloadDate = remember(mangaBakaDbMetadata) {
@@ -336,7 +336,7 @@ private fun MangaBakaDbDownloadContent(
         modifier = Modifier.widthIn(max = 600.dp),
         header = {
             Column(modifier = Modifier.padding(10.dp)) {
-                Text("Downloading MangaBaka database", style = MaterialTheme.typography.titleLarge)
+                Text(LocalStrings.current.ui.downloadingMangabakaDatabase, style = MaterialTheme.typography.titleLarge)
                 HorizontalDivider(Modifier.padding(top = 10.dp))
             }
         },
@@ -344,7 +344,7 @@ private fun MangaBakaDbDownloadContent(
             val errorText = error
             when {
                 errorText != null -> Text(errorText, Modifier.padding(20.dp))
-                completed -> Text("Done", Modifier.padding(20.dp))
+                completed -> Text(LocalStrings.current.ui.done, Modifier.padding(20.dp))
                 else -> UpdateProgressContent(
                     progress.total,
                     progress.completed,
@@ -359,7 +359,7 @@ private fun MangaBakaDbDownloadContent(
                         onClick = onDismiss,
                         modifier = Modifier.cursorForHand(),
                         content = {
-                            Text("Close")
+                            Text(LocalStrings.current.ui.close)
                         }
                     )
 
@@ -368,7 +368,7 @@ private fun MangaBakaDbDownloadContent(
                         onClick = onDismiss,
                         modifier = Modifier.cursorForHand(),
                         content = {
-                            Text("Close")
+                            Text(LocalStrings.current.ui.close)
                         }
                     )
                 }
@@ -444,48 +444,48 @@ private class SeriesMetadataTab(private val state: ProviderConfigState) : Dialog
             SwitchWithLabel(
                 checked = state.seriesAgeRating,
                 onCheckedChange = state::onSeriesAgeRatingChange,
-                label = { Text("Age Rating") }
+                label = { Text(LocalStrings.current.ui.ageRating) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesAuthors,
                 onCheckedChange = state::onSeriesAuthorsChange,
-                label = { Text("Authors") }
+                label = { Text(LocalStrings.current.ui.authors) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesBookCount,
                 onCheckedChange = state::onSeriesBookCountChange,
-                label = { Text("Book Count") }
+                label = { Text(LocalStrings.current.ui.bookCount) }
             )
             HorizontalDivider()
             SwitchWithLabel(
                 checked = state.seriesCover,
                 onCheckedChange = state::onSeriesCoverChange,
-                label = { Text("Cover") }
+                label = { Text(LocalStrings.current.ui.cover) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesGenres,
                 onCheckedChange = state::onSeriesGenresChange,
-                label = { Text("Genres") }
+                label = { Text(LocalStrings.current.ui.genres) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesLinks,
                 onCheckedChange = state::onSeriesLinksChange,
-                label = { Text("Links") }
+                label = { Text(LocalStrings.current.ui.links) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesPublisher,
                 onCheckedChange = state::onSeriesPublisherChange,
-                label = { Text("Publisher") }
+                label = { Text(LocalStrings.current.ui.publisher) }
             )
             HorizontalDivider()
 
@@ -493,8 +493,8 @@ private class SeriesMetadataTab(private val state: ProviderConfigState) : Dialog
                 SwitchWithLabel(
                     checked = state.seriesOriginalPublisher,
                     onCheckedChange = state::onSeriesOriginalPublisherChange,
-                    label = { Text("Use Original Publisher") },
-                    supportingText = { Text("Prefer original publisher instead of localizing publisher") }
+                    label = { Text(LocalStrings.current.ui.useOriginalPublisher) },
+                    supportingText = { Text(LocalStrings.current.ui.preferOriginalPublisherInsteadOf) }
                 )
                 HorizontalDivider()
             }
@@ -502,35 +502,35 @@ private class SeriesMetadataTab(private val state: ProviderConfigState) : Dialog
             SwitchWithLabel(
                 checked = state.seriesReleaseDate,
                 onCheckedChange = state::onSeriesReleaseDateChange,
-                label = { Text("Release date") }
+                label = { Text(LocalStrings.current.ui.releaseDate) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesStatus,
                 onCheckedChange = state::onSeriesStatusChange,
-                label = { Text("Status") }
+                label = { Text(LocalStrings.current.ui.status) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesSummary,
                 onCheckedChange = state::onSeriesSummaryChange,
-                label = { Text("Summary") }
+                label = { Text(LocalStrings.current.ui.summary) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesTags,
                 onCheckedChange = state::onSeriesTagsChange,
-                label = { Text("Tags") }
+                label = { Text(LocalStrings.current.ui.tags) }
             )
             HorizontalDivider()
 
             SwitchWithLabel(
                 checked = state.seriesTitle,
                 onCheckedChange = state::onSeriesTitleChange,
-                label = { Text("Title") }
+                label = { Text(LocalStrings.current.ui.title) }
             )
         }
     }
@@ -545,7 +545,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
             SwitchWithLabel(
                 checked = state.bookEnabled,
                 onCheckedChange = state::onBookEnabledChange,
-                label = { Text("Enabled") }
+                label = { Text(LocalStrings.current.ui.enabled) }
             )
             HorizontalDivider()
 
@@ -553,7 +553,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookAuthors,
                 onCheckedChange = state::onBookAuthorsChange,
-                label = { Text("Authors") }
+                label = { Text(LocalStrings.current.ui.authors) }
             )
             HorizontalDivider()
 
@@ -561,7 +561,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookCover,
                 onCheckedChange = state::onBookCoverChange,
-                label = { Text("Cover") }
+                label = { Text(LocalStrings.current.ui.cover) }
             )
             HorizontalDivider()
 
@@ -569,7 +569,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookIsbn,
                 onCheckedChange = state::onBookIsbnChange,
-                label = { Text("ISBN") }
+                label = { Text(LocalStrings.current.ui.isbn) }
             )
             HorizontalDivider()
 
@@ -577,7 +577,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookLinks,
                 onCheckedChange = state::onBookLinksChange,
-                label = { Text("Links") }
+                label = { Text(LocalStrings.current.ui.links) }
             )
             HorizontalDivider()
 
@@ -585,7 +585,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookNumber,
                 onCheckedChange = state::onBookNumberChange,
-                label = { Text("Number") }
+                label = { Text(LocalStrings.current.ui.number) }
             )
             HorizontalDivider()
 
@@ -593,7 +593,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookReleaseDate,
                 onCheckedChange = state::onBookReleaseDateChange,
-                label = { Text("Release Date") }
+                label = { Text(LocalStrings.current.ui.releaseDate2) }
             )
             HorizontalDivider()
 
@@ -601,7 +601,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookSummary,
                 onCheckedChange = state::onBookSummaryChange,
-                label = { Text("Summary") }
+                label = { Text(LocalStrings.current.ui.summary) }
             )
             HorizontalDivider()
 
@@ -609,7 +609,7 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
                 enabled = state.bookEnabled,
                 checked = state.bookTags,
                 onCheckedChange = state::onBookTagsChange,
-                label = { Text("Tags") }
+                label = { Text(LocalStrings.current.ui.tags) }
             )
         }
     }
@@ -634,7 +634,7 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
                             KomfMediaType.entries.map { LabeledEntry(it, it.name) }
                 },
                 onOptionChange = { state.onMediaTypeChange(it.value) },
-                label = { Text("Media Type") },
+                label = { Text(LocalStrings.current.ui.mediaType) },
                 inputFieldModifier = Modifier.fillMaxWidth()
             )
 
@@ -650,7 +650,7 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
                             KomfNameMatchingMode.entries.map { LabeledEntry(it, it.name) }
                 },
                 onOptionChange = { state.onNameMatchingModeChange(it.value) },
-                label = { Text("Name matching mode") },
+                label = { Text(LocalStrings.current.ui.nameMatchingMode) },
                 inputFieldModifier = Modifier.fillMaxWidth()
             )
 
@@ -658,16 +658,16 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
                 selectedOptions = remember(state.authorRoles) { state.authorRoles.map { LabeledEntry(it, it.name) } },
                 options = remember { KomfAuthorRole.entries.map { LabeledEntry(it, it.name) } },
                 onOptionSelect = { state.onAuthorSelect(it.value) },
-                label = { Text("Author Roles") },
-                placeholder = "Unset",
+                label = { Text(LocalStrings.current.ui.authorRoles) },
+                placeholder = LocalStrings.current.ui.unset,
                 inputFieldModifier = Modifier.fillMaxWidth()
             )
             DropdownMultiChoiceMenu(
                 selectedOptions = remember(state.artistRoles) { state.artistRoles.map { LabeledEntry(it, it.name) } },
                 options = remember { KomfAuthorRole.entries.map { LabeledEntry(it, it.name) } },
                 onOptionSelect = { state.onArtistSelect(it.value) },
-                label = { Text("Artist Roles") },
-                placeholder = "Unset",
+                label = { Text(LocalStrings.current.ui.artistRoles) },
+                placeholder = LocalStrings.current.ui.unset,
                 inputFieldModifier = Modifier.fillMaxWidth()
             )
             when (state) {
@@ -687,14 +687,14 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
                 currentValue = remember(state.tagScoreThreshold) { state.tagScoreThreshold.toString() },
                 onValueSave = { state.onTagScoreThresholdChange(it.toInt()) },
                 valueChangePolicy = { it.toIntOrNull() != null },
-                label = { Text("Tag score threshold") }
+                label = { Text(LocalStrings.current.ui.tagScoreThreshold) }
             )
 
             SavableTextField(
                 currentValue = remember(state.tagSizeLimit) { state.tagSizeLimit.toString() },
                 onValueSave = { state.onTagSizeLimitChange(it.toInt()) },
                 valueChangePolicy = { it.toIntOrNull() != null },
-                label = { Text("Tag size limit") }
+                label = { Text(LocalStrings.current.ui.tagSizeLimit) }
             )
         }
     }
@@ -703,7 +703,7 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
     private fun MangaDexProviderSettings(state: MangaDexConfigState) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ChipFieldWithSuggestions(
-                label = { Text("Alternative title languages (ISO 639)") },
+                label = { Text(LocalStrings.current.ui.alternativeTitleLanguagesIso639) },
                 values = state.coverLanguages,
                 onValuesChange = state::onCoverLanguagesChange,
                 suggestions = komfLanguageTagsSuggestions
@@ -712,8 +712,8 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
                 selectedOptions = state.links.map { LabeledEntry(it, it.name) },
                 options = MangaDexLink.entries.map { LabeledEntry(it, it.name) },
                 onOptionSelect = { state.onLinkSelect(it.value) },
-                label = { Text("Include links") },
-                placeholder = "All",
+                label = { Text(LocalStrings.current.ui.includeLinks) },
+                placeholder = LocalStrings.current.ui.all,
                 inputFieldModifier = Modifier.fillMaxWidth()
             )
         }
@@ -734,7 +734,7 @@ private class ProviderSettingsTab(private val state: ProviderConfigState) : Dial
                 MangaBakaMode.entries.map { LabeledEntry(it, it.name) }
             },
             onOptionChange = { state.onModeChange(it.value) },
-            label = { Text("Datasource type") },
+            label = { Text(LocalStrings.current.ui.datasourceType) },
             inputFieldModifier = Modifier.fillMaxWidth()
         )
     }

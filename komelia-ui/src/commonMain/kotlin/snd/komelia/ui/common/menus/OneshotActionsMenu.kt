@@ -36,6 +36,7 @@ import snd.komelia.ui.dialogs.komf.reset.KomfResetSeriesMetadataDialog
 import snd.komelia.ui.dialogs.oneshot.OneshotEditDialog
 import snd.komelia.ui.dialogs.readlistadd.AddToReadListDialog
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun OneshotActionsMenu(
@@ -53,7 +54,7 @@ fun OneshotActionsMenu(
     var showDeleteDownloadedDialog by remember { mutableStateOf(false) }
     if (showDeleteDialog) {
         ConfirmationDialog(
-            title = "Delete Book",
+            title = LocalStrings.current.ui.deleteBook,
             body = "The Book ${book.metadata.title} will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
             confirmText = "Yes, delete book \"${book.metadata.title}\"",
             onDialogConfirm = {
@@ -70,7 +71,7 @@ fun OneshotActionsMenu(
     }
     if (showDeleteDownloadedDialog) {
         ConfirmationDialog(
-            title = "Delete downloaded Book",
+            title = LocalStrings.current.ui.deleteDownloadedBook,
             body = "The Book ${book.metadata.title} will be removed from this device only",
             onDialogConfirm = {
                 actions.deleteDownloaded(book)
@@ -151,7 +152,7 @@ fun OneshotActionsMenu(
     ) {
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Analyze", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.analyze, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = {
                     actions.analyze(book)
@@ -160,7 +161,7 @@ fun OneshotActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Refresh metadata", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.refreshMetadata, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = {
                     actions.refreshMetadata(book)
@@ -169,12 +170,12 @@ fun OneshotActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Add to read list", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.addToReadList, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Add, null) },
                 onClick = { showAddToReadListDialog = true },
             )
             DropdownMenuItem(
-                text = { Text("Add to collection", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.addToCollection, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Add, null) },
                 onClick = { showAddToCollectionDialog = true },
             )
@@ -185,7 +186,7 @@ fun OneshotActionsMenu(
 
         if (!isRead) {
             DropdownMenuItem(
-                text = { Text("Mark as read", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.markAsRead, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Label, null) },
                 onClick = {
                     actions.markAsRead(book)
@@ -196,7 +197,7 @@ fun OneshotActionsMenu(
 
         if (!isUnread) {
             DropdownMenuItem(
-                text = { Text("Mark as unread", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.markAsUnread, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.LabelOff, null) },
                 onClick = {
                     actions.markAsUnread(book)
@@ -207,7 +208,7 @@ fun OneshotActionsMenu(
 
         if (isAdmin && !isOffline && showEditOption) {
             DropdownMenuItem(
-                text = { Text("Edit", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.edit, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Edit, null) },
                 onClick = { showEditDialog = true },
             )
@@ -216,13 +217,13 @@ fun OneshotActionsMenu(
         val komfIntegration = LocalKomfIntegration.current.collectAsState(false)
         if (komfIntegration.value) {
             DropdownMenuItem(
-                text = { Text("Identify (Komf)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.identifyKomf, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = { showKomfDialog = true },
             )
 
             DropdownMenuItem(
-                text = { Text("Reset Metadata (Komf)", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.resetMetadataKomf, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = { showKomfResetDialog = true },
             )
@@ -230,7 +231,7 @@ fun OneshotActionsMenu(
 
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Delete", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.delete, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
                 onClick = {
                     showDeleteDialog = true
@@ -244,7 +245,7 @@ fun OneshotActionsMenu(
 
         if (book.downloaded) {
             DropdownMenuItem(
-                text = { Text("Delete downloaded", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteDownloaded, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Delete, null) },
                 onClick = { showDeleteDownloadedDialog = true },
                 colors = MenuDefaults.itemColors(

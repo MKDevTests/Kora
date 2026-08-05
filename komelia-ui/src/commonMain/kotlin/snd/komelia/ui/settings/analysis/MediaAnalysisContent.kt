@@ -42,7 +42,7 @@ fun MediaAnalysisContent(
         )
 
         if (books.isEmpty()) {
-            Text("Nothing to show")
+            Text(LocalStrings.current.ui.nothingToShow)
         } else {
             books.forEach {
                 BookAnalysisCard(

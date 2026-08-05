@@ -20,6 +20,7 @@ import snd.komelia.ui.StateHolder
 import snd.komelia.ui.common.components.LockableChipTextField
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class SharingTab(
     private val vm: SeriesBulkEditDialogViewModel,
@@ -52,14 +53,14 @@ private fun SharingContent(
         Row(Modifier.border(Dp.Hairline, warningColor).padding(20.dp)) {
             Icon(Icons.Default.PriorityHigh, null, tint = warningColor)
             Text(
-                text = "You are editing tags for multiple series. This will override existing tags of each series.",
+                text = LocalStrings.current.ui.youAreEditingTagsFor,
                 color = warningColor
             )
         }
 
         LockableChipTextField(
             values = labels,
-            label = "Labels",
+            label = LocalStrings.current.ui.labels,
             lock = labelsLock
         )
     }

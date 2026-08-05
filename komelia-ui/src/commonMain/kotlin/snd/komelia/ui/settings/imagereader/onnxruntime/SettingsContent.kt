@@ -27,6 +27,7 @@ import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.UpdateProgress
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -77,7 +78,7 @@ fun OnnxRuntimeSettingsContent(
             Text("ONNX Runtime", style = MaterialTheme.typography.titleLarge)
             FilledTonalButton(
                 onClick = { showOrtInstallDialog = true },
-            ) { Text("Download ONNX Runtime") }
+            ) { Text(LocalStrings.current.ui.downloadOnnxRuntime) }
 
             if (loadError != null)
                 Text(
@@ -102,12 +103,12 @@ fun OnnxRuntimeSettingsContent(
                     onClick = { showOrtInstallDialog = true },
                     shape = RoundedCornerShape(5.dp),
                     modifier = Modifier.cursorForHand()
-                ) { Text("Update ONNX Runtime", maxLines = 1) }
+                ) { Text(LocalStrings.current.ui.updateOnnxRuntime, maxLines = 1) }
 
-                Text("Update or download another version of ONNX Runtime", style = MaterialTheme.typography.labelLarge)
+                Text(LocalStrings.current.ui.updateOrDownloadAnotherVersion, style = MaterialTheme.typography.labelLarge)
             }
 
-            Text("Upscaler Settings", style = MaterialTheme.typography.titleMedium)
+            Text(LocalStrings.current.ui.upscalerSettings, style = MaterialTheme.typography.titleMedium)
             UpscalerSettings(
                 upscaleMode = upscaleMode,
                 onModeChange = onUpscaleModeChange,
@@ -120,7 +121,7 @@ fun OnnxRuntimeSettingsContent(
             )
             HorizontalDivider()
         }
-        Text("Panel Detection", style = MaterialTheme.typography.titleMedium)
+        Text(LocalStrings.current.ui.panelDetection, style = MaterialTheme.typography.titleMedium)
         PanelDetectionSettings(
             isDownloaded = panelModelIsDownloaded,
             currentUrl = panelDetectionUrl,

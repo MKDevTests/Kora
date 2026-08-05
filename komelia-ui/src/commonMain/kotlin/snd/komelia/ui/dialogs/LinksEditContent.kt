@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.LockIcon
 import snd.komelia.ui.common.components.withTextFieldNavigation
 import snd.komga.client.common.KomgaWebLink
+import snd.komelia.ui.LocalStrings
 
 
 @Composable
@@ -48,7 +49,7 @@ fun LinksEditContent(
                     TextField(
                         value = link.label,
                         onValueChange = { onLinkChange(index, link.copy(label = it)) },
-                        label = { Text("Label") },
+                        label = { Text(LocalStrings.current.ui.label) },
                         maxLines = 2,
                         modifier = Modifier.widthIn(min = 100.dp).withTextFieldNavigation()
                     )
@@ -56,7 +57,7 @@ fun LinksEditContent(
                     TextField(
                         value = link.url,
                         onValueChange = { onLinkChange(index, link.copy(url = it)) },
-                        label = { Text("URL") },
+                        label = { Text(LocalStrings.current.ui.url) },
                         maxLines = 3,
                         modifier = Modifier.fillMaxWidth().withTextFieldNavigation()
                     )

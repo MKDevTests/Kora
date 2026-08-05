@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import snd.komelia.ui.LocalSeriesRatingsRepository
 import snd.komelia.ui.common.components.RatingStars
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 /**
  * Compact row shown on the series detail screen: a label + the
@@ -40,7 +41,7 @@ fun SeriesRatingRow(seriesId: KomgaSeriesId) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "Your rating",
+            text = LocalStrings.current.ui.yourRating,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

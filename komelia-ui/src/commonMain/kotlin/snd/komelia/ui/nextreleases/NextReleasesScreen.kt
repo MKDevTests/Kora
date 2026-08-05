@@ -63,6 +63,7 @@ import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.series.SeriesScreen
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
+import snd.komelia.ui.LocalStrings
 
 private val logger = KotlinLogging.logger {}
 
@@ -93,11 +94,11 @@ class NextReleasesScreen : Screen {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { navigator.pop() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.back)
                 }
                 Icon(Icons.Rounded.Event, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
                 Text(
-                    "Prochaines sorties",
+                    LocalStrings.current.ui.prochainesSorties,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 12.dp),
@@ -124,7 +125,7 @@ class NextReleasesScreen : Screen {
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { navigator.push(MaintenanceScreen()) }) { Text("Gérer") }
+                        TextButton(onClick = { navigator.push(MaintenanceScreen()) }) { Text(LocalStrings.current.ui.gRer) }
                     }
                 }
             }
@@ -139,7 +140,7 @@ class NextReleasesScreen : Screen {
                         FilterChip(
                             selected = selectedLibraryIds.isEmpty(),
                             onClick = { selectedLibraryIds = emptySet() },
-                            label = { Text("Toutes") },
+                            label = { Text(LocalStrings.current.ui.toutes2) },
                         )
                     }
                     items(libraries) { library ->
@@ -345,7 +346,7 @@ fun NextReleasesHomeCard() {
             )
             Column(Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Prochaines sorties",
+                    text = LocalStrings.current.ui.prochainesSorties2,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

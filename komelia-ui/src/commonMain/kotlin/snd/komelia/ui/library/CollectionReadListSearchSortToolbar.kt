@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun CollectionReadListSearchSortToolbar(
@@ -43,7 +44,7 @@ fun CollectionReadListSearchSortToolbar(
             trailingIcon = if (searchQuery.isNotEmpty()) {
                 {
                     IconButton(onClick = { onSearchQueryChange("") }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                        Icon(Icons.Default.Close, contentDescription = LocalStrings.current.ui.clear)
                     }
                 }
             } else null,

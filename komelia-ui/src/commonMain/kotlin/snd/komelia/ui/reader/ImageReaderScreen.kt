@@ -55,6 +55,7 @@ import snd.komga.client.book.MediaProfile.DIVINA
 import snd.komga.client.book.MediaProfile.EPUB
 import snd.komga.client.book.MediaProfile.PDF
 import kotlin.jvm.Transient
+import snd.komelia.ui.LocalStrings
 
 fun readerScreen(
     book: KomeliaBook,
@@ -262,15 +263,15 @@ private fun ServerUnavailableDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Server Unavailable") },
-        text = { Text("Could not connect to the server. Would you like to switch to offline mode?") },
+        title = { Text(LocalStrings.current.ui.serverUnavailable) },
+        text = { Text(LocalStrings.current.ui.couldNotConnectToThe) },
         confirmButton = {
-            TextButton(onClick = onGoOffline) { Text("Go Offline") }
+            TextButton(onClick = onGoOffline) { Text(LocalStrings.current.ui.goOffline) }
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                TextButton(onClick = onRetry) { Text("Retry") }
+                TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.cancel) }
+                TextButton(onClick = onRetry) { Text(LocalStrings.current.ui.retry) }
             }
         }
     )

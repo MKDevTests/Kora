@@ -37,6 +37,7 @@ import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komelia.ui.settings.imagereader.onnxruntime.DownloadDialog
+import snd.komelia.ui.LocalStrings
 
 class TranscriptionSettingsScreen : Screen {
 
@@ -46,7 +47,7 @@ class TranscriptionSettingsScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getTranscriptionSettingsViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer(title = "Transcription Settings") {
+        SettingsScreenContainer(title = LocalStrings.current.ui.transcriptionSettings) {
             when (val result = vm.state.collectAsState().value) {
                 is LoadState.Error -> ErrorContent(result.exception)
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
@@ -75,7 +76,7 @@ private fun TranscriptionSettingsContent(vm: TranscriptionSettingsViewModel) {
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Speech Engine", style = MaterialTheme.typography.titleMedium)
+        Text(LocalStrings.current.ui.speechEngine, style = MaterialTheme.typography.titleMedium)
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SegmentedButton(
@@ -98,7 +99,7 @@ private fun TranscriptionSettingsContent(vm: TranscriptionSettingsViewModel) {
 
         if (engine == TranscriptionEngineType.ML_KIT) {
             Text(
-                "Uses Google's on-device model. Downloads automatically when first used.",
+                LocalStrings.current.ui.usesGoogleSOnDevice,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -107,7 +108,7 @@ private fun TranscriptionSettingsContent(vm: TranscriptionSettingsViewModel) {
         if (engine == TranscriptionEngineType.WHISPER) {
             HorizontalDivider()
 
-            Text("Whisper Model", style = MaterialTheme.typography.titleSmall)
+            Text(LocalStrings.current.ui.whisperModel, style = MaterialTheme.typography.titleSmall)
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -115,11 +116,11 @@ private fun TranscriptionSettingsContent(vm: TranscriptionSettingsViewModel) {
             ) {
                 Text("ggml-base-q5_0 (~75 MB)", modifier = Modifier.weight(1f))
                 if (isWhisperModelDownloaded) {
-                    Icon(Icons.Default.Check, contentDescription = "Downloaded", tint = Color.Green)
-                    Text("Downloaded", style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.Default.Check, contentDescription = LocalStrings.current.ui.downloaded, tint = Color.Green)
+                    Text(LocalStrings.current.ui.downloaded, style = MaterialTheme.typography.bodySmall)
                 } else {
                     Text(
-                        "Not downloaded",
+                        LocalStrings.current.ui.notDownloaded,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -127,13 +128,13 @@ private fun TranscriptionSettingsContent(vm: TranscriptionSettingsViewModel) {
             }
 
             Button(onClick = { showDownloadDialog = true }) {
-                if (isWhisperModelDownloaded) Text("Re-download Model")
-                else Text("Download Model")
+                if (isWhisperModelDownloaded) Text(LocalStrings.current.ui.reDownloadModel)
+                else Text(LocalStrings.current.ui.downloadModel)
             }
 
             HorizontalDivider()
 
-            Text("Language", style = MaterialTheme.typography.titleSmall)
+            Text(LocalStrings.current.ui.language, style = MaterialTheme.typography.titleSmall)
 
             val languageOptions = listOf(
                 null to "Auto (detect)",
@@ -162,7 +163,7 @@ private fun TranscriptionSettingsContent(vm: TranscriptionSettingsViewModel) {
             HorizontalDivider()
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("About Whisper", style = MaterialTheme.typography.labelLarge)
+                    Text(LocalStrings.current.ui.aboutWhisper, style = MaterialTheme.typography.labelLarge)
                     Text(
                         "Whisper provides accurate word-level timestamps but requires a one-time model download (~75 MB). " +
                             "ML Kit uses Google's streaming model that downloads automatically.",

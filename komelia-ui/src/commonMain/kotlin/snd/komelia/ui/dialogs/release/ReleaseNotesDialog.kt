@@ -18,6 +18,7 @@ import com.mohamedrejeb.richeditor.ui.material3.RichText
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.AppRelease
+import snd.komelia.ui.LocalStrings
 
 /**
  * "What's new in this release" modal shown once per upgrade on first
@@ -51,7 +52,7 @@ private fun HeaderContent() {
         modifier = Modifier.padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("What's new", style = MaterialTheme.typography.headlineSmall)
+        Text(LocalStrings.current.ui.whatSNew, style = MaterialTheme.typography.headlineSmall)
         HorizontalDivider()
     }
 }
@@ -88,7 +89,7 @@ private fun ControlButtons(onDismiss: () -> Unit) {
             onClick = onDismiss,
             modifier = Modifier.cursorForHand(),
         ) {
-            Text("Got it")
+            Text(LocalStrings.current.ui.gotIt)
         }
     }
 }

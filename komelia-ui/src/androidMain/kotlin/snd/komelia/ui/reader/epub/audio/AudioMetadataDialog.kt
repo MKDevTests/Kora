@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AudioMetadataDialog(
@@ -61,11 +62,11 @@ fun AudioMetadataDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Audio Metadata",
+                        text = LocalStrings.current.ui.audioMetadata,
                         style = MaterialTheme.typography.titleLarge
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = LocalStrings.current.ui.close)
                     }
                 }
 
@@ -83,7 +84,7 @@ fun AudioMetadataDialog(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Failed to load metadata")
+                            Text(LocalStrings.current.ui.failedToLoadMetadata)
                         }
                     } else {
                         LazyColumn(
@@ -93,7 +94,7 @@ fun AudioMetadataDialog(
                         ) {
                             item {
                                 Text(
-                                    text = "Tags",
+                                    text = LocalStrings.current.ui.tags,
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(vertical = 8.dp),
                                     color = MaterialTheme.colorScheme.primary
@@ -117,7 +118,7 @@ fun AudioMetadataDialog(
                                 item {
                                     HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                                     Text(
-                                        text = "Chapters",
+                                        text = LocalStrings.current.ui.chapters,
                                         style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.padding(vertical = 8.dp),
                                         color = MaterialTheme.colorScheme.primary

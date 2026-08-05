@@ -42,6 +42,7 @@ import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.platform.cursorForHand
 import snd.komga.client.book.MediaProfile.EPUB
 import snd.webview.webviewIsAvailable
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun readIsSupported(book: KomeliaBook) = book.media.mediaProfile != EPUB || webviewIsAvailable()
@@ -100,7 +101,7 @@ private fun ReadButton(
             contentDescription = null,
         )
         Spacer(Modifier.width(10.dp))
-        Text("Read")
+        Text(LocalStrings.current.ui.read)
     }
 }
 
@@ -138,7 +139,7 @@ private fun IncognitoDropDown(
             modifier = Modifier.width(150.dp)
         ) {
             DropdownMenuItem(
-                text = { Text("Read incognito") },
+                text = { Text(LocalStrings.current.ui.readIncognito) },
                 onClick = { onIncognitoRead() },
                 modifier = Modifier.cursorForHand()
             )

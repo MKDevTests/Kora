@@ -35,6 +35,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
 import snd.komga.client.readlist.KomgaReadList
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AddToReadListDialog(
@@ -66,7 +67,7 @@ private fun Header(onDismissRequest: () -> Unit) {
             modifier = Modifier.padding(horizontal = 15.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Add to read list", style = MaterialTheme.typography.titleLarge)
+            Text(LocalStrings.current.ui.addToReadList, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onDismissRequest) { Icon(Icons.Default.Close, null) }
         }
@@ -93,11 +94,11 @@ private fun DialogContent(
             TextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Search or create read list") },
+                label = { Text(LocalStrings.current.ui.searchOrCreateReadList) },
                 supportingText = {
                     if (readListExistsForQuery.value)
                         Text(
-                            "A read list with this name already exists",
+                            LocalStrings.current.ui.aReadListWithThis,
                             color = MaterialTheme.colorScheme.error
                         )
                 },
@@ -106,7 +107,7 @@ private fun DialogContent(
             FilledTonalButton(
                 onClick = { coroutineScope.launch { onCreateNewReadList(query) } },
                 enabled = query.isNotBlank() && !readListExistsForQuery.value,
-                content = { Text("Create") },
+                content = { Text(LocalStrings.current.ui.create) },
             )
         }
 
@@ -147,9 +148,9 @@ private fun ReadListEntry(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("${readList.bookIds.size} books", style = MaterialTheme.typography.labelLarge)
+            Text(LocalStrings.current.counts.booksCount(readList.bookIds.size), style = MaterialTheme.typography.labelLarge)
             if (alreadyContainsSeries) Text(
-                "already contains this book",
+                LocalStrings.current.ui.alreadyContainsThisBook,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.tertiary
             )

@@ -51,6 +51,7 @@ import snd.komelia.ui.search.SearchResults
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AppBar(
@@ -130,7 +131,7 @@ fun AppBar(
                 modifier = Modifier.align(Alignment.End).padding(end = 10.dp),
                 border = BorderStroke(2.dp, MaterialTheme.colorScheme.errorContainer)
             ) {
-                Text("Offline")
+                Text(LocalStrings.current.ui.offline)
             }
             if (showConfirmationDialog) {
                 ConfirmationDialog(

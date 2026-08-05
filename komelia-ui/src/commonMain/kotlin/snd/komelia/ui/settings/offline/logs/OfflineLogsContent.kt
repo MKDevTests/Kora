@@ -31,6 +31,7 @@ import snd.komelia.ui.common.components.AppFilterChipDefaults
 import snd.komelia.ui.common.components.Pagination
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.settings.offline.logs.OfflineLogsState.TaskTab
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun OfflineLogsContent(
@@ -53,7 +54,7 @@ fun OfflineLogsContent(
         )
 
         if (logs.isEmpty()) {
-            Text("Nothing to show")
+            Text(LocalStrings.current.ui.nothingToShow)
         } else {
             LogsContent(logs)
 
@@ -84,14 +85,14 @@ private fun StatusFilters(
         FilterChip(
             selected = selectedTab == TaskTab.ERROR,
             onClick = { onTabSelect(TaskTab.ERROR) },
-            label = { Text("Errors") },
+            label = { Text(LocalStrings.current.ui.errors) },
             colors = AppFilterChipDefaults.filterChipColors(),
             border = null
         )
         FilterChip(
             selected = selectedTab == TaskTab.INFO,
             onClick = { onTabSelect(TaskTab.INFO) },
-            label = { Text("Info") },
+            label = { Text(LocalStrings.current.ui.info) },
             colors = AppFilterChipDefaults.filterChipColors(),
             border = null
         )
@@ -99,7 +100,7 @@ private fun StatusFilters(
         var showDeleteDialog by remember { mutableStateOf(false) }
 
         Spacer(Modifier.weight(1f))
-        FilledTonalButton(onClick = { showDeleteDialog = true }) { Text("Delete all") }
+        FilledTonalButton(onClick = { showDeleteDialog = true }) { Text(LocalStrings.current.ui.deleteAll) }
 
         if (showDeleteDialog) {
             ConfirmationDialog(

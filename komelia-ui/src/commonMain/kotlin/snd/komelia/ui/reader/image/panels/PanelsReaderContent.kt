@@ -55,6 +55,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
 import snd.komelia.ui.reader.image.common.AdaptiveBackground
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BoxScope.PanelsReaderContent(
@@ -227,7 +228,7 @@ private fun TransitionPage(page: TransitionPage) {
         when (page) {
             is BookEnd -> {
                 Column {
-                    Text("Finished:", style = MaterialTheme.typography.bodyMedium)
+                    Text(LocalStrings.current.ui.finished, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         page.currentBook.metadata.title,
                         style = MaterialTheme.typography.titleLarge
@@ -237,14 +238,14 @@ private fun TransitionPage(page: TransitionPage) {
 
                 if (page.nextBook != null) {
                     Column {
-                        Text("Next:", style = MaterialTheme.typography.bodyMedium)
+                        Text(LocalStrings.current.ui.next2, style = MaterialTheme.typography.bodyMedium)
                         Text(
                             page.nextBook.metadata.title,
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
                 } else {
-                    Text("There's no next book")
+                    Text(LocalStrings.current.ui.thereSNoNextBook)
                 }
 
             }
@@ -252,19 +253,19 @@ private fun TransitionPage(page: TransitionPage) {
             is BookStart -> {
                 if (page.previousBook != null) {
                     Column {
-                        Text("Previous:", style = MaterialTheme.typography.bodyMedium)
+                        Text(LocalStrings.current.ui.previous2, style = MaterialTheme.typography.bodyMedium)
                         Text(
                             page.previousBook.metadata.title,
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
                 } else {
-                    Text("There's no previous book")
+                    Text(LocalStrings.current.ui.thereSNoPreviousBook)
 
                 }
                 Spacer(Modifier.size(50.dp))
                 Column {
-                    Text("Current:", style = MaterialTheme.typography.bodyMedium)
+                    Text(LocalStrings.current.ui.current, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         page.currentBook.metadata.title,
                         style = MaterialTheme.typography.titleLarge

@@ -113,6 +113,7 @@ import snd.komga.client.series.KomgaSeries
 import snd.komga.client.sse.KomgaEvent.ThumbnailBookEvent
 import snd.komga.client.sse.KomgaEvent.ThumbnailSeriesEvent
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
@@ -620,20 +621,20 @@ private fun OneshotImmersiveTabRow(
         Tab(
             selected = currentTab == OneshotImmersiveTab.TAGS,
             onClick = { onTabChange(OneshotImmersiveTab.TAGS) },
-            text = { Text("Tags") },
+            text = { Text(LocalStrings.current.ui.tags) },
         )
         if (showCollectionsTab) {
             Tab(
                 selected = currentTab == OneshotImmersiveTab.COLLECTIONS,
                 onClick = { onTabChange(OneshotImmersiveTab.COLLECTIONS) },
-                text = { Text("Collections") },
+                text = { Text(LocalStrings.current.ui.collections) },
             )
         }
         if (showReadListsTab) {
             Tab(
                 selected = currentTab == OneshotImmersiveTab.READ_LISTS,
                 onClick = { onTabChange(OneshotImmersiveTab.READ_LISTS) },
-                text = { Text("Read Lists") },
+                text = { Text(LocalStrings.current.ui.readLists) },
             )
         }
     }

@@ -27,6 +27,7 @@ import snd.komelia.readingorder.ReadingOrderKind
 import snd.komelia.readingorder.ReadingOrderNode
 import snd.komelia.ui.series.ReadingOrderState
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 /**
  * "Reading order": where to start a franchise and what follows.
@@ -61,9 +62,9 @@ fun ReadingOrderContent(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Reading order", style = MaterialTheme.typography.titleMedium)
+            Text(LocalStrings.current.ui.readingOrder, style = MaterialTheme.typography.titleMedium)
             IconButton(onClick = { state.refresh() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Rebuild the reading order")
+                Icon(Icons.Default.Refresh, contentDescription = LocalStrings.current.ui.rebuildTheReadingOrder)
             }
         }
 
@@ -92,7 +93,7 @@ fun ReadingOrderContent(
 
         if (graph.hasFork) {
             Text(
-                "Two sequels, no order between them. Mark one as the sequel of the other to chain them.",
+                LocalStrings.current.ui.twoSequelsNoOrderBetween,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -100,7 +101,7 @@ fun ReadingOrderContent(
 
         if (graph.truncated) {
             Text(
-                "Bigger than this — the lists below have everything.",
+                LocalStrings.current.ui.biggerThanThisTheLists,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -109,7 +110,7 @@ fun ReadingOrderContent(
         FilterChip(
             selected = state.currentIsOriginal,
             onClick = { state.toggleOriginal() },
-            label = { Text("Original series") },
+            label = { Text(LocalStrings.current.ui.originalSeries) },
         )
     }
 }

@@ -7,6 +7,7 @@ import snd.komelia.ui.StateHolder
 import snd.komelia.ui.common.components.LockableChipTextField
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class SharingTab(
     private val vm: SeriesEditMetadataState,
@@ -33,7 +34,7 @@ private fun SharingContent(
 ) {
     LockableChipTextField(
         values = labels,
-        label = "Labels",
+        label = LocalStrings.current.ui.labels,
         lock = labelsLock
     )
 }

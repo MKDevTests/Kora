@@ -18,6 +18,7 @@ import snd.komelia.ui.StateHolder
 import snd.komelia.ui.common.components.LockableTextField
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 class GeneralTab(
     private val vm: BookEditMetadataState
@@ -68,7 +69,7 @@ private fun GeneralTabContent(
             text = title.value,
             onTextChange = title.setValue,
             errorMessage = title.errorMessage,
-            label = "Title",
+            label = LocalStrings.current.ui.title,
             lock = titleLock,
             modifier = Modifier.fillMaxWidth()
         )
@@ -78,7 +79,7 @@ private fun GeneralTabContent(
                 text = number.value,
                 onTextChange = number.setValue,
                 errorMessage = number.errorMessage,
-                label = "Number",
+                label = LocalStrings.current.ui.number,
                 lock = numberLock,
                 modifier = Modifier.weight(.5f)
             )
@@ -99,7 +100,7 @@ private fun GeneralTabContent(
                     }
                 },
                 errorMessage = sortNumber.errorMessage,
-                label = "Sort Number",
+                label = LocalStrings.current.ui.sortNumber,
                 lock = sortNumberLock,
                 modifier = Modifier.weight(.5f)
             )
@@ -110,7 +111,7 @@ private fun GeneralTabContent(
             text = summary.value,
             onTextChange = summary.setValue,
             errorMessage = summary.errorMessage,
-            label = "Summary",
+            label = LocalStrings.current.ui.summary,
             lock = summaryLock,
             minLines = 6,
             maxLines = 12,
@@ -123,7 +124,7 @@ private fun GeneralTabContent(
                 text = releaseDate.value,
                 onTextChange = { releaseDate.setValue(it) },
                 errorMessage = releaseDate.errorMessage,
-                label = "Release Date",
+                label = LocalStrings.current.ui.releaseDate2,
                 lock = releaseDateLock,
                 maxLines = 1,
                 modifier = Modifier.weight(.5f)
@@ -133,7 +134,7 @@ private fun GeneralTabContent(
                 text = isbn.value,
                 onTextChange = isbn.setValue,
                 errorMessage = isbn.errorMessage,
-                label = "ISBN",
+                label = LocalStrings.current.ui.isbn,
                 lock = isbnLock,
                 maxLines = 1,
                 modifier = Modifier.weight(.5f)

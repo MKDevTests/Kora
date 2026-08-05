@@ -32,6 +32,7 @@ import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.dialogs.DialogConfirmCancelButtons
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun <T : Preset> PresetsContent(
@@ -50,17 +51,17 @@ fun <T : Preset> PresetsContent(
             options = remember(availablePresets) { availablePresets.map { LabeledEntry(it, it.name) } },
             onOptionChange = { preset -> preset.value?.let { state.onPresetSelect(it) } },
             inputFieldModifier = Modifier.fillMaxWidth(),
-            label = { Text("Presets") },
+            label = { Text(LocalStrings.current.ui.presets) },
             modifier = Modifier.weight(1f, false).widthIn(max = 400.dp).fillMaxWidth(),
         )
         if (selectedPreset == null)
-            Tooltip("Save Preset") {
+            Tooltip(LocalStrings.current.ui.savePreset) {
                 IconButton(onClick = { showNameDialog = true }) {
                     Icon(Icons.Default.Add, null)
                 }
             }
         else {
-            Tooltip("Delete Preset") {
+            Tooltip(LocalStrings.current.ui.deletePreset) {
                 IconButton(
                     onClick = { state.onPresetDelete(selectedPreset) },
                 ) {
@@ -82,7 +83,7 @@ fun <T : Preset> PresetsContent(
             },
             header = {
                 Text(
-                    "Enter a name for the preset",
+                    LocalStrings.current.ui.enterANameForThe,
                     modifier = Modifier.padding(20.dp)
                 )
             },
@@ -94,10 +95,10 @@ fun <T : Preset> PresetsContent(
                         value = newPresetName,
                         onValueChange = { newPresetName = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Saved Settings") },
+                        placeholder = { Text(LocalStrings.current.ui.savedSettings) },
                         supportingText = {
                             if (!isValidName) Text(
-                                "Preset with that name already exists",
+                                LocalStrings.current.ui.presetWithThatNameAlready,
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
@@ -107,7 +108,7 @@ fun <T : Preset> PresetsContent(
                         CheckboxWithLabel(
                             checked = confirmOverride,
                             onCheckedChange = { confirmOverride = it },
-                            label = { Text("Override existing preset") }
+                            label = { Text(LocalStrings.current.ui.overrideExistingPreset) }
                         )
                     }
 

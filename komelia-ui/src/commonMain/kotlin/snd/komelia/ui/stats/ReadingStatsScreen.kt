@@ -10,6 +10,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class ReadingStatsScreen : Screen {
 
@@ -20,7 +21,7 @@ class ReadingStatsScreen : Screen {
         LaunchedEffect(Unit) { vm.initialize() }
         val state = vm.state.collectAsState()
 
-        SettingsScreenContainer("My Reading Stats") {
+        SettingsScreenContainer(LocalStrings.current.ui.myReadingStats) {
             when (val result = state.value) {
                 is LoadState.Error -> Text("${result::class.simpleName}: ${result.exception.message}")
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()

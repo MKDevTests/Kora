@@ -425,28 +425,28 @@ fun BottomSheetSettingsOverlay(
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                         modifier = Modifier.heightIn(min = 40.dp).cursorForHand(),
                     ) {
-                        Text("Display", modifier = Modifier.padding(horizontal = 12.dp))
+                        Text(LocalStrings.current.ui.display, modifier = Modifier.padding(horizontal = 12.dp))
                     }
                     Tab(
                         selected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                         modifier = Modifier.heightIn(min = 40.dp).cursorForHand(),
                     ) {
-                        Text("Navigation", modifier = Modifier.padding(horizontal = 12.dp))
+                        Text(LocalStrings.current.ui.navigation, modifier = Modifier.padding(horizontal = 12.dp))
                     }
                     Tab(
                         selected = pagerState.currentPage == 2,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                         modifier = Modifier.heightIn(min = 40.dp).cursorForHand(),
                     ) {
-                        Text("Image", modifier = Modifier.padding(horizontal = 12.dp))
+                        Text(LocalStrings.current.ui.image, modifier = Modifier.padding(horizontal = 12.dp))
                     }
                     Tab(
                         selected = pagerState.currentPage == 3,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
                         modifier = Modifier.heightIn(min = 40.dp).cursorForHand(),
                     ) {
-                        Text("Text", modifier = Modifier.padding(horizontal = 12.dp))
+                        Text(LocalStrings.current.ui.text, modifier = Modifier.padding(horizontal = 12.dp))
                     }
                 }
                 val focusManager = LocalFocusManager.current
@@ -552,26 +552,26 @@ private fun BottomSheetReadingModeSettings(
     onKeepProgressBarVisibleChange: (Boolean) -> Unit,
 ) {
     Column {
-        Text("Reading mode")
+        Text(LocalStrings.current.ui.readingMode)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             InputChip(
                 selected = readerType == PAGED,
                 onClick = { onReaderTypeChange(PAGED) },
                 colors = accentInputChipColors(),
-                label = { Text("Paged") }
+                label = { Text(LocalStrings.current.ui.paged) }
             )
             InputChip(
                 selected = readerType == CONTINUOUS,
                 onClick = { onReaderTypeChange(CONTINUOUS) },
                 colors = accentInputChipColors(),
-                label = { Text("Continuous") }
+                label = { Text(LocalStrings.current.ui.continuous) }
             )
             if (panelsReaderState != null)
                 InputChip(
                     selected = readerType == PANELS,
                     onClick = { onReaderTypeChange(PANELS) },
                     colors = accentInputChipColors(),
-                    label = { Text("Panels") }
+                    label = { Text(LocalStrings.current.ui.panels) }
                 )
         }
 
@@ -585,7 +585,7 @@ private fun BottomSheetReadingModeSettings(
         snd.komelia.ui.common.components.SwitchWithLabel(
             checked = keepProgressBarVisible,
             onCheckedChange = onKeepProgressBarVisibleChange,
-            label = { Text("Always show progress bar while reading") },
+            label = { Text(LocalStrings.current.ui.alwaysShowProgressBarWhile) },
             supportingText = {
                 Text(
                     "Hide the rest of the controls but keep the slim bottom strip. " +
@@ -662,7 +662,7 @@ private fun PagedModeSettings(
         SwitchWithLabel(
             checked = autoDirection,
             onCheckedChange = pageState::onAutoDirectionChange,
-            label = { Text("Auto-detect direction (use series metadata)") },
+            label = { Text(LocalStrings.current.ui.autoDetectDirectionUseSeries) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
 
@@ -704,7 +704,7 @@ private fun PagedModeSettings(
         SwitchWithLabel(
             checked = tapToZoom,
             onCheckedChange = pageState::onTapToZoomChange,
-            label = { Text("Tap to zoom") },
+            label = { Text(LocalStrings.current.ui.tapToZoom) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
 
@@ -719,7 +719,7 @@ private fun PagedModeSettings(
             SwitchWithLabel(
                 checked = splitDoublePages,
                 onCheckedChange = pageState::onSplitDoublePagesChange,
-                label = { Text("Split landscape pages") },
+                label = { Text(LocalStrings.current.ui.splitLandscapePages) },
                 contentPadding = PaddingValues(horizontal = 10.dp),
             )
         }
@@ -727,14 +727,14 @@ private fun PagedModeSettings(
         SwitchWithLabel(
             checked = autoSkipBlankPages,
             onCheckedChange = pageState::onAutoSkipBlankPagesChange,
-            label = { Text("Auto-skip blank pages") },
+            label = { Text(LocalStrings.current.ui.autoSkipBlankPages) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
 
         SwitchWithLabel(
             checked = autoDetectWebtoon,
             onCheckedChange = pageState::onAutoDetectWebtoonChange,
-            label = { Text("Auto-detect webtoon (switch to vertical scroll)") },
+            label = { Text(LocalStrings.current.ui.autoDetectWebtoonSwitchTo) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
     }
@@ -771,7 +771,7 @@ private fun PanelsModeSettings(
         }
 
         val displayMode = state.fullPageDisplayMode.collectAsState().value
-        Text("Show full page")
+        Text(LocalStrings.current.ui.showFullPage)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PanelsFullPageDisplayMode.entries.forEach { mode ->
                 InputChip(
@@ -786,7 +786,7 @@ private fun PanelsModeSettings(
         SwitchWithLabel(
             checked = tapToZoom,
             onCheckedChange = state::onTapToZoomChange,
-            label = { Text("Tap to zoom") },
+            label = { Text(LocalStrings.current.ui.tapToZoom) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
 
@@ -839,7 +839,7 @@ private fun ContinuousModeSettings(
         SwitchWithLabel(
             checked = state.tapToZoom.collectAsState().value,
             onCheckedChange = state::onTapToZoomChange,
-            label = { Text("Tap to zoom") },
+            label = { Text(LocalStrings.current.ui.tapToZoom) },
             contentPadding = PaddingValues(horizontal = 10.dp),
         )
 
@@ -847,7 +847,7 @@ private fun ContinuousModeSettings(
             val sidePadding = state.sidePaddingFraction.collectAsState().value
             val paddingPercentage = remember(sidePadding) { (sidePadding * 200).roundToInt() }
             Column(Modifier.width(100.dp)) {
-                Text("Side padding", style = MaterialTheme.typography.labelLarge)
+                Text(LocalStrings.current.ui.sidePadding, style = MaterialTheme.typography.labelLarge)
                 Text("$paddingPercentage%", style = MaterialTheme.typography.labelMedium)
             }
             Slider(
@@ -862,7 +862,7 @@ private fun ContinuousModeSettings(
         Row(verticalAlignment = Alignment.CenterVertically) {
             val spacing = state.pageSpacing.collectAsState(Dispatchers.Main.immediate).value
             Column(Modifier.width(100.dp)) {
-                Text("Page spacing", style = MaterialTheme.typography.labelLarge)
+                Text(LocalStrings.current.ui.pageSpacing, style = MaterialTheme.typography.labelLarge)
                 Text("$spacing", style = MaterialTheme.typography.labelMedium)
             }
             when (windowWidth) {
@@ -1056,20 +1056,20 @@ private fun ReaderFloatingToolbar(
                 selected = readerType == PAGED,
                 onClick = { onReaderTypeChange(PAGED) },
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
-                contentDescription = "Paged",
+                contentDescription = LocalStrings.current.ui.paged,
             )
             ReaderModeIconButton(
                 selected = readerType == CONTINUOUS,
                 onClick = { onReaderTypeChange(CONTINUOUS) },
                 icon = Icons.Rounded.ViewStream,
-                contentDescription = "Continuous",
+                contentDescription = LocalStrings.current.ui.continuous,
             )
             if (panelsReaderState != null) {
                 ReaderModeIconButton(
                     selected = readerType == PANELS,
                     onClick = { onReaderTypeChange(PANELS) },
                     icon = Icons.Rounded.GridView,
-                    contentDescription = "Panels",
+                    contentDescription = LocalStrings.current.ui.panels,
                 )
             }
 
@@ -1083,7 +1083,7 @@ private fun ReaderFloatingToolbar(
                     selected = ncnnSettings.enabled,
                     onClick = { ncnnSettingsState.onSettingsChange(ncnnSettings.copy(enabled = !ncnnSettings.enabled)) },
                     icon = Icons.Rounded.AutoAwesome,
-                    contentDescription = "Upscaling",
+                    contentDescription = LocalStrings.current.ui.upscaling,
                 )
             }
         }
@@ -1212,7 +1212,7 @@ fun ImageReaderControlsCardNewUI(
                         IconButton(onClick = onPreviousBook, enabled = hasPreviousBook) {
                             Icon(
                                 Icons.Rounded.SkipPrevious,
-                                contentDescription = "Previous volume",
+                                contentDescription = LocalStrings.current.ui.previousVolume,
                                 tint = if (hasPreviousBook) accentColorForButtons else accentColorForButtons.copy(alpha = 0.3f)
                             )
                         }
@@ -1230,7 +1230,7 @@ fun ImageReaderControlsCardNewUI(
                         IconButton(onClick = onNextBook, enabled = hasNextBook) {
                             Icon(
                                 Icons.Rounded.SkipNext,
-                                contentDescription = "Next volume",
+                                contentDescription = LocalStrings.current.ui.nextVolume,
                                 tint = if (hasNextBook) accentColorForButtons else accentColorForButtons.copy(alpha = 0.3f)
                             )
                         }
@@ -1258,20 +1258,20 @@ fun ImageReaderControlsCardNewUI(
                             selected = readerType == PAGED,
                             onClick = { onReaderTypeChange(PAGED) },
                             icon = Icons.AutoMirrored.Rounded.MenuBook,
-                            contentDescription = "Paged",
+                            contentDescription = LocalStrings.current.ui.paged,
                         )
                         ReaderModeIconButton(
                             selected = readerType == CONTINUOUS,
                             onClick = { onReaderTypeChange(CONTINUOUS) },
                             icon = Icons.Rounded.ViewStream,
-                            contentDescription = "Continuous",
+                            contentDescription = LocalStrings.current.ui.continuous,
                         )
                         if (panelsReaderState != null) {
                             ReaderModeIconButton(
                                 selected = readerType == PANELS,
                                 onClick = { onReaderTypeChange(PANELS) },
                                 icon = Icons.Rounded.GridView,
-                                contentDescription = "Panels",
+                                contentDescription = LocalStrings.current.ui.panels,
                             )
                         }
 
@@ -1291,7 +1291,7 @@ fun ImageReaderControlsCardNewUI(
                                     )
                                 },
                                 icon = Icons.Rounded.AutoAwesome,
-                                contentDescription = "Upscaling",
+                                contentDescription = LocalStrings.current.ui.upscaling,
                             )
                         }
 
@@ -1305,7 +1305,7 @@ fun ImageReaderControlsCardNewUI(
                                     selected = ocrSettings.enabled,
                                     onClick = { onOcrSettingsChange(ocrSettings.copy(enabled = !ocrSettings.enabled)) },
                                     icon = Icons.Rounded.TextFields,
-                                    contentDescription = "Scan Text",
+                                    contentDescription = LocalStrings.current.ui.scanText,
                                 )
                             }
                         }
@@ -1319,13 +1319,13 @@ fun ImageReaderControlsCardNewUI(
                             selected = false,
                             onClick = onNotesClick,
                             icon = Icons.Rounded.EditNote,
-                            contentDescription = "Notes",
+                            contentDescription = LocalStrings.current.ui.notes,
                         )
 
                         IconButton(onClick = onSettingsClick) {
                             Icon(
                                 Icons.Rounded.Tune,
-                                contentDescription = "Settings",
+                                contentDescription = LocalStrings.current.ui.settings,
                                 tint = accentColor ?: MaterialTheme.colorScheme.primary
                             )
                         }
@@ -1340,17 +1340,17 @@ fun ImageReaderControlsCardNewUI(
                     ) {
                         ReturnNavButton(
                             icon = Icons.Rounded.Book,
-                            label = "Return book",
+                            label = LocalStrings.current.ui.returnBook,
                             onClick = onReturnBook,
                         )
                         ReturnNavButton(
                             icon = Icons.Rounded.Collections,
-                            label = "Return serie",
+                            label = LocalStrings.current.ui.returnSerie,
                             onClick = onReturnSeries,
                         )
                         ReturnNavButton(
                             icon = Icons.Rounded.LibraryBooks,
-                            label = "Return library",
+                            label = LocalStrings.current.ui.returnLibrary,
                             onClick = onReturnLibrary,
                         )
                     }
@@ -1443,9 +1443,9 @@ private fun SamplingModeSettings(
     SwitchWithLabel(
         checked = linearLightDownsampling,
         onCheckedChange = onLinearLightDownsamplingChange,
-        label = { Text("Linear light downsampling") },
+        label = { Text(LocalStrings.current.ui.linearLightDownsampling) },
         supportingText = {
-            Text("slower but potentially more accurate", style = MaterialTheme.typography.labelMedium)
+            Text(LocalStrings.current.ui.slowerButPotentiallyMoreAccurate, style = MaterialTheme.typography.labelMedium)
         },
         contentPadding = PaddingValues(horizontal = 10.dp)
     )
@@ -1462,16 +1462,16 @@ private fun OcrModeSettings(
         SwitchWithLabel(
             checked = ocrSettings.enabled,
             onCheckedChange = { onOcrSettingsChange(ocrSettings.copy(enabled = it)) },
-            label = { Text("Enable Text Selection") },
+            label = { Text(LocalStrings.current.ui.enableTextSelection) },
             supportingText = {
-                Text("Automatically scan pages for text", style = MaterialTheme.typography.labelMedium)
+                Text(LocalStrings.current.ui.automaticallyScanPagesForText, style = MaterialTheme.typography.labelMedium)
             },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
 
         if (platform == MOBILE) {
             Column {
-                Text("OCR Engine")
+                Text(LocalStrings.current.ui.ocrEngine)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -1489,7 +1489,7 @@ private fun OcrModeSettings(
 
         AnimatedVisibility(ocrSettings.engine == OcrEngine.ML_KIT) {
             Column {
-                Text("Text Detection Language")
+                Text(LocalStrings.current.ui.textDetectionLanguage)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -1507,7 +1507,7 @@ private fun OcrModeSettings(
 
         AnimatedVisibility(ocrSettings.engine == OcrEngine.RAPID_OCR) {
             Column {
-                Text("RapidOCR Model")
+                Text(LocalStrings.current.ui.rapidocrModel)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -1526,9 +1526,9 @@ private fun OcrModeSettings(
         SwitchWithLabel(
             checked = ocrSettings.mergeBoxes,
             onCheckedChange = { onOcrSettingsChange(ocrSettings.copy(mergeBoxes = it)) },
-            label = { Text("Merge text segments") },
+            label = { Text(LocalStrings.current.ui.mergeTextSegments) },
             supportingText = {
-                Text("Merge adjacent text blocks into a single block", style = MaterialTheme.typography.labelMedium)
+                Text(LocalStrings.current.ui.mergeAdjacentTextBlocksInto, style = MaterialTheme.typography.labelMedium)
             },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )

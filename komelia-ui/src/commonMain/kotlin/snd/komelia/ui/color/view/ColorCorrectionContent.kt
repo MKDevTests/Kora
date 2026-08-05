@@ -36,6 +36,7 @@ import snd.komelia.ui.platform.WindowSizeClass.EXPANDED
 import snd.komelia.ui.platform.WindowSizeClass.FULL
 import snd.komelia.ui.platform.WindowSizeClass.MEDIUM
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ColorCorrectionContent(
@@ -151,14 +152,14 @@ private fun EditorContent(
                 onClick = { onCurveTypeChange(ColorCorrectionType.entries[0]) },
                 modifier = Modifier.heightIn(min = 40.dp).pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Curves")
+                Text(LocalStrings.current.ui.curves)
             }
             Tab(
                 selected = currentCurveType.ordinal == 1,
                 onClick = { onCurveTypeChange(ColorCorrectionType.entries[1]) },
                 modifier = Modifier.heightIn(min = 40.dp).pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Levels")
+                Text(LocalStrings.current.ui.levels)
             }
         }
 

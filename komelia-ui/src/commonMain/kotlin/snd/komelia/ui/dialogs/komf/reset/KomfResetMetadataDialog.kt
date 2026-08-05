@@ -24,6 +24,7 @@ import snd.komf.api.KomfServerLibraryId
 import snd.komf.api.KomfServerSeriesId
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 val resetSeriesText = """
     All series metadata will be reset including field locks and thumbnails uploaded by Komf.
@@ -132,8 +133,8 @@ private fun DialogContent(
         SwitchWithLabel(
             checked = removeComicInfo,
             onCheckedChange = onRemoveComicInfoChange,
-            label = { Text("Remove ComicInfo.xml?") },
-            supportingText = { Text("Requires write access to files") }
+            label = { Text(LocalStrings.current.ui.removeComicinfoXml) },
+            supportingText = { Text(LocalStrings.current.ui.requiresWriteAccessToFiles) }
         )
     }
 }

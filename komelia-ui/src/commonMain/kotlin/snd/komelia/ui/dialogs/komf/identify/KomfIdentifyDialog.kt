@@ -115,7 +115,7 @@ fun IdentifyConfigContent(state: ConfigState) {
             TextField(
                 value = state.searchName,
                 onValueChange = state::searchName::set,
-                label = { Text("Title") },
+                label = { Text(LocalStrings.current.ui.title) },
                 modifier = Modifier.weight(1f)
             )
 
@@ -131,7 +131,7 @@ fun IdentifyConfigContent(state: ConfigState) {
                 enabled = !isLoading.value,
             ) {
                 if (isLoading.value && searchInProgress) CircularProgressIndicator(Modifier.size(25.dp))
-                else Text("Search")
+                else Text(LocalStrings.current.ui.search)
             }
         }
     }
@@ -143,7 +143,7 @@ fun IdentifyResultsContent(
     state: SearchResultsState,
 ) {
     if (state.searchResults.isEmpty()) {
-        Text("No results")
+        Text(LocalStrings.current.ui.noResults)
         return
     }
     FlowRow(
@@ -207,7 +207,7 @@ private fun ProviderProgressCard(progress: ProviderProgressStatus) {
 
             when (progress.status) {
                 ProgressStatus.COMPLETED -> {
-                    Text("Completed")
+                    Text(LocalStrings.current.ui.completed)
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
@@ -252,7 +252,7 @@ private fun ProcessingProgressCard() {
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("Processing")
+            Text(LocalStrings.current.ui.processing2)
             Spacer(Modifier.weight(1f))
         }
         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -272,7 +272,7 @@ fun IdentifyConfigButtons(state: ConfigState) {
             onClick = state.onDismiss,
             modifier = Modifier.cursorForHand()
         ) {
-            Text("Cancel")
+            Text(LocalStrings.current.ui.cancel)
         }
 
         FilledTonalButton(
@@ -287,7 +287,7 @@ fun IdentifyConfigButtons(state: ConfigState) {
             modifier = Modifier.cursorForHand()
         ) {
             if (isLoading.value && autoIdentifyProgress) CircularProgressIndicator(Modifier.size(25.dp))
-            else Text("Auto-Identify")
+            else Text(LocalStrings.current.ui.autoIdentify)
         }
     }
 }
@@ -310,8 +310,8 @@ fun IdentificationProgressButtons(
         onClick = state.onDismiss,
         modifier = Modifier.cursorForHand()
     ) {
-        if (isLoading) Text("Run in background")
-        else Text("Confirm")
+        if (isLoading) Text(LocalStrings.current.ui.runInBackground)
+        else Text(LocalStrings.current.ui.confirm)
     }
 }
 
@@ -331,7 +331,7 @@ private fun ControlButtons(
             onClick = onDismissRequest,
             modifier = Modifier.cursorForHand()
         ) {
-            Text("Cancel")
+            Text(LocalStrings.current.ui.cancel)
         }
 
         FilledTonalButton(

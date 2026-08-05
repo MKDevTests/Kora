@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.platform.cursorForHand
 import snd.komf.api.mediaserver.KomfMediaServerLibrary
 import snd.komf.api.mediaserver.KomfMediaServerLibraryId
+import snd.komelia.ui.LocalStrings
 
 private fun <T> tabTransitionSpec(): AnimatedContentTransitionScope<IndexedState<T>>.() -> ContentTransform = {
     if (targetState.index > initialState.index) {
@@ -83,7 +84,7 @@ fun <T> LibraryTabs(
                     },
                 ) {
                     Text(
-                        "Default",
+                        LocalStrings.current.ui.default,
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1,
                     )

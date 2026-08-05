@@ -26,6 +26,7 @@ import snd.komelia.formatDecimal
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.UpdateProgress
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun DownloadDialog(
@@ -57,7 +58,7 @@ fun DownloadDialog(
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.cursorForHand(),
-                    content = { Text("Cancel") }
+                    content = { Text(LocalStrings.current.ui.cancel) }
                 )
             }
         },

@@ -52,7 +52,7 @@ fun UserEditDialog(
     val coroutineScope = rememberCoroutineScope()
 
     TabDialog(
-        title = "Edit User",
+        title = LocalStrings.current.ui.editUser,
         currentTab = vm.currentTab,
         tabs = vm.tabs(),
         confirmationText = "Save Changes",
@@ -92,22 +92,22 @@ class UserRolesTab(private val vm: UserEditDialogViewModel) : DialogTab {
         fileDownload: StateHolder<Boolean>
     ) {
         Column {
-            Text("Roles for ${user.email}")
+            Text(LocalStrings.current.counts.rolesFor(user.email))
             Spacer(Modifier.height(20.dp))
             CheckboxWithLabel(
                 checked = administrator.value,
                 onCheckedChange = { administrator.setValue(it) },
-                label = { Text("Administrator") }
+                label = { Text(LocalStrings.current.ui.administrator) }
             )
             CheckboxWithLabel(
                 checked = pageStreaming.value,
                 onCheckedChange = { pageStreaming.setValue(it) },
-                label = { Text("Page Streaming") }
+                label = { Text(LocalStrings.current.ui.pageStreaming) }
             )
             CheckboxWithLabel(
                 checked = fileDownload.value,
                 onCheckedChange = { fileDownload.setValue(it) },
-                label = { Text("File Download") }
+                label = { Text(LocalStrings.current.ui.fileDownload) }
             )
         }
     }
@@ -142,12 +142,12 @@ class UserSharedLibrariesTab(private val vm: UserEditDialogViewModel) : DialogTa
         onLibraryUncheck: (KomgaLibraryId) -> Unit,
     ) {
         Column {
-            Text("Share Libraries")
+            Text(LocalStrings.current.ui.shareLibraries)
             Spacer(Modifier.height(20.dp))
             CheckboxWithLabel(
                 checked = shareAll,
                 onCheckedChange = onShareAllChange,
-                label = { Text("All Libraries") }
+                label = { Text(LocalStrings.current.ui.allLibraries) }
             )
 
             HorizontalDivider()

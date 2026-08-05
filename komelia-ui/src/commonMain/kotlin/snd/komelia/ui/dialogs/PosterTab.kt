@@ -53,6 +53,7 @@ import snd.komga.client.common.KomgaThumbnailId
 import snd.komga.client.readlist.KomgaReadListThumbnail
 import snd.komga.client.series.KomgaSeriesThumbnail
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 class PosterTab(private val state: PosterEditState) : DialogTab {
 
@@ -259,7 +260,7 @@ fun PosterEditContent(
                     .clip(RectangleShape)
             )
             Text(
-                "Choose an image - drag and drop",
+                LocalStrings.current.ui.chooseAnImageDragAnd,
                 textDecoration = TextDecoration.Underline,
                 color = MaterialTheme.colorScheme.tertiary,
                 fontWeight = FontWeight.Bold

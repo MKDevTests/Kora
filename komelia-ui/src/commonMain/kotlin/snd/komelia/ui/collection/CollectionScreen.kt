@@ -19,6 +19,7 @@ import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.collection.KomgaCollectionId
+import snd.komelia.ui.LocalStrings
 
 class CollectionScreen(val collectionId: KomgaCollectionId) : ReloadableScreen {
 
@@ -77,7 +78,7 @@ class CollectionScreen(val collectionId: KomgaCollectionId) : ReloadableScreen {
                     )
             }
 
-            is Error -> Text("Error")
+            is Error -> Text(LocalStrings.current.ui.error)
         }
 
         BackPressHandler { navigator.pop() }

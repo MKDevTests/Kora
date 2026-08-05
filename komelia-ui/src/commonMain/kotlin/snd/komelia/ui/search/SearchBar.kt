@@ -70,6 +70,7 @@ import snd.komelia.ui.platform.rememberVoiceSearchLauncher
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 /**
  * M3 SearchBar with inline results for mobile screens.
@@ -119,7 +120,7 @@ fun SearchBarWithResults(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = LocalStrings.current.ui.back
                 )
             }
             SearchTextField(
@@ -148,7 +149,7 @@ fun SearchBarWithResults(
                     androidx.compose.material3.FilterChip(
                         selected = selectedLibraryId == null,
                         onClick = { onSelectedLibraryChange(null) },
-                        label = { Text("All") }
+                        label = { Text(LocalStrings.current.ui.all) }
                     )
                 }
                 items(libraries.size) { idx ->
@@ -167,7 +168,7 @@ fun SearchBarWithResults(
                 androidx.compose.material3.FilterChip(
                     selected = fuzzyEnabled,
                     onClick = { onFuzzyEnabledChange(!fuzzyEnabled) },
-                    label = { Text("≈ Fuzzy") },
+                    label = { Text(LocalStrings.current.ui.fuzzy) },
                 )
             }
         }
@@ -273,7 +274,7 @@ private fun ColumnScope.SearchResultsDropDownBox(
             .padding(horizontal = 5.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Text("Search all...")
+        Text(LocalStrings.current.ui.searchAll)
     }
     if (isLoading) LinearProgressIndicator(
         color = MaterialTheme.colorScheme.tertiary,
@@ -286,7 +287,7 @@ private fun ColumnScope.SearchResultsDropDownBox(
     ) {
         val series = searchResults.series
         if (series.isNotEmpty()) {
-            Text(text = "Series")
+            Text(text = LocalStrings.current.ui.series)
             series.forEach {
                 SeriesSearchEntry(
                     series = it,
@@ -301,7 +302,7 @@ private fun ColumnScope.SearchResultsDropDownBox(
         val books = searchResults.books
         if (books.isNotEmpty()) {
             Text(
-                text = "Books",
+                text = LocalStrings.current.ui.books,
                 modifier = Modifier.padding(5.dp)
             )
             books.forEach {
@@ -353,7 +354,7 @@ private fun SeriesSearchEntry(
         )
         Column {
             Text(series.metadata.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            library?.let { Text("in ${library.name}") }
+            library?.let { Text(LocalStrings.current.counts.inLibrary(library.name)) }
         }
     }
 }
@@ -375,7 +376,7 @@ private fun BookSearchEntry(
         )
         Column {
             Text(book.metadata.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            library?.let { Text("in ${library.name}") }
+            library?.let { Text(LocalStrings.current.counts.inLibrary(library.name)) }
         }
     }
 }
@@ -394,7 +395,7 @@ fun SearchTextField(
     val focusManager = LocalFocusManager.current
     NoPaddingTextField(
         text = query,
-        placeholder = "Search",
+        placeholder = LocalStrings.current.ui.search,
         onTextChange = onQueryChange,
         shape = CircleShape,
         colors = OutlinedTextFieldDefaults.colors(
@@ -434,7 +435,7 @@ fun SearchTextField(
                 if (onVoiceSearch != null) {
                     Icon(
                         Icons.Filled.Mic,
-                        contentDescription = "Voice search",
+                        contentDescription = LocalStrings.current.ui.voiceSearch,
                         modifier = Modifier
                             .clickable(
                                 interactionSource = interactionSource,

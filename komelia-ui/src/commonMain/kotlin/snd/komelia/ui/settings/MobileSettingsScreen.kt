@@ -31,6 +31,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.PlatformTitleBar
 import snd.komelia.ui.settings.navigation.SettingsNavigationMenu
+import snd.komelia.ui.LocalStrings
 
 class MobileSettingsScreen : Screen {
     @Composable
@@ -56,7 +57,7 @@ class MobileSettingsScreen : Screen {
                     IconButton(onClick = { currentNavigator.pop() }) {
                         Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                     }
-                    Text("Settings", style = MaterialTheme.typography.titleLarge)
+                    Text(LocalStrings.current.ui.settings, style = MaterialTheme.typography.titleLarge)
                 }
 
                 HorizontalDivider()

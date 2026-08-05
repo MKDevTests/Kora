@@ -16,6 +16,7 @@ import snd.komelia.offline.user.model.OfflineUser
 import snd.komelia.ui.settings.offline.users.RootUserCard
 import snd.komelia.ui.settings.offline.users.ServerCard
 import snd.komga.client.user.KomgaUserId
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun OfflineLoginContent(
@@ -30,7 +31,7 @@ fun OfflineLoginContent(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.widthIn(max = 600.dp)
     ) {
-        Text("Offline mode", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.offlineMode, style = MaterialTheme.typography.titleLarge)
 
         for ((server, users) in serverUsers) {
             ServerCard(
@@ -48,7 +49,7 @@ fun OfflineLoginContent(
         }
 
         Button(onClick = onReturnToLogin, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text("Back to online")
+            Text(LocalStrings.current.ui.backToOnline)
         }
     }
 }

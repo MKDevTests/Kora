@@ -14,6 +14,7 @@ import snd.komelia.ui.LoadState.Uninitialized
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class AuthenticationActivityScreen(val forMe: Boolean) : Screen {
     override val key: ScreenKey = "SettingsAuthActivityScreen$forMe"
@@ -24,7 +25,7 @@ class AuthenticationActivityScreen(val forMe: Boolean) : Screen {
         val vm = rememberScreenModel(forMe.toString()) { viewModelFactory.getAuthenticationActivityViewModel(forMe) }
         LaunchedEffect(forMe) { vm.initialize() }
 
-        SettingsScreenContainer("Authentication Activity") {
+        SettingsScreenContainer(LocalStrings.current.ui.authenticationActivity) {
             when (val state = vm.state.collectAsState().value) {
                 Uninitialized, Loading -> LoadingMaxSizeIndicator()
                 is Error -> Text(state.exception.message ?: "Error")

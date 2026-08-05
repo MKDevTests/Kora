@@ -62,6 +62,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
+import snd.komelia.ui.LocalStrings
 
 /**
  * Backup & Restore settings screen.
@@ -108,19 +109,19 @@ class BackupSettingsScreen : Screen {
             }
         }
 
-        SettingsScreenContainer("Backup & restore") {
+        SettingsScreenContainer(LocalStrings.current.ui.backupRestore) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Save a copy of your settings, home filters, library filters " +
+                    text = LocalStrings.current.ui.saveACopyOfYour +
                         "and per-series reader overrides to a JSON file - or restore a " +
                         "previous backup.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Server URL, login and reading progress are NOT included. " +
+                    text = LocalStrings.current.ui.serverUrlLoginAndReading +
                         "Annotations, bookmarks and color-correction presets are also " +
                         "not part of this backup.",
                     style = MaterialTheme.typography.bodySmall,
@@ -142,7 +143,7 @@ class BackupSettingsScreen : Screen {
                     ) {
                         Icon(Icons.Default.Download, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Export…")
+                        Text(LocalStrings.current.ui.export)
                     }
                     Button(
                         enabled = !busy,
@@ -150,7 +151,7 @@ class BackupSettingsScreen : Screen {
                     ) {
                         Icon(Icons.Default.Upload, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Import…")
+                        Text(LocalStrings.current.ui.import)
                     }
                     if (busy) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp))
@@ -182,7 +183,7 @@ class BackupSettingsScreen : Screen {
         // First dialog: warn about overwrite, then open the picker on confirm.
         if (state is BackupUiState.PreImportConfirm) {
             ConfirmationDialog(
-                title = "Import settings",
+                title = LocalStrings.current.ui.importSettings,
                 body = "This will overwrite your current settings, home filters, " +
                     "library filters and per-series reader overrides with the contents " +
                     "of the backup file. Continue?",
@@ -215,7 +216,7 @@ class BackupSettingsScreen : Screen {
         if (preview != null) {
             val plan = preview.plan
             ConfirmationDialog(
-                title = "Apply backup?",
+                title = LocalStrings.current.ui.applyBackup,
                 body = buildString {
                     appendLine("Exported: ${plan.exportedAt ?: "unknown"}")
                     appendLine("By: ${plan.exportedBy ?: "unknown"} (schema v${plan.schemaVersion})")
@@ -255,9 +256,9 @@ private fun AutobackupSection(vm: BackupSettingsViewModel) {
     val lastFailureMsg by vm.autobackupLastFailureMessage.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Automatic backups", style = MaterialTheme.typography.titleMedium)
+        Text(LocalStrings.current.ui.automaticBackups, style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "Periodically write the same backup file to a folder of your choice. " +
+            text = LocalStrings.current.ui.periodicallyWriteTheSameBackup +
                 "Older copies are pruned automatically.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -268,7 +269,7 @@ private fun AutobackupSection(vm: BackupSettingsViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Enable automatic backups", modifier = Modifier.weight(1f))
+            Text(LocalStrings.current.ui.enableAutomaticBackups, modifier = Modifier.weight(1f))
             Switch(checked = enabled, onCheckedChange = { vm.onAutobackupToggle(it) })
         }
 
@@ -280,7 +281,7 @@ private fun AutobackupSection(vm: BackupSettingsViewModel) {
             Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Backup folder",
+                    text = LocalStrings.current.ui.backupFolder,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
@@ -295,7 +296,7 @@ private fun AutobackupSection(vm: BackupSettingsViewModel) {
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Frequency", style = MaterialTheme.typography.bodyMedium)
+            Text(LocalStrings.current.ui.frequency, style = MaterialTheme.typography.bodyMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AutobackupFrequency.entries.forEach { option ->
                     FilterChip(
@@ -330,7 +331,7 @@ private fun AutobackupSection(vm: BackupSettingsViewModel) {
             ) {
                 Icon(Icons.Default.PlayArrow, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Backup now")
+                Text(LocalStrings.current.ui.backupNow)
             }
         }
 
@@ -453,7 +454,7 @@ private fun StatusCard(message: String, isError: Boolean, onDismiss: () -> Unit)
                 modifier = Modifier.weight(1f).padding(end = 8.dp),
             )
             TextButton(onClick = onDismiss, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text("Dismiss")
+                Text(LocalStrings.current.ui.dismiss)
             }
         }
     }

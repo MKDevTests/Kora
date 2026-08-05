@@ -25,6 +25,7 @@ import snd.komelia.offline.sync.model.OfflineScanResult
 import snd.komelia.ui.dialogs.permissions.StoragePermissionRequestDialog
 import snd.komga.client.book.KomgaBookId
 import kotlin.coroutines.cancellation.CancellationException
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun OfflineDownloadsContent(
@@ -40,7 +41,7 @@ fun OfflineDownloadsContent(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (storageLocation != null) {
             Column {
-                Text("Storage location")
+                Text(LocalStrings.current.ui.storageLocation)
                 Text(
                     rememberStorageLabel(storageLocation),
                     modifier = Modifier.padding(start = 10.dp),
@@ -58,11 +59,11 @@ fun OfflineDownloadsContent(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = { showDirectoryPickerDialog = true }) { Text("Change location") }
-            Button(onClick = onStorageLocationReset) { Text("Reset to internal") }
+            Button(onClick = { showDirectoryPickerDialog = true }) { Text(LocalStrings.current.ui.changeLocation) }
+            Button(onClick = onStorageLocationReset) { Text(LocalStrings.current.ui.resetToInternal) }
         }
 
-        Button(onClick = onScanClick) { Text("Scan for existing files") }
+        Button(onClick = onScanClick) { Text(LocalStrings.current.ui.scanForExistingFiles) }
 
         HorizontalDivider()
         for (event in downloads) {
@@ -113,7 +114,7 @@ private fun OfflineScanDialog(
                     is OfflineScanState.Scanning -> {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         Spacer(Modifier.height(8.dp))
-                        Text("Processed ${state.count} files")
+                        Text(LocalStrings.current.counts.processedFiles(state.count))
                         state.lastResult?.let { result ->
                             Text(
                                 "Current: ${result.bookName}",
@@ -244,7 +245,7 @@ private fun RowScope.DownloadProgressIndicator(
 private fun DownloadCompleted(event: DownloadEvent.BookDownloadCompleted) {
     Column {
         Text(event.book.metadata.title)
-        Text("Download Complete ")
+        Text(LocalStrings.current.ui.downloadComplete)
     }
 }
 

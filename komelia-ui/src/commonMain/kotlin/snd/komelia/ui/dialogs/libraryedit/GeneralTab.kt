@@ -22,6 +22,7 @@ import snd.komelia.ui.StateHolder
 import snd.komelia.ui.dialogs.filebrowser.FileBrowserDialogContent
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 class GeneralTab(
     private val vm: LibraryEditDialogViewModel,
@@ -54,7 +55,7 @@ private fun GeneralTabContent(
         TextField(
             value = name.value,
             onValueChange = name.setValue,
-            label = { Text("Name") },
+            label = { Text(LocalStrings.current.ui.name) },
             isError = name.errorMessage != null,
             supportingText = { name.errorMessage?.let { Text(it) } },
             modifier = Modifier.fillMaxWidth()
@@ -64,7 +65,7 @@ private fun GeneralTabContent(
             TextField(
                 value = rootFolder.value,
                 onValueChange = rootFolder.setValue,
-                label = { Text("Root folder") },
+                label = { Text(LocalStrings.current.ui.rootFolder) },
                 isError = rootFolder.errorMessage != null,
                 supportingText = { rootFolder.errorMessage?.let { Text(it) } },
                 modifier = Modifier.weight(7f)
@@ -74,7 +75,7 @@ private fun GeneralTabContent(
                 onClick = { showFileBrowserDialog = true },
                 modifier = Modifier.padding(horizontal = 10.dp),
             ) {
-                Text("Browse")
+                Text(LocalStrings.current.ui.browse)
             }
         }
     }

@@ -61,6 +61,7 @@ import snd.komelia.ui.LocalTheme
 import snd.komelia.ui.Theme
 import snd.komelia.ui.platform.cursorForHand
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BulkActionsContainer(
@@ -112,9 +113,9 @@ fun BulkActionsContainer(
                                 unselectedColor = contentColor.copy(alpha = 0.6f)
                             )
                         )
-                        Text("Select All")
+                        Text(LocalStrings.current.ui.selectAll)
                     }
-                    Text("$selectedCount selected", modifier = Modifier.width(110.dp).padding(start = 10.dp))
+                    Text(LocalStrings.current.counts.selected(selectedCount), modifier = Modifier.width(110.dp).padding(start = 10.dp))
 
                     content()
                 }
@@ -269,7 +270,7 @@ private fun MoreActionsDropdown(actions: List<BulkActionButtonData>, compact: Bo
         onExpandedChange = { showDropdown = it },
     ) {
         BulkActionButton(
-            description = "More",
+            description = LocalStrings.current.ui.more,
             icon = if (compact) Icons.Default.MoreHoriz else Icons.Default.MoreVert,
             onClick = { showDropdown = true },
             compact = compact

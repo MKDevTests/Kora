@@ -51,6 +51,7 @@ import snd.komelia.audiobook.AudioBookmark
 import snd.komelia.audiobook.AudioChapterEntry
 import snd.komelia.ui.LocalAccentColor
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 private fun formatHMS(seconds: Double): String {
     val totalSeconds = seconds.toLong()
@@ -125,12 +126,12 @@ fun AudioTrackListDialog(
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = { Text("Chapters") },
+                    text = { Text(LocalStrings.current.ui.chapters) },
                 )
                 Tab(
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = { Text("Bookmarks") },
+                    text = { Text(LocalStrings.current.ui.bookmarks) },
                 )
             }
 
@@ -184,7 +185,7 @@ private fun ChaptersTab(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No chapters available",
+                text = LocalStrings.current.ui.noChaptersAvailable,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -249,7 +250,7 @@ private fun AudioBookmarksTab(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No bookmarks yet",
+                text = LocalStrings.current.ui.noBookmarksYet,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -301,7 +302,7 @@ private fun AudioBookmarkRow(
         }
 
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete bookmark")
+            Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.deleteBookmark)
         }
     }
 }

@@ -22,6 +22,7 @@ import snd.komelia.ui.common.components.LabeledEntry.Companion.stringEntry
 import snd.komelia.ui.common.components.LockableChipTextFieldWithSuggestions
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class TagsTab(
     private val vm: SeriesBulkEditDialogViewModel,
@@ -63,7 +64,7 @@ private fun TagsContent(
         Row(Modifier.border(Dp.Hairline, warningColor).padding(20.dp)) {
             Icon(Icons.Default.PriorityHigh, null, tint = warningColor)
             Text(
-                text = "You are editing tags for multiple series. This will override existing tags of each series.",
+                text = LocalStrings.current.ui.youAreEditingTagsFor,
                 color = warningColor
             )
         }
@@ -71,7 +72,7 @@ private fun TagsContent(
         LockableChipTextFieldWithSuggestions(
             values = tags.value,
             onValuesChange = { tags.setValue(it) },
-            label = "Tags",
+            label = LocalStrings.current.ui.tags,
             suggestions = remember(allTags) { allTags.map { stringEntry(it) } },
             locked = tagsLock.value,
             onLockChange = { tagsLock.setValue(it) }
@@ -79,7 +80,7 @@ private fun TagsContent(
         LockableChipTextFieldWithSuggestions(
             values = genres.value,
             onValuesChange = { genres.setValue(it) },
-            label = "Genres",
+            label = LocalStrings.current.ui.genres,
             suggestions = remember(allGenres) { allGenres.map { stringEntry(it) } },
             locked = genresLock.value,
             onLockChange = { genresLock.setValue(it) }

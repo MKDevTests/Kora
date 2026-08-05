@@ -50,6 +50,7 @@ import snd.komelia.ui.home.edit.TagConditionState
 import snd.komelia.ui.home.edit.TitleConditionState
 import snd.komelia.ui.home.edit.TitleSortConditionState
 import snd.komga.client.series.KomgaSeriesStatus
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun SeriesConditionContent(
@@ -417,7 +418,7 @@ private fun SeriesSharingLabelConditionContent(
         EqualityNullableOpDropdownSearchContent(
             state = state,
             options = state.sharingLabels.collectAsState(emptyList()).value,
-            label = "Sharing Label"
+            label = LocalStrings.current.ui.sharingLabel
         )
     }
 }
@@ -454,7 +455,7 @@ private fun SeriesGenreConditionContent(
         EqualityNullableOpDropdownSearchContent(
             state = state,
             options = state.genres.collectAsState(emptyList()).value,
-            label = "Genre"
+            label = LocalStrings.current.ui.genre
         )
     }
 }
@@ -473,7 +474,7 @@ private fun SeriesLanguageConditionContent(
         EqualityOpDropdownSearchContent(
             state = state,
             options = state.languages.collectAsState(emptyList()).value,
-            label = "Language"
+            label = LocalStrings.current.ui.language
         )
     }
 }
@@ -492,7 +493,7 @@ private fun SeriesPublisherConditionContent(
         EqualityOpDropdownSearchContent(
             state = state,
             options = state.publishers.collectAsState(emptyList()).value,
-            label = "Publisher"
+            label = LocalStrings.current.ui.publisher
         )
     }
 }
@@ -537,13 +538,13 @@ fun SeriesAgeRatingConditionContent(
             options = NumericNullableOpState.Op.entries.map { LabeledEntry(it, it.name) },
             onOptionChange = { state.setOp(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Operator") }
+            label = { Text(LocalStrings.current.ui.operator) }
         )
         if (operator != NumericNullableOpState.Op.IsNull && operator != NumericNullableOpState.Op.IsNotNull)
             IntTextField(
                 value = state.value.collectAsState().value,
                 onValueChange = state::setValue,
-                label = "Age",
+                label = LocalStrings.current.ui.age,
             )
     }
 }
@@ -566,14 +567,14 @@ fun CollectionIdConditionContent(
             options = EqualityOpState.Op.entries.map { LabeledEntry(it, it.name) },
             onOptionChange = { state.setOp(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Operator") }
+            label = { Text(LocalStrings.current.ui.operator) }
         )
         SearchableOptionSelectionField(
             searchText = state.searchText.collectAsState().value,
             onSearchTextChange = state::onSearchTextChange,
             options = remember(options) { options.map { LabeledEntry(it, it.name) } },
             onValueChange = state::onCollectionSelect,
-            label = "Collection"
+            label = LocalStrings.current.ui.collection2
         )
     }
 }

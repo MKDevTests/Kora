@@ -20,6 +20,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.dialogs.ConfirmationDialog
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ServerManagementContent(
@@ -34,43 +35,43 @@ fun ServerManagementContent(
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Server Management", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.serverManagement, style = MaterialTheme.typography.titleLarge)
         HorizontalDivider()
         Button(
-            title = "Scan all libraries",
-            description = "Check folders for new or removed books.\nUses the last modified time of parent folders",
+            title = LocalStrings.current.ui.scanAllLibraries,
+            description = LocalStrings.current.ui.checkFoldersForNewOr,
             buttonText = "Scan",
             level = WarningLevel.NORMAL,
             onClick = { onScanAllLibraries(false) }
         )
         HorizontalDivider()
         Button(
-            title = "Deep scan all libraries",
-            description = "Force the scanner to compare all scanned books with the ones stored in the database",
+            title = LocalStrings.current.ui.deepScanAllLibraries,
+            description = LocalStrings.current.ui.forceTheScannerToCompare,
             buttonText = "Deep Scan",
             level = WarningLevel.NORMAL,
             onClick = { onScanAllLibraries(true) }
         )
         HorizontalDivider()
         Button(
-            title = "Empty trash for all libraries",
-            description = "Delete items marked as unavailable",
+            title = LocalStrings.current.ui.emptyTrashForAllLibraries,
+            description = LocalStrings.current.ui.deleteItemsMarkedAsUnavailable,
             buttonText = "Empty",
             level = WarningLevel.NORMAL,
             onClick = { showEmptyTrashDialog = true }
         )
         HorizontalDivider()
         Button(
-            title = "Cancel all tasks",
-            description = "Cancel all currently running tasks",
+            title = LocalStrings.current.ui.cancelAllTasks,
+            description = LocalStrings.current.ui.cancelAllCurrentlyRunningTasks,
             buttonText = "Cancel",
             level = WarningLevel.WARNING,
             onClick = { onCancelAllTasks() }
         )
         HorizontalDivider()
         Button(
-            title = "Shutdown",
-            description = "Stop Komga application process",
+            title = LocalStrings.current.ui.shutdown,
+            description = LocalStrings.current.ui.stopKomgaApplicationProcess,
             buttonText = "Shutdown",
             level = WarningLevel.DANGER,
             onClick = { showShutdownDialog = true }
@@ -79,7 +80,7 @@ fun ServerManagementContent(
 
         if (showEmptyTrashDialog) {
             ConfirmationDialog(
-                title = "Empty trash for library",
+                title = LocalStrings.current.ui.emptyTrashForLibrary,
                 body = "By default the media server doesn't remove information for media right away. This helps if a drive is temporarily disconnected. When you empty the trash for a library, all information about missing media is deleted.",
                 buttonConfirm = "Empty",
                 buttonCancel = "Cancel",
@@ -90,7 +91,7 @@ fun ServerManagementContent(
 
         if (showShutdownDialog) {
             ConfirmationDialog(
-                title = "Shut down server",
+                title = LocalStrings.current.ui.shutDownServer,
                 body = "Are you sure you want to stop Komga?",
                 buttonConfirm = "Stop",
                 buttonCancel = "Cancel",

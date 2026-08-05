@@ -28,6 +28,7 @@ import snd.komf.api.MediaServer
 import snd.komf.api.MediaServer.KOMGA
 import snd.komf.api.mediaserver.KomfMediaServerLibrary
 import snd.komf.api.mediaserver.KomfMediaServerLibraryId
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun KomfProcessingSettingsContent(
@@ -61,8 +62,8 @@ private fun ProcessingConfigContent(
             selectedOptions = state.updateModes.map { LabeledEntry(it, it.name) },
             options = remember { KomfUpdateMode.entries.map { LabeledEntry(it, it.name) } },
             onOptionSelect = { state.onUpdateModeSelect(it.value) },
-            label = { Text("Update Modes") },
-            placeholder = "None",
+            label = { Text(LocalStrings.current.ui.updateModes) },
+            placeholder = LocalStrings.current.ui.none,
             inputFieldModifier = Modifier.fillMaxWidth()
         )
 
@@ -70,32 +71,32 @@ private fun ProcessingConfigContent(
             selectedOption = LabeledEntry(state.libraryType, state.libraryType.name),
             options = remember { KomfMediaType.entries.map { LabeledEntry(it, it.name) } },
             onOptionChange = { state.onLibraryTypeChange(it.value) },
-            label = { Text("Library type. Affects some options, mainly book name parsing") },
+            label = { Text(LocalStrings.current.ui.libraryTypeAffectsSomeOptions) },
             inputFieldModifier = Modifier.fillMaxWidth(),
         )
 
         SwitchWithLabel(
             checked = state.orderBooks,
             onCheckedChange = state::onOrderBooksChange,
-            label = { Text("Order Books") },
+            label = { Text(LocalStrings.current.ui.orderBooks) },
 
             supportingText = {
                 Text(
-                    "Attempt to order books using naming pattern based on selected library type",
+                    LocalStrings.current.ui.attemptToOrderBooksUsing,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
         )
         HorizontalDivider()
 
-        Text("Aggregation settings", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.aggregationSettings, style = MaterialTheme.typography.titleLarge)
         SwitchWithLabel(
             checked = state.aggregate,
             onCheckedChange = state::onAggregateChange,
-            label = { Text("Aggregate") },
+            label = { Text(LocalStrings.current.ui.aggregate) },
             supportingText = {
                 Text(
-                    "aggregate and combine metadata from all enabled providers instead of taking first matched result",
+                    LocalStrings.current.ui.aggregateAndCombineMetadataFrom,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -105,10 +106,10 @@ private fun ProcessingConfigContent(
             checked = state.mergeGenres,
             onCheckedChange = state::onMergeGenresChange,
             enabled = state.aggregate,
-            label = { Text("Merge Genres") },
+            label = { Text(LocalStrings.current.ui.mergeGenres) },
             supportingText = {
                 Text(
-                    "if aggregate option is enabled merge genres instead of taking them from first matched result",
+                    LocalStrings.current.ui.ifAggregateOptionIsEnabled,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -118,26 +119,26 @@ private fun ProcessingConfigContent(
             checked = state.mergeTags,
             onCheckedChange = state::onMergeTagsChange,
             enabled = state.aggregate,
-            label = { Text("Merge Tags") },
+            label = { Text(LocalStrings.current.ui.mergeTags) },
 
             supportingText = {
                 Text(
-                    "if aggregate option is enabled merge tags instead of taking them from first matched result",
+                    LocalStrings.current.ui.ifAggregateOptionIsEnabled2,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
         )
 
         HorizontalDivider()
-        Text("Cover settings", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.coverSettings, style = MaterialTheme.typography.titleLarge)
         SwitchWithLabel(
             checked = state.seriesCovers,
             onCheckedChange = state::onSeriesCoversChange,
-            label = { Text("Series Covers") },
+            label = { Text(LocalStrings.current.ui.seriesCovers) },
 
             supportingText = {
                 Text(
-                    "Upload series covers",
+                    LocalStrings.current.ui.uploadSeriesCovers,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -146,11 +147,11 @@ private fun ProcessingConfigContent(
         SwitchWithLabel(
             checked = state.bookCovers,
             onCheckedChange = state::onBookCoversChange,
-            label = { Text("Book Covers") },
+            label = { Text(LocalStrings.current.ui.bookCovers) },
 
             supportingText = {
                 Text(
-                    "Upload book covers",
+                    LocalStrings.current.ui.uploadBookCovers,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -159,26 +160,26 @@ private fun ProcessingConfigContent(
         SwitchWithLabel(
             checked = state.overrideExistingCovers,
             onCheckedChange = state::onOverrideExistingCoversChange,
-            label = { Text("Override Existing Covers") },
+            label = { Text(LocalStrings.current.ui.overrideExistingCovers) },
 
             supportingText = {
                 Text(
-                    "If entry already has a user uploaded cover, mark newly uploaded cover as current.\nIf disabled, then upload cover without selecting it",
+                    LocalStrings.current.ui.ifEntryAlreadyHasA,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
         )
 
         HorizontalDivider()
-        Text("Title Settings", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.titleSettings, style = MaterialTheme.typography.titleLarge)
         SwitchWithLabel(
             checked = state.seriesTitle,
             onCheckedChange = state::onSeriesTitleChange,
-            label = { Text("Series Title") },
+            label = { Text(LocalStrings.current.ui.seriesTitle) },
 
             supportingText = {
                 Text(
-                    "Update series title if matched metadata contains title data",
+                    LocalStrings.current.ui.updateSeriesTitleIfMatched,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -186,11 +187,11 @@ private fun ProcessingConfigContent(
         SwitchWithLabel(
             checked = state.alternativeSeriesTitles,
             onCheckedChange = state::onAlternativeSeriesTitlesChange,
-            label = { Text("Alternative Series Titles") },
+            label = { Text(LocalStrings.current.ui.alternativeSeriesTitles) },
 
             supportingText = {
                 Text(
-                    "Update series alternative title if matched metadata contains alternative title data",
+                    LocalStrings.current.ui.updateSeriesAlternativeTitleIf,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -198,29 +199,29 @@ private fun ProcessingConfigContent(
         SwitchWithLabel(
             checked = state.fallbackToAltTitle,
             onCheckedChange = state::onFallbackToAltTitleChange,
-            label = { Text("Alternative Title Fallback") },
+            label = { Text(LocalStrings.current.ui.alternativeTitleFallback) },
 
             supportingText = {
                 Text(
-                    "Use first available alternative title if no main title with specified language is found",
+                    LocalStrings.current.ui.useFirstAvailableAlternativeTitle,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
         )
         LanguageSelectionField(
-            label = "Series title language (ISO 639)",
+            label = LocalStrings.current.ui.seriesTitleLanguageIso639,
             languageValue = state.seriesTitleLanguage,
             onLanguageValueChange = state::onSeriesTitleLanguageChange,
             onLanguageValueSave = state::onSeriesTitleLanguageSave
         )
         ChipFieldWithSuggestions(
-            label = { Text("Alternative title languages (ISO 639)") },
+            label = { Text(LocalStrings.current.ui.alternativeTitleLanguagesIso639) },
             values = state.alternativeSeriesTitleLanguages,
             onValuesChange = state::onAlternativeTitleLanguagesChange,
             suggestions = komfLanguageTagsSuggestions
         )
         HorizontalDivider()
-        Text("Default values", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.defaultValues, style = MaterialTheme.typography.titleLarge)
         if (serverType == KOMGA) {
             DropdownChoiceMenu(
                 selectedOption = LabeledEntry(state.readingDirectionValue, state.readingDirectionValue?.name ?: "None"),
@@ -229,12 +230,12 @@ private fun ProcessingConfigContent(
                             KomfReadingDirection.entries.map { LabeledEntry(it, it.name) }
                 },
                 onOptionChange = { state.onReadingDirectionChange(it.value) },
-                label = { Text("Default series reading direction") },
+                label = { Text(LocalStrings.current.ui.defaultSeriesReadingDirection) },
                 inputFieldModifier = Modifier.fillMaxWidth(),
             )
         }
         LanguageSelectionField(
-            label = "Default series language",
+            label = LocalStrings.current.ui.defaultSeriesLanguage,
             languageValue = state.defaultLanguageValue ?: "",
             onLanguageValueChange = state::onDefaultLanguageChange,
             onLanguageValueSave = state::onDefaultLanguageSave

@@ -58,7 +58,7 @@ fun IgnoreListToHiddenMigrationPrompt(
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = { if (!working) candidate = null },
-        title = { Text("Masquer pour tous ?") },
+        title = { Text(LocalStrings.current.ui.masquerPourTous) },
         text = {
             Text(
                 "Tu as ${ids.size} série(s) ignorée(s) localement. Les masquer pour TOUS les " +
@@ -91,7 +91,7 @@ fun IgnoreListToHiddenMigrationPrompt(
             ) { Text(if (working) "…" else "Masquer pour tous") }
         },
         dismissButton = {
-            TextButton(enabled = !working, onClick = { candidate = null }) { Text("Plus tard") }
+            TextButton(enabled = !working, onClick = { candidate = null }) { Text(LocalStrings.current.ui.plusTard) }
         },
     )
 }

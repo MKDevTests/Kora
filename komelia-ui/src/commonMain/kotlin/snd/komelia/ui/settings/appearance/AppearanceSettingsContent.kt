@@ -122,6 +122,8 @@ fun AppearanceSettingsContent(
     onUseFloatingNavigationBarChange: (Boolean) -> Unit,
     useImmersiveMorphingCover: Boolean,
     onUseImmersiveMorphingCoverChange: (Boolean) -> Unit,
+    uiLanguage: snd.komelia.ui.i18n.AppLanguage,
+    onUiLanguageChange: (snd.komelia.ui.i18n.AppLanguage) -> Unit,
     cardWidthScale: Float,
     onCardWidthScaleChange: (Float) -> Unit,
     cardHeightScale: Float,
@@ -147,11 +149,21 @@ fun AppearanceSettingsContent(
             inputFieldModifier = Modifier.widthIn(min = 250.dp)
         )
 
+        // a bis. Interface language. Not driven by the device on purpose: a
+        // French reader on an English phone had no way to ask for French.
+        DropdownChoiceMenu(
+            label = { Text(strings.language) },
+            selectedOption = LabeledEntry(uiLanguage, languageLabel(uiLanguage)),
+            options = snd.komelia.ui.i18n.AppLanguage.entries.map { LabeledEntry(it, languageLabel(it)) },
+            onOptionChange = { onUiLanguageChange(it.value) },
+            inputFieldModifier = Modifier.widthIn(min = 250.dp)
+        )
+
         HorizontalDivider()
 
         // b. Accent color (always shown)
         DropdownChoiceMenu(
-            label = { Text("Accent Color (chips & tabs)") },
+            label = { Text(LocalStrings.current.ui.accentColorChipsTabs) },
             selectedOption = accentPresets.find { it.first == accentColor }
                 ?.let { LabeledEntry(it.first, it.second) },
             options = accentPresets.map { LabeledEntry(it.first, it.second) },
@@ -167,8 +179,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = useNewLibraryUI,
             onCheckedChange = onUseNewLibraryUIChange,
-            label = { Text("New library UI") },
-            supportingText = { Text("Floating nav bar, Keep Reading panel, and pill-shaped tabs") },
+            label = { Text(LocalStrings.current.ui.newLibraryUi) },
+            supportingText = { Text(LocalStrings.current.ui.floatingNavBarKeepReading) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -180,8 +192,8 @@ fun AppearanceSettingsContent(
             SwitchWithLabel(
                 checked = immersiveColorEnabled,
                 onCheckedChange = onImmersiveColorEnabledChange,
-                label = { Text("Immersive card color") },
-                supportingText = { Text("Tint the detail card background with the cover's dominant color") },
+                label = { Text(LocalStrings.current.ui.immersiveCardColor) },
+                supportingText = { Text(LocalStrings.current.ui.tintTheDetailCardBackground) },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -203,8 +215,8 @@ fun AppearanceSettingsContent(
             SwitchWithLabel(
                 checked = showImmersiveNavBar,
                 onCheckedChange = onShowImmersiveNavBarChange,
-                label = { Text("Show navigation bar in immersive screens") },
-                supportingText = { Text("Display the bottom navigation bar on series, book, and oneshot screens") },
+                label = { Text(LocalStrings.current.ui.showNavigationBarInImmersive) },
+                supportingText = { Text(LocalStrings.current.ui.displayTheBottomNavigationBar) },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -212,8 +224,8 @@ fun AppearanceSettingsContent(
             SwitchWithLabel(
                 checked = useNewLibraryUI2,
                 onCheckedChange = onUseNewLibraryUI2Change,
-                label = { Text("New UI 2") },
-                supportingText = { Text("Modern top app bar and updated item cards") },
+                label = { Text(LocalStrings.current.ui.newUi2) },
+                supportingText = { Text(LocalStrings.current.ui.modernTopAppBarAnd) },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -222,8 +234,8 @@ fun AppearanceSettingsContent(
                 SwitchWithLabel(
                     checked = useFloatingNavigationBar,
                     onCheckedChange = onUseFloatingNavigationBarChange,
-                    label = { Text("Floating navigation bar") },
-                    supportingText = { Text("Replace the bottom navigation bar with a floating toolbar") },
+                    label = { Text(LocalStrings.current.ui.floatingNavigationBar) },
+                    supportingText = { Text(LocalStrings.current.ui.replaceTheBottomNavigationBar) },
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 )
@@ -232,8 +244,8 @@ fun AppearanceSettingsContent(
             SwitchWithLabel(
                 checked = useImmersiveMorphingCover,
                 onCheckedChange = onUseImmersiveMorphingCoverChange,
-                label = { Text("Morphing Immersive Cover") },
-                supportingText = { Text("Morphing cover image that flies to thumbnail on expand") },
+                label = { Text(LocalStrings.current.ui.morphingImmersiveCover) },
+                supportingText = { Text(LocalStrings.current.ui.morphingCoverImageThatFlies) },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -245,7 +257,7 @@ fun AppearanceSettingsContent(
 
         // e. "Cards" header
         Text(
-            "Cards",
+            LocalStrings.current.ui.cards,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 4.dp)
@@ -330,14 +342,14 @@ fun AppearanceSettingsContent(
             ) {
                 LibraryItemCard(
                     modifier = Modifier.width(cardWidth),
-                    title = "Book Title Example",
+                    title = LocalStrings.current.ui.bookTitleExample,
                     secondaryText = "Series Example",
                     image = {
                         Box(
                             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Thumbnail")
+                            Text(LocalStrings.current.ui.thumbnail)
                         }
                     },
                 )
@@ -350,8 +362,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = cardLayoutBelow,
             onCheckedChange = onCardLayoutBelowChange,
-            label = { Text("Text below card") },
-            supportingText = { Text("Show title and metadata below the thumbnail instead of on top") },
+            label = { Text(LocalStrings.current.ui.textBelowCard) },
+            supportingText = { Text(LocalStrings.current.ui.showTitleAndMetadataBelow) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -362,8 +374,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = cardLayoutOverlayBackground,
             onCheckedChange = onCardLayoutOverlayBackgroundChange,
-            label = { Text("Card layout overlay background") },
-            supportingText = { Text("Show a semi-transparent background overlay behind the text on cards") },
+            label = { Text(LocalStrings.current.ui.cardLayoutOverlayBackground) },
+            supportingText = { Text(LocalStrings.current.ui.showASemiTransparentBackground) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -374,8 +386,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = hideParenthesesInNames,
             onCheckedChange = onHideParenthesesInNamesChange,
-            label = { Text("Hide parentheses in names") },
-            supportingText = { Text("Remove anything in parentheses when displaying series and oneshot names") },
+            label = { Text(LocalStrings.current.ui.hideParenthesesInNames) },
+            supportingText = { Text(LocalStrings.current.ui.removeAnythingInParenthesesWhen) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -388,8 +400,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = authorRolesFilterEnabled,
             onCheckedChange = onAuthorRolesFilterEnabledChange,
-            label = { Text("Choose which author roles to show") },
-            supportingText = { Text("Applies to book and series pages. Off = every role Komga provides") },
+            label = { Text(LocalStrings.current.ui.chooseWhichAuthorRolesTo) },
+            supportingText = { Text(LocalStrings.current.ui.appliesToBookAndSeries) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -411,8 +423,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = showLanguageOnCovers,
             onCheckedChange = onShowLanguageOnCoversChange,
-            label = { Text("Show language on covers") },
-            supportingText = { Text("Small FR/EN pill on series covers, only when the language is known") },
+            label = { Text(LocalStrings.current.ui.showLanguageOnCovers) },
+            supportingText = { Text(LocalStrings.current.ui.smallFrEnPillOn) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -433,8 +445,8 @@ fun AppearanceSettingsContent(
             SwitchWithLabel(
                 checked = languageBadgeAtBottom,
                 onCheckedChange = onLanguageBadgeAtBottomChange,
-                label = { Text("Pill at bottom-left") },
-                supportingText = { Text("Otherwise the pill sits at the top-left of the cover") },
+                label = { Text(LocalStrings.current.ui.pillAtBottomLeft) },
+                supportingText = { Text(LocalStrings.current.ui.otherwiseThePillSitsAt) },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             )
@@ -444,8 +456,8 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = showCompleteSeriesBadge,
             onCheckedChange = onShowCompleteSeriesBadgeChange,
-            label = { Text("Highlight complete series") },
-            supportingText = { Text("Recolors the top-right badge on series cards when the series is Ended and every volume is owned") },
+            label = { Text(LocalStrings.current.ui.highlightCompleteSeries) },
+            supportingText = { Text(LocalStrings.current.ui.recolorsTheTopRightBadge) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -456,12 +468,21 @@ fun AppearanceSettingsContent(
         SwitchWithLabel(
             checked = lockScreenRotation,
             onCheckedChange = onLockScreenRotationChange,
-            label = { Text("Lock screen rotation") },
-            supportingText = { Text("Prevent the application screen from rotating") },
+            label = { Text(LocalStrings.current.ui.lockScreenRotation) },
+            supportingText = { Text(LocalStrings.current.ui.preventTheApplicationScreenFrom) },
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
     }
+}
+
+@Composable
+private fun languageLabel(language: snd.komelia.ui.i18n.AppLanguage) = when (language) {
+    // Each language names itself: someone who put the app in a language they
+    // cannot read has to find their way back out of the menu.
+    snd.komelia.ui.i18n.AppLanguage.SYSTEM -> LocalStrings.current.settings.languageSystem
+    snd.komelia.ui.i18n.AppLanguage.ENGLISH -> "English"
+    snd.komelia.ui.i18n.AppLanguage.FRENCH -> "Français"
 }
 
 @Composable

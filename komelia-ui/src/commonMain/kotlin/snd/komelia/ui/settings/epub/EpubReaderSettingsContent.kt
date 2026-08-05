@@ -50,7 +50,7 @@ fun EpubReaderSettingsContent(
                         .map { LabeledEntry(it, strings.forEpubReaderType(it)) }
                 },
                 onOptionChange = { onReaderChange(it.value) },
-                label = { Text("Reader Type") },
+                label = { Text(LocalStrings.current.ui.readerType) },
                 inputFieldModifier = Modifier.fillMaxWidth().animateContentSize(),
                 modifier = Modifier.weight(1f),
             )
@@ -61,7 +61,7 @@ fun EpubReaderSettingsContent(
                     onClick = { uriHandler.openUri("https://github.com/ttu-ttu/ebook-reader") },
                     modifier = Modifier.cursorForHand().padding(start = 20.dp)
                 ) {
-                    Text("Project on Github")
+                    Text(LocalStrings.current.ui.projectOnGithub)
                 }
             }
         }
@@ -75,11 +75,11 @@ fun EpubReaderSettingsContent(
                 """.trimIndent()
             )
 
-            KOMGA_EPUB -> Text("Komga webui epub reader adapted for use in Kora")
+            KOMGA_EPUB -> Text(LocalStrings.current.ui.komgaWebuiEpubReaderAdapted)
 
             EPUB3_READER -> {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Native EPUB 3 reader with synchronized audio overlay (SMIL) support. Android only.")
+                    Text(LocalStrings.current.ui.nativeEpub3ReaderWith)
 
                     FilledTonalButton(
                         onClick = onClearEpubCache,
@@ -87,7 +87,7 @@ fun EpubReaderSettingsContent(
                             val contentColor = if (it.luminance() > 0.5f) Color.Black else Color.White
                             ButtonDefaults.filledTonalButtonColors(containerColor = it, contentColor = contentColor)
                         } ?: ButtonDefaults.filledTonalButtonColors()
-                    ) { Text("Clear EPUB cache") }
+                    ) { Text(LocalStrings.current.ui.clearEpubCache) }
 
                     Column {
                         Text(

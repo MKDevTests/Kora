@@ -68,6 +68,7 @@ import org.readium.r2.shared.util.Url
 import snd.komelia.bookmarks.EpubBookmark
 import snd.komelia.ui.LocalAccentColor
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 private fun containsHref(link: Link, targetHref: Url): Boolean {
     if (link.url()?.removeFragment() == targetHref) return true
@@ -214,7 +215,7 @@ private fun ContentsTab(
     if (toc.isEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = "No chapters available",
+                text = LocalStrings.current.ui.noChaptersAvailable,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -335,7 +336,7 @@ private fun BookmarksTab(
     if (bookmarks.isEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = "No bookmarks yet",
+                text = LocalStrings.current.ui.noBookmarksYet,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -400,7 +401,7 @@ private fun BookmarkRow(
         }
 
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete bookmark")
+            Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.deleteBookmark)
         }
     }
 }
@@ -422,7 +423,7 @@ private fun SearchTab(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            placeholder = { Text("Search") },
+            placeholder = { Text(LocalStrings.current.ui.search) },
             shape = CircleShape,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = {
@@ -434,7 +435,7 @@ private fun SearchTab(
                     onSearch(query)
                     keyboardController?.hide()
                 }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
+                    Icon(Icons.Default.Search, contentDescription = LocalStrings.current.ui.search)
                 }
             },
             modifier = Modifier
@@ -488,7 +489,7 @@ private fun AnnotationsTab(
     if (annotations.isEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = "No annotations yet",
+                text = LocalStrings.current.ui.noAnnotationsYet,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

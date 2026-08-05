@@ -132,20 +132,20 @@ private fun ScanFileTypes(
     scanPdf: StateHolder<Boolean>,
 ) {
     Column(Modifier.padding(vertical = 15.dp)) {
-        Text("Scan for these file types")
+        Text(LocalStrings.current.ui.scanForTheseFileTypes)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ScanFiletypeChip(
-                label = { Text("Comic Book archives") },
+                label = { Text(LocalStrings.current.ui.comicBookArchives) },
                 selected = scanCbx.value,
                 onValueChange = scanCbx.setValue
             )
             ScanFiletypeChip(
-                label = { Text("PDF") },
+                label = { Text(LocalStrings.current.ui.pdf) },
                 selected = scanPdf.value,
                 onValueChange = scanPdf.setValue
             )
             ScanFiletypeChip(
-                label = { Text("Epub") },
+                label = { Text(LocalStrings.current.ui.epub) },
                 selected = scanEpub.value,
                 onValueChange = scanEpub.setValue
             )

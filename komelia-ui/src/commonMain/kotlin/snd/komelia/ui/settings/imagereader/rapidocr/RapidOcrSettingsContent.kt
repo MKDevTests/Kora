@@ -17,6 +17,7 @@ import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.settings.imagereader.onnxruntime.DownloadDialog
 import snd.komelia.updates.UpdateProgress
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun RapidOcrSettingsContent(
@@ -28,7 +29,7 @@ fun RapidOcrSettingsContent(
     var showDownloadDialog by remember { mutableStateOf(false) }
     val accentColor = LocalAccentColor.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("RapidOCR Models", style = MaterialTheme.typography.titleMedium)
+        Text(LocalStrings.current.ui.rapidocrModels, style = MaterialTheme.typography.titleMedium)
 
         val options = remember {
             listOf(
@@ -58,7 +59,7 @@ fun RapidOcrSettingsContent(
                         isCustomUrl = true
                     }
                 },
-                label = { Text("Model URL Source") },
+                label = { Text(LocalStrings.current.ui.modelUrlSource) },
                 modifier = Modifier.weight(0.7f)
             )
 
@@ -68,8 +69,8 @@ fun RapidOcrSettingsContent(
                 colors = accentColor?.let { ButtonDefaults.buttonColors(containerColor = it) }
                     ?: ButtonDefaults.buttonColors()
             ) {
-                if (isDownloaded) Text("Re-download Models")
-                else Text("Download Models")
+                if (isDownloaded) Text(LocalStrings.current.ui.reDownloadModels)
+                else Text(LocalStrings.current.ui.downloadModels)
             }
         }
 
@@ -77,7 +78,7 @@ fun RapidOcrSettingsContent(
             OutlinedTextField(
                 value = rapidOcrModelsUrl,
                 onValueChange = onRapidOcrModelsUrlChange,
-                label = { Text("Custom URL") },
+                label = { Text(LocalStrings.current.ui.customUrl) },
                 modifier = Modifier.fillMaxWidth()
             )
         }

@@ -65,6 +65,7 @@ import snd.komga.client.collection.KomgaCollection
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.readlist.KomgaReadList
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -269,7 +270,7 @@ private fun FlowRowScope.OneshotMainInfo(
                     onClick = onDownloadDelete,
                     border = BorderStroke(2.dp, MaterialTheme.colorScheme.errorContainer)
                 ) {
-                    Text("Delete downloaded")
+                    Text(LocalStrings.current.ui.deleteDownloaded)
                 }
             }
         }

@@ -15,6 +15,7 @@ import snd.komelia.ui.dialogs.book.edit.BookEditMetadataState
 import snd.komelia.ui.dialogs.series.edit.SeriesEditMetadataState
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class OneshotTagsTab(
     private val seriesMetadata: SeriesEditMetadataState,
@@ -51,7 +52,7 @@ internal class OneshotTagsTab(
             LockableChipTextFieldWithSuggestions(
                 values = tags.value,
                 onValuesChange = { tags.setValue(it) },
-                label = "Tags",
+                label = LocalStrings.current.ui.tags,
                 suggestions = remember(allTags) { allTags.map { stringEntry(it) } },
                 locked = tagsLock.value,
                 onLockChange = { tagsLock.setValue(it) }
@@ -59,7 +60,7 @@ internal class OneshotTagsTab(
             LockableChipTextFieldWithSuggestions(
                 values = genres.value,
                 onValuesChange = { genres.setValue(it) },
-                label = "Genres",
+                label = LocalStrings.current.ui.genres,
                 suggestions = remember(allGenres) { allGenres.map { stringEntry(it) } },
                 locked = genresLock.value,
                 onLockChange = { genresLock.setValue(it) }

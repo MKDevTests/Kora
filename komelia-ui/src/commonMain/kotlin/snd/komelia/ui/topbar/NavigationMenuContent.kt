@@ -71,6 +71,7 @@ import snd.komelia.ui.platform.VerticalScrollbar
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.sse.KomgaEvent.TaskQueueStatus
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun NavBarContent(
@@ -164,7 +165,7 @@ fun ColumnScope.LibrariesNavBarContent(
     NavButton(
         onClick = { onLibrariesClick() },
         icon = Icons.AutoMirrored.Filled.LibraryBooks,
-        label = "Libraries",
+        label = LocalStrings.current.ui.libraries,
         isSelected = false,
         actionButton = if (!isAdmin || isOffline) null else {
             {
@@ -214,13 +215,13 @@ fun ColumnScope.LibrariesNavBarContent(
     NavButton(
         onClick = onFavoritesClick,
         icon = Icons.Default.Star,
-        label = "Favoris",
+        label = LocalStrings.current.ui.favoris2,
         isSelected = currentScreen is FavoritesScreen,
     )
     NavButton(
         onClick = onPlannedClick,
         icon = Icons.Default.Bookmark,
-        label = "À lire",
+        label = LocalStrings.current.ui.lire2,
         isSelected = currentScreen is PlannedScreen,
     )
 }
@@ -261,7 +262,7 @@ private fun NavMenu(
             NavButton(
                 onClick = { onHomeClick() },
                 icon = Icons.Default.Home,
-                label = "Home",
+                label = LocalStrings.current.ui.home,
                 isSelected = currentScreen is HomeScreen
             )
             LibrariesNavBarContent(
@@ -278,7 +279,7 @@ private fun NavMenu(
             NavButton(
                 onClick = onSettingsClick,
                 icon = Icons.Default.Settings,
-                label = "Settings",
+                label = LocalStrings.current.ui.settings,
                 isSelected = false
             )
 
@@ -357,7 +358,7 @@ private fun TaskQueueIndicator(queueStatus: TaskQueueStatus) {
             Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .9f)) {
                 Column(Modifier.padding(10.dp)) {
                     when (queueStatus.count) {
-                        1 -> Text("1 pending task")
+                        1 -> Text(LocalStrings.current.ui.pendingTask)
                         else -> Text("${queueStatus.count} pending tasks")
                     }
                     Spacer(Modifier.height(10.dp))

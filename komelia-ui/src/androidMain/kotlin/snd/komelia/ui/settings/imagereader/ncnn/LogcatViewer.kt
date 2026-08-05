@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import snd.komelia.ui.LocalStrings
 
 @Composable
 actual fun NcnnLogViewerDialog(onDismiss: () -> Unit) {
@@ -37,7 +38,7 @@ actual fun NcnnLogViewerDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("NCNN / Upscaler Logs") },
+        title = { Text(LocalStrings.current.ui.ncnnUpscalerLogs) },
         text = {
             Column(modifier = Modifier.fillMaxHeight(0.8f)) {
                 HorizontalDivider()
@@ -59,7 +60,7 @@ actual fun NcnnLogViewerDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.close) }
         },
         dismissButton = {
             TextButton(onClick = {
@@ -68,7 +69,7 @@ actual fun NcnnLogViewerDialog(onDismiss: () -> Unit) {
                 // Trigger refresh
                 logs = "" 
             }) {
-                Text("Refresh")
+                Text(LocalStrings.current.ui.refresh)
             }
         }
     )

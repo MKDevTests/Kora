@@ -41,6 +41,7 @@ import snd.komelia.ui.platform.VerticalScrollbar
 import snd.komelia.ui.platform.WindowSizeClass
 import snd.komelia.ui.search.SearchViewModel.SearchResultsTab
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun SearchContent(
@@ -202,7 +203,7 @@ fun SearchContent(
                             if (authorSeriesResults.isEmpty() && authorBookResults.isEmpty()) {
                                 item {
                                     Text(
-                                        "No works found for this author",
+                                        LocalStrings.current.ui.noWorksFoundForThis,
                                         modifier = Modifier.padding(16.dp)
                                     )
                                 }
@@ -262,7 +263,7 @@ private fun AuthorWorksHeader(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to authors")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.backToAuthors)
         }
         Text(author, style = MaterialTheme.typography.titleMedium)
     }
@@ -287,8 +288,8 @@ private fun EmptySearchResults() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(100.dp))
-        Text("The search returned no results", style = MaterialTheme.typography.titleLarge)
-        Text("Try searching for something else")
+        Text(LocalStrings.current.ui.theSearchReturnedNoResults, style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.trySearchingForSomethingElse)
     }
 }
 
@@ -314,19 +315,19 @@ fun SearchToolBar(
             selected = searchType == SearchResultsTab.SERIES,
             onClick = { onSearchTypeChange(SearchResultsTab.SERIES) },
             modifier = Modifier.heightIn(min = 40.dp),
-            text = { Text("Series") },
+            text = { Text(LocalStrings.current.ui.series) },
         )
         if (hasBooks) Tab(
             selected = searchType == SearchResultsTab.BOOKS,
             onClick = { onSearchTypeChange(SearchResultsTab.BOOKS) },
             modifier = Modifier.heightIn(min = 40.dp),
-            text = { Text("Books") },
+            text = { Text(LocalStrings.current.ui.books) },
         )
         Tab(
             selected = searchType == SearchResultsTab.AUTHORS,
             onClick = { onSearchTypeChange(SearchResultsTab.AUTHORS) },
             modifier = Modifier.heightIn(min = 40.dp),
-            text = { Text("Authors") },
+            text = { Text(LocalStrings.current.ui.authors) },
         )
     }
 }

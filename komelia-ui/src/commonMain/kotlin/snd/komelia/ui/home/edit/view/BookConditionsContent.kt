@@ -49,6 +49,7 @@ import snd.komelia.ui.home.edit.TitleConditionState
 import snd.komga.client.book.KomgaMediaStatus
 import snd.komga.client.book.MediaProfile
 import snd.komga.client.search.KomgaSearchCondition.PosterMatch
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BookConditionContent(
@@ -338,14 +339,14 @@ fun SeriesIdConditionContent(
             options = EqualityOpState.Op.entries.map { LabeledEntry(it, it.name) },
             onOptionChange = { state.setOp(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Operator") }
+            label = { Text(LocalStrings.current.ui.operator) }
         )
         SearchableOptionSelectionField(
             searchText = state.searchText.collectAsState().value,
             onSearchTextChange = state::onSearchTextChange,
             options = remember(options) { options.map { LabeledEntry(it, it.name) } },
             onValueChange = state::onSeriesSelect,
-            label = "Series"
+            label = LocalStrings.current.ui.series
         )
     }
 }
@@ -424,12 +425,12 @@ fun NumberSortConditionContent(
             options = NumericOpState.Op.entries.map { LabeledEntry(it, it.name) },
             onOptionChange = { state.setOp(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Operator") }
+            label = { Text(LocalStrings.current.ui.operator) }
         )
         FloatTextField(
             value = state.value.collectAsState().value,
             onValueChange = state::setValue,
-            label = "Number",
+            label = LocalStrings.current.ui.number,
         )
     }
 }
@@ -452,7 +453,7 @@ fun PosterConditionContent(
             options = EqualityOpState.Op.entries.map { LabeledEntry(it, it.name) },
             onOptionChange = { state.setOp(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Operator") }
+            label = { Text(LocalStrings.current.ui.operator) }
         )
 
         DropdownChoiceMenu(
@@ -473,7 +474,7 @@ fun PosterConditionContent(
             },
             onOptionChange = { state.setType(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Type") }
+            label = { Text(LocalStrings.current.ui.type) }
         )
 
         DropdownChoiceMenu(
@@ -492,7 +493,7 @@ fun PosterConditionContent(
             },
             onOptionChange = { state.setSelected(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Selected") }
+            label = { Text(LocalStrings.current.ui.selected) }
         )
 
     }
@@ -516,14 +517,14 @@ fun ReadListConditionContent(
             options = EqualityOpState.Op.entries.map { LabeledEntry(it, it.name) },
             onOptionChange = { state.setOp(it.value) },
             inputFieldModifier = Modifier.widthIn(min = conditionInputMinWidth),
-            label = { Text("Operator") }
+            label = { Text(LocalStrings.current.ui.operator) }
         )
         SearchableOptionSelectionField(
             searchText = state.searchText.collectAsState().value,
             onSearchTextChange = state::onSearchTextChange,
             options = remember(options) { options.map { LabeledEntry(it, it.name) } },
             onValueChange = state::onReadListSelect,
-            label = "Read List"
+            label = LocalStrings.current.ui.readList2
         )
 
     }

@@ -113,6 +113,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import snd.komelia.ui.LocalStrings
 
 private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS, LINKS, SIMILAR }
 
@@ -634,29 +635,29 @@ private fun SeriesImmersiveTabRow(
         Tab(
             selected = currentTab == ImmersiveTab.BOOKS,
             onClick = { onTabChange(ImmersiveTab.BOOKS) },
-            text = { Text("Books") },
+            text = { Text(LocalStrings.current.ui.books) },
         )
         if (showCollectionsTab) {
             Tab(
                 selected = currentTab == ImmersiveTab.COLLECTIONS,
                 onClick = { onTabChange(ImmersiveTab.COLLECTIONS) },
-                text = { Text("Collections") },
+                text = { Text(LocalStrings.current.ui.collections) },
             )
         }
         Tab(
             selected = currentTab == ImmersiveTab.TAGS,
             onClick = { onTabChange(ImmersiveTab.TAGS) },
-            text = { Text("Tags") },
+            text = { Text(LocalStrings.current.ui.tags) },
         )
         Tab(
             selected = currentTab == ImmersiveTab.LINKS,
             onClick = { onTabChange(ImmersiveTab.LINKS) },
-            text = { Text("Links") },
+            text = { Text(LocalStrings.current.ui.links) },
         )
         Tab(
             selected = currentTab == ImmersiveTab.SIMILAR,
             onClick = { onTabChange(ImmersiveTab.SIMILAR) },
-            text = { Text("Similar") },
+            text = { Text(LocalStrings.current.ui.similar) },
         )
     }
 }

@@ -31,6 +31,7 @@ import snd.komelia.ui.platform.PlatformType.DESKTOP
 import snd.komelia.ui.platform.PlatformType.MOBILE
 import snd.komelia.ui.platform.PlatformType.WEB_KOMF
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class LoginScreen : Screen {
 
@@ -54,7 +55,7 @@ class LoginScreen : Screen {
                         contentAlignment = Alignment.Center
                     ) { ScreenContent(vm, rootNavigator) }
 
-                WEB_KOMF -> SettingsScreenContainer(title = "Komga Login") {
+                WEB_KOMF -> SettingsScreenContainer(title = LocalStrings.current.ui.komgaLogin) {
                     ScreenContent(vm, rootNavigator)
                 }
             }

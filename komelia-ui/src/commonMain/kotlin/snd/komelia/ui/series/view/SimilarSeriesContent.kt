@@ -28,6 +28,7 @@ import snd.komelia.ui.suggestions.SuggestionActions
 import snd.komelia.ui.series.SimilarSeriesState
 import snd.komelia.ui.series.SimilarSuggestion
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 /**
  * "Similar" tab: series of the same library scored against this one.
@@ -75,16 +76,16 @@ private fun SimilarHeader(state: SimilarSeriesState) {
                 )
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
                 Text(
-                    "Once per library. Suggestions are then computed on the device.",
+                    LocalStrings.current.ui.oncePerLibrarySuggestionsAre,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            state.isLoading -> Text("Computing suggestions…", style = MaterialTheme.typography.bodyMedium)
+            state.isLoading -> Text(LocalStrings.current.ui.computingSuggestions, style = MaterialTheme.typography.bodyMedium)
 
             state.failed -> Text(
-                "Could not compute suggestions.",
+                LocalStrings.current.ui.couldNotComputeSuggestions,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -129,7 +130,7 @@ private fun RebuildRow(state: SimilarSeriesState) {
         OutlinedButton(onClick = { state.rebuild() }) {
             Icon(Icons.Default.Refresh, null)
             Spacer(Modifier.width(8.dp))
-            Text("Re-analyse library")
+            Text(LocalStrings.current.ui.reAnalyseLibrary)
         }
         Text(
             "${state.indexedCount} series analysed. Re-run it after a large import or a tagging pass.",

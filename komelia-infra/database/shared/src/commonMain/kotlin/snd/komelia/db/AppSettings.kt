@@ -252,6 +252,8 @@ data class AppSettings(
      * series pages). Off by default → every credit is shown, as before.
      */
     val authorRolesFilterEnabled: Boolean = false,
+    /** "" = follow the system locale; otherwise a language tag such as "fr". */
+    val uiLanguage: String = "",
 
     /**
      * Roles hidden when the filter above is on, lowercase ("letterer", …).

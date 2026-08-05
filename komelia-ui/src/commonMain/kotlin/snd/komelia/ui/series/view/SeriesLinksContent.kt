@@ -54,6 +54,7 @@ import snd.komelia.ui.series.AniListAnalysis
 import snd.komelia.ui.series.AniListSuggestionRow
 import snd.komelia.ui.series.SeriesLinksState
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 /** Display order + labels for related-series sections (from this series' view). */
 private val relationDisplayOrder = listOf(
@@ -98,7 +99,7 @@ fun SeriesLinksContent(
         Button(onClick = { showAdd = true }) {
             Icon(Icons.Default.Add, null)
             Spacer(Modifier.width(8.dp))
-            Text("Add link")
+            Text(LocalStrings.current.ui.addLink)
         }
 
         // Online AniList suggestions — only when the user opted in (Settings →
@@ -107,7 +108,7 @@ fun SeriesLinksContent(
         val aniListEnabled by state.aniListEnabled.collectAsState()
         if (aniListEnabled) {
             OutlinedButton(onClick = { state.analyze() }) {
-                Text("Analyze with AniList")
+                Text(LocalStrings.current.ui.analyzeWithAnilist)
             }
         }
 
@@ -115,7 +116,7 @@ fun SeriesLinksContent(
         val relations = state.relations
         if (versions.isEmpty() && relations.isEmpty()) {
             Text(
-                text = "No links yet. Use “Add link” to mark other versions (another " +
+                text = LocalStrings.current.ui.noLinksYetUseAdd +
                     "language or edition) or related series (sequel, prequel, spin-off). " +
                     "Long-press a linked series to unlink it.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -174,7 +175,7 @@ private fun LinkSection(
                     if (shared) {
                         Icon(
                             Icons.Default.Public,
-                            contentDescription = "Shared on server",
+                            contentDescription = LocalStrings.current.ui.sharedOnServer,
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(4.dp)
@@ -190,7 +191,7 @@ private fun LinkSection(
     val pending = pendingUnlink
     if (pending != null) {
         ConfirmationDialog(
-            title = "Unlink series",
+            title = LocalStrings.current.ui.unlinkSeries,
             body = "Remove the link to “${pending.metadata.title}”? This unlinks it on both series.",
             onDialogConfirm = {
                 onUnlink(pending)
@@ -224,7 +225,7 @@ private fun AddLinkDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add link") },
+        title = { Text(LocalStrings.current.ui.addLink) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
@@ -233,7 +234,7 @@ private fun AddLinkDialog(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it; selected = null },
-                    label = { Text("Search series") },
+                    label = { Text(LocalStrings.current.ui.searchSeries) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -247,7 +248,7 @@ private fun AddLinkDialog(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Suggest (same author / similar title)") }
+                ) { Text(LocalStrings.current.ui.suggestSameAuthorSimilarTitle) }
 
                 val sel = selected
                 when {
@@ -277,12 +278,12 @@ private fun AddLinkDialog(
                         KindButton("Other language") { state.linkRelation(sel.id, SeriesRelationType.LANGUAGE); onDismiss() }
                         KindButton("Colour edition") { state.linkRelation(sel.id, SeriesRelationType.COLORED); onDismiss() }
                         KindButton("Related") { state.linkRelation(sel.id, SeriesRelationType.RELATED); onDismiss() }
-                        TextButton(onClick = { selected = null }) { Text("Back to results") }
+                        TextButton(onClick = { selected = null }) { Text(LocalStrings.current.ui.backToResults) }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.close) } },
     )
 }
 
@@ -321,7 +322,7 @@ private fun AniListAnalysisDialog(
 
     AlertDialog(
         onDismissRequest = { state.dismissAnalysis() },
-        title = { Text("AniList suggestions") },
+        title = { Text(LocalStrings.current.ui.anilistSuggestions) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
@@ -331,7 +332,7 @@ private fun AniListAnalysisDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text("Analyzing…")
+                        Text(LocalStrings.current.ui.analyzing)
                     }
                 } else {
                     SourceSection(analysis, state)
@@ -371,7 +372,7 @@ private fun AniListAnalysisDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = { state.dismissAnalysis() }) { Text("Cancel") }
+            TextButton(onClick = { state.dismissAnalysis() }) { Text(LocalStrings.current.ui.cancel) }
         },
     )
 
@@ -448,7 +449,7 @@ private fun SourceSection(
         OutlinedTextField(
             value = manualQuery,
             onValueChange = { manualQuery = it },
-            label = { Text("Wrong series? Search AniList") },
+            label = { Text(LocalStrings.current.ui.wrongSeriesSearchAnilist) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -484,7 +485,7 @@ private fun CorrectSeriesDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Pick the correct series") },
+        title = { Text(LocalStrings.current.ui.pickTheCorrectSeries) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
@@ -493,7 +494,7 @@ private fun CorrectSeriesDialog(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text("Search series") },
+                    label = { Text(LocalStrings.current.ui.searchSeries) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -511,6 +512,6 @@ private fun CorrectSeriesDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.cancel) } },
     )
 }

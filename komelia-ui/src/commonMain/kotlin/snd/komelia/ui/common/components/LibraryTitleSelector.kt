@@ -24,6 +24,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
+import snd.komelia.ui.LocalStrings
 
 /**
  * Renders a big page title that doubles as a library-switcher dropdown.
@@ -65,7 +66,7 @@ fun LibraryTitleSelector(
             Text(label, style = titleStyle)
             Icon(
                 imageVector = Icons.Filled.ArrowDropDown,
-                contentDescription = "Switch library",
+                contentDescription = LocalStrings.current.ui.switchLibrary,
             )
         }
         DropdownMenu(
@@ -75,7 +76,7 @@ fun LibraryTitleSelector(
             // "Home" entry: always first, checkmarked when no library is
             // active (the caller passes currentLibraryId = null on Home).
             DropdownMenuItem(
-                text = { Text("Home") },
+                text = { Text(LocalStrings.current.ui.home) },
                 onClick = {
                     expanded = false
                     onPickHome()

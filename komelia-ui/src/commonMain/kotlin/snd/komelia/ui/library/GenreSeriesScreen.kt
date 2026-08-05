@@ -32,6 +32,7 @@ import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.series.list.SeriesListContent
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.library.KomgaLibraryId
+import snd.komelia.ui.LocalStrings
 
 /**
  * A genre's series, with the full library list UI (letters, read/unread and all
@@ -71,7 +72,7 @@ class GenreSeriesScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.back)
                         }
                         Column(Modifier.padding(start = 4.dp)) {
                             Text(

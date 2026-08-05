@@ -73,6 +73,7 @@ object AppSettingsTable : Table("AppSettings") {
     val genreTileTextBelow = bool("genre_tile_text_below").default(false)
     val genreTileShowCount = bool("genre_tile_show_count").default(true)
     val authorRolesFilterEnabled = bool("author_roles_filter_enabled").default(false)
+    val uiLanguage = text("ui_language").default("")
     val hiddenAuthorRoles = text("hidden_author_roles").default("[]")
 
     override val primaryKey = PrimaryKey(version)

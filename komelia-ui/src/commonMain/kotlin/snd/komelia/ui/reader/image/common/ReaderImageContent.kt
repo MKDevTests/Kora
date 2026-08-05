@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.DpSize
 import snd.komelia.image.OcrElementBox
 import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImageResult
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ReaderImageContent(
@@ -51,7 +52,7 @@ fun ReaderImageContent(
             content = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color.Black)
-                    Text("Downloading...", color = Color.Black)
+                    Text(LocalStrings.current.ui.downloading, color = Color.Black)
                 }
             }
         )
@@ -104,7 +105,7 @@ private fun ImageContent(
             verticalArrangement = Arrangement.Center
         ) {
             CircularProgressIndicator(color = Color.Black)
-            Text("Processing...", color = Color.Black)
+            Text(LocalStrings.current.ui.processing, color = Color.Black)
         }
 
     } else {

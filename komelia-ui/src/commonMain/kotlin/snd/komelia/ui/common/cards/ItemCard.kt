@@ -56,6 +56,7 @@ import snd.komelia.ui.LocalUseNewLibraryUI2
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.ui.LocalStrings
 
 const val defaultCardWidth = 240
 const val DEFAULT_CARD_MAX_LINES = 2
@@ -150,7 +151,7 @@ fun LibraryItemCard(
                             )
 
                             if (isUnavailable) {
-                                Text("Unavailable", style = primaryStyle, color = MaterialTheme.colorScheme.error, maxLines = 1)
+                                Text(LocalStrings.current.ui.unavailable, style = primaryStyle, color = MaterialTheme.colorScheme.error, maxLines = 1)
                                 Text(title, style = primaryStyle, color = textColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             } else {
                                 val secondary = @Composable {
@@ -185,7 +186,7 @@ fun LibraryItemCard(
                 val secondaryStyle = MaterialTheme.typography.labelSmall
 
                 if (isUnavailable) {
-                    Text("Unavailable", style = primaryStyle, color = MaterialTheme.colorScheme.error, maxLines = 1)
+                    Text(LocalStrings.current.ui.unavailable, style = primaryStyle, color = MaterialTheme.colorScheme.error, maxLines = 1)
                     Text(title, style = primaryStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 } else {
                     val secondary = @Composable {

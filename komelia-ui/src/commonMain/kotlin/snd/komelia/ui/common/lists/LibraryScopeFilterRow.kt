@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.CheckboxWithLabel
 import snd.komga.client.library.KomgaLibrary
+import snd.komelia.ui.LocalStrings
 
 /**
  * Library scope selector for the personal lists (Favorites / Planned): "All"
@@ -63,7 +64,7 @@ fun LibraryScopeFilterRow(
                 FilterChip(
                     selected = selectedLibraryId == null,
                     onClick = { onSelect(null) },
-                    label = { Text("Toutes") },
+                    label = { Text(LocalStrings.current.ui.toutes) },
                 )
             }
             items(libraries, key = { it.id.value }) { library ->
@@ -81,14 +82,14 @@ fun LibraryScopeFilterRow(
             }
         }
         IconButton(onClick = { showScopeDialog = true }) {
-            Icon(Icons.Default.FilterList, contentDescription = "Bibliothèques incluses dans « Toutes »")
+            Icon(Icons.Default.FilterList, contentDescription = LocalStrings.current.ui.bibliothQuesInclusesDansToutes)
         }
     }
 
     if (showScopeDialog) {
         AlertDialog(
             onDismissRequest = { showScopeDialog = false },
-            title = { Text("Bibliothèques dans « Toutes »") },
+            title = { Text(LocalStrings.current.ui.bibliothQuesDansToutes) },
             text = {
                 Column {
                     Text(
@@ -110,7 +111,7 @@ fun LibraryScopeFilterRow(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showScopeDialog = false }) { Text("Fermer") }
+                TextButton(onClick = { showScopeDialog = false }) { Text(LocalStrings.current.ui.fermer) }
             },
         )
     }

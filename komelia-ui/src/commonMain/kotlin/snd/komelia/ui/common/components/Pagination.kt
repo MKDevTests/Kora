@@ -38,6 +38,7 @@ import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.ic_view_grid_plus
 import org.jetbrains.compose.resources.painterResource
 import snd.komelia.ui.common.components.LabeledEntry.Companion.intEntry
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun Pagination(
@@ -145,7 +146,7 @@ fun PageSizeSelectionDropdown(
         IconButton(onClick = { expanded = true }) {
             Icon(
                 painter = painterResource(Res.drawable.ic_view_grid_plus),
-                contentDescription = "Grid Size"
+                contentDescription = LocalStrings.current.ui.gridSize
             )
         }
         DropdownMenu(

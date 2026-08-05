@@ -98,6 +98,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V86__author_roles_and_continuous_zoom.sql",
         "V87__reading_order.sql",
         "V88__suggestion_feedback.sql",
+        "V89__ui_language.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

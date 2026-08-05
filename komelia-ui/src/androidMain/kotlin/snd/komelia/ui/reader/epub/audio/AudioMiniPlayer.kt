@@ -43,6 +43,7 @@ import snd.komelia.image.coil.BookDefaultThumbnailRequest
 import snd.komelia.ui.LocalImmersiveColorEnabled
 import snd.komelia.ui.common.images.ThumbnailImage
 import snd.komga.client.book.KomgaBookId
+import snd.komelia.ui.LocalStrings
 
 private val emphasizedEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
 private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
@@ -185,7 +186,7 @@ private fun SharedTransitionScope.PlayerRow(
         IconButton(onClick = controller::seekToPrev) {
             Icon(
                 Icons.Filled.SkipPrevious,
-                contentDescription = "Previous segment",
+                contentDescription = LocalStrings.current.ui.previousSegment,
             )
         }
         IconButton(onClick = controller::togglePlayPause) {
@@ -197,7 +198,7 @@ private fun SharedTransitionScope.PlayerRow(
         IconButton(onClick = controller::seekToNext) {
             Icon(
                 Icons.Filled.SkipNext,
-                contentDescription = "Next segment",
+                contentDescription = LocalStrings.current.ui.nextSegment,
             )
         }
     }

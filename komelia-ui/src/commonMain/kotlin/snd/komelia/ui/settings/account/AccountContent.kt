@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.dialogs.user.PasswordChangeDialog
 import snd.komga.client.user.KomgaUser
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AccountSettingsContent(user: KomgaUser) {
@@ -48,7 +49,7 @@ private fun RolesDetails(user: KomgaUser) {
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Roles:", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
+        Text(LocalStrings.current.ui.roles2, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             user.roles.forEach { role ->
                 SuggestionChip(
@@ -68,7 +69,7 @@ private fun PasswordDetails(user: KomgaUser) {
         onClick = { showPasswordDialog = true },
         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
     ) {
-        Text("Change Password")
+        Text(LocalStrings.current.ui.changePassword)
     }
     if (showPasswordDialog) {
         PasswordChangeDialog(user = user, onDismiss = { showPasswordDialog = false })

@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -61,7 +62,7 @@ fun SplitFabMenu(
                     ) {
                         Icon(
                             Icons.Filled.Close,
-                            contentDescription = "Close menu",
+                            contentDescription = LocalStrings.current.ui.closeMenu,
                             tint = contentColor
                         )
                     }
@@ -95,7 +96,7 @@ fun SplitFabMenu(
                         ) {
                             Icon(
                                 Icons.Rounded.KeyboardArrowUp,
-                                contentDescription = "Open menu",
+                                contentDescription = LocalStrings.current.ui.openMenu,
                                 tint = contentColor
                             )
                         }

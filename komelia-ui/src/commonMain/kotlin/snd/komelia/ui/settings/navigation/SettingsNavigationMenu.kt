@@ -60,6 +60,7 @@ import snd.komelia.ui.settings.users.UsersScreen
 import snd.komf.api.MediaServer.KOMGA
 import snd.komga.client.user.KomgaUser
 import snd.webview.webviewIsAvailable
+import snd.komelia.ui.LocalStrings
 
 private data class NavEntry(
     val label: String,
@@ -93,33 +94,33 @@ fun SettingsNavigationMenu(
         SettingsSearchField(query = query, onQueryChange = { query = it })
 
         FilteredSettingsGroup(
-            title = "App Settings",
+            title = LocalStrings.current.ui.appSettings,
             query = query,
             entries = buildList {
                 add(
                     NavEntry(
-                        label = "Appearance",
+                        label = LocalStrings.current.ui.appearance,
                         onClick = { onNavigation(AppSettingsScreen()) },
                         isSelected = currentScreen is AppSettingsScreen,
                     )
                 )
                 add(
                     NavEntry(
-                        label = "Navigation",
+                        label = LocalStrings.current.ui.navigation,
                         onClick = { onNavigation(NavigationSettingsScreen()) },
                         isSelected = currentScreen is NavigationSettingsScreen,
                     )
                 )
                 add(
                     NavEntry(
-                        label = "Connected Servers",
+                        label = LocalStrings.current.ui.connectedServers,
                         onClick = { onNavigation(AppServerManagementScreen()) },
                         isSelected = currentScreen is AppServerManagementScreen,
                     )
                 )
                 add(
                     NavEntry(
-                        label = "Image Reader",
+                        label = LocalStrings.current.ui.imageReader,
                         onClick = { onNavigation(ImageReaderSettingsScreen()) },
                         isSelected = currentScreen is ImageReaderSettingsScreen,
                     )
@@ -127,7 +128,7 @@ fun SettingsNavigationMenu(
                 if (webviewIsAvailable()) {
                     add(
                         NavEntry(
-                            label = "Epub Reader",
+                            label = LocalStrings.current.ui.epubReader,
                             onClick = { onNavigation(EpubReaderSettingsScreen()) },
                             isSelected = currentScreen is EpubReaderSettingsScreen,
                         )
@@ -135,7 +136,7 @@ fun SettingsNavigationMenu(
                 }
                 add(
                     NavEntry(
-                        label = "Transcription",
+                        label = LocalStrings.current.ui.transcription,
                         onClick = { onNavigation(TranscriptionSettingsScreen()) },
                         isSelected = currentScreen is TranscriptionSettingsScreen,
                     )
@@ -143,7 +144,7 @@ fun SettingsNavigationMenu(
                 if (updatesEnabled) {
                     add(
                         NavEntry(
-                            label = "Updates",
+                            label = LocalStrings.current.ui.updates,
                             onClick = { onNavigation(AppUpdatesScreen()) },
                             isSelected = currentScreen is AppUpdatesScreen,
                             trailingContent = if (newVersionIsAvailable) {
@@ -154,21 +155,21 @@ fun SettingsNavigationMenu(
                 }
                 add(
                     NavEntry(
-                        label = "Offline Mode",
+                        label = LocalStrings.current.ui.offlineMode2,
                         onClick = { onNavigation(OfflineSettingsScreen()) },
                         isSelected = currentScreen is OfflineSettingsScreen,
                     )
                 )
                 add(
                     NavEntry(
-                        label = "Backup & Restore",
+                        label = LocalStrings.current.ui.backupRestore2,
                         onClick = { onNavigation(BackupSettingsScreen()) },
                         isSelected = currentScreen is BackupSettingsScreen,
                     )
                 )
                 add(
                     NavEntry(
-                        label = "Diagnostics",
+                        label = LocalStrings.current.ui.diagnostics,
                         onClick = { onNavigation(DiagnosticsScreen()) },
                         isSelected = currentScreen is DiagnosticsScreen,
                     )
@@ -177,19 +178,19 @@ fun SettingsNavigationMenu(
         )
 
         FilteredSettingsGroup(
-            title = "Experimental",
+            title = LocalStrings.current.ui.experimental,
             query = query,
             entries = buildList {
                 add(
                     NavEntry(
-                        label = "Genre tab",
+                        label = LocalStrings.current.ui.genreTab,
                         onClick = { onNavigation(ExperimentalSettingsScreen()) },
                         isSelected = currentScreen is ExperimentalSettingsScreen,
                     )
                 )
                 add(
                     NavEntry(
-                        label = "Ignore List",
+                        label = LocalStrings.current.ui.ignoreList,
                         onClick = { onNavigation(IgnoreListScreen()) },
                         isSelected = currentScreen is IgnoreListScreen,
                     )
@@ -197,7 +198,7 @@ fun SettingsNavigationMenu(
                 if (isAdmin) {
                     add(
                         NavEntry(
-                            label = "Séries masquées",
+                            label = LocalStrings.current.ui.sRiesMasquEs,
                             onClick = { onNavigation(HiddenSeriesScreen()) },
                             isSelected = currentScreen is HiddenSeriesScreen,
                         )
@@ -210,19 +211,19 @@ fun SettingsNavigationMenu(
         // metadata that Komga rejects for them anyway (403).
         if (isAdmin) {
             FilteredSettingsGroup(
-                title = "Admin",
+                title = LocalStrings.current.ui.admin,
                 query = query,
                 entries = buildList {
                     add(
                         NavEntry(
-                            label = "Maintenance",
+                            label = LocalStrings.current.ui.maintenance,
                             onClick = { onNavigation(MaintenanceScreen()) },
                             isSelected = currentScreen is MaintenanceScreen,
                         )
                     )
                     add(
                         NavEntry(
-                            label = "Komga Toolkit",
+                            label = LocalStrings.current.ui.komgaToolkit,
                             onClick = { onNavigation(ToolkitScreen()) },
                             isSelected = currentScreen is ToolkitScreen,
                         )
@@ -233,19 +234,19 @@ fun SettingsNavigationMenu(
 
         if (!isOffline) {
             FilteredSettingsGroup(
-                title = "User Settings",
+                title = LocalStrings.current.ui.userSettings,
                 query = query,
                 entries = buildList {
                     add(
                         NavEntry(
-                            label = "My Account",
+                            label = LocalStrings.current.ui.myAccount,
                             onClick = { onNavigation(AccountSettingsScreen()) },
                             isSelected = currentScreen is AccountSettingsScreen,
                         )
                     )
                     add(
                         NavEntry(
-                            label = "My Authentication Activity",
+                            label = LocalStrings.current.ui.myAuthenticationActivity,
                             onClick = { onNavigation(AuthenticationActivityScreen(true)) },
                             isSelected = currentScreen is AuthenticationActivityScreen && currentScreen.forMe,
                         )
@@ -255,33 +256,33 @@ fun SettingsNavigationMenu(
 
             if (isAdmin) {
                 FilteredSettingsGroup(
-                    title = "Server Settings",
+                    title = LocalStrings.current.ui.serverSettings,
                     query = query,
                     entries = buildList {
                         add(
                             NavEntry(
-                                label = "General",
+                                label = LocalStrings.current.ui.general,
                                 onClick = { onNavigation(ServerSettingsScreen()) },
                                 isSelected = currentScreen is ServerSettingsScreen,
                             )
                         )
                         add(
                             NavEntry(
-                                label = "Users",
+                                label = LocalStrings.current.ui.users,
                                 onClick = { onNavigation(UsersScreen()) },
                                 isSelected = currentScreen is UsersScreen,
                             )
                         )
                         add(
                             NavEntry(
-                                label = "Authentication Activity",
+                                label = LocalStrings.current.ui.authenticationActivity,
                                 onClick = { onNavigation(AuthenticationActivityScreen(false)) },
                                 isSelected = currentScreen is AuthenticationActivityScreen && !currentScreen.forMe,
                             )
                         )
                         add(
                             NavEntry(
-                                label = "Media Management",
+                                label = LocalStrings.current.ui.mediaManagement,
                                 onClick = { onNavigation(MediaAnalysisScreen()) },
                                 isSelected = currentScreen is MediaAnalysisScreen,
                                 trailingContent = if (hasMediaErrors) {
@@ -291,7 +292,7 @@ fun SettingsNavigationMenu(
                         )
                         add(
                             NavEntry(
-                                label = "Announcements",
+                                label = LocalStrings.current.ui.announcements,
                                 onClick = { onNavigation(AnnouncementsScreen()) },
                                 isSelected = currentScreen is AnnouncementsScreen,
                             )
@@ -302,12 +303,12 @@ fun SettingsNavigationMenu(
 
             if (isAdmin) {
                 FilteredSettingsGroup(
-                    title = "Komf Settings",
+                    title = LocalStrings.current.ui.komfSettings,
                     query = query,
                     entries = buildList {
                         add(
                             NavEntry(
-                                label = "Connection",
+                                label = LocalStrings.current.ui.connection,
                                 onClick = { onNavigation(KomfSettingsScreen()) },
                                 isSelected = currentScreen is KomfSettingsScreen,
                             )
@@ -315,28 +316,28 @@ fun SettingsNavigationMenu(
                         if (komfEnabled) {
                             add(
                                 NavEntry(
-                                    label = "Processing",
+                                    label = LocalStrings.current.ui.processing2,
                                     onClick = { onNavigation(KomfProcessingSettingsScreen(KOMGA)) },
                                     isSelected = currentScreen is KomfProcessingSettingsScreen,
                                 )
                             )
                             add(
                                 NavEntry(
-                                    label = "Providers",
+                                    label = LocalStrings.current.ui.providers,
                                     onClick = { onNavigation(KomfProvidersSettingsScreen()) },
                                     isSelected = currentScreen is KomfProvidersSettingsScreen,
                                 )
                             )
                             add(
                                 NavEntry(
-                                    label = "Notifications",
+                                    label = LocalStrings.current.ui.notifications,
                                     onClick = { onNavigation(KomfNotificationSettingsScreen()) },
                                     isSelected = currentScreen is KomfNotificationSettingsScreen,
                                 )
                             )
                             add(
                                 NavEntry(
-                                    label = "Job History",
+                                    label = LocalStrings.current.ui.jobHistory,
                                     onClick = { onNavigation(KomfJobsScreen()) },
                                     isSelected = currentScreen is KomfJobsScreen,
                                 )
@@ -349,11 +350,11 @@ fun SettingsNavigationMenu(
 
         var showLogoutConfirmation by remember { mutableStateOf(false) }
         FilteredSettingsGroup(
-            title = "Actions",
+            title = LocalStrings.current.ui.actions,
             query = query,
             entries = listOf(
                 NavEntry(
-                    label = "Log Out",
+                    label = LocalStrings.current.ui.logOut,
                     onClick = { showLogoutConfirmation = true },
                     isSelected = false,
                 )
@@ -364,7 +365,7 @@ fun SettingsNavigationMenu(
 
         if (showLogoutConfirmation) {
             ConfirmationDialog(
-                title = "Log Out",
+                title = LocalStrings.current.ui.logOut,
                 body = "Are you sure you want to logout?",
                 buttonConfirm = "Log Out",
                 buttonConfirmColor = MaterialTheme.colorScheme.errorContainer,
@@ -412,12 +413,12 @@ private fun SettingsSearchField(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Search settings") },
+        placeholder = { Text(LocalStrings.current.ui.searchSettings) },
         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotBlank()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Filled.Close, contentDescription = "Clear")
+                    Icon(Icons.Filled.Close, contentDescription = LocalStrings.current.ui.clear)
                 }
             }
         },

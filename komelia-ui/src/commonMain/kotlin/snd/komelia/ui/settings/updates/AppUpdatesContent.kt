@@ -30,6 +30,7 @@ import snd.komelia.updates.AppRelease
 import snd.komelia.updates.AppVersion
 import snd.komelia.updates.UpdateProgress
 import kotlin.time.Instant
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AppUpdatesContent(
@@ -54,7 +55,7 @@ fun AppUpdatesContent(
         SwitchWithLabel(
             checked = checkForUpdates,
             onCheckedChange = onCheckForUpdatesChange,
-            label = { Text("Check for updates on startup") }
+            label = { Text(LocalStrings.current.ui.checkForUpdatesOnStartup) }
         )
         HorizontalDivider(Modifier.padding(bottom = 20.dp))
         VersionDetails(currentVersion, latestVersion, lastChecked, versionCheckInProgress)
@@ -66,20 +67,20 @@ fun AppUpdatesContent(
 
             FilledTonalButton(
                 onClick = { onCheckForUpdates() },
-            ) { Text("Check for updates") }
+            ) { Text(LocalStrings.current.ui.checkForUpdates) }
 
             if (LocalPlatform.current != PlatformType.WEB_KOMF &&
                 latestVersion != null && currentVersion < latestVersion
             ) {
                 FilledTonalButton(
                     onClick = { onUpdate() },
-                ) { Text("Update") }
+                ) { Text(LocalStrings.current.ui.update) }
             }
         }
 
         if (releases.isNotEmpty()) {
             HorizontalDivider(Modifier.padding(vertical = 20.dp))
-            Text("Release notes:", style = MaterialTheme.typography.headlineMedium)
+            Text(LocalStrings.current.ui.releaseNotes, style = MaterialTheme.typography.headlineMedium)
             releases.forEach {
                 ReleaseDetails(it)
                 HorizontalDivider()
@@ -137,7 +138,7 @@ private fun VersionDetails(
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Current version:", modifier = Modifier.widthIn(min = 200.dp))
+            Text(LocalStrings.current.ui.currentVersion, modifier = Modifier.widthIn(min = 200.dp))
             Text("$currentVersion")
         }
 
@@ -146,7 +147,7 @@ private fun VersionDetails(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (latestVersion != null) {
-                Text("Latest checked version:", modifier = Modifier.widthIn(200.dp))
+                Text(LocalStrings.current.ui.latestCheckedVersion, modifier = Modifier.widthIn(200.dp))
                 Text("$latestVersion")
 
                 if (lastChecked != null) {

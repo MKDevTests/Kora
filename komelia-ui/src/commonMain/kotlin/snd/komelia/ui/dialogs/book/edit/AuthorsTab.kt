@@ -28,6 +28,7 @@ import snd.komelia.ui.common.components.LockableChipTextField
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
 import snd.komga.client.common.KomgaAuthor
+import snd.komelia.ui.LocalStrings
 
 class AuthorsTab(
     private val vm: BookEditMetadataState
@@ -75,7 +76,7 @@ private fun AuthorsTabContent(
         TextField(
             value = newCustomRole,
             onValueChange = { newCustomRole = it },
-            label = { Text("Add custom role") },
+            label = { Text(LocalStrings.current.ui.addCustomRole) },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,

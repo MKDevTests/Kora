@@ -50,6 +50,7 @@ import snd.komga.client.common.pencillerRole
 import snd.komga.client.common.translatorRole
 import snd.komga.client.common.writerRole
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 private val authorsOrder = listOf(
     writerRole,
@@ -78,7 +79,7 @@ fun BookInfoColumn(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!publisher.isNullOrBlank()) {
             DescriptionChips(
-                label = "Publisher",
+                label = LocalStrings.current.ui.publisher,
                 chipValue = stringEntry(publisher),
                 onClick = { onFilterClick(SeriesScreenFilter(publisher = listOf(it))) },
             )
@@ -87,7 +88,7 @@ fun BookInfoColumn(
         val genreEntries = remember(genres) { genres?.map { stringEntry(it) } }
         if (genreEntries != null) {
             DescriptionChips(
-                label = "Genres",
+                label = LocalStrings.current.ui.genres,
                 chipValues = genreEntries,
                 onChipClick = { onFilterClick(SeriesScreenFilter(genres = listOf(it))) },
             )
@@ -102,7 +103,7 @@ fun BookInfoColumn(
         val uriHandler = LocalUriHandler.current
         val linkEntries = remember(links) { links.map { LabeledEntry(it, it.label) } }
         DescriptionChips(
-            label = "Links",
+            label = LocalStrings.current.ui.links,
             chipValues = linkEntries,
             onChipClick = { entry -> uriHandler.openUri(entry.url) },
             icon = Icons.Default.Link,
@@ -132,7 +133,7 @@ fun BookInfoColumn(
         Spacer(Modifier.size(0.dp))
         Row {
             Text(
-                "Size",
+                LocalStrings.current.ui.size,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.width(120.dp)
             )
@@ -141,7 +142,7 @@ fun BookInfoColumn(
 
         Row {
             Text(
-                "Format",
+                LocalStrings.current.ui.format,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.width(120.dp)
             )
@@ -153,7 +154,7 @@ fun BookInfoColumn(
         isbn.ifBlank { null }?.let { isbn ->
             Row {
                 Text(
-                    "ISBN",
+                    LocalStrings.current.ui.isbn,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.width(120.dp)
                 )
@@ -163,7 +164,7 @@ fun BookInfoColumn(
 
         Row {
             Text(
-                "File",
+                LocalStrings.current.ui.file,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.width(120.dp)
             )
@@ -196,7 +197,7 @@ fun BookInfoRow(
             if (book.deleted) {
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("Unavailable") },
+                    label = { Text(LocalStrings.current.ui.unavailable) },
                     border = null,
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -206,7 +207,7 @@ fun BookInfoRow(
             if (book.remoteFileUnavailable) {
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("Remote Unavailable") },
+                    label = { Text(LocalStrings.current.ui.remoteUnavailable) },
                     border = null,
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -217,7 +218,7 @@ fun BookInfoRow(
             if (book.isLocalFileOutdated) {
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("Local download outdated") },
+                    label = { Text(LocalStrings.current.ui.localDownloadOutdated) },
                     border = null,
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -227,7 +228,7 @@ fun BookInfoRow(
         }
 
         SelectionContainer {
-            Text(text = "Book #${book.metadata.number} · ${book.media.pagesCount} pages")
+            Text(text = LocalStrings.current.counts.bookAndPages(book.metadata.number.toString(), book.media.pagesCount))
         }
 
         Spacer(Modifier.heightIn(5.dp))
@@ -236,7 +237,7 @@ fun BookInfoRow(
                 book.metadata.releaseDate?.let {
                     Row {
                         Text(
-                            text = "Release date:",
+                            text = LocalStrings.current.ui.releaseDate3,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.width(120.dp)
                         )
@@ -268,7 +269,7 @@ fun BookInfoRow(
 
                         Row {
                             Text(
-                                "Read progress:",
+                                LocalStrings.current.ui.readProgress,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.width(120.dp)
                             )
@@ -283,7 +284,7 @@ fun BookInfoRow(
                                 .format(localDateTimeFormat)
                         }
                         Text(
-                            "Last read:",
+                            LocalStrings.current.ui.lastRead,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.width(120.dp)
                         )

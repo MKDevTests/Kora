@@ -19,6 +19,7 @@ import com.mohamedrejeb.richeditor.ui.material3.RichText
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.AppRelease
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun UpdateDialog(
@@ -47,7 +48,7 @@ private fun HeaderContent() {
         modifier = Modifier.padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("New version is available", style = MaterialTheme.typography.headlineSmall)
+        Text(LocalStrings.current.ui.newVersionIsAvailable, style = MaterialTheme.typography.headlineSmall)
         HorizontalDivider()
     }
 }
@@ -85,14 +86,14 @@ private fun ControlButtons(
         TextButton(
             onClick = onDismiss,
             modifier = Modifier.cursorForHand(),
-            content = { Text("Dismiss") }
+            content = { Text(LocalStrings.current.ui.dismiss) }
         )
 
         FilledTonalButton(
             onClick = onConfirm,
             modifier = Modifier.cursorForHand(),
         ) {
-            Text("Update")
+            Text(LocalStrings.current.ui.update)
         }
     }
 }

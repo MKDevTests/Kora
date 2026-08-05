@@ -41,6 +41,7 @@ import snd.komelia.ui.common.components.CheckboxWithLabel
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.UpdateProgress
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun OrtInstallDialog(
@@ -76,9 +77,9 @@ fun OrtInstallDialog(
             header = {
                 Column(modifier = Modifier.padding(10.dp)) {
                     if (updateProgress == null)
-                        Text("Choose ONNX Runtime version", style = MaterialTheme.typography.titleLarge)
+                        Text(LocalStrings.current.ui.chooseOnnxRuntimeVersion, style = MaterialTheme.typography.titleLarge)
                     else
-                        Text("Downloading ONNX Runtime", style = MaterialTheme.typography.titleLarge)
+                        Text(LocalStrings.current.ui.downloadingOnnxRuntime, style = MaterialTheme.typography.titleLarge)
                     HorizontalDivider(Modifier.padding(top = 10.dp))
                 }
             },
@@ -102,7 +103,7 @@ fun OrtInstallDialog(
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier.cursorForHand(),
-                        content = { Text("Cancel") }
+                        content = { Text(LocalStrings.current.ui.cancel) }
                     )
 
                     FilledTonalButton(
@@ -110,7 +111,7 @@ fun OrtInstallDialog(
                         onClick = { provider?.let { onInstall(it) } },
                         modifier = Modifier.cursorForHand(),
                     ) {
-                        Text("Install")
+                        Text(LocalStrings.current.ui.install)
                     }
                 }
             },
@@ -136,7 +137,7 @@ private fun OrtDownloadDialogContent(
                 .fillMaxWidth()
         ) {
             Text(
-                "ONNX Runtime support is experimental.\nMight cause crashes or other app instabilities",
+                LocalStrings.current.ui.onnxRuntimeSupportIsExperimental,
                 color = MaterialTheme.colorScheme.tertiaryContainer
             )
         }
@@ -151,10 +152,10 @@ private fun OrtDownloadDialogContent(
                         labelAlignment = Alignment.Top,
                         label = {
                             Column {
-                                Text("Cuda (Nvidia GPUs, requires CUDA12 and cuDNN9 system install)")
+                                Text(LocalStrings.current.ui.cudaNvidiaGpusRequiresCuda12)
                                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        "download CUDA12",
+                                        LocalStrings.current.ui.downloadCuda12,
                                         color = MaterialTheme.colorScheme.secondary,
                                         textDecoration = Underline,
                                         modifier = Modifier
@@ -163,7 +164,7 @@ private fun OrtDownloadDialogContent(
                                             .padding(horizontal = 5.dp),
                                     )
                                     Text(
-                                        "download cuDNN9",
+                                        LocalStrings.current.ui.downloadCudnn9,
                                         color = MaterialTheme.colorScheme.secondary,
                                         textDecoration = Underline,
                                         modifier = Modifier
@@ -183,14 +184,14 @@ private fun OrtDownloadDialogContent(
                     labelAlignment = Alignment.Top,
                     label = {
                         Column {
-                            Text("TensorRT (Nvidia GPUs, requires CUDA12, cuDNN9 and TensorRT system install)")
+                            Text(LocalStrings.current.ui.tensorrtNvidiaGpusRequiresCuda12)
                             Text(
-                                "Uses TensorRT to create optimized graph engine. Takes a significant time on model first load. After initial load engine is cached for future use",
+                                LocalStrings.current.ui.usesTensorrtToCreateOptimized,
                                 style = MaterialTheme.typography.labelLarge
                             )
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    "download CUDA12",
+                                    LocalStrings.current.ui.downloadCuda12,
                                     color = MaterialTheme.colorScheme.secondary,
                                     textDecoration = Underline,
                                     modifier = Modifier
@@ -199,7 +200,7 @@ private fun OrtDownloadDialogContent(
                                         .padding(horizontal = 5.dp),
                                 )
                                 Text(
-                                    "download cuDNN9",
+                                    LocalStrings.current.ui.downloadCudnn9,
                                     color = MaterialTheme.colorScheme.secondary,
                                     textDecoration = Underline,
                                     modifier = Modifier
@@ -208,7 +209,7 @@ private fun OrtDownloadDialogContent(
                                         .padding(horizontal = 5.dp),
                                 )
                                 Text(
-                                    "download TensorRT",
+                                    LocalStrings.current.ui.downloadTensorrt,
                                     color = MaterialTheme.colorScheme.secondary,
                                     textDecoration = Underline,
                                     modifier = Modifier
@@ -225,7 +226,7 @@ private fun OrtDownloadDialogContent(
                 ROCm -> CheckboxWithLabel(
                     checked = chosenProvider == ROCm,
                     onCheckedChange = { onProviderChoice(ROCm) },
-                    label = { Text("ROCm (AMD GPUs, requires ROCm7 system install)") },
+                    label = { Text(LocalStrings.current.ui.rocmAmdGpusRequiresRocm7) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -235,9 +236,9 @@ private fun OrtDownloadDialogContent(
                     labelAlignment = Alignment.Top,
                     label = {
                         Column {
-                            Text("DirectML (any GPU)")
+                            Text(LocalStrings.current.ui.directmlAnyGpu)
                             Text(
-                                "High-performance, hardware-accelerated DirectX 12 library for machine learning",
+                                LocalStrings.current.ui.highPerformanceHardwareAcceleratedDirectx,
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
@@ -258,9 +259,9 @@ private fun OrtDownloadDialogContent(
                     labelAlignment = Alignment.Top,
                     label = {
                         Column {
-                            Text("WebGPU (Any GPU)")
+                            Text(LocalStrings.current.ui.webgpuAnyGpu)
                             Text(
-                                " API for cross-platform efficient GPU access using system's underlying Vulkan, Metal, or Direct3D 12 technologies",
+                                LocalStrings.current.ui.apiForCrossPlatformEfficient,
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
@@ -284,7 +285,7 @@ fun RestartDialog(
                 if (error != null)
                     Text("An error occurred during installation:\n$error")
                 else
-                    Text("App restart is required for changes to take effect")
+                    Text(LocalStrings.current.ui.appRestartIsRequiredFor)
             }
         },
         controlButtons = {
@@ -293,7 +294,7 @@ fun RestartDialog(
                     onClick = onConfirm,
                     modifier = Modifier.cursorForHand(),
                 ) {
-                    Text("Confirm")
+                    Text(LocalStrings.current.ui.confirm)
                 }
             }
         },

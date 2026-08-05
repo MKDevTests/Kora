@@ -38,6 +38,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 /**
  * Admin-only screen listing every series hidden for everyone (the kora:hidden
@@ -52,7 +53,7 @@ class HiddenSeriesScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getHiddenSeriesViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer("Séries masquées") {
+        SettingsScreenContainer(LocalStrings.current.ui.sRiesMasquEs) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     "Séries masquées pour TOUS les utilisateurs Kora via le tag kora:hidden " +
@@ -74,13 +75,13 @@ class HiddenSeriesScreen : Screen {
                         modifier = Modifier.weight(1f),
                     )
                     if (vm.hidden.isNotEmpty()) {
-                        TextButton(onClick = vm::unhideAll) { Text("Tout réafficher") }
+                        TextButton(onClick = vm::unhideAll) { Text(LocalStrings.current.ui.toutRAfficher) }
                     }
                 }
 
                 if (vm.hidden.isEmpty()) {
                     Text(
-                        "Aucune série masquée. Appui long sur une série → « Masquer pour tous ».",
+                        LocalStrings.current.ui.aucuneSRieMasquE,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 20.dp),
@@ -99,7 +100,7 @@ class HiddenSeriesScreen : Screen {
                                 modifier = Modifier.weight(1f),
                             )
                             IconButton(onClick = { vm.unhide(series.id) }) {
-                                Icon(Icons.Default.Visibility, contentDescription = "Réafficher")
+                                Icon(Icons.Default.Visibility, contentDescription = LocalStrings.current.ui.rAfficher)
                             }
                         }
                     }

@@ -82,31 +82,31 @@ fun CommonImageSettings(
             SwitchWithLabel(
                 checked = cropBorders,
                 onCheckedChange = onCropBordersChange,
-                label = { Text("Crop borders") },
+                label = { Text(LocalStrings.current.ui.cropBorders) },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 
             SwitchWithLabel(
                 checked = invertSpeechBubbles,
                 onCheckedChange = onInvertSpeechBubblesChange,
-                label = { Text("Invert speech bubbles") },
-                supportingText = { Text("Black bubble, white text — artwork untouched. Reduces glare. Bubbles with screentone or gradient backgrounds are left as-is.") },
+                label = { Text(LocalStrings.current.ui.invertSpeechBubbles) },
+                supportingText = { Text(LocalStrings.current.ui.blackBubbleWhiteTextArtwork) },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 
             SwitchWithLabel(
                 checked = webtoonSmartScroll,
                 onCheckedChange = onWebtoonSmartScrollChange,
-                label = { Text("Webtoon smart scroll") },
-                supportingText = { Text("Tapping in a vertical strip crosses blank gutters whole and stops on panel and speech-bubble boundaries, instead of a fixed distance.") },
+                label = { Text(LocalStrings.current.ui.webtoonSmartScroll) },
+                supportingText = { Text(LocalStrings.current.ui.tappingInAVerticalStrip) },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
 
             SwitchWithLabel(
                 checked = loadThumbnailPreviews,
                 onCheckedChange = onLoadThumbnailPreviewsChange,
-                label = { Text("Load small previews") },
-                supportingText = { Text("Shows a thumbnail while dragging the navigation slider") },
+                label = { Text(LocalStrings.current.ui.loadSmallPreviews) },
+                supportingText = { Text(LocalStrings.current.ui.showsAThumbnailWhileDragging) },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
         }
@@ -119,7 +119,7 @@ fun CommonImageSettings(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Color Correction")
+            Text(LocalStrings.current.ui.colorCorrection)
             Spacer(Modifier.width(10.dp))
             Icon(
                 imageVector = Icons.Default.BarChart,
@@ -129,7 +129,7 @@ fun CommonImageSettings(
             )
             if (isColorCorrectionsActive) {
                 Text(
-                    "active",
+                    LocalStrings.current.ui.active,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -142,8 +142,8 @@ fun CommonImageSettings(
             SwitchWithLabel(
                 checked = flashEnabled,
                 onCheckedChange = onFlashEnabledChange,
-                label = { Text("Flash on page change") },
-                supportingText = { Text("Prevents ghosting on e-ink devices") },
+                label = { Text(LocalStrings.current.ui.flashOnPageChange) },
+                supportingText = { Text(LocalStrings.current.ui.preventsGhostingOnEInk) },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
             AnimatedVisibility(flashEnabled) {
@@ -153,7 +153,7 @@ fun CommonImageSettings(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.width(100.dp)) {
-                            Text("Flash Duration", style = MaterialTheme.typography.labelLarge)
+                            Text(LocalStrings.current.ui.flashDuration, style = MaterialTheme.typography.labelLarge)
                             Text("$flashDuration ms", style = MaterialTheme.typography.labelMedium)
                         }
                         Slider(
@@ -167,7 +167,7 @@ fun CommonImageSettings(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.width(100.dp)) {
-                            Text("Flash every", style = MaterialTheme.typography.labelLarge)
+                            Text(LocalStrings.current.ui.flashEvery, style = MaterialTheme.typography.labelLarge)
                             val pagesText = remember(flashEveryNPages) {
                                 if (flashEveryNPages == 1) "$flashEveryNPages page"
                                 else "$flashEveryNPages pages"
@@ -184,7 +184,7 @@ fun CommonImageSettings(
                     }
 
                     Column {
-                        Text("Flash with")
+                        Text(LocalStrings.current.ui.flashWith)
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
@@ -192,19 +192,19 @@ fun CommonImageSettings(
                                 selected = flashWith == ReaderFlashColor.BLACK,
                                 onClick = { onFlashWithChange(ReaderFlashColor.BLACK) },
                                 colors = accentInputChipColors(),
-                                label = { Text("Black") }
+                                label = { Text(LocalStrings.current.ui.black) }
                             )
                             InputChip(
                                 selected = flashWith == ReaderFlashColor.WHITE,
                                 onClick = { onFlashWithChange(ReaderFlashColor.WHITE) },
                                 colors = accentInputChipColors(),
-                                label = { Text("White") }
+                                label = { Text(LocalStrings.current.ui.white) }
                             )
                             InputChip(
                                 selected = flashWith == ReaderFlashColor.WHITE_AND_BLACK,
                                 onClick = { onFlashWithChange(ReaderFlashColor.WHITE_AND_BLACK) },
                                 colors = accentInputChipColors(),
-                                label = { Text("White and Black") }
+                                label = { Text(LocalStrings.current.ui.whiteAndBlack) }
                             )
                         }
                     }

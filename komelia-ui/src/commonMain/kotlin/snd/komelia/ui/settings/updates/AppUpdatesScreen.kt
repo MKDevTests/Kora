@@ -10,6 +10,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komelia.updates.AppVersion
+import snd.komelia.ui.LocalStrings
 
 class AppUpdatesScreen : Screen {
     @Composable
@@ -19,7 +20,7 @@ class AppUpdatesScreen : Screen {
         LaunchedEffect(Unit) { vm.initialize() }
 
         val state = vm.state.collectAsState().value
-        SettingsScreenContainer("App Updates") {
+        SettingsScreenContainer(LocalStrings.current.ui.appUpdates) {
             when (state) {
                 is LoadState.Error -> Text("Error ${state.exception.message}")
                 LoadState.Loading, LoadState.Uninitialized, is LoadState.Success -> AppUpdatesContent(

@@ -39,6 +39,7 @@ import snd.komelia.ui.settings.komf.SavableHttpTextField
 import snd.komelia.ui.settings.komf.SavableTextField
 import snd.komf.api.mediaserver.KomfMediaServerLibrary
 import snd.komf.api.mediaserver.KomfMediaServerLibraryId
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -68,9 +69,9 @@ fun KomfSettingsContent(
                             komfEnabledConfirmed = true
                         }
                     },
-                    label = { Text("Enable Komf Integration") },
+                    label = { Text(LocalStrings.current.ui.enableKomfIntegration) },
                     supportingText = {
-                        Text("Adds features aimed at metadata updates and editing")
+                        Text(LocalStrings.current.ui.addsFeaturesAimedAtMetadata)
                     }
                 )
 
@@ -79,7 +80,7 @@ fun KomfSettingsContent(
                     ElevatedButton(
                         onClick = { uriHandler.openUri("https://github.com/Snd-R/komf") },
                     ) {
-                        Text("Project Link")
+                        Text(LocalStrings.current.ui.projectLink)
                     }
                 }
             }
@@ -149,7 +150,7 @@ private fun KomfConnectionDetails(
     komfConnectionError: String?,
 ) {
     SavableHttpTextField(
-        label = "Komf Url",
+        label = LocalStrings.current.ui.komfUrl,
         currentValue = komfUrl,
         onValueSave = onKomfUrlChange,
         confirmationText = "Connect",
@@ -162,7 +163,7 @@ private fun KomfConnectionDetails(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Connected", color = MaterialTheme.colorScheme.secondary)
+                    Text(LocalStrings.current.ui.connected, color = MaterialTheme.colorScheme.secondary)
                     Icon(Icons.Default.Check, null)
                 }
             }
@@ -194,7 +195,7 @@ private fun KomgaConnectionDetails(
         }
 
         SavableHttpTextField(
-            label = "Komga Url",
+            label = LocalStrings.current.ui.komgaUrl,
             confirmationText = "Save",
             currentValue = baseUrl,
             onValueSave = onBaseUrlChange,
@@ -203,13 +204,13 @@ private fun KomgaConnectionDetails(
         SavableTextField(
             currentValue = username,
             onValueSave = onUsernameChange,
-            label = { Text("Komga Username") },
+            label = { Text(LocalStrings.current.ui.komgaUsername) },
         )
 
         SavableTextField(
             currentValue = "",
             onValueSave = onPasswordChange,
-            label = { Text("Komga Password") },
+            label = { Text(LocalStrings.current.ui.komgaPassword) },
             useEditButton = true,
             isPassword = true
         )
@@ -247,7 +248,7 @@ private fun KavitaConnectionDetails(
         }
 
         SavableHttpTextField(
-            label = "Kavita Url",
+            label = LocalStrings.current.ui.kavitaUrl,
             confirmationText = "Save",
             currentValue = baseUrl,
             onValueSave = onBaseUrlChange,
@@ -256,7 +257,7 @@ private fun KavitaConnectionDetails(
         SavableTextField(
             currentValue = "",
             onValueSave = onPasswordChange,
-            label = { Text("Kavita API Key") },
+            label = { Text(LocalStrings.current.ui.kavitaApiKey) },
             useEditButton = true,
             isPassword = true
         )
@@ -289,10 +290,10 @@ private fun MediaServerEventListenerSettings(
         SwitchWithLabel(
             checked = enableEventListener,
             onCheckedChange = onEnableEventListenerChange,
-            label = { Text("Event Listener") },
+            label = { Text(LocalStrings.current.ui.eventListener) },
             supportingText = {
                 Text(
-                    "Launch processing jobs when new series or book is added",
+                    LocalStrings.current.ui.launchProcessingJobsWhenNew,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -341,7 +342,7 @@ private fun EventListenerContent(
             selectedOptions = metadataSelectedOptions,
             options = libraryOptions,
             onOptionSelect = { onMetadataLibraryFilterSelect(it.value) },
-            label = { Text("Enable metadata update jobs for libraries") },
+            label = { Text(LocalStrings.current.ui.enableMetadataUpdateJobsFor) },
             inputFieldModifier = Modifier.fillMaxWidth(),
             inputFieldColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -359,7 +360,7 @@ private fun EventListenerContent(
             selectedOptions = notificationsSelectedOptions,
             options = libraryOptions,
             onOptionSelect = { onNotificationsLibraryFilterSelect(it.value) },
-            label = { Text("Enable notification jobs for libraries") },
+            label = { Text(LocalStrings.current.ui.enableNotificationJobsForLibraries) },
             inputFieldModifier = Modifier.fillMaxWidth(),
             inputFieldColor = MaterialTheme.colorScheme.surfaceVariant
         )

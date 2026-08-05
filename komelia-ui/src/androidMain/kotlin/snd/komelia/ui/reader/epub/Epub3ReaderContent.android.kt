@@ -85,6 +85,7 @@ import snd.komelia.ui.reader.epub.audio.AudiobookFolderController
 import snd.komelia.ui.reader.epub.audio.AudioFullScreenPlayer
 import snd.komelia.ui.reader.epub.audio.AudioMiniPlayer
 import snd.komelia.ui.reader.epub.audio.AudioTrackListDialog
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -269,7 +270,7 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                                 .statusBarsPadding()
                         ) {
                             IconButton(onClick = { epub3State.closeWebview() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Leave")
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.leave)
                             }
                             val book by epub3State.book.collectAsState()
                             Text(

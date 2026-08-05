@@ -44,6 +44,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komelia.updates.AppVersion
 import kotlin.time.Clock
+import snd.komelia.ui.LocalStrings
 
 /**
  * Settings -> App Settings -> Diagnostics. A read-only, at-a-glance view of the
@@ -67,7 +68,7 @@ class DiagnosticsScreen : Screen {
         var showLogs by remember { mutableStateOf(false) }
         var logText by remember { mutableStateOf("") }
 
-        SettingsScreenContainer("Diagnostics") {
+        SettingsScreenContainer(LocalStrings.current.ui.diagnostics) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 DiagnosticRow("App version", AppVersion.current.toString())
                 DiagnosticRow("Mode", if (isOffline) "Offline" else "Online")
@@ -92,7 +93,7 @@ class DiagnosticsScreen : Screen {
                     } ?: DiagnosticRow("Cache", "Calculating…")
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(enabled = !clearing, onClick = { vm.clearImageCache() }) {
-                            Text("Clear image cache")
+                            Text(LocalStrings.current.ui.clearImageCache)
                         }
                         if (clearing) {
                             Spacer(Modifier.width(12.dp))
@@ -117,7 +118,7 @@ class DiagnosticsScreen : Screen {
 
                     DiagnosticSection("Logs")
                     DiagnosticRow("Log size", formatBytes(logInfo?.totalBytes ?: 0))
-                    Text("Maximum log size", style = MaterialTheme.typography.bodyMedium)
+                    Text(LocalStrings.current.ui.maximumLogSize, style = MaterialTheme.typography.bodyMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         LogSizeCap.entries.forEach { cap ->
                             FilterChip(
@@ -128,7 +129,7 @@ class DiagnosticsScreen : Screen {
                         }
                     }
                     Text(
-                        text = "Applied on the next app start.",
+                        text = LocalStrings.current.ui.appliedOnTheNextApp,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -138,7 +139,7 @@ class DiagnosticsScreen : Screen {
                                 logText = vm.readRecentLogs()
                                 showLogs = true
                             }
-                        }) { Text("View logs") }
+                        }) { Text(LocalStrings.current.ui.viewLogs) }
                         OutlinedButton(onClick = {
                             scope.launch {
                                 val text = vm.buildLogExport()
@@ -148,7 +149,7 @@ class DiagnosticsScreen : Screen {
                                 }.getOrNull() ?: return@launch
                                 runCatching { target.writeString(text) }
                             }
-                        }) { Text("Export logs…") }
+                        }) { Text(LocalStrings.current.ui.exportLogs) }
                     }
                 }
             }
@@ -157,7 +158,7 @@ class DiagnosticsScreen : Screen {
         if (showLogs) {
             AlertDialog(
                 onDismissRequest = { showLogs = false },
-                title = { Text("Logs") },
+                title = { Text(LocalStrings.current.ui.logs) },
                 text = {
                     Column(modifier = Modifier.fillMaxHeight(0.8f)) {
                         HorizontalDivider()
@@ -177,7 +178,7 @@ class DiagnosticsScreen : Screen {
                         }
                     }
                 },
-                confirmButton = { TextButton(onClick = { showLogs = false }) { Text("Close") } },
+                confirmButton = { TextButton(onClick = { showLogs = false }) { Text(LocalStrings.current.ui.close) } },
             )
         }
     }
@@ -213,7 +214,7 @@ private fun ServerLatencySection() {
     DiagnosticRow("Slowest", "${worst.millis} ms · ${worst.label}")
     if (failures > 0) DiagnosticRow("Failures", "$failures")
     Text(
-        text = "Median ≥ 2000 ms: the server is the bottleneck, not the app.",
+        text = LocalStrings.current.ui.median2000MsTheServer,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

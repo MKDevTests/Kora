@@ -20,6 +20,7 @@ import snd.komelia.ui.settings.navigation.SettingsGroup
 import snd.komelia.ui.settings.navigation.SettingsListItem
 import snd.komf.api.MediaServer.KAVITA
 import snd.komf.api.MediaServer.KOMGA
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun KomfNavigationContent(
@@ -35,45 +36,45 @@ fun KomfNavigationContent(
     ) {
         SettingsGroup {
             SettingsListItem(
-                label = "Komga webui",
+                label = LocalStrings.current.ui.komgaWebui,
                 onClick = { onNavigation(LoginScreen()) },
                 isSelected = currentScreen is LoginScreen,
             )
         }
 
-        SettingsGroup(title = "Komf Settings") {
+        SettingsGroup(title = LocalStrings.current.ui.komfSettings) {
             SettingsListItem(
-                label = "Connection",
+                label = LocalStrings.current.ui.connection,
                 onClick = { onNavigation(KomfSettingsScreen(integrationToggleEnabled = false, showKavitaSettings = true)) },
                 isSelected = currentScreen is KomfSettingsScreen,
             )
             HorizontalDivider()
             SettingsListItem(
-                label = "Komga Processing",
+                label = LocalStrings.current.ui.komgaProcessing,
                 onClick = { onNavigation(KomfProcessingSettingsScreen(KOMGA)) },
                 isSelected = currentScreen is KomfProcessingSettingsScreen && currentScreen.serverType == KOMGA,
             )
             HorizontalDivider()
             SettingsListItem(
-                label = "Kavita Processing",
+                label = LocalStrings.current.ui.kavitaProcessing,
                 onClick = { onNavigation(KomfProcessingSettingsScreen(KAVITA)) },
                 isSelected = currentScreen is KomfProcessingSettingsScreen && currentScreen.serverType == KAVITA,
             )
             HorizontalDivider()
             SettingsListItem(
-                label = "Providers",
+                label = LocalStrings.current.ui.providers,
                 onClick = { onNavigation(KomfProvidersSettingsScreen()) },
                 isSelected = currentScreen is KomfProvidersSettingsScreen,
             )
             HorizontalDivider()
             SettingsListItem(
-                label = "Notifications",
+                label = LocalStrings.current.ui.notifications,
                 onClick = { onNavigation(KomfNotificationSettingsScreen()) },
                 isSelected = currentScreen is KomfNotificationSettingsScreen,
             )
             HorizontalDivider()
             SettingsListItem(
-                label = "Job History",
+                label = LocalStrings.current.ui.jobHistory,
                 onClick = { onNavigation(KomfJobsScreen(false)) },
                 isSelected = currentScreen is KomfJobsScreen,
             )

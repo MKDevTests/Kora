@@ -154,7 +154,7 @@ fun SettingsSideMenuOverlay(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
                     Spacer(Modifier.width(3.dp))
-                    Text("Close Book")
+                    Text(LocalStrings.current.ui.closeBook)
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { onShowHelpMenu() }) { Icon(Icons.AutoMirrored.Default.Help, null) }
@@ -225,7 +225,7 @@ fun SettingsSideMenuOverlay(
                     .cursorForHand()
                     .padding(10.dp)
             ) {
-                Text("Image Settings")
+                Text(LocalStrings.current.ui.imageSettings)
                 Spacer(Modifier.weight(1f))
                 Icon(
                     Icons.Filled.ArrowDropDown,
@@ -387,7 +387,7 @@ private fun ColumnScope.ContinuousReaderSettingsContent(state: ContinuousReaderS
     SwitchWithLabel(
         checked = state.tapToZoom.collectAsState().value,
         onCheckedChange = state::onTapToZoomChange,
-        label = { Text("Tap to zoom") },
+        label = { Text(LocalStrings.current.ui.tapToZoom) },
         contentPadding = PaddingValues(horizontal = 10.dp)
     )
 
@@ -395,7 +395,7 @@ private fun ColumnScope.ContinuousReaderSettingsContent(state: ContinuousReaderS
         val padding = state.sidePaddingFraction.collectAsState().value
         NumberFieldWithIncrements(
             value = padding * 200,
-            label = { Text("side padding", style = MaterialTheme.typography.labelMedium) },
+            label = { Text(LocalStrings.current.ui.sidePadding2, style = MaterialTheme.typography.labelMedium) },
             onvValueChange = { state.onSidePaddingChange(it / 200) },
             stepSize = 5f,
             minValue = 0f,
@@ -406,7 +406,7 @@ private fun ColumnScope.ContinuousReaderSettingsContent(state: ContinuousReaderS
         val spacing = state.pageSpacing.collectAsState(Dispatchers.Main.immediate).value
         NumberFieldWithIncrements(
             value = spacing.toFloat(),
-            label = { Text("page spacing", style = MaterialTheme.typography.labelMedium) },
+            label = { Text(LocalStrings.current.ui.pageSpacing2, style = MaterialTheme.typography.labelMedium) },
             onvValueChange = { state.onPageSpacingChange(it.roundToInt()) },
             stepSize = 1f,
             minValue = 0f,
@@ -480,13 +480,13 @@ private fun ColumnScope.PagedReaderSettingsContent(
         SwitchWithLabel(
             checked = autoDirection,
             onCheckedChange = pageState::onAutoDirectionChange,
-            label = { Text("Auto-detect direction (use series metadata)") },
+            label = { Text(LocalStrings.current.ui.autoDetectDirectionUseSeries) },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
         SwitchWithLabel(
             checked = tapToZoom,
             onCheckedChange = pageState::onTapToZoomChange,
-            label = { Text("Tap to zoom") },
+            label = { Text(LocalStrings.current.ui.tapToZoom) },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
         SwitchWithLabel(
@@ -499,20 +499,20 @@ private fun ColumnScope.PagedReaderSettingsContent(
             SwitchWithLabel(
                 checked = splitDoublePages,
                 onCheckedChange = pageState::onSplitDoublePagesChange,
-                label = { Text("Split landscape pages") },
+                label = { Text(LocalStrings.current.ui.splitLandscapePages) },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )
         }
         SwitchWithLabel(
             checked = autoSkipBlankPages,
             onCheckedChange = pageState::onAutoSkipBlankPagesChange,
-            label = { Text("Auto-skip blank pages") },
+            label = { Text(LocalStrings.current.ui.autoSkipBlankPages) },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
         SwitchWithLabel(
             checked = autoDetectWebtoon,
             onCheckedChange = pageState::onAutoDetectWebtoonChange,
-            label = { Text("Auto-detect webtoon (switch to vertical scroll)") },
+            label = { Text(LocalStrings.current.ui.autoDetectWebtoonSwitchTo) },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
     }
@@ -551,14 +551,14 @@ private fun PanelsReaderSettingsContent(
             },
             onOptionChange = { state.onFullPageDisplayModeChange(it.value) },
             inputFieldModifier = Modifier.fillMaxWidth(),
-            label = { Text("Show full page") },
+            label = { Text(LocalStrings.current.ui.showFullPage) },
             inputFieldColor = MaterialTheme.colorScheme.surfaceVariant
         )
 
         SwitchWithLabel(
             checked = tapToZoom,
             onCheckedChange = state::onTapToZoomChange,
-            label = { Text("Tap to zoom") },
+            label = { Text(LocalStrings.current.ui.tapToZoom) },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
         SwitchWithLabel(
@@ -666,9 +666,9 @@ private fun SamplingModeSettings(
             SwitchWithLabel(
                 checked = linearLightDownsampling,
                 onCheckedChange = onLinearLightDownsamplingChange,
-                label = { Text("Linear light downsampling") },
+                label = { Text(LocalStrings.current.ui.linearLightDownsampling) },
                 supportingText = {
-                    Text("slower but potentially more accurate", style = MaterialTheme.typography.labelMedium)
+                    Text(LocalStrings.current.ui.slowerButPotentiallyMoreAccurate, style = MaterialTheme.typography.labelMedium)
                 },
                 contentPadding = PaddingValues(horizontal = 10.dp)
             )

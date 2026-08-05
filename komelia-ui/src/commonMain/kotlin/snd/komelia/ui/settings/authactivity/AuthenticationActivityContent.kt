@@ -30,6 +30,7 @@ import kotlinx.datetime.TimeZone.Companion.currentSystemDefault
 import kotlinx.datetime.toLocalDateTime
 import snd.komelia.ui.common.components.Pagination
 import snd.komga.client.user.KomgaAuthenticationActivity
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AuthenticationActivityContent(
@@ -98,7 +99,7 @@ private fun AuthenticationInfoCard(
                 )
                 Spacer(Modifier.weight(1f))
                 if (activity.success) {
-                    Text("Successful")
+                    Text(LocalStrings.current.ui.successful)
                     Icon(
                         Icons.Default.Done,
                         null,

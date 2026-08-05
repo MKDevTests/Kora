@@ -15,6 +15,7 @@ import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.updates.UpdateProgress
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun PanelDetectionSettings(
@@ -53,7 +54,7 @@ fun PanelDetectionSettings(
                 Text(if (isDownloaded) "Re-download Model" else "Download Model")
             }
             if (isDownloaded) {
-                Text("Installed")
+                Text(LocalStrings.current.ui.installed)
                 Icon(Icons.Default.Check, null, tint = Color.Green)
             }
         }
@@ -82,7 +83,7 @@ fun PanelDetectionSettings(
                     isCustomUrl = true
                 }
             },
-            label = { Text("Model URL Source") },
+            label = { Text(LocalStrings.current.ui.modelUrlSource) },
             inputFieldModifier = Modifier.fillMaxWidth()
         )
 
@@ -90,7 +91,7 @@ fun PanelDetectionSettings(
             OutlinedTextField(
                 value = currentUrl,
                 onValueChange = onUrlChange,
-                label = { Text("Custom URL") },
+                label = { Text(LocalStrings.current.ui.customUrl) },
                 modifier = Modifier.fillMaxWidth()
             )
         }

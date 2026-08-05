@@ -26,6 +26,7 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalHazeState
 import snd.komelia.ui.LocalTheme
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ReaderNavigationBackButton(
@@ -78,7 +79,7 @@ fun ReaderNavigationBackButton(
             ) {
                 Icon(
                     Icons.Outlined.History,
-                    contentDescription = "Go back",
+                    contentDescription = LocalStrings.current.ui.goBack,
                     tint = accentColor,
                     modifier = Modifier.size(32.dp)
                 )

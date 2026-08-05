@@ -550,7 +550,7 @@ class MainScreen(
                         onDismissRequest = { showSwitcher.value = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Favoris") },
+                            text = { Text(LocalStrings.current.ui.favoris) },
                             onClick = {
                                 showSwitcher.value = false
                                 if (navigator.lastItem !is FavoritesScreen) navigator.push(FavoritesScreen())
@@ -558,7 +558,7 @@ class MainScreen(
                             leadingIcon = { Icon(Icons.Rounded.Star, null) },
                         )
                         DropdownMenuItem(
-                            text = { Text("À lire") },
+                            text = { Text(LocalStrings.current.ui.lire) },
                             onClick = {
                                 showSwitcher.value = false
                                 if (navigator.lastItem !is PlannedScreen) navigator.push(PlannedScreen())
@@ -686,7 +686,7 @@ class MainScreen(
                 selected = navigator.lastItem is LibraryScreen,
                 onClick = vm::navigateToLibrary,
                 icon = { Icon(Icons.Rounded.LocalLibrary, null) },
-                label = { Text("Libraries") },
+                label = { Text(LocalStrings.current.navigation.libraries) },
                 colors = itemColors
             )
             NavigationBarItem(
@@ -694,7 +694,7 @@ class MainScreen(
                 selected = navigator.lastItem is HomeScreen,
                 onClick = { if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen()) },
                 icon = { Icon(Icons.Rounded.Home, null) },
-                label = { Text("Home") },
+                label = { Text(LocalStrings.current.navigation.home) },
                 colors = itemColors
             )
             NavigationBarItem(
@@ -702,7 +702,7 @@ class MainScreen(
                 selected = navigator.lastItem is SearchScreen,
                 onClick = { if (navigator.lastItem !is SearchScreen) navigator.push(SearchScreen(null)) },
                 icon = { Icon(Icons.Rounded.Search, null) },
-                label = { Text("Search") },
+                label = { Text(LocalStrings.current.navigation.search) },
                 colors = itemColors
             )
             if (vm.showStatsInBottomNav.collectAsState().value) {
@@ -714,7 +714,7 @@ class MainScreen(
                             navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
                     },
                     icon = { Icon(Icons.Rounded.BarChart, null) },
-                    label = { Text("Stats") },
+                    label = { Text(LocalStrings.current.navigation.stats) },
                     colors = itemColors
                 )
             }
@@ -727,7 +727,7 @@ class MainScreen(
                             navigator.push(snd.komelia.ui.nextreleases.NextReleasesScreen())
                     },
                     icon = { Icon(Icons.Rounded.Event, null) },
-                    label = { Text("Sorties") },
+                    label = { Text(LocalStrings.current.navigation.releases) },
                     colors = itemColors
                 )
             }
@@ -739,7 +739,7 @@ class MainScreen(
                         navigator.push(MobileSettingsScreen())
                 },
                 icon = { Icon(Icons.Rounded.Settings, null) },
-                label = { Text("Settings") },
+                label = { Text(LocalStrings.current.navigation.settings) },
                 colors = itemColors
             )
         }
@@ -761,7 +761,7 @@ class MainScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     CompactNavButton(
-                        text = "Libraries",
+                        text = LocalStrings.current.ui.libraries,
                         icon = Icons.Rounded.LocalLibrary,
                         onClick = vm::navigateToLibrary,
                         isSelected = navigator.lastItem is LibraryScreen,
@@ -769,7 +769,7 @@ class MainScreen(
                     )
 
                     CompactNavButton(
-                        text = "Home",
+                        text = LocalStrings.current.ui.home,
                         icon = Icons.Rounded.Home,
                         onClick = { if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen()) },
                         isSelected = navigator.lastItem is HomeScreen,
@@ -777,7 +777,7 @@ class MainScreen(
                     )
 
                     CompactNavButton(
-                        text = "Search",
+                        text = LocalStrings.current.ui.search,
                         icon = Icons.Rounded.Search,
                         onClick = { if (navigator.lastItem !is SearchScreen) navigator.push(SearchScreen(null)) },
                         isSelected = navigator.lastItem is SearchScreen,
@@ -786,7 +786,7 @@ class MainScreen(
 
                     if (vm.showStatsInBottomNav.collectAsState().value) {
                         CompactNavButton(
-                            text = "Stats",
+                            text = LocalStrings.current.ui.stats,
                             icon = Icons.Rounded.BarChart,
                             onClick = {
                                 if (navigator.lastItem !is snd.komelia.ui.stats.ReadingStatsScreen)
@@ -799,7 +799,7 @@ class MainScreen(
 
                     if (vm.showNextReleasesInBottomNav.collectAsState().value) {
                         CompactNavButton(
-                            text = "Sorties",
+                            text = LocalStrings.current.ui.sorties,
                             icon = Icons.Rounded.Event,
                             onClick = {
                                 if (navigator.lastItem !is snd.komelia.ui.nextreleases.NextReleasesScreen)
@@ -811,7 +811,7 @@ class MainScreen(
                     }
 
                     CompactNavButton(
-                        text = "Settings",
+                        text = LocalStrings.current.ui.settings,
                         icon = Icons.Rounded.Settings,
                         onClick = {
                             if (navigator.lastItem !is MobileSettingsScreen && navigator.lastItem !is SettingsScreen)

@@ -69,6 +69,7 @@ import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun KomfJobsContent(
@@ -106,7 +107,7 @@ fun KomfJobsContent(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (loading) CircularProgressIndicator()
                 else if (jobs.isEmpty()) {
-                    Text("Nothing to show")
+                    Text(LocalStrings.current.ui.nothingToShow)
                 } else {
                     key(currentPage, selectedStatus) {
                         jobs.forEach {
@@ -263,7 +264,7 @@ private fun StatusFilters(
         FilterChip(
             selected = selectedStatus == null,
             onClick = { onStatusSelect(null) },
-            label = { Text("All") },
+            label = { Text(LocalStrings.current.ui.all) },
             colors = AppFilterChipDefaults.filterChipColors(),
             border = null
         )
@@ -271,21 +272,21 @@ private fun StatusFilters(
         FilterChip(
             selected = selectedStatus == RUNNING,
             onClick = { onStatusSelect(RUNNING) },
-            label = { Text("Running") },
+            label = { Text(LocalStrings.current.ui.running) },
             colors = AppFilterChipDefaults.filterChipColors(),
             border = null
         )
         FilterChip(
             selected = selectedStatus == COMPLETED,
             onClick = { onStatusSelect(COMPLETED) },
-            label = { Text("Completed") },
+            label = { Text(LocalStrings.current.ui.completed) },
             colors = AppFilterChipDefaults.filterChipColors(),
             border = null
         )
         FilterChip(
             selected = selectedStatus == FAILED,
             onClick = { onStatusSelect(FAILED) },
-            label = { Text("Failed") },
+            label = { Text(LocalStrings.current.ui.failed) },
             colors = AppFilterChipDefaults.filterChipColors(),
             border = null
         )
@@ -297,7 +298,7 @@ private fun StatusFilters(
             colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
             modifier = Modifier.cursorForHand()
         ) {
-            Text("Delete all")
+            Text(LocalStrings.current.ui.deleteAll)
         }
         if (showConfirmationDialog) {
             ConfirmationDialog(
@@ -326,7 +327,7 @@ private fun SeriesTooltip(
             if (loading) CircularProgressIndicator()
             else {
                 Spacer(Modifier.weight(1f))
-                Text("Unknown series")
+                Text(LocalStrings.current.ui.unknownSeries)
             }
         }
     else SeriesImageCard(

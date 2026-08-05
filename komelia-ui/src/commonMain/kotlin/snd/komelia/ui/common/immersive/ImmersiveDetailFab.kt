@@ -42,6 +42,7 @@ import snd.komelia.ui.common.FloatingFABWithDropdownMenu
 import snd.komelia.ui.common.SplitFabMenu
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -109,17 +110,17 @@ fun ImmersiveDetailFab(
                         accentColor = accentColor,
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Read") },
+                            text = { Text(LocalStrings.current.ui.read) },
                             onClick = onReadClick,
                             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null) },
                         )
                         DropdownMenuItem(
-                            text = { Text("Read Incognito") },
+                            text = { Text(LocalStrings.current.ui.readIncognito2) },
                             onClick = onReadIncognitoClick,
                             leadingIcon = { Icon(Icons.Rounded.VisibilityOff, contentDescription = null) },
                         )
                         DropdownMenuItem(
-                            text = { Text("Download") },
+                            text = { Text(LocalStrings.current.ui.download) },
                             onClick = onDownloadClick,
                             leadingIcon = { Icon(Icons.Rounded.Download, contentDescription = null) },
                         )
@@ -227,21 +228,21 @@ fun ImmersiveDetailFab(
                         FloatingActionButtonMenuItem(
                             onClick = { expanded = false; onReadClick() },
                             icon = { Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null) },
-                            text = { Text("Read") },
+                            text = { Text(LocalStrings.current.ui.read) },
                             containerColor = readNowContainerColor,
                             contentColor = readNowContentColor
                         )
                         FloatingActionButtonMenuItem(
                             onClick = { expanded = false; onReadIncognitoClick() },
                             icon = { Icon(Icons.Rounded.VisibilityOff, contentDescription = null) },
-                            text = { Text("Read Incognito") },
+                            text = { Text(LocalStrings.current.ui.readIncognito2) },
                             containerColor = readNowContainerColor,
                             contentColor = readNowContentColor
                         )
                         FloatingActionButtonMenuItem(
                             onClick = { expanded = false; onDownloadClick() },
                             icon = { Icon(Icons.Rounded.Download, contentDescription = null) },
-                            text = { Text("Download") },
+                            text = { Text(LocalStrings.current.ui.download) },
                             containerColor = readNowContainerColor,
                             contentColor = readNowContentColor
                         )
@@ -253,7 +254,7 @@ fun ImmersiveDetailFab(
                     containerColor = fabContainerColor,
                     contentColor = fabContentColor,
                 ) {
-                    Icon(Icons.Rounded.Download, contentDescription = "Download")
+                    Icon(Icons.Rounded.Download, contentDescription = LocalStrings.current.ui.download)
                 }
             }
         }

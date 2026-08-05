@@ -109,6 +109,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[genreTileTextBelow] = settings.genreTileTextBelow
                 it[genreTileShowCount] = settings.genreTileShowCount
                 it[authorRolesFilterEnabled] = settings.authorRolesFilterEnabled
+                it[uiLanguage] = settings.uiLanguage
                 it[hiddenAuthorRoles] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.hiddenAuthorRoles.toList()
                 )
@@ -223,6 +224,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             genreTileTextBelow = get(AppSettingsTable.genreTileTextBelow),
             genreTileShowCount = get(AppSettingsTable.genreTileShowCount),
             authorRolesFilterEnabled = get(AppSettingsTable.authorRolesFilterEnabled),
+            uiLanguage = get(AppSettingsTable.uiLanguage),
             hiddenAuthorRoles = runCatching {
                 Json.decodeFromString(
                     ListSerializer(String.serializer()),

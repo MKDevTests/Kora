@@ -13,6 +13,7 @@ import snd.komelia.ui.LoadState.Uninitialized
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class UsersScreen : Screen {
 
@@ -22,9 +23,9 @@ class UsersScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getUsersViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer("Users") {
+        SettingsScreenContainer(LocalStrings.current.ui.users) {
             when (vm.state.collectAsState().value) {
-                is Error -> Text("Error")
+                is Error -> Text(LocalStrings.current.ui.error)
                 Uninitialized, Loading -> LoadingMaxSizeIndicator()
 
                 is Success -> UsersContent(

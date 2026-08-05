@@ -44,6 +44,7 @@ import snd.komelia.ui.platform.WindowSizeClass.COMPACT
 import snd.komelia.ui.platform.WindowSizeClass.EXPANDED
 import snd.komelia.ui.platform.WindowSizeClass.FULL
 import snd.komelia.ui.platform.WindowSizeClass.MEDIUM
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -86,7 +87,7 @@ fun ColorLevelContent(
                     .align(Alignment.CenterVertically)
                     .pointerHoverIcon(PointerIcon.Hand),
             ) {
-                Text("Reset All")
+                Text(LocalStrings.current.ui.resetAll)
             }
         }
 
@@ -107,7 +108,7 @@ fun ColorLevelContent(
                 gammaValue = state.gammaInputValue.collectAsState(1f).value,
                 onGammaValueChange = state::onGammaInputChange
             )
-            Text("Output Levels", modifier = Modifier.padding(vertical = 10.dp))
+            Text(LocalStrings.current.ui.outputLevels, modifier = Modifier.padding(vertical = 10.dp))
             HorizontalGradient()
             HandleBar(state.outputHandleBarState)
             OutputFields(
@@ -186,7 +187,7 @@ private fun InputFields(
         NumberFieldWithIncrements(
             value = lowValue.toFloat(),
             onvValueChange = { onLowValueChange(it.toInt()) },
-            label = { Text("Black") },
+            label = { Text(LocalStrings.current.ui.black) },
             stepSize = 1f,
             minValue = 0f,
             maxValue = 255f,
@@ -198,7 +199,7 @@ private fun InputFields(
         NumberFieldWithIncrements(
             value = gammaValue,
             onvValueChange = onGammaValueChange,
-            label = { Text("Gamma") },
+            label = { Text(LocalStrings.current.ui.gamma) },
             stepSize = 0.01f,
             minValue = 0.1f,
             maxValue = 10f,
@@ -209,7 +210,7 @@ private fun InputFields(
         NumberFieldWithIncrements(
             value = highValue.toFloat(),
             onvValueChange = { onHighValueChange(it.toInt()) },
-            label = { Text("White") },
+            label = { Text(LocalStrings.current.ui.white) },
             stepSize = 1f,
             minValue = 0f,
             maxValue = 255f,
@@ -233,7 +234,7 @@ private fun OutputFields(
         NumberFieldWithIncrements(
             value = lowValue.toFloat(),
             onvValueChange = { onLowValueChange(it.toInt()) },
-            label = { Text("Black") },
+            label = { Text(LocalStrings.current.ui.black) },
             stepSize = 1f,
             minValue = 0f,
             maxValue = 255f,
@@ -244,7 +245,7 @@ private fun OutputFields(
         NumberFieldWithIncrements(
             value = highValue.toFloat(),
             onvValueChange = { onHighValueChange(it.toInt()) },
-            label = { Text("White") },
+            label = { Text(LocalStrings.current.ui.white) },
             stepSize = 1f,
             minValue = 0f,
             maxValue = 255f,

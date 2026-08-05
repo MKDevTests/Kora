@@ -53,6 +53,7 @@ import snd.komelia.ui.dialogs.book.edit.BookEditDialog
 import snd.komelia.ui.dialogs.permissions.DownloadNotificationRequestDialog
 import snd.komelia.ui.dialogs.readlistadd.AddToReadListDialog
 import snd.komga.client.book.KomgaBookReadProgressUpdateRequest
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BookActionsMenu(
@@ -71,7 +72,7 @@ fun BookActionsMenu(
     var showDeleteDownloadedDialog by remember { mutableStateOf(false) }
     if (showDeleteDialog) {
         ConfirmationDialog(
-            title = "Delete Book",
+            title = LocalStrings.current.ui.deleteBook,
             body = "The Book ${book.metadata.title} will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
             confirmText = "Yes, delete book \"${book.metadata.title}\"",
             onDialogConfirm = {
@@ -90,7 +91,7 @@ fun BookActionsMenu(
     var showDeleteSeriesDialog by remember { mutableStateOf(false) }
     if (showDeleteSeriesDialog) {
         ConfirmationDialog(
-            title = "Delete series",
+            title = LocalStrings.current.ui.deleteSeries,
             body = "The whole series \"${book.seriesTitle}\" will be removed from this server, " +
                 "with every volume and its media files. This cannot be undone. Continue?",
             confirmText = "Yes, delete the series \"${book.seriesTitle}\"",
@@ -108,7 +109,7 @@ fun BookActionsMenu(
 
     if (showDeleteDownloadedDialog) {
         ConfirmationDialog(
-            title = "Delete downloaded Book",
+            title = LocalStrings.current.ui.deleteDownloadedBook,
             body = "Book ${book.metadata.title} will be removed from this device",
             onDialogConfirm = {
                 actions.deleteDownloaded(book)
@@ -160,7 +161,7 @@ fun BookActionsMenu(
     ) {
         if (onSelect != null) {
             DropdownMenuItem(
-                text = { Text("Select", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.select, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Checklist, null) },
                 onClick = {
                     onSelect()
@@ -170,7 +171,7 @@ fun BookActionsMenu(
         }
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Analyze", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.analyze, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 onClick = {
                     actions.analyze(book)
@@ -179,7 +180,7 @@ fun BookActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Refresh metadata", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.refreshMetadata, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
                 onClick = {
                     actions.refreshMetadata(book)
@@ -188,7 +189,7 @@ fun BookActionsMenu(
             )
 
             DropdownMenuItem(
-                text = { Text("Add to read list", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.addToReadList, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Add, null) },
                 onClick = { showAddToReadListDialog = true },
             )
@@ -199,7 +200,7 @@ fun BookActionsMenu(
 
         if (!isRead) {
             DropdownMenuItem(
-                text = { Text("Mark as read", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.markAsRead, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Label, null) },
                 onClick = {
                     actions.markAsRead(book)
@@ -210,7 +211,7 @@ fun BookActionsMenu(
 
         if (!isUnread) {
             DropdownMenuItem(
-                text = { Text("Mark as unread", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.markAsUnread, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Rounded.LabelOff, null) },
                 onClick = {
                     actions.markAsUnread(book)
@@ -221,14 +222,14 @@ fun BookActionsMenu(
 
         if (isAdmin && !isOffline && showEditOption) {
             DropdownMenuItem(
-                text = { Text("Edit", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.edit, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Edit, null) },
                 onClick = { showEditDialog = true },
             )
         }
         if (!isOffline && showDownloadOption) {
             DropdownMenuItem(
-                text = { Text("Download", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.download, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Download, null) },
                 onClick = { showDownloadDialog = true },
             )
@@ -236,7 +237,7 @@ fun BookActionsMenu(
 
         if (book.downloaded) {
             DropdownMenuItem(
-                text = { Text("Delete downloaded", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteDownloaded, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.Delete, null) },
                 onClick = { showDeleteDownloadedDialog = true },
                 colors = MenuDefaults.itemColors(
@@ -249,7 +250,7 @@ fun BookActionsMenu(
 
         if (isAdmin && !isOffline) {
             DropdownMenuItem(
-                text = { Text("Delete from server", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteFromServer, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
                 onClick = { showDeleteDialog = true },
                 colors = MenuDefaults.itemColors(
@@ -309,7 +310,7 @@ fun BookActionsMenu(
         }
         if (isAdmin && !isOffline && actions.deleteSeries != null) {
             DropdownMenuItem(
-                text = { Text("Delete series from server", style = MaterialTheme.typography.labelLarge) },
+                text = { Text(LocalStrings.current.ui.deleteSeriesFromServer, style = MaterialTheme.typography.labelLarge) },
                 leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
                 onClick = { showDeleteSeriesDialog = true },
                 colors = MenuDefaults.itemColors(

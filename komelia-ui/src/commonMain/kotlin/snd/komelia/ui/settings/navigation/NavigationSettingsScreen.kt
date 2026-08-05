@@ -22,6 +22,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.platform.rememberWidgetLibraryFilter
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class NavigationSettingsScreen : Screen {
 
@@ -32,7 +33,7 @@ class NavigationSettingsScreen : Screen {
         LaunchedEffect(Unit) { vm.initialize() }
         val state = vm.state.collectAsState()
 
-        SettingsScreenContainer("Navigation") {
+        SettingsScreenContainer(LocalStrings.current.ui.navigation) {
             when (val result = state.value) {
                 is LoadState.Error -> Text("${result::class.simpleName}: ${result.exception.message}")
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
@@ -76,7 +77,7 @@ private fun WidgetLibrarySection() {
     Column(modifier = Modifier.padding(top = 20.dp)) {
         HorizontalDivider()
         Text(
-            "Widget « Prochain tome »",
+            LocalStrings.current.ui.widgetProchainTome,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 12.dp),
         )
@@ -90,7 +91,7 @@ private fun WidgetLibrarySection() {
             FilterChip(
                 selected = filter.libraryId == null,
                 onClick = { filter.set(null) },
-                label = { Text("Toutes") },
+                label = { Text(LocalStrings.current.ui.toutes2) },
             )
             libraries.forEach { library ->
                 FilterChip(

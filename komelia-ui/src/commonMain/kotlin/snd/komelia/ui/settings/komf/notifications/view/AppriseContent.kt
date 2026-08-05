@@ -44,6 +44,7 @@ import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.WindowSizeClass.COMPACT
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.ui.settings.komf.notifications.NotificationContextState
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun AppriseContent(
@@ -67,7 +68,7 @@ fun AppriseContent(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
 
-        Text("Urls")
+        Text(LocalStrings.current.ui.urls)
         urls.forEach { url ->
 
             Row {
@@ -88,12 +89,12 @@ fun AppriseContent(
             onClick = { showAddUrlDialog = true },
             modifier = Modifier.cursorForHand()
         ) {
-            Text("Add Url")
+            Text(LocalStrings.current.ui.addUrl2)
         }
         SwitchWithLabel(
             checked = uploadSeriesCover,
             onCheckedChange = onUploadSeriesCoverChange,
-            label = { Text("Upload series cover") }
+            label = { Text(LocalStrings.current.ui.uploadSeriesCover) }
         )
 
         if (showAddUrlDialog) {
@@ -140,7 +141,7 @@ fun AddUrlDialog(
                 modifier = Modifier.padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Add URL", style = MaterialTheme.typography.headlineSmall)
+                Text(LocalStrings.current.ui.addUrl, style = MaterialTheme.typography.headlineSmall)
                 HorizontalDivider()
             }
         },
@@ -151,18 +152,18 @@ fun AddUrlDialog(
                 TextField(
                     value = newWebhook,
                     onValueChange = { newWebhook = it },
-                    label = { Text("URL") },
+                    label = { Text(LocalStrings.current.ui.url) },
                     modifier = Modifier.fillMaxWidth(),
                     isError = isError,
                     interactionSource = interactionSource,
-                    supportingText = { if (isError) Text("failed to parse URL") },
+                    supportingText = { if (isError) Text(LocalStrings.current.ui.failedToParseUrl) },
                     visualTransformation = if (isFocused) VisualTransformation.None else PasswordVisualTransformation(),
                 )
                 if (isError) {
                     CheckboxWithLabel(
                         checked = confirmInvalidUrl,
                         onCheckedChange = { confirmInvalidUrl = !confirmInvalidUrl },
-                        label = { Text("apply anyway") }
+                        label = { Text(LocalStrings.current.ui.applyAnyway) }
                     )
                 }
             }
@@ -176,7 +177,7 @@ fun AddUrlDialog(
                 TextButton(
                     onClick = onDismissRequest,
                     modifier = Modifier.cursorForHand(),
-                    content = { Text("Cancel") }
+                    content = { Text(LocalStrings.current.ui.cancel) }
                 )
 
                 FilledTonalButton(
@@ -187,7 +188,7 @@ fun AddUrlDialog(
                     modifier = Modifier.cursorForHand(),
                     enabled = !isError || confirmInvalidUrl
                 ) {
-                    Text("Confirm")
+                    Text(LocalStrings.current.ui.confirm)
                 }
             }
         }
@@ -209,11 +210,11 @@ private fun TemplatesEditor(
     var showNotificationContextDialog by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Notification Template", style = MaterialTheme.typography.titleLarge)
+        Text(LocalStrings.current.ui.notificationTemplate, style = MaterialTheme.typography.titleLarge)
         Column {
-            Text("Uses Apprise executable installed on the system.\nTemplates are rendered using Apache Velocity")
+            Text(LocalStrings.current.ui.usesAppriseExecutableInstalledOn)
             Text(
-                "Apprise github page",
+                LocalStrings.current.ui.appriseGithubPage,
                 color = MaterialTheme.colorScheme.secondary,
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier.clickable {
@@ -221,7 +222,7 @@ private fun TemplatesEditor(
                 }.padding(2.dp).cursorForHand()
             )
             Text(
-                "Velocity Template Language syntax reference",
+                LocalStrings.current.ui.velocityTemplateLanguageSyntaxReference,
                 color = MaterialTheme.colorScheme.secondary,
                 textDecoration = TextDecoration.Underline,
                 modifier = Modifier.clickable {
@@ -233,14 +234,14 @@ private fun TemplatesEditor(
             TextField(
                 value = titleTemplate,
                 onValueChange = onTitleTemplateChange,
-                label = { Text("Title") },
+                label = { Text(LocalStrings.current.ui.title) },
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )
             TextField(
                 value = bodyTemplate,
                 onValueChange = onBodyTemplateChange,
-                label = { Text("Body") },
+                label = { Text(LocalStrings.current.ui.body) },
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -254,7 +255,7 @@ private fun TemplatesEditor(
                 onClick = { showNotificationContextDialog = true },
                 modifier = Modifier.cursorForHand()
             ) {
-                Text("Notification Context")
+                Text(LocalStrings.current.ui.notificationContext)
 
             }
 
@@ -262,7 +263,7 @@ private fun TemplatesEditor(
                 onClick = onTemplateSend,
                 modifier = Modifier.cursorForHand()
             ) {
-                Text("Test Send")
+                Text(LocalStrings.current.ui.testSend)
             }
 
             FilledTonalButton(
@@ -270,7 +271,7 @@ private fun TemplatesEditor(
                 enabled = true,
                 modifier = Modifier.cursorForHand()
             ) {
-                Text("Save")
+                Text(LocalStrings.current.ui.save)
             }
         }
     }

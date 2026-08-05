@@ -58,6 +58,7 @@ import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 /**
  * The virtual cross-library "Planned" (a lire) library: series the user
@@ -86,12 +87,12 @@ class PlannedScreen : Screen {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.back)
                         }
                         Icon(Icons.Rounded.Bookmark, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
                         Column(Modifier.padding(start = 8.dp)) {
                             Text(
-                                "À lire",
+                                LocalStrings.current.ui.lire,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )

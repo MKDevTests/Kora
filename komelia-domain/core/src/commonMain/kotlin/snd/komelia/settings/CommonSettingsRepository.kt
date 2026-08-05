@@ -193,6 +193,13 @@ interface CommonSettingsRepository {
      * page, series pages). Off by default → every role is shown, as before.
      * The HIDDEN roles are stored, so a role Komga adds later still appears.
      */
+    /**
+     * Language of the interface: "" follows the system, "en" / "fr" pin it.
+     * A French reader running an English phone is the whole reason this exists.
+     */
+    fun getUiLanguage(): Flow<String>
+    suspend fun putUiLanguage(language: String)
+
     fun getAuthorRolesFilterEnabled(): Flow<Boolean>
     suspend fun putAuthorRolesFilterEnabled(enabled: Boolean)
     fun getHiddenAuthorRoles(): Flow<Set<String>>

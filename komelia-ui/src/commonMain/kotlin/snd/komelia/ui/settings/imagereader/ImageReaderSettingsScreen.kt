@@ -7,6 +7,7 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.settings.SettingsScreenContainer
+import snd.komelia.ui.LocalStrings
 
 class ImageReaderSettingsScreen : Screen {
 
@@ -16,7 +17,7 @@ class ImageReaderSettingsScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getImageReaderSettingsViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer("Image Reader") {
+        SettingsScreenContainer(LocalStrings.current.ui.imageReader) {
             ImageReaderSettingsContent(
                 loadThumbnailPreviews = vm.loadThumbnailsPreview.collectAsState().value,
                 onLoadThumbnailPreviewsChange = vm::onLoadThumbnailsPreviewChange,

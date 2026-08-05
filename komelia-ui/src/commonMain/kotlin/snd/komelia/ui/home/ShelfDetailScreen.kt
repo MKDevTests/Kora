@@ -52,6 +52,7 @@ import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.reader.readerScreen
 import snd.komelia.ui.series.seriesScreen
+import snd.komelia.ui.LocalStrings
 
 /** How many items a shelf shows once opened full-screen, versus the ~20 that fit
  *  in the Home carousel. Deliberately a single fixed page: the shelves are
@@ -91,11 +92,11 @@ class ShelfDetailScreen(private val filter: HomeScreenFilter) : Screen {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = { navigator.pop() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.retour)
                     }
                     Column(Modifier.padding(start = 8.dp)) {
                         Text(
-                            filter.label,
+                            shelfLabel(filter.label, LocalStrings.current.shelves),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                         )

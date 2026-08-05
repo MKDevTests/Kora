@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.ReaderTapNavigationMode.*
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun TapNavigationDiagram(
@@ -35,6 +36,8 @@ fun TapNavigationDiagram(
     val textColor = MaterialTheme.colorScheme.onSurface
     val textMeasurer = rememberTextMeasurer()
     val textStyle = TextStyle(fontSize = 9.sp, color = textColor)
+    // Read before the Canvas: a draw scope is not a composition.
+    val menuLabel = LocalStrings.current.ui.menu
 
     Box(modifier = modifier.size(100.dp).padding(8.dp), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize().aspectRatio(0.7f)) {
@@ -70,7 +73,7 @@ fun TapNavigationDiagram(
 
             // Middle zone (Menu)
             drawTextInZone(
-                text = "Menu",
+                text = menuLabel,
                 center = Offset(size.width / 2, size.height / 2),
                 textMeasurer = textMeasurer,
                 textStyle = textStyle

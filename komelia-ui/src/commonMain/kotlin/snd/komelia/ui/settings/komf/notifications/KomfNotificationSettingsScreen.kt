@@ -12,6 +12,7 @@ import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.error.formatExceptionMessage
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komelia.ui.settings.komf.notifications.view.KomfSettingsContent
+import snd.komelia.ui.LocalStrings
 
 class KomfNotificationSettingsScreen : Screen {
 
@@ -23,7 +24,7 @@ class KomfNotificationSettingsScreen : Screen {
         val komfConfigLoadError = vm.komfConfig.configError.collectAsState().value
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer(title = "Notification Settings") {
+        SettingsScreenContainer(title = LocalStrings.current.ui.notificationSettings) {
 
             if (komfConfigLoadError != null) {
                 Text(formatExceptionMessage(komfConfigLoadError))

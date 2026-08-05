@@ -58,6 +58,7 @@ import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.ui.LocalStrings
 
 /**
  * The virtual cross-library "Favorites" library: the series the user marked as
@@ -85,12 +86,12 @@ class FavoritesScreen : Screen {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.back)
                         }
                         Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
                         Column(Modifier.padding(start = 8.dp)) {
                             Text(
-                                "Favoris",
+                                LocalStrings.current.ui.favoris,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )

@@ -50,6 +50,7 @@ import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesMetadataUpdateRequest
 import snd.komga.client.series.KomgaSeriesSearch
+import snd.komelia.ui.LocalStrings
 
 /**
  * Admin-only maintenance tools. First (and so far only) tool: cleanup of
@@ -70,7 +71,7 @@ class MaintenanceScreen : Screen {
         val libraries = LocalLibraries.current.collectAsState().value
         LaunchedEffect(libraries) { if (libraries.isNotEmpty()) vm.initialize(libraries) }
 
-        SettingsScreenContainer("Maintenance") {
+        SettingsScreenContainer(LocalStrings.current.ui.maintenance) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     "Tags nextrelease périmés : la date de sortie est passée, le " +
@@ -99,13 +100,13 @@ class MaintenanceScreen : Screen {
                             modifier = Modifier.weight(1f),
                         )
                         if (vm.expired.isNotEmpty()) {
-                            TextButton(onClick = vm::purgeAll) { Text("Tout purger") }
+                            TextButton(onClick = vm::purgeAll) { Text(LocalStrings.current.ui.toutPurger) }
                         }
                     }
 
                     if (vm.expired.isEmpty()) {
                         Text(
-                            "Aucun tag périmé. Tout est à jour.",
+                            LocalStrings.current.ui.aucunTagPRimTout,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 20.dp),
@@ -131,7 +132,7 @@ class MaintenanceScreen : Screen {
                                 }
                                 if (entry.series != null) {
                                     IconButton(onClick = { vm.purge(entry) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Purger le tag")
+                                        Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.purgerLeTag)
                                     }
                                 }
                             }

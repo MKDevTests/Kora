@@ -30,6 +30,7 @@ import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.ui.settings.SettingsScreenContainer
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 class ExperimentalSettingsScreen : Screen {
 
@@ -40,10 +41,10 @@ class ExperimentalSettingsScreen : Screen {
         LaunchedEffect(Unit) { vm.initialize() }
         val accentColor = LocalAccentColor.current
 
-        SettingsScreenContainer("Experimental") {
+        SettingsScreenContainer(LocalStrings.current.ui.experimental) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "These features are experimental — they may change or be removed in a future version.",
+                    LocalStrings.current.ui.theseFeaturesAreExperimentalThey,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 10.dp),
@@ -52,8 +53,8 @@ class ExperimentalSettingsScreen : Screen {
                 SwitchWithLabel(
                     checked = vm.genreTabEnabled,
                     onCheckedChange = vm::onGenreTabEnabledChange,
-                    label = { Text("Genre tab") },
-                    supportingText = { Text("Adds a Genre tab to each library, grouping series by their kora:genre:* tags. Requires a connection to the server.") },
+                    label = { Text(LocalStrings.current.ui.genreTab) },
+                    supportingText = { Text(LocalStrings.current.ui.addsAGenreTabTo) },
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                 )
@@ -61,7 +62,7 @@ class ExperimentalSettingsScreen : Screen {
                 if (vm.genreTabEnabled) {
                     HorizontalDivider()
                     Text(
-                        "Genre tile appearance",
+                        LocalStrings.current.ui.genreTileAppearance,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 4.dp),
@@ -69,8 +70,8 @@ class ExperimentalSettingsScreen : Screen {
                     SwitchWithLabel(
                         checked = vm.genreTilesCustom,
                         onCheckedChange = vm::onGenreTilesCustomChange,
-                        label = { Text("Custom tile appearance") },
-                        supportingText = { Text("Give genre tiles their own size and text style instead of the global card appearance.") },
+                        label = { Text(LocalStrings.current.ui.customTileAppearance) },
+                        supportingText = { Text(LocalStrings.current.ui.giveGenreTilesTheirOwn) },
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     )
@@ -90,16 +91,16 @@ class ExperimentalSettingsScreen : Screen {
                         SwitchWithLabel(
                             checked = vm.genreTileTextBelow,
                             onCheckedChange = vm::onGenreTileTextBelowChange,
-                            label = { Text("Title below cover") },
-                            supportingText = { Text("Otherwise the title is overlaid on the cover.") },
+                            label = { Text(LocalStrings.current.ui.titleBelowCover) },
+                            supportingText = { Text(LocalStrings.current.ui.otherwiseTheTitleIsOverlaid) },
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         )
                         SwitchWithLabel(
                             checked = vm.genreTileShowCount,
                             onCheckedChange = vm::onGenreTileShowCountChange,
-                            label = { Text("Show series count") },
-                            supportingText = { Text("Show the number of series under each genre.") },
+                            label = { Text(LocalStrings.current.ui.showSeriesCount) },
+                            supportingText = { Text(LocalStrings.current.ui.showTheNumberOfSeries) },
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         )

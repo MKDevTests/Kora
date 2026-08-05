@@ -48,7 +48,7 @@ fun NcnnSettingsContent(
         SwitchWithLabel(
             checked = settings.enabled,
             onCheckedChange = { onSettingsChange(settings.copy(enabled = it)) },
-            label = { Text("Enable NCNN upscaler (Mobile only)") },
+            label = { Text(LocalStrings.current.ui.enableNcnnUpscalerMobileOnly) },
             modifier = Modifier.fillMaxWidth(),
             enabled = settings.isDownloaded
         )
@@ -58,12 +58,12 @@ fun NcnnSettingsContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(onClick = { showDownloadDialog = true }) {
-                if (settings.isDownloaded) Text("Re-download Models")
-                else Text("Download Models")
+                if (settings.isDownloaded) Text(LocalStrings.current.ui.reDownloadModels)
+                else Text(LocalStrings.current.ui.downloadModels)
             }
 
             if (settings.isDownloaded) {
-                Text("Installed")
+                Text(LocalStrings.current.ui.installed)
                 Icon(Icons.Default.Check, null, tint = Color.Green)
             }
         }
@@ -91,7 +91,7 @@ fun NcnnSettingsContent(
                     isCustomUrl = true
                 }
             },
-            label = { Text("Model URL Source") },
+            label = { Text(LocalStrings.current.ui.modelUrlSource) },
             inputFieldModifier = Modifier.fillMaxWidth()
         )
 
@@ -99,7 +99,7 @@ fun NcnnSettingsContent(
             OutlinedTextField(
                 value = settings.ncnnUpscalerUrl,
                 onValueChange = { onSettingsChange(settings.copy(ncnnUpscalerUrl = it)) },
-                label = { Text("Custom URL") },
+                label = { Text(LocalStrings.current.ui.customUrl) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -121,7 +121,7 @@ fun NcnnSettingsContent(
                     )
                 },
                 onOptionChange = { onSettingsChange(settings.copy(engine = it.value, model = getDefaultModelForEngine(it.value))) },
-                label = { Text("Engine") },
+                label = { Text(LocalStrings.current.ui.engine) },
                 inputFieldModifier = Modifier.fillMaxSize()
             )
 
@@ -138,7 +138,7 @@ fun NcnnSettingsContent(
                     models.map { LabeledEntry(it, it) }
                 },
                 onOptionChange = { onSettingsChange(settings.copy(model = it.value)) },
-                label = { Text("Model") },
+                label = { Text(LocalStrings.current.ui.model) },
                 inputFieldModifier = Modifier.fillMaxSize()
             )
 
@@ -161,8 +161,8 @@ fun NcnnSettingsContent(
             SwitchWithLabel(
                 checked = settings.ttaMode,
                 onCheckedChange = { onSettingsChange(settings.copy(ttaMode = it)) },
-                label = { Text("TTA Mode") },
-                supportingText = { Text("Test-Time Augmentation, slower but higher quality") }
+                label = { Text(LocalStrings.current.ui.ttaMode) },
+                supportingText = { Text(LocalStrings.current.ui.testTimeAugmentationSlowerBut) }
             )
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.dialogs.collectionedit.CollectionEditDialog
 import snd.komga.client.collection.KomgaCollection
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun CollectionActionsMenu(
@@ -29,7 +30,7 @@ fun CollectionActionsMenu(
     var showDeleteDialog by remember { mutableStateOf(false) }
     if (showDeleteDialog) {
         ConfirmationDialog(
-            title = "Delete Collection",
+            title = LocalStrings.current.ui.deleteCollection,
             body = "Collection ${collection.name} will be removed from this server. Your media files will not be affected. This cannot be undone. Continue?",
             confirmText = "Yes, delete collection \"${collection.name}\"",
             onDialogConfirm = {
@@ -59,13 +60,13 @@ fun CollectionActionsMenu(
         onDismissRequest = onDismissRequest
     ) {
         DropdownMenuItem(
-            text = { Text("Edit", style = MaterialTheme.typography.labelLarge) },
+            text = { Text(LocalStrings.current.ui.edit, style = MaterialTheme.typography.labelLarge) },
             leadingIcon = { Icon(Icons.Rounded.Edit, null) },
             onClick = { showEditDialog = true },
         )
 
         DropdownMenuItem(
-            text = { Text("Delete", style = MaterialTheme.typography.labelLarge) },
+            text = { Text(LocalStrings.current.ui.delete, style = MaterialTheme.typography.labelLarge) },
             leadingIcon = { Icon(Icons.Rounded.DeleteForever, null) },
             onClick = { showDeleteDialog = true },
             colors = MenuDefaults.itemColors(

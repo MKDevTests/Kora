@@ -44,6 +44,7 @@ import snd.komelia.ui.LocalOnLockScreenRotationChange
 import snd.komelia.ui.LocalTheme
 import snd.komelia.ui.reader.image.settings.UpscaleActivityIndicator
 import snd.komelia.utils.removeParentheses
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ReaderTopBar(
@@ -102,7 +103,7 @@ fun ReaderTopBar(
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = LocalStrings.current.ui.back,
                         tint = accentColor
                     )
                 }

@@ -49,6 +49,7 @@ import snd.komelia.ui.common.menus.bulk.BulkActionsContainer
 import snd.komelia.ui.common.menus.bulk.ReadListBulkActionsContent
 import snd.komelia.ui.platform.WindowSizeClass
 import snd.komga.client.readlist.KomgaReadList
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ReadListContent(
@@ -169,7 +170,7 @@ private fun ReadListToolbar(
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Text(
-                "read list",
+                LocalStrings.current.ui.readList,
                 style = MaterialTheme.typography.labelMedium,
                 fontStyle = FontStyle.Italic
             )
@@ -230,7 +231,7 @@ private fun ContinueReadingHeader(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Continue reading",
+                    LocalStrings.current.ui.continueReading2,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -263,8 +264,8 @@ private fun BulkActionsToolbar(
     ) {
         when (LocalWindowWidth.current) {
             WindowSizeClass.FULL -> {
-                if (readList.ordered) Text("Edit mode: Click to select, drag to change order")
-                else Text("Selection mode: Click on items to select or deselect them")
+                if (readList.ordered) Text(LocalStrings.current.ui.editModeClickToSelect)
+                else Text(LocalStrings.current.ui.selectionModeClickOnItems)
                 if (selectedBooks.isNotEmpty()) {
                     Spacer(Modifier.weight(1f))
 
@@ -274,8 +275,8 @@ private fun BulkActionsToolbar(
 
             WindowSizeClass.EXPANDED -> {
                 if (selectedBooks.isEmpty()) {
-                    if (readList.ordered) Text("Edit mode: Click to select, drag to change order")
-                    else Text("Selection mode: Click on items to select or deselect them")
+                    if (readList.ordered) Text(LocalStrings.current.ui.editModeClickToSelect)
+                    else Text(LocalStrings.current.ui.selectionModeClickOnItems)
                 } else {
                     Spacer(Modifier.weight(1f))
                     ReadListBulkActionsContent(readList, selectedBooks, false)

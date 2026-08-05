@@ -18,6 +18,7 @@ import snd.komelia.ui.settings.imagereader.onnxruntime.isOnnxRuntimeSupported
 import snd.komelia.ui.settings.imagereader.rapidocr.RapidOcrSettingsContent
 import snd.komelia.ui.settings.imagereader.rapidocr.RapidOcrSettingsState
 import snd.komelia.ui.settings.imagereader.rapidocr.isRapidOcrSupported
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun ImageReaderSettingsContent(
@@ -67,63 +68,63 @@ fun ImageReaderSettingsContent(
         SwitchWithLabel(
             checked = loadThumbnailPreviews,
             onCheckedChange = onLoadThumbnailPreviewsChange,
-            label = { Text("Load small previews when dragging navigation slider") },
-            supportingText = { Text("can be slow for high resolution images") },
+            label = { Text(LocalStrings.current.ui.loadSmallPreviewsWhenDragging) },
+            supportingText = { Text(LocalStrings.current.ui.canBeSlowForHigh) },
         )
 
         if (platform == PlatformType.MOBILE) {
             SwitchWithLabel(
                 checked = volumeKeysNavigation,
                 onCheckedChange = onVolumeKeysNavigationChange,
-                label = { Text("Volume keys navigation") },
+                label = { Text(LocalStrings.current.ui.volumeKeysNavigation) },
             )
             SwitchWithLabel(
                 checked = keepReaderScreenOn,
                 onCheckedChange = onKeepReaderScreenOnChange,
-                label = { Text("Keep screen on while reading") },
+                label = { Text(LocalStrings.current.ui.keepScreenOnWhileReading) },
             )
         }
 
         SwitchWithLabel(
             checked = pagedReaderAutoDirection,
             onCheckedChange = onPagedReaderAutoDirectionChange,
-            label = { Text("Auto-detect reading direction") },
-            supportingText = { Text("Use series metadata. Manual flips are stored locally per-series.") },
+            label = { Text(LocalStrings.current.ui.autoDetectReadingDirection) },
+            supportingText = { Text(LocalStrings.current.ui.useSeriesMetadataManualFlips) },
         )
 
         SwitchWithLabel(
             checked = pagedAutoSkipBlankPages,
             onCheckedChange = onPagedAutoSkipBlankPagesChange,
-            label = { Text("Auto-skip blank pages") },
-            supportingText = { Text("When Crop borders is on, blank pages are removed from the reader instead of crashing.") },
+            label = { Text(LocalStrings.current.ui.autoSkipBlankPages) },
+            supportingText = { Text(LocalStrings.current.ui.whenCropBordersIsOn) },
         )
 
         SwitchWithLabel(
             checked = pagedAutoDetectWebtoon,
             onCheckedChange = onPagedAutoDetectWebtoonChange,
-            label = { Text("Auto-detect webtoon") },
-            supportingText = { Text("If the first 3 pages are very tall (height ≥ 4× width), switch to panel-by-panel reader (auto-zoom on each panel). Your manual override sticks for the rest of the reader session.") },
+            label = { Text(LocalStrings.current.ui.autoDetectWebtoon) },
+            supportingText = { Text(LocalStrings.current.ui.ifTheFirst3Pages) },
         )
 
         SwitchWithLabel(
             checked = webtoonSmartScroll,
             onCheckedChange = onWebtoonSmartScrollChange,
-            label = { Text("Webtoon smart scroll") },
-            supportingText = { Text("In the continuous reader, a screen tap crosses blank gutters whole and stops on panel and speech-bubble boundaries instead of advancing a blind 80%. Falls back to the fixed distance when a page can't be analysed. Also available in the in-reader settings.") },
+            label = { Text(LocalStrings.current.ui.webtoonSmartScroll) },
+            supportingText = { Text(LocalStrings.current.ui.inTheContinuousReaderA) },
         )
 
         SwitchWithLabel(
             checked = invertSpeechBubbles,
             onCheckedChange = onInvertSpeechBubblesChange,
-            label = { Text("Invert speech bubbles") },
-            supportingText = { Text("Black bubble, white text — artwork untouched. Reduces glare. Bubbles with screentone or gradient backgrounds are left as-is. Also available in the in-reader settings.") },
+            label = { Text(LocalStrings.current.ui.invertSpeechBubbles) },
+            supportingText = { Text(LocalStrings.current.ui.blackBubbleWhiteTextArtwork2) },
         )
 
         SwitchWithLabel(
             checked = continuousReaderStopAtEnd,
             onCheckedChange = onContinuousReaderStopAtEndChange,
-            label = { Text("Stop at end of book (continuous reader)") },
-            supportingText = { Text("Pause at the last page instead of rolling silently into the next book. Swipe again to continue. Also ensures the current book gets marked as read.") },
+            label = { Text(LocalStrings.current.ui.stopAtEndOfBook) },
+            supportingText = { Text(LocalStrings.current.ui.pauseAtTheLastPage) },
         )
 
 
@@ -133,7 +134,7 @@ fun ImageReaderSettingsContent(
                 val contentColor = if (it.luminance() > 0.5f) Color.Black else Color.White
                 ButtonDefaults.filledTonalButtonColors(containerColor = it, contentColor = contentColor)
             } ?: ButtonDefaults.filledTonalButtonColors()
-        ) { Text("Clear image cache") }
+        ) { Text(LocalStrings.current.ui.clearImageCache) }
 
         Column {
             Text(
@@ -153,7 +154,7 @@ fun ImageReaderSettingsContent(
                 } ?: SliderDefaults.colors()
             )
             Text(
-                "Requires app restart to take effect",
+                LocalStrings.current.ui.requiresAppRestartToTake,
                 style = MaterialTheme.typography.labelSmall
             )
         }
@@ -210,14 +211,14 @@ fun ImageReaderSettingsContent(
                     colors = accentColor?.let { ButtonDefaults.textButtonColors(contentColor = it) }
                         ?: ButtonDefaults.textButtonColors()
                 ) {
-                    Text("View Logs")
+                    Text(LocalStrings.current.ui.viewLogs2)
                 }
                 TextButton(
                     onClick = { showCrashLogs = true },
                     colors = accentColor?.let { ButtonDefaults.textButtonColors(contentColor = it) }
                         ?: ButtonDefaults.textButtonColors()
                 ) {
-                    Text("Crash Logs")
+                    Text(LocalStrings.current.ui.crashLogs)
                 }
             }
         }

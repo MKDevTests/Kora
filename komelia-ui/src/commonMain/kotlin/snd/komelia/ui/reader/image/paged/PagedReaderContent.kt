@@ -64,6 +64,7 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.toSize
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun BoxScope.PagedReaderContent(
@@ -337,7 +338,7 @@ private fun TransitionPage(page: TransitionPage) {
         when (page) {
             is BookEnd -> {
                 Column {
-                    Text("Finished:", style = MaterialTheme.typography.bodyMedium)
+                    Text(LocalStrings.current.ui.finished, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         page.currentBook.metadata.title,
                         style = MaterialTheme.typography.titleLarge
@@ -368,7 +369,7 @@ private fun TransitionPage(page: TransitionPage) {
                         )
                     }
                 } else {
-                    Text("No next series with the current filters")
+                    Text(LocalStrings.current.ui.noNextSeriesWithThe)
                 }
 
             }
@@ -376,19 +377,19 @@ private fun TransitionPage(page: TransitionPage) {
             is BookStart -> {
                 if (page.previousBook != null) {
                     Column {
-                        Text("Previous:", style = MaterialTheme.typography.bodyMedium)
+                        Text(LocalStrings.current.ui.previous2, style = MaterialTheme.typography.bodyMedium)
                         Text(
                             page.previousBook.metadata.title,
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
                 } else {
-                    Text("There's no previous book")
+                    Text(LocalStrings.current.ui.thereSNoPreviousBook)
 
                 }
                 Spacer(Modifier.size(50.dp))
                 Column {
-                    Text("Current:", style = MaterialTheme.typography.bodyMedium)
+                    Text(LocalStrings.current.ui.current, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         page.currentBook.metadata.title,
                         style = MaterialTheme.typography.titleLarge

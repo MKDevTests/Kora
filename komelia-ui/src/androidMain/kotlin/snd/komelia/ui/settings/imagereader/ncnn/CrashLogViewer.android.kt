@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import snd.komelia.ui.LocalStrings
 
 @Composable
 actual fun NcnnCrashLogViewerDialog(onDismiss: () -> Unit) {
@@ -38,7 +39,7 @@ actual fun NcnnCrashLogViewerDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Crash Logs") },
+        title = { Text(LocalStrings.current.ui.crashLogs) },
         text = {
             Column(modifier = Modifier.fillMaxHeight(0.8f)) {
                 HorizontalDivider()
@@ -60,7 +61,7 @@ actual fun NcnnCrashLogViewerDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.close) }
         }
     )
 }

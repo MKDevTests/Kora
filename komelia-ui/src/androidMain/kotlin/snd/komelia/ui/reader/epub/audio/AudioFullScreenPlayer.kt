@@ -104,6 +104,7 @@ import snd.komelia.ui.reader.epub.Epub3LocationLabel
 import snd.komelia.ui.reader.epub.locatorToPositionIndex
 import snd.komga.client.book.KomgaBookId
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 private val emphasizedEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
 private val emphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
@@ -134,7 +135,7 @@ private fun TranscriptPanel(
             state is TranscriptEngineState.UnsupportedDevice ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "Speech model not available on this device.\nRequires Android 12+ with Google speech model.",
+                        LocalStrings.current.ui.speechModelNotAvailableOn,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -153,7 +154,7 @@ private fun TranscriptPanel(
                     } else {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Downloading transcription model…", style = MaterialTheme.typography.bodySmall)
+                        Text(LocalStrings.current.ui.downloadingTranscriptionModel, style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
@@ -172,7 +173,7 @@ private fun TranscriptPanel(
             segments.isEmpty() ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "Listening…",
+                        LocalStrings.current.ui.listening,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     )
@@ -419,7 +420,7 @@ fun AudioFullScreenPlayer(
                                     onClick = { showMetadataDialog = true },
                                     modifier = Modifier.align(Alignment.TopEnd),
                                 ) {
-                                    Icon(Icons.Default.Info, contentDescription = "Metadata")
+                                    Icon(Icons.Default.Info, contentDescription = LocalStrings.current.ui.metadata)
                                 }
                             }
                         }
@@ -450,7 +451,7 @@ fun AudioFullScreenPlayer(
                                     Icon(
                                         imageVector = if (isTranscribing) Icons.Default.ClosedCaption
                                                       else Icons.Default.ClosedCaptionOff,
-                                        contentDescription = "Toggle transcript",
+                                        contentDescription = LocalStrings.current.ui.toggleTranscript,
                                         tint = if (isTranscribing) accentColor ?: LocalContentColor.current
                                                else LocalContentColor.current,
                                     )
@@ -640,7 +641,7 @@ fun AudioFullScreenPlayer(
                         ) {
                             // Outer left: prev chapter (folder = prev track; SMIL = prev epub chapter)
                             IconButton(onClick = onPrevChapter) {
-                                Icon(Icons.Filled.SkipPrevious, contentDescription = "Previous chapter")
+                                Icon(Icons.Filled.SkipPrevious, contentDescription = LocalStrings.current.ui.previousChapter)
                             }
                             // Inner left: folder = −20 s; SMIL = prev epub position
                             if (isSMILMode) {
@@ -650,11 +651,11 @@ fun AudioFullScreenPlayer(
                                     },
                                     enabled = smilCurrentIndex > 0,
                                 ) {
-                                    Icon(Icons.Filled.Remove, contentDescription = "Previous page")
+                                    Icon(Icons.Filled.Remove, contentDescription = LocalStrings.current.ui.previousPage)
                                 }
                             } else {
                                 IconButton(onClick = { controller.seekRelative(-10.0) }) {
-                                    Icon(Icons.Filled.Replay10, contentDescription = "Rewind 10 seconds")
+                                    Icon(Icons.Filled.Replay10, contentDescription = LocalStrings.current.ui.rewind10Seconds)
                                 }
                             }
                             // Play / Pause
@@ -681,16 +682,16 @@ fun AudioFullScreenPlayer(
                                     },
                                     enabled = smilCurrentIndex < positions.size - 1,
                                 ) {
-                                    Icon(Icons.Filled.Add, contentDescription = "Next page")
+                                    Icon(Icons.Filled.Add, contentDescription = LocalStrings.current.ui.nextPage)
                                 }
                             } else {
                                 IconButton(onClick = { controller.seekRelative(30.0) }) {
-                                    Icon(Icons.Filled.Forward30, contentDescription = "Forward 30 seconds")
+                                    Icon(Icons.Filled.Forward30, contentDescription = LocalStrings.current.ui.forward30Seconds)
                                 }
                             }
                             // Outer right: next chapter (folder = next track; SMIL = next epub chapter)
                             IconButton(onClick = onNextChapter) {
-                                Icon(Icons.Filled.SkipNext, contentDescription = "Next chapter")
+                                Icon(Icons.Filled.SkipNext, contentDescription = LocalStrings.current.ui.nextChapter)
                             }
                         }
 

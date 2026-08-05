@@ -36,9 +36,24 @@ data class ForYouAttribution(
     val reasons: List<String>,
 )
 
+/**
+ * What a section is titled after. Data, not a formatted string: the wording is
+ * translated, and this class cannot reach a resource — it has no composition.
+ */
+sealed interface ForYouSectionTitle {
+    /** "Because you liked / read / are reading <name>". */
+    data class Source(
+        val kind: snd.komelia.ui.suggestions.ForYouSourceKind,
+        val name: String,
+    ) : ForYouSectionTitle
+
+    /** Everything no single series explains. */
+    data object More : ForYouSectionTitle
+}
+
 /** A titled run of suggestions. A null title means the untitled main grid. */
 data class ForYouSection(
-    val title: String?,
+    val title: ForYouSectionTitle?,
     val items: List<ForYouSuggestion>,
 )
 
@@ -130,14 +145,14 @@ class LibraryForYouTabState(
                     }
                     if (items.size >= MIN_SECTION_SIZE) {
                         items.forEach { assigned += it.series.id.value }
-                        named += ForYouSection(info.heading(), items)
+                        named += ForYouSection(ForYouSectionTitle.Source(info.kind, info.name), items)
                     }
                 }
             val leftovers = rest.filterNot { it.series.id.value in assigned }
             return when {
                 named.isEmpty() -> listOf(ForYouSection(null, leftovers))
                 leftovers.isEmpty() -> named
-                else -> named + ForYouSection("More for you", leftovers)
+                else -> named + ForYouSection(ForYouSectionTitle.More, leftovers)
             }
         }
 
@@ -227,17 +242,6 @@ class LibraryForYouTabState(
             failed = true
         }
     }
-}
-
-/**
- * Says what the user actually did with the series, not what the app wishes they
- * had done: a series that was read but never rated is not one they told us they
- * liked, and claiming otherwise is exactly what makes a suggestion look wrong.
- */
-private fun snd.komelia.ui.suggestions.ForYouSource.heading(): String = when (kind) {
-    snd.komelia.ui.suggestions.ForYouSourceKind.LIKED -> "Because you liked $name"
-    snd.komelia.ui.suggestions.ForYouSourceKind.READ -> "Because you read $name"
-    snd.komelia.ui.suggestions.ForYouSourceKind.READING -> "Because you are reading $name"
 }
 
 /** Same wording everywhere a reason is shown, tab or shelf. */

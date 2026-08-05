@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import snd.komelia.ui.common.components.CheckboxWithLabel
 import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
+import snd.komelia.ui.LocalStrings
 
 internal class GeneralTab(
     private val vm: CollectionEditDialogViewModel,
@@ -33,7 +34,7 @@ internal class GeneralTab(
             TextField(
                 value = vm.name,
                 onValueChange = vm::name::set,
-                label = { Text("Name") },
+                label = { Text(LocalStrings.current.ui.name) },
                 supportingText = {
                     vm.nameValidationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 },
@@ -45,13 +46,13 @@ internal class GeneralTab(
             HorizontalDivider()
             Column {
                 Text(
-                    "By default, series in a collection will be ordered by name. You can enable manual ordering to define your own order.",
+                    LocalStrings.current.ui.byDefaultSeriesInA,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 CheckboxWithLabel(
                     checked = vm.manualOrdering,
                     onCheckedChange = vm::manualOrdering::set,
-                    label = { Text("Manual ordering") }
+                    label = { Text(LocalStrings.current.ui.manualOrdering) }
                 )
 
             }

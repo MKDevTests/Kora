@@ -16,6 +16,7 @@ import snd.komelia.settings.model.StartupScreen
 import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.common.components.SwitchWithLabel
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun NavigationSettingsContent(
@@ -43,12 +44,12 @@ fun NavigationSettingsContent(
         // Library switcher in title -------------------------------------
         Column {
             SwitchWithLabel(
-                label = { Text("Library switcher in page title") },
+                label = { Text(LocalStrings.current.ui.librarySwitcherInPageTitle) },
                 checked = libraryDropdownInTitle,
                 onCheckedChange = onLibraryDropdownInTitleChange,
             )
             Text(
-                text = "When on, tapping 'Home' / library-name at the top of " +
+                text = LocalStrings.current.ui.whenOnTappingHomeLibrary +
                     "the screen opens a dropdown listing all libraries for " +
                     "one-tap switching. When off, the title is plain text " +
                     "and you switch libraries via the side drawer (☰) only.",
@@ -75,11 +76,11 @@ fun NavigationSettingsContent(
                 selectedOption = selected,
                 options = options,
                 onOptionChange = { onStartupScreenChange(it.value) },
-                label = { Text("Startup screen") },
+                label = { Text(LocalStrings.current.ui.startupScreen) },
                 inputFieldModifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = "Which screen Kora opens to when you launch the app. " +
+                text = LocalStrings.current.ui.whichScreenKoraOpensTo +
                     "'Home' shows your curated landing page; 'Last opened " +
                     "library' jumps straight into the library you were " +
                     "browsing previously.",
@@ -94,12 +95,12 @@ fun NavigationSettingsContent(
         // Reading Stats master switch -----------------------------------
         Column {
             SwitchWithLabel(
-                label = { Text("Reading stats") },
+                label = { Text(LocalStrings.current.ui.readingStats) },
                 checked = statsEnabled,
                 onCheckedChange = onStatsEnabledChange,
             )
             Text(
-                text = "Tracks book completions and shows your reading " +
+                text = LocalStrings.current.ui.tracksBookCompletionsAndShows +
                     "activity (books finished, streak, monthly chart). " +
                     "When off, no events are logged and the stats surface " +
                     "is hidden. Lifetime counters always come straight from " +
@@ -114,13 +115,13 @@ fun NavigationSettingsContent(
         // Stats in bottom nav ------------------------------------------
         Column {
             SwitchWithLabel(
-                label = { Text("Show stats in bottom navigation") },
+                label = { Text(LocalStrings.current.ui.showStatsInBottomNavigation) },
                 checked = statsInBottomNav,
                 onCheckedChange = onStatsInBottomNavChange,
                 enabled = statsEnabled,
             )
             Text(
-                text = "Adds a dedicated stats button to the bottom navigation " +
+                text = LocalStrings.current.ui.addsADedicatedStatsButton +
                     "bar (next to Home / Search / Library). When off, the stats " +
                     "page is still reachable from the Home screen card.",
                 style = MaterialTheme.typography.bodySmall,
@@ -132,12 +133,12 @@ fun NavigationSettingsContent(
         // Upcoming releases in bottom nav --------------------------------
         Column {
             SwitchWithLabel(
-                label = { Text("Show upcoming releases in bottom navigation") },
+                label = { Text(LocalStrings.current.ui.showUpcomingReleasesInBottom) },
                 checked = nextReleasesInBottomNav,
                 onCheckedChange = onNextReleasesInBottomNavChange,
             )
             Text(
-                text = "Adds a dedicated button to the bottom navigation bar for " +
+                text = LocalStrings.current.ui.addsADedicatedButtonTo +
                     "the cross-library upcoming releases calendar. When off, the " +
                     "page is still reachable from the Home screen card.",
                 style = MaterialTheme.typography.bodySmall,
@@ -149,7 +150,7 @@ fun NavigationSettingsContent(
         // AniList link suggestions (opt-in, online) ---------------------
         Column {
             SwitchWithLabel(
-                label = { Text("AniList link suggestions (online)") },
+                label = { Text(LocalStrings.current.ui.anilistLinkSuggestionsOnline) },
                 checked = aniListLinkSuggestionsEnabled,
                 onCheckedChange = onAniListLinkSuggestionsEnabledChange,
             )
@@ -169,12 +170,12 @@ fun NavigationSettingsContent(
         // Share series links via Komga (read all, write admin) ----------
         Column {
             SwitchWithLabel(
-                label = { Text("Share series links via Komga") },
+                label = { Text(LocalStrings.current.ui.shareSeriesLinksViaKomga) },
                 checked = shareLinksViaKomga,
                 onCheckedChange = onShareLinksViaKomgaChange,
             )
             Text(
-                text = "Reads shared series relations from the Komga server (visible to " +
+                text = LocalStrings.current.ui.readsSharedSeriesRelationsFrom +
                     "everyone) on top of your private local links. When on, admins publish " +
                     "their links to the server; non-admins keep writing locally. Off by " +
                     "default: everything stays local on this device.",

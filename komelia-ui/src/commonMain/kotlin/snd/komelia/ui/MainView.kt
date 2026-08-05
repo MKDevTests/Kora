@@ -100,6 +100,7 @@ fun MainView(
     var cardCornerRadius by remember { mutableStateOf(8.0f) }
     var useFloatingNavigationBar by remember { mutableStateOf(false) }
     var hideParenthesesInNames by remember { mutableStateOf(false) }
+    var uiLanguage by remember { mutableStateOf(snd.komelia.ui.i18n.AppLanguage.SYSTEM) }
     var hiddenAuthorRoles by remember { mutableStateOf<Set<String>?>(null) }
     var showLanguageOnCovers by remember { mutableStateOf(false) }
     var languageBadgeScale by remember { mutableStateOf(1.0f) }
@@ -146,6 +147,10 @@ fun MainView(
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getHideParenthesesInNames()
             ?.collect { hideParenthesesInNames = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getUiLanguage()
+            ?.collect { uiLanguage = snd.komelia.ui.i18n.AppLanguage.of(it) }
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getShowLanguageOnCovers()
@@ -329,26 +334,31 @@ fun MainView(
                 LocalCardCornerRadius provides cardCornerRadius,
                 LocalUseFloatingNavigationBar provides useFloatingNavigationBar,
             ) {
-                key(currentServerProfile?.id) {
-                    MainContent(
-                        platformType = platformType,
-                        komgaSharedState = dependencies.komgaSharedState,
-                        localFileApiProvider = dependencies.localFileApiProvider,
-                        widgetBookToOpenFlow = dependencies.widgetBookToOpenFlow,
+                // Everything the user can read sits inside this: the choice has
+                // to reach the notifications and the dialogs too, not only the
+                // screens.
+                snd.komelia.ui.i18n.ProvideAppLanguage(uiLanguage) {
+                    key(currentServerProfile?.id) {
+                        MainContent(
+                            platformType = platformType,
+                            komgaSharedState = dependencies.komgaSharedState,
+                            localFileApiProvider = dependencies.localFileApiProvider,
+                            widgetBookToOpenFlow = dependencies.widgetBookToOpenFlow,
+                        )
+                    }
+
+                    AppNotifications(dependencies.appNotifications, theme)
+                    val updateChecker = remember { viewModelFactory.getStartupUpdateChecker() }
+                    if (updateChecker != null) {
+                        StartupUpdateChecker(updateChecker)
+                    }
+                    IgnoreListToHiddenMigrationPrompt(
+                        settingsRepository = dependencies.appRepositories.settingsRepository,
+                        hiddenController = dependencies.hiddenSeriesController,
+                        authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
+                        isOffline = dependencies.isOffline,
                     )
                 }
-
-                AppNotifications(dependencies.appNotifications, theme)
-                val updateChecker = remember { viewModelFactory.getStartupUpdateChecker() }
-                if (updateChecker != null) {
-                    StartupUpdateChecker(updateChecker)
-                }
-                IgnoreListToHiddenMigrationPrompt(
-                    settingsRepository = dependencies.appRepositories.settingsRepository,
-                    hiddenController = dependencies.hiddenSeriesController,
-                    authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
-                    isOffline = dependencies.isOffline,
-                )
             }
 
             BackPressHandler {}

@@ -50,6 +50,7 @@ import snd.komelia.ui.platform.cursorForHand
 import snd.komga.client.user.KomgaAuthenticationActivity
 import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun UsersContent(
@@ -77,7 +78,7 @@ fun UsersContent(
             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
 
         ) {
-            Text("Add User")
+            Text(LocalStrings.current.ui.addUser)
         }
 
         if (showUserAddDialog) {
@@ -131,7 +132,7 @@ private fun UserCard(
 @Composable
 private fun UserRoles(user: KomgaUser) {
     Column {
-        Text("Roles:", fontWeight = FontWeight.Bold)
+        Text(LocalStrings.current.ui.roles2, fontWeight = FontWeight.Bold)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             user.roles.forEach { role ->
                 SuggestionChip(
@@ -207,7 +208,7 @@ private fun UserActions(
             ) {
                 Icon(Icons.Default.Edit, null)
                 Spacer(Modifier.width(10.dp))
-                Text("Edit User")
+                Text(LocalStrings.current.ui.editUser)
             }
 
         FilledTonalButton(
@@ -217,7 +218,7 @@ private fun UserActions(
         ) {
             Icon(Icons.Default.LockReset, null)
             Spacer(Modifier.width(10.dp))
-            Text("Change Password")
+            Text(LocalStrings.current.ui.changePassword)
         }
 
 
@@ -233,7 +234,7 @@ private fun UserActions(
             ) {
                 Icon(Icons.Default.Delete, null)
                 Spacer(Modifier.width(10.dp))
-                Text("Delete User")
+                Text(LocalStrings.current.ui.deleteUser)
             }
     }
 
@@ -249,7 +250,7 @@ private fun UserActions(
 
     if (showDeleteDialog) {
         ConfirmationDialog(
-            title = "Delete User",
+            title = LocalStrings.current.ui.deleteUser,
             body = "The user ${user.email} will be deleted from this server. This cannot be undone. Continue?",
             confirmText = "Yes, delete \"${user.email}\"",
             buttonConfirm = "DELETE",

@@ -267,7 +267,7 @@ fun <T> DropdownChoiceMenuWithSearch(
             val focusRequester = remember { FocusRequester() }
             NoPaddingTextField(
                 text = searchText,
-                placeholder = "Search",
+                placeholder = LocalStrings.current.ui.search,
                 onTextChange = { searchText = it },
                 modifier = Modifier
                     .padding(horizontal = 10.dp)
@@ -477,7 +477,7 @@ fun <T> FilterDialogMultiChoiceWithSearch(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Search Results")
+                        Text(LocalStrings.current.ui.searchResults)
                         HorizontalDivider(Modifier.padding(start = 10.dp))
                     }
 
@@ -712,7 +712,7 @@ private fun TagFilterDropdownContent(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 10.dp)
         ) {
-            Text("Other Options")
+            Text(LocalStrings.current.ui.otherOptions)
             HorizontalDivider(Modifier.padding(start = 10.dp))
         }
 
@@ -727,7 +727,7 @@ private fun TagFilterDropdownContent(
                     }
                 },
                 onOptionChange = { onInclusionModeChange(it.value) },
-                label = { Text("Inclusion mode") }
+                label = { Text(LocalStrings.current.ui.inclusionMode) }
             )
 
             DropdownChoiceMenu(
@@ -740,7 +740,7 @@ private fun TagFilterDropdownContent(
                     }
                 },
                 onOptionChange = { onExclusionModeChange(it.value) },
-                label = { Text("Exclusion mode") }
+                label = { Text(LocalStrings.current.ui.exclusionMode) }
             )
         }
     }

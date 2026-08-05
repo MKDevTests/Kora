@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.toIntSize
 import snd.komelia.image.OcrElementBox
 import snd.komelia.ui.common.components.AnimatedDropdownMenu
 import snd.komelia.ui.platform.rememberTranslator
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun TextSelectionOverlay(
@@ -134,7 +135,7 @@ fun TextSelectionOverlay(
                 transformOrigin = TransformOrigin(0f, 0f)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Copy") },
+                    text = { Text(LocalStrings.current.ui.copy) },
                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
                     onClick = {
                         clipboardManager.setText(AnnotatedString(text))
@@ -142,7 +143,7 @@ fun TextSelectionOverlay(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Translate") },
+                    text = { Text(LocalStrings.current.ui.translate) },
                     leadingIcon = { Icon(Icons.Default.Translate, contentDescription = null) },
                     onClick = {
                         translateText(text)
@@ -150,7 +151,7 @@ fun TextSelectionOverlay(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Add Note") },
+                    text = { Text(LocalStrings.current.ui.addNote) },
                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                     onClick = {
                         val firstBox = selectedBoxes.minByOrNull { it.imageRect.top } ?: selectedBoxes.first()

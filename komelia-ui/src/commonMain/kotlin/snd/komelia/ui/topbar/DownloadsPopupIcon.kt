@@ -46,6 +46,7 @@ import kotlinx.datetime.format
 import snd.komelia.DefaultDateTimeFormats.localTimeFormat
 import snd.komelia.formatDecimal
 import snd.komelia.ui.platform.VerticalScrollbar
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,10 +122,10 @@ private fun NotificationsContent(
                 modifier = Modifier.padding(5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Recent downloads", modifier = Modifier.padding(start = 5.dp))
+                Text(LocalStrings.current.ui.recentDownloads, modifier = Modifier.padding(start = 5.dp))
                 Spacer(Modifier.weight(1f))
                 ElevatedButton(onClick = onNotificationsClear) {
-                    Text("Clear all")
+                    Text(LocalStrings.current.ui.clearAll)
                     Icon(Icons.Default.Clear, null)
                 }
             }

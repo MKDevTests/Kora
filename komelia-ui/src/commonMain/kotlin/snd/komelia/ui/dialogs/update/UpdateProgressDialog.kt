@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.platform.cursorForHand
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun UpdateProgressDialog(
@@ -24,7 +25,7 @@ fun UpdateProgressDialog(
         modifier = Modifier.widthIn(max = 600.dp),
         header = {
             Text(
-                "Updating",
+                LocalStrings.current.ui.updating,
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(10.dp)
             )
@@ -33,7 +34,7 @@ fun UpdateProgressDialog(
             FilledTonalButton(
                 onClick = onCancel,
                 modifier = Modifier.cursorForHand().padding(10.dp),
-                content = { Text("Cancel") }
+                content = { Text(LocalStrings.current.ui.cancel) }
             )
         },
         content = { DialogContent(totalSize, downloadedSize) },

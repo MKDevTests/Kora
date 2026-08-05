@@ -64,6 +64,7 @@ import snd.komelia.ui.common.menus.BookMenuActions
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.PlatformType
 import snd.komga.client.series.KomgaSeries
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun HomeContent(
@@ -171,7 +172,7 @@ private fun HomeHeaderSection() {
     ) {
         if (showDropdown) {
             snd.komelia.ui.common.components.LibraryTitleSelector(
-                label = "Home",
+                label = LocalStrings.current.ui.home,
                 titleStyle = titleStyle,
                 libraries = libraries,
                 currentLibraryId = null,
@@ -179,7 +180,7 @@ private fun HomeHeaderSection() {
                 onPickLibrary = { libId -> mainScreenVm.navigateToLibrary(libId) },
             )
         } else {
-            Text("Home", style = titleStyle)
+            Text(LocalStrings.current.ui.home, style = titleStyle)
         }
     }
 }
@@ -191,6 +192,8 @@ private fun Toolbar(
     onFilterChange: (Int) -> Unit,
 ) {
     val chipColors = AppFilterChipDefaults.filterChipColors()
+    // Read here, not inside the lazy blocks below: those are not compositions.
+    val shelfStrings = LocalStrings.current.shelves
     val nonEmptyFilters = remember(filters) {
         filters.filter {
             when (it) {
@@ -219,7 +222,7 @@ private fun Toolbar(
                     FilterChip(
                         onClick = { onFilterChange(0) },
                         selected = selected,
-                        label = { Text("All") },
+                        label = { Text(LocalStrings.current.ui.all) },
                         colors = chipColors,
                         shape = AppFilterChipDefaults.shape(),
                         border = AppFilterChipDefaults.filterChipBorder(selected),
@@ -238,7 +241,7 @@ private fun Toolbar(
                     FilterChip(
                         onClick = { onFilterChange(data.filter.order) },
                         selected = selected,
-                        label = { Text(data.filter.label) },
+                        label = { Text(shelfLabel(data.filter.label, shelfStrings)) },
                         colors = chipColors,
                         shape = AppFilterChipDefaults.shape(),
                         border = AppFilterChipDefaults.filterChipBorder(selected),
@@ -291,6 +294,7 @@ private fun DisplayContent(
     val useNewLibraryUI = LocalUseNewLibraryUI.current
     val extraBottomPadding = LocalTransparentNavBarPadding.current
     val toolbarPadding = LocalFloatingToolbarPadding.current
+    val shelfStrings = LocalStrings.current.shelves
     if (useNewLibraryUI && activeFilterNumber == 0) {
         LazyColumn(
             state = columnState,
@@ -308,7 +312,7 @@ private fun DisplayContent(
                 if (!isEmpty) {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SectionHeader(data.filter.label, onClick = { onShelfClick(data.filter) })
+                            SectionHeader(shelfLabel(data.filter.label, shelfStrings), onClick = { onShelfClick(data.filter) })
                             SectionRow(
                                 data = data,
                                 cardWidth = cardWidth,
@@ -341,7 +345,7 @@ private fun DisplayContent(
                 if (activeFilterNumber == 0 || data.filter.order == activeFilterNumber) {
                     when (data) {
                         is BookFilterData -> BookFilterEntry(
-                            label = data.filter.label,
+                            label = shelfLabel(data.filter.label, shelfStrings),
                             onLabelClick = { onShelfClick(data.filter) },
                             books = data.books,
                             bookMenuActions = bookMenuActions,
@@ -350,7 +354,7 @@ private fun DisplayContent(
                         )
 
                         is SeriesFilterData -> SeriesFilterEntries(
-                            label = data.filter.label,
+                            label = shelfLabel(data.filter.label, shelfStrings),
                             onLabelClick = { onShelfClick(data.filter) },
                             series = data.series,
                             onSeriesClick = onSeriesClick,

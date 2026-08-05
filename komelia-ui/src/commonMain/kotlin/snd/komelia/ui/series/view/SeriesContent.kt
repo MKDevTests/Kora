@@ -97,6 +97,7 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun SeriesContent(
@@ -287,7 +288,7 @@ fun SeriesToolBar(
                         CircleShape
                     )
                 ) {
-                    Icon(Icons.Rounded.Casino, contentDescription = "Random series in library")
+                    Icon(Icons.Rounded.Casino, contentDescription = LocalStrings.current.ui.randomSeriesInLibrary)
                 }
             }
             Box {
@@ -325,14 +326,14 @@ fun SeriesToolBar(
             }
             if (onReadFromStartClick != null) {
                 IconButton(onClick = onReadFromStartClick) {
-                    Icon(Icons.Rounded.Replay, contentDescription = "Read from start")
+                    Icon(Icons.Rounded.Replay, contentDescription = LocalStrings.current.ui.readFromStart)
                 }
             }
             if (onContinueReadClick != null) {
                 IconButton(onClick = onContinueReadClick) {
                     Icon(
                         Icons.AutoMirrored.Rounded.MenuBook,
-                        contentDescription = "Continue reading",
+                        contentDescription = LocalStrings.current.ui.continueReading2,
                     )
                 }
             }
@@ -459,14 +460,14 @@ fun SeriesChipTags(
     ) {
         if (series.metadata.publisher.isNotBlank()) {
             DescriptionChips(
-                label = "Publisher",
+                label = LocalStrings.current.ui.publisher,
                 chipValue = stringEntry(series.metadata.publisher),
                 onClick = { onFilterClick(SeriesScreenFilter(publisher = listOf(it))) },
             )
         }
 
         DescriptionChips(
-            label = "Genres",
+            label = LocalStrings.current.ui.genres,
             chipValues = series.metadata.genres.map { stringEntry(it) },
             onChipClick = { onFilterClick(SeriesScreenFilter(genres = listOf(it))) },
         )
@@ -479,7 +480,7 @@ fun SeriesChipTags(
 
         val uriHandler = LocalUriHandler.current
         DescriptionChips(
-            label = "Links",
+            label = LocalStrings.current.ui.links,
             chipValues = series.metadata.links.map { LabeledEntry(it, it.label) },
             onChipClick = { entry -> uriHandler.openUri(entry.url) },
             icon = Icons.Default.Link,
@@ -523,14 +524,14 @@ private fun TabRow(
                 FilterChip(
                     onClick = { onTabChange(SeriesTab.BOOKS) },
                     selected = currentTab == SeriesTab.BOOKS,
-                    label = { Text("Books") },
+                    label = { Text(LocalStrings.current.ui.books) },
                     colors = chipColors,
                     border = null,
                 )
                 FilterChip(
                     onClick = { onTabChange(SeriesTab.COLLECTIONS) },
                     selected = currentTab == SeriesTab.COLLECTIONS,
-                    label = { Text("Collections") },
+                    label = { Text(LocalStrings.current.ui.collections) },
                     colors = chipColors,
                     border = null,
                 )

@@ -42,6 +42,7 @@ import snd.komelia.ui.LocalTheme
 import snd.komelia.ui.Theme
 import snd.komelia.ui.reader.common.AnnotationRow
 import kotlin.math.roundToInt
+import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +100,7 @@ fun ComicContentDialog(
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = { Text("Notes") },
+                    text = { Text(LocalStrings.current.ui.notes) },
                 )
             }
 
@@ -131,7 +132,7 @@ private fun ComicAnnotationsTab(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No annotations yet",
+                text = LocalStrings.current.ui.noAnnotationsYet,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

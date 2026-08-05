@@ -28,12 +28,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalFloatingToolbarPadding
+import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.common.cards.SeriesImageCard
 import snd.komelia.ui.suggestions.ReasonPill
 import snd.komelia.ui.suggestions.SuggestionActions
 import snd.komelia.ui.library.ForYouSuggestion
+import snd.komelia.ui.library.ForYouSectionTitle
 import snd.komelia.ui.library.LibraryForYouTabState
+import snd.komelia.ui.suggestions.ForYouSourceKind
 import snd.komga.client.series.KomgaSeries
 
 /**
@@ -76,7 +79,7 @@ fun ForYouContent(
         if (top.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Closest matches", style = MaterialTheme.typography.titleSmall)
+                    Text(LocalStrings.current.suggestions.closestMatches, style = MaterialTheme.typography.titleSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(top.size) { index ->
                             SuggestionCard(
@@ -90,11 +93,11 @@ fun ForYouContent(
                 }
             }
         }
-        state.sections.forEach { section ->
+        state.sections.forEachIndexed { sectionIndex, section ->
             if (section.title != null) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "header:${section.title}") {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "header:$sectionIndex") {
                     Text(
-                        section.title,
+                        sectionTitle(section.title),
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
                     )
@@ -102,7 +105,7 @@ fun ForYouContent(
             }
             items(
                 count = section.items.size,
-                key = { index -> "${section.title}:${section.items[index].series.id.value}" },
+                key = { index -> "$sectionIndex:${section.items[index].series.id.value}" },
             ) { index ->
                 SuggestionCard(section.items[index], onSeriesClick, state::dismiss)
             }
@@ -110,8 +113,23 @@ fun ForYouContent(
     }
 }
 
+/** The heading of a section, in the language the user picked. */
+@Composable
+private fun sectionTitle(title: ForYouSectionTitle): String {
+    val strings = LocalStrings.current.suggestions
+    return when (title) {
+        ForYouSectionTitle.More -> strings.moreForYou
+        is ForYouSectionTitle.Source -> when (title.kind) {
+            ForYouSourceKind.LIKED -> strings.becauseYouLiked(title.name)
+            ForYouSourceKind.READ -> strings.becauseYouRead(title.name)
+            ForYouSourceKind.READING -> strings.becauseYouAreReading(title.name)
+        }
+    }
+}
+
 @Composable
 private fun ForYouHeader(state: LibraryForYouTabState) {
+    val strings = LocalStrings.current.suggestions
     val progress = state.buildProgress
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -120,27 +138,22 @@ private fun ForYouHeader(state: LibraryForYouTabState) {
         when {
             progress != null -> {
                 Text(
-                    "Analysing the library… ${(progress * 100).toInt()} %",
+                    strings.analysingLibrary((progress * 100).toInt()),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
             }
 
-            state.isLoading -> Text("Building your profile…", style = MaterialTheme.typography.bodyMedium)
+            state.isLoading -> Text(strings.buildingProfile, style = MaterialTheme.typography.bodyMedium)
 
             state.failed -> Text(
-                "Could not compute suggestions.",
+                strings.failed,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
 
             state.suggestions.isEmpty() -> Text(
-                if (state.profileSize == 0) {
-                    "Nothing to go on yet. Read or rate a few series in this library and " +
-                        "suggestions will appear here."
-                } else {
-                    "No suggestion left. Try showing the series you have already read."
-                },
+                if (state.profileSize == 0) strings.emptyNoProfile else strings.emptyAllRead,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -150,20 +163,20 @@ private fun ForYouHeader(state: LibraryForYouTabState) {
             FilterChip(
                 selected = state.includeRead,
                 onClick = { state.toggleIncludeRead() },
-                label = { Text("Show read") },
+                label = { Text(strings.showRead) },
             )
             if (state.dismissedCount > 0) {
                 // An irreversible one-tap action needs a way back in sight of
                 // where it is taken.
                 TextButton(onClick = { state.resetDismissed() }) {
-                    Text("Reset not interested (${state.dismissedCount})")
+                    Text(strings.resetDismissed(state.dismissedCount))
                 }
             }
             if (state.profileSize > 0) {
                 Text(
                     // Says what the suggestions are based on, so a surprising
                     // list can be understood instead of just distrusted.
-                    "Based on ${state.profileSize} series you have read or rated",
+                    strings.profileSize(state.profileSize),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

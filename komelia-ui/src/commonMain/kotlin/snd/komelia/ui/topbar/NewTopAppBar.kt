@@ -52,6 +52,7 @@ import snd.komelia.ui.Theme
 import snd.komelia.ui.common.menus.LibraryActionsMenu
 import snd.komelia.ui.common.menus.LibraryMenuActions
 import snd.komga.client.library.KomgaLibrary
+import snd.komelia.ui.LocalStrings
 
 @Composable
 fun NewTopAppBar(
@@ -132,7 +133,7 @@ fun NewTopAppBar(
                 else -> Icons.Rounded.LightMode
             }
             IconButton(onClick = { mainScreenVm.toggleTheme(theme) }) {
-                Icon(toggleIcon, contentDescription = "Toggle theme", tint = iconColor)
+                Icon(toggleIcon, contentDescription = LocalStrings.current.ui.toggleTheme, tint = iconColor)
             }
 
             if (showThreeDotsMenu && library != null && libraryActions != null) {
