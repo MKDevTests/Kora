@@ -93,6 +93,22 @@ class ReadingOrderState(
             isLoading = true
             try {
                 val current = series.filterNotNull().first()
+
+                // Draw the graph we already know for this series while it is
+                // recomputed. Finding its root needs the shared-link walk —
+                // up to twelve requests — and until now nothing was shown
+                // during it, even though the answer was already on disk.
+                if (!forceRefresh && graph == null) {
+                    val remembered = snd.komelia.perf.PerfTrace.measure(
+                        label = "series.readingOrder.remembered",
+                        count = { it: snd.komelia.readingorder.ReadingOrderGraph? -> it?.nodes?.size },
+                    ) { repository.getCachedContaining(current.id) }
+                    if (remembered != null && remembered.isWorthShowing) {
+                        graph = remembered
+                        isLoading = false
+                    }
+                }
+
                 val localRelations = linksRepository.getAllRelations()
                 val versions = linksRepository.getAllVersions()
                 currentIsOriginal = repository.isOriginal(current.id)

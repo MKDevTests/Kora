@@ -42,6 +42,7 @@ class SeriesBooksState(
     private val settingsRepository: CommonSettingsRepository,
     private val notifications: AppNotifications,
     private val bookApi: KomgaBookApi,
+    private val booksCacheRepository: snd.komelia.library.SeriesBooksCacheRepository,
     private val events: SharedFlow<KomgaEvent>,
     private val taskEmitter: OfflineTaskEmitter,
     private val screenModelScope: CoroutineScope,
@@ -98,6 +99,34 @@ class SeriesBooksState(
         }
     }
 
+    /**
+     * Publishes the remembered first page, when it is the page being asked for.
+     *
+     * Only the default view: another page or another ordering is a deliberate
+     * request, and showing a different list would be worse than the wait.
+     */
+    private suspend fun paintRememberedBooks(page: Int) {
+        if (page != 1) return
+        if (filterState.state.value != snd.komelia.ui.book.BookFilter.DEFAULT) return
+        val seriesId = series.value?.id?.value ?: return
+
+        val remembered = snd.komelia.perf.PerfTrace.measure(
+            label = "series.books.remembered",
+            count = { it: snd.komelia.library.CachedSeriesBooks? -> it?.books?.size },
+        ) { booksCacheRepository.get(seriesId) } ?: return
+
+        if (state.value is LoadState.Success<BooksData>) return
+        mutableState.value = LoadState.Success(
+            BooksData(
+                books = remembered.books,
+                pageSize = remembered.pageSize,
+                totalPages = remembered.totalPages,
+                currentPage = 1,
+                layout = settingsRepository.getBookListLayout().first(),
+            )
+        )
+    }
+
     private suspend fun loadBookData(page: Int) {
         notifications.runCatchingToNotifications {
             val currentState = state.value
@@ -107,7 +136,11 @@ class SeriesBooksState(
                 }
 
                 else -> {
-                    mutableState.value = LoadState.Loading
+                    // Draw the volumes we already know before asking again: the
+                    // request costs one to three seconds here, and the area was
+                    // simply empty until it answered.
+                    paintRememberedBooks(page)
+                    if (state.value !is LoadState.Success<BooksData>) mutableState.value = LoadState.Loading
                     settingsRepository.getBookPageLoadSize().first()
                 }
             }
@@ -149,6 +182,19 @@ class SeriesBooksState(
                 )
             }
             mutableState.value = LoadState.Success(newState)
+
+            // Remember the default first page only: that is what entering the
+            // series shows, and anything else was asked for on purpose.
+            if (page == 1 && filter == snd.komelia.ui.book.BookFilter.DEFAULT) {
+                booksCacheRepository.put(
+                    series.id.value,
+                    snd.komelia.library.CachedSeriesBooks(
+                        books = pageResponse.content,
+                        pageSize = pageLoadSize,
+                        totalPages = pageResponse.totalPages,
+                    ),
+                )
+            }
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 

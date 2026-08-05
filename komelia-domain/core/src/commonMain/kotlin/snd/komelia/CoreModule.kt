@@ -58,4 +58,12 @@ data class AppRepositories(
     val readingOrderRepository: ReadingOrderRepository,
     /** "Not interested" answers, which also weigh on the taste profile. */
     val suggestionFeedbackRepository: SuggestionFeedbackRepository,
+    /** Remembered tab counts, so a library's chips don't wait on the server. */
+    val libraryCountsRepository: snd.komelia.library.LibraryCountsRepository,
+    /** Remembered "Keep reading" row, for the same reason. */
+    val keepReadingRepository: snd.komelia.library.KeepReadingRepository,
+    /** Remembered Links tab: resolving each link is a request of its own. */
+    val seriesLinksCacheRepository: snd.komelia.library.SeriesLinksCacheRepository,
+    /** Remembered first page of a series' books. */
+    val seriesBooksCacheRepository: snd.komelia.library.SeriesBooksCacheRepository,
 )

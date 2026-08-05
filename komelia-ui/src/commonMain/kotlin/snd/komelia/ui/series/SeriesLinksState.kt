@@ -71,6 +71,7 @@ class SeriesLinksState(
     val series: StateFlow<KomgaSeries?>,
     private val notifications: AppNotifications,
     private val seriesApi: KomgaSeriesApi,
+    private val linksCacheRepository: snd.komelia.library.SeriesLinksCacheRepository,
     private val linksRepository: SeriesLinksRepository,
     private val aniListClient: AniListClient,
     private val settingsRepository: CommonSettingsRepository,
@@ -122,10 +123,35 @@ class SeriesLinksState(
 
     private suspend fun load() {
         notifications.runCatchingToNotifications {
-            mutableState.value = LoadState.Loading
             val current = series.filterNotNull().first()
+
+            // Draw what the server said last time while asking it again. Each
+            // linked id costs its own request — one to three seconds here — so
+            // a series with a handful of links showed nothing for ten seconds,
+            // on every single visit.
+            if (versions.isEmpty() && relations.isEmpty()) {
+                val remembered = snd.komelia.perf.PerfTrace.measure(
+                    label = "series.links.remembered",
+                    count = { it: snd.komelia.library.CachedSeriesLinks? ->
+                        it?.let { c -> c.versions.size + c.relations.values.sumOf { r -> r.size } }
+                    },
+                ) { linksCacheRepository.get(current.id.value) }
+                if (remembered != null) {
+                    versions = remembered.versions
+                    relations = remembered.relations.mapNotNull { (name, series) ->
+                        SeriesRelationType.entries.firstOrNull { it.name == name }?.let { it to series }
+                    }.toMap()
+                    mutableState.value = LoadState.Success(Unit)
+                }
+            }
+            if (versions.isEmpty() && relations.isEmpty()) mutableState.value = LoadState.Loading
+            // Bounded fan-out: these all hit the same connection pool, and
+            // firing ten at once is what turned a slow tab into an unusable one.
+            val resolveLimit = Semaphore(4)
             versions = coroutineScope {
-                linksRepository.versionsOf(current.id).map { async { resolve(it) } }.awaitAll()
+                linksRepository.versionsOf(current.id)
+                    .map { async { resolveLimit.withPermit { resolve(it) } } }
+                    .awaitAll()
             }.filterNotNull()
 
             val localRelations = linksRepository.relationsOf(current.id)
@@ -160,12 +186,20 @@ class SeriesLinksState(
 
             relations = coroutineScope {
                 byId.values.map { (id, type) ->
-                    async { resolve(id)?.let { type to it } }
+                    async { resolveLimit.withPermit { resolve(id)?.let { type to it } } }
                 }.awaitAll()
             }.filterNotNull()
                 .groupBy({ it.first }, { it.second })
                 .filterValues { it.isNotEmpty() }
             mutableState.value = LoadState.Success(Unit)
+
+            linksCacheRepository.put(
+                current.id.value,
+                snd.komelia.library.CachedSeriesLinks(
+                    versions = versions,
+                    relations = relations.entries.associate { (type, series) -> type.name to series },
+                ),
+            )
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 

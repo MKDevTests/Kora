@@ -99,6 +99,10 @@ class AppMigrations : MigrationResourcesProvider() {
         "V87__reading_order.sql",
         "V88__suggestion_feedback.sql",
         "V89__ui_language.sql",
+        "V90__library_counts.sql",
+        "V91__keep_reading_cache.sql",
+        "V92__series_links_cache.sql",
+        "V93__series_books_cache.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

@@ -57,6 +57,8 @@ class SeriesViewModel(
     collectionApi: KomgaCollectionsApi,
     referentialApi: KomgaReferentialApi,
     seriesLinksRepository: snd.komelia.links.SeriesLinksRepository,
+    private val seriesLinksCacheRepository: snd.komelia.library.SeriesLinksCacheRepository,
+    private val seriesBooksCacheRepository: snd.komelia.library.SeriesBooksCacheRepository,
     readingOrderRepository: snd.komelia.readingorder.ReadingOrderRepository,
     similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
@@ -85,6 +87,7 @@ class SeriesViewModel(
         settingsRepository = settingsRepository,
         notifications = notifications,
         bookApi = bookApi,
+        booksCacheRepository = seriesBooksCacheRepository,
         events = events,
         screenModelScope = screenModelScope,
         cardWidth = cardWidth,
@@ -136,6 +139,7 @@ class SeriesViewModel(
         series = this.series,
         notifications = notifications,
         seriesApi = seriesApi,
+        linksCacheRepository = seriesLinksCacheRepository,
         linksRepository = seriesLinksRepository,
         aniListClient = aniListClient,
         settingsRepository = settingsRepository,
@@ -162,9 +166,13 @@ class SeriesViewModel(
                 library.value = newLibrary
             }.launchIn(screenModelScope)
 
-        booksState.initialize()
-        collectionsState.initialize()
-        linksState.initialize()
+        // Independent tabs, so independent coroutines. Chained, the Links tab
+        // only started after the books and the collections had both come back
+        // from the server — its own content was remembered and ready in 20 ms,
+        // and still showed up two to three seconds late.
+        screenModelScope.launch { booksState.initialize() }
+        screenModelScope.launch { collectionsState.initialize() }
+        screenModelScope.launch { linksState.initialize() }
         screenModelScope.launch { updateSiblingAvailability() }
         startKomgaEventListener()
 

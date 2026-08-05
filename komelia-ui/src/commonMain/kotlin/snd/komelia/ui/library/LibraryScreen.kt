@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -672,7 +673,18 @@ private fun ContinueReadingSection(
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.padding(start = gridPadding, end = gridPadding, bottom = 12.dp)
         )
+        val rowState = rememberLazyListState()
+        // The row now starts from a remembered list, so it keeps its scroll
+        // offset across a refresh. A book just read moves to the head — and
+        // stayed off-screen to the left, which is the one place the user was
+        // going to look. Snap back when the head actually changes; scrolling
+        // done by hand is left alone.
+        val headId = books.firstOrNull()?.id?.value
+        LaunchedEffect(headId) {
+            if (headId != null && rowState.firstVisibleItemIndex > 0) rowState.scrollToItem(0)
+        }
         LazyRow(
+            state = rowState,
             contentPadding = PaddingValues(horizontal = gridPadding),
             horizontalArrangement = Arrangement.spacedBy(7.dp)
         ) {

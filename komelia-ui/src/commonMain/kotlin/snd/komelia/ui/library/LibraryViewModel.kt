@@ -90,7 +90,9 @@ class LibraryViewModel(
     private val libraryId: KomgaLibraryId?,
     private val settingsRepository: CommonSettingsRepository,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
-    similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
+    private val similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
+    private val libraryCountsRepository: snd.komelia.library.LibraryCountsRepository,
+    private val keepReadingRepository: snd.komelia.library.KeepReadingRepository,
     similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
     seriesRatingsRepository: snd.komelia.ratings.SeriesRatingsRepository,
     suggestionFeedbackRepository: snd.komelia.similarity.SuggestionFeedbackRepository,
@@ -186,15 +188,17 @@ class LibraryViewModel(
 
         if (seriesFilter != null) toBrowseTab()
 
-        screenModelScope.launch {
-            loadItemCounts()
-            loadKeepReadingBooks()
-        }
+        // Two independent requests, so two coroutines. Chained, "Keep reading"
+        // waited for the counts refresh — which nothing waits on any more, the
+        // counts being remembered — and only then asked for its own books: five
+        // to ten seconds before the row appeared, for one request of work.
+        screenModelScope.launch { loadItemCounts() }
+        screenModelScope.launch { loadKeepReadingBooks() }
         startKomgaEventListener()
 
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
-            loadItemCounts()
+            screenModelScope.launch { loadItemCounts() }
             loadKeepReadingBooks()
             delay(1000)
         }.launchIn(screenModelScope)
@@ -202,8 +206,8 @@ class LibraryViewModel(
 
     fun reload() {
         mutableState.value = Loading
+        screenModelScope.launch { loadItemCounts() }
         screenModelScope.launch {
-            loadItemCounts()
             loadKeepReadingBooks()
             when (currentTab) {
                 SERIES -> seriesTabState.reload()
@@ -218,11 +222,29 @@ class LibraryViewModel(
     private suspend fun loadItemCounts() {
         if (state.value is Error) return
 
-        // On a revisit, paint the last known counts immediately (no spinner)
-        // and refresh them silently below. Survives the screen teardown.
+        // Paint the last known counts immediately, from memory within a session
+        // and from disk across app starts. Measured on the real server, asking
+        // for them costs 839 ms (collections), 4.5 s (genres) and 6.9 s (read
+        // lists) — the chips used to appear seven seconds after their screen.
         val libraryKey = libraryId?.value
         if (state.value !is Success) {
-            libraryKey?.let { LibraryCountsCache.get(it) }?.let { cached ->
+            val remembered = snd.komelia.perf.PerfTrace.measure(
+                // Screen opened -> chips can draw. The refresh below is timed
+                // separately as library.counts: it no longer holds anything up.
+                label = "library.chipsReady",
+                // 1 = painted from memory or disk, 0 = nothing known yet and the
+                // chips have to wait for the server. Which of the two happens is
+                // the whole question here.
+                count = { it: LibraryCountsCache.Counts? -> if (it == null) 0 else 1 },
+            ) {
+                libraryKey?.let { key ->
+                    LibraryCountsCache.get(key)
+                        ?: libraryCountsRepository.get(key)?.let {
+                            LibraryCountsCache.Counts(it.collections, it.readLists, it.genres)
+                        }
+                }
+            }
+            remembered?.let { cached ->
                 collectionsCount = cached.collections
                 readListsCount = cached.readLists
                 genresCount = cached.genres
@@ -239,32 +261,72 @@ class LibraryViewModel(
 
             // The three counts are independent — fetch them concurrently
             // instead of one network round-trip after another.
-            coroutineScope {
-                val collectionsDeferred = async {
-                    collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+            // Measured individually, and the whole set as well: the three run
+            // concurrently but share one connection pool with the series grid,
+            // so "which one is slow" and "how long before the chips can appear"
+            // are two different questions. The genre count is the suspect —
+            // it downloads every tag of the library to count the kora:genre ones.
+            snd.komelia.perf.PerfTrace.measure("library.counts") {
+                coroutineScope {
+                    val collectionsDeferred = async {
+                        snd.komelia.perf.PerfTrace.measure("library.counts.collections") {
+                            collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+                        }
+                    }
+                    val readListsDeferred = async {
+                        snd.komelia.perf.PerfTrace.measure("library.counts.readlists") {
+                            readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+                        }
+                    }
+                    val genresDeferred = async {
+                        if (genreTabEnabled.value) countGenres() else 0
+                    }
+                    collectionsCount = collectionsDeferred.await()
+                    readListsCount = readListsDeferred.await()
+                    genresCount = genresDeferred.await()
                 }
-                val readListsDeferred = async {
-                    readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
-                }
-                val genresDeferred = async {
-                    if (genreTabEnabled.value) {
-                        runCatching {
-                            referentialApi.getSeriesTags(libraryId = libraryId)
-                                .count { GenreLabels.isGenreTag(it) }
-                        }.getOrDefault(0)
-                    } else 0
-                }
-                collectionsCount = collectionsDeferred.await()
-                readListsCount = readListsDeferred.await()
-                genresCount = genresDeferred.await()
             }
 
             libraryKey?.let {
                 LibraryCountsCache.put(it, LibraryCountsCache.Counts(collectionsCount, readListsCount, genresCount))
+                libraryCountsRepository.put(
+                    it,
+                    snd.komelia.library.LibraryCounts(collectionsCount, readListsCount, genresCount),
+                )
             }
             applyTabFallback()
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = Error(it) }
+    }
+
+    /**
+     * How many genres the library holds.
+     *
+     * Read from the local term index when it exists: the index already stores
+     * each series' `kora:genre:*` terms, so this is a SQLite read instead of
+     * downloading every tag of the library — 3482 of them on the manga one, to
+     * end up with a number under thirty. The server is asked only when the
+     * library was never indexed.
+     */
+    private suspend fun countGenres(): Int {
+        val key = libraryId?.value
+        if (key != null) {
+            val indexed = snd.komelia.perf.PerfTrace.measure("library.counts.genres.local") {
+                similarityIndexRepository.entriesOf(key)
+            }
+            if (indexed.isNotEmpty()) {
+                return indexed.flatMap { it.terms.genres }.distinct().size
+            }
+        }
+        return snd.komelia.perf.PerfTrace.measure(
+            label = "library.counts.genres",
+            count = { tags: Int -> tags },
+        ) {
+            runCatching {
+                referentialApi.getSeriesTags(libraryId = libraryId)
+                    .count { GenreLabels.isGenreTag(it) }
+            }.getOrDefault(0)
+        }
     }
 
     private fun applyTabFallback() {
@@ -275,17 +337,38 @@ class LibraryViewModel(
 
     private suspend fun loadKeepReadingBooks() {
         val libId = libraryId ?: return
+
+        // Draw the row from the last known answer while the server is asked
+        // again. The request costs one to three seconds here, and an empty row
+        // for that long — at the top of the screen, where the user is heading —
+        // is worse than a book that turns out to be finished.
+        if (keepReadingBooks.isEmpty()) {
+            val remembered = snd.komelia.perf.PerfTrace.measure(
+                label = "library.keepReading.remembered",
+                count = { books: List<*> -> books.size },
+            ) { keepReadingRepository.get(libId.value) }
+            if (remembered.isNotEmpty() && keepReadingBooks.isEmpty()) {
+                keepReadingBooks = remembered
+            }
+        }
+
         appNotifications.runCatchingToNotifications {
-            keepReadingBooks = bookApi.getBookList(
-                conditionBuilder = allOfBooks {
-                    library { isEqualTo(libId) }
-                    readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
-                },
-                pageRequest = KomgaPageRequest(
-                    sort = KomgaBooksSort.byReadDateDesc(),
-                    size = 20
-                )
-            ).content
+            keepReadingBooks = snd.komelia.perf.PerfTrace.measure(
+                label = "library.keepReading",
+                count = { books: List<*> -> books.size },
+            ) {
+                bookApi.getBookList(
+                    conditionBuilder = allOfBooks {
+                        library { isEqualTo(libId) }
+                        readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                    },
+                    pageRequest = KomgaPageRequest(
+                        sort = KomgaBooksSort.byReadDateDesc(),
+                        size = 20
+                    )
+                ).content
+            }
+            keepReadingRepository.put(libId.value, keepReadingBooks)
         }
     }
 

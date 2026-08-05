@@ -148,6 +148,8 @@ class ViewModelFactory(
             similarityIndexBuilder = dependencies.similarityIndexBuilder,
             seriesRatingsRepository = appRepositories.seriesRatingsRepository,
             suggestionFeedbackRepository = appRepositories.suggestionFeedbackRepository,
+            libraryCountsRepository = appRepositories.libraryCountsRepository,
+            keepReadingRepository = appRepositories.keepReadingRepository,
             hiddenSeriesIds = dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),
         )
     }
@@ -278,6 +280,8 @@ class ViewModelFactory(
         settingsRepository = appRepositories.settingsRepository,
         referentialApi = komgaApi.referentialApi,
         seriesLinksRepository = appRepositories.seriesLinksRepository,
+        seriesLinksCacheRepository = appRepositories.seriesLinksCacheRepository,
+        seriesBooksCacheRepository = appRepositories.seriesBooksCacheRepository,
         readingOrderRepository = appRepositories.readingOrderRepository,
         similarityIndexRepository = appRepositories.similarityIndexRepository,
         similarityIndexBuilder = dependencies.similarityIndexBuilder,

@@ -27,6 +27,16 @@ interface ReadingOrderRepository {
     /** Last graph computed for this original, or null if none/stale. */
     suspend fun getCached(originalSeriesId: KomgaSeriesId): ReadingOrderGraph?
 
+    /**
+     * The cached graph CONTAINING [seriesId], whichever series roots it.
+     *
+     * Finding the root means walking the links first — up to twelve requests,
+     * two to three seconds — and the cache used to be consulted only after
+     * that walk, so a graph that was already known still made the user wait for
+     * it. Looked up by member, it can be drawn at once and corrected behind.
+     */
+    suspend fun getCachedContaining(seriesId: KomgaSeriesId): ReadingOrderGraph?
+
     suspend fun putCached(graph: ReadingOrderGraph)
 
     /**

@@ -45,6 +45,19 @@ class ExposedReadingOrderRepository(
         }
     }
 
+    override suspend fun getCachedContaining(seriesId: KomgaSeriesId): ReadingOrderGraph? = transaction {
+        // Few graphs ever exist (one per franchise the user opened), so reading
+        // them and looking at their nodes is cheaper than another table to keep
+        // in step with them.
+        SeriesReadingOrderCacheTable.selectAll()
+            .mapNotNull { row ->
+                runCatching {
+                    JsonDbDefault.decodeFromString<ReadingOrderGraph>(row[SeriesReadingOrderCacheTable.graph])
+                }.getOrNull()
+            }
+            .firstOrNull { graph -> graph.nodes.any { it.seriesId == seriesId.value } }
+    }
+
     override suspend fun getCached(originalSeriesId: KomgaSeriesId): ReadingOrderGraph? = transaction {
         SeriesReadingOrderCacheTable.selectAll()
             .where { SeriesReadingOrderCacheTable.originalSeriesId eq originalSeriesId.value }
