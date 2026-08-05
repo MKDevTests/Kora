@@ -96,7 +96,7 @@ class HomeViewModel(
     excludedLibraryIdsFlow: Flow<Set<String>> = flowOf(emptySet()),
     /** Same pipeline as the library "For you" tab; null where it isn't available. */
     private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
-    lastSelectedLibraryIdFlow: Flow<String?> = flowOf(null),
+    libraryIdsFlow: Flow<List<String>> = flowOf(emptyList()),
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
     private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
@@ -107,7 +107,7 @@ class HomeViewModel(
         favoriteIds = { favoriteIds.value },
         excludedLibraryIds = { excludedLibraryIds.value },
         forYouSuggester = forYouSuggester,
-        lastSelectedLibraryId = { lastSelectedLibraryIdFlow.first() },
+        allLibraryIds = { libraryIdsFlow.first() },
     )
 
     private val reloadEventsEnabled = MutableStateFlow(true)

@@ -194,8 +194,7 @@ class ViewModelFactory(
             favoriteIdsFlow = scopedFavoriteSeriesIds(),
             excludedLibraryIdsFlow = appRepositories.settingsRepository.getExcludedLibraryIds(),
             forYouSuggester = forYouSuggester,
-            lastSelectedLibraryIdFlow = appRepositories.settingsRepository
-                .getLastSelectedLibraryId().map { it?.value },
+            libraryIdsFlow = dependencies.komgaSharedState.libraries.map { libs -> libs.map { it.id.value } },
         )
     }
 

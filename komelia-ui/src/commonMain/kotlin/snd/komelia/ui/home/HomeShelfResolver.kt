@@ -41,12 +41,12 @@ class HomeShelfResolver(
     /** Same pipeline as the library's "For you" tab; null on platforms without it. */
     private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
     /**
-     * Library the "For you" shelf falls back to when it isn't pinned to one.
-     * Suspending on purpose: the setting is DataStore-backed and arrives after
-     * the first emission, and Home resolves its shelves immediately at startup —
-     * reading a StateFlow's seeded value returned null and left the shelf empty.
+     * Libraries the "For you" shelf can draw from. Suspending on purpose: the
+     * list arrives from the server after the first emission, and Home resolves
+     * its shelves immediately at startup — reading a seeded StateFlow value
+     * returned nothing and left the shelf empty.
      */
-    private val lastSelectedLibraryId: suspend () -> String? = { null },
+    private val allLibraryIds: suspend () -> List<String> = { emptyList() },
 ) {
 
     suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? =
@@ -106,22 +106,36 @@ class HomeShelfResolver(
             }
 
             is SeriesHomeScreenFilter.ForYou -> {
-                // The shelf follows the library last opened unless it was pinned
-                // to one: suggestions are per-library, and a shelf stuck on the
-                // library the user has stopped reading is worse than no shelf.
-                val libraryId = filter.libraryId ?: lastSelectedLibraryId()
                 val suggester = forYouSuggester
-                if (libraryId == null || suggester == null) SeriesFilterData(emptyList(), filter)
+                val libraries = allLibraryIds().filterNot { it in filter.excludedLibraryIds }
+                if (suggester == null || libraries.isEmpty()) SeriesFilterData(emptyList(), filter)
                 else {
+                    // Each library is scored on its own index — cosine scores
+                    // are not comparable between two different vocabularies —
+                    // so the lists are interleaved rather than merged by score.
+                    // Otherwise the library with the denser tags would take the
+                    // whole shelf.
+                    //
                     // No index building from Home: that is a one-off burst of
-                    // requests the user did not ask for. The shelf stays empty
-                    // until the library tab has indexed once.
-                    val suggestions = suggester.suggest(
-                        libraryId = KomgaLibraryId(libraryId),
-                        limit = filter.pageSize,
-                        indexIfMissing = false,
-                    )
-                    SeriesFilterData(series = suggestions.results.map { it.series }, filter = filter)
+                    // requests the user did not ask for by scrolling past a
+                    // shelf. A library stays out until its own tab indexed once.
+                    val perLibrary = libraries.map { id ->
+                        suggester.suggest(
+                            libraryId = KomgaLibraryId(id),
+                            limit = filter.pageSize,
+                            indexIfMissing = false,
+                        ).results
+                    }.filter { it.isNotEmpty() }
+                    val interleaved = buildList {
+                        var index = 0
+                        while (size < filter.pageSize && perLibrary.any { index < it.size }) {
+                            perLibrary.forEach { list ->
+                                if (size < filter.pageSize && index < list.size) add(list[index].series)
+                            }
+                            index++
+                        }
+                    }
+                    SeriesFilterData(series = interleaved, filter = filter)
                 }
             }
 

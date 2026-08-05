@@ -427,10 +427,17 @@ private fun SeriesFilterEditContent(state: SeriesFilterEditState) {
                 )
             }
 
-            is snd.komelia.ui.home.edit.SeriesForYouFilterState -> PageSizeSettingsContent(
-                pageSize = filter.pageSize.collectAsState().value,
-                onPageSizeChange = filter::onPageSizeChange,
-            )
+            is snd.komelia.ui.home.edit.SeriesForYouFilterState -> {
+                PageSizeSettingsContent(
+                    pageSize = filter.pageSize.collectAsState().value,
+                    onPageSizeChange = filter::onPageSizeChange,
+                )
+                ExcludedLibrariesContent(
+                    libraries = filter.options.collectAsState().value.libraries,
+                    excludedIds = filter.excludedLibraryIds.collectAsState().value,
+                    onExcludedChange = filter::onExcludedLibrariesChange,
+                )
+            }
 
             is SeriesFavoritesFilterState -> PageSizeSettingsContent(
                 pageSize = filter.pageSize.collectAsState().value,

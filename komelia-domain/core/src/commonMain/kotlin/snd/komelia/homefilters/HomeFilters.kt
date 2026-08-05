@@ -141,11 +141,13 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
     }
 
     /**
-     * Suggestions for one library, from what the user has read and rated there.
+     * Suggestions from what the user has read and rated, across every library
+     * except [excludedLibraryIds].
      *
-     * [libraryId] null means "the library last opened", so the shelf follows the
-     * user around instead of being pinned to whichever library happened to be
-     * selected when it was created.
+     * Exclusions rather than a single library: a taste profile spanning comics
+     * and manga is the interesting one, while a magazines or "Divers" library
+     * only adds noise to it. Each library is still scored on its own index —
+     * scores are not comparable between them — and the results are interleaved.
      */
     @Serializable
     @SerialName("io.github.snd_r.komelia.ui.home.SeriesHomeScreenFilter.ForYou")
@@ -154,7 +156,7 @@ sealed interface SeriesHomeScreenFilter : HomeScreenFilter {
         override val label: String,
         override val enabled: Boolean = true,
         val pageSize: Int = 12,
-        val libraryId: String? = null,
+        val excludedLibraryIds: List<String> = emptyList(),
     ) : SeriesHomeScreenFilter {
         override fun withOrder(newOrder: Int) = this.copy(order = newOrder)
     }

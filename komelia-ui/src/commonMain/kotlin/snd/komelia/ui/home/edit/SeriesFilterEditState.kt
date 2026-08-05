@@ -87,6 +87,7 @@ class SeriesFilterEditState(
                 )
 
                 is SeriesHomeScreenFilter.ForYou -> SeriesForYouFilterState(
+                    options = options,
                     initial = initial,
                     initialSeries = initialSeries,
                 )
@@ -165,7 +166,7 @@ class SeriesFilterEditState(
                 label = label.value,
                 enabled = enabled.value,
                 pageSize = editState.pageSize.value,
-                libraryId = editState.libraryId.value,
+                excludedLibraryIds = editState.excludedLibraryIds.value,
             )
 
             is SeriesFavoritesFilterState -> SeriesHomeScreenFilter.Favorites(
@@ -207,7 +208,7 @@ class SeriesFilterEditState(
                 initialSeries = null,
             )
 
-            FilterType.ForYou -> SeriesForYouFilterState(initial = null, initialSeries = null)
+            FilterType.ForYou -> SeriesForYouFilterState(options = options, initial = null, initialSeries = null)
             FilterType.Favorites -> SeriesFavoritesFilterState(initial = null, initialSeries = null)
         }
     }
@@ -590,14 +591,24 @@ enum class SeriesSort {
  * computed on Home from the local index.
  */
 class SeriesForYouFilterState(
+    /** Read for the library list the editor shows as exclusion toggles. */
+    val options: StateFlow<FilterSuggestionOptions>,
     initial: SeriesHomeScreenFilter.ForYou?,
     initialSeries: List<KomgaSeries>?,
 ) : SeriesFilterStateType {
     val pageSize = MutableStateFlow(initial?.pageSize ?: 12)
-    val libraryId = MutableStateFlow(initial?.libraryId)
+    val excludedLibraryIds = MutableStateFlow(initial?.excludedLibraryIds ?: emptyList())
+    // No preview: suggestions are computed on Home from the local index, and
+    // running the whole profile inside the editor to fill a preview would cost
+    // more than the shelf itself.
     override val series = MutableStateFlow(initialSeries ?: emptyList())
+
     fun onPageSizeChange(value: Int) {
         this.pageSize.value = value
+    }
+
+    fun onExcludedLibrariesChange(ids: List<String>) {
+        this.excludedLibraryIds.value = ids
     }
 }
 
