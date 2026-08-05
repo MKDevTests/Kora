@@ -119,12 +119,17 @@ class HomeShelfResolver(
                     // No index building from Home: that is a one-off burst of
                     // requests the user did not ask for by scrolling past a
                     // shelf. A library stays out until its own tab indexed once.
-                    val perLibrary = libraries.map { id ->
-                        suggester.suggest(
-                            libraryId = KomgaLibraryId(id),
-                            limit = filter.pageSize,
-                            indexIfMissing = false,
-                        ).results
+                    val perLibrary = libraries.mapNotNull { id ->
+                        // One slow or failed library must not take the whole
+                        // Home load down with it: every other shelf is awaited
+                        // in the same awaitAll.
+                        runCatching {
+                            suggester.suggest(
+                                libraryId = KomgaLibraryId(id),
+                                limit = filter.pageSize,
+                                indexIfMissing = false,
+                            ).results
+                        }.getOrNull()
                     }.filter { it.isNotEmpty() }
                     val interleaved = buildList {
                         var index = 0

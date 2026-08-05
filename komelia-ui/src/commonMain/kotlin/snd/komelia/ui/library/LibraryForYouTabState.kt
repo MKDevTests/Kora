@@ -70,10 +70,11 @@ class LibraryForYouTabState(
     fun onOpened() {
         if (started) return
         started = true
-        reload()
+        screenModelScope.launch { load() }
     }
 
     fun reload() {
+        forceRecompute = true
         screenModelScope.launch { load() }
     }
 
@@ -81,6 +82,8 @@ class LibraryForYouTabState(
         includeRead = !includeRead
         reload()
     }
+
+    private var forceRecompute = false
 
     private suspend fun load() {
         notifications.runCatchingToNotifications {
@@ -91,8 +94,11 @@ class LibraryForYouTabState(
                 libraryId = currentLibrary.id,
                 limit = MAX_SUGGESTIONS,
                 includeRead = includeRead,
+                // The tab is where the user asks for suggestions, so it always
+                // computes; the shelf is what reads the cache.
+                force = forceRecompute,
                 onIndexProgress = { buildProgress = it },
-            )
+            ).also { forceRecompute = false }
             profileSize = computed.profileSize
             suggestions = computed.results.map { result ->
                 ForYouSuggestion(result.series, result.reasons.map { it.label() })

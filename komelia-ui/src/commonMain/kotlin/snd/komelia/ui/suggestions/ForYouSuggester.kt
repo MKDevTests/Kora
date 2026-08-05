@@ -26,6 +26,7 @@ import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
+import kotlin.time.Clock
 
 private val logger = KotlinLogging.logger {}
 
@@ -40,6 +41,36 @@ data class ForYouSuggestions(
     val results: List<ForYouResult> = emptyList(),
     val profileSize: Int = 0,
 )
+
+/**
+ * Process-wide cache of computed suggestions.
+ *
+ * Building a taste profile costs up to ten paged queries PER LIBRARY (read and
+ * in-progress series), and this server answers a list in about two seconds.
+ * That is affordable when the user opens the For-you tab; it is not affordable
+ * on every Home load, where it made the shelf arrive minutes late — or never,
+ * when one of those requests timed out. Computed once, then served from here.
+ */
+private object ForYouCache {
+    private data class Entry(val suggestions: ForYouSuggestions, val atMillis: Long)
+
+    private val byKey = mutableMapOf<String, Entry>()
+
+    fun get(key: String): ForYouSuggestions? {
+        val entry = byKey[key] ?: return null
+        val age = Clock.System.now().toEpochMilliseconds() - entry.atMillis
+        return if (age < TTL_MILLIS) entry.suggestions else null
+    }
+
+    fun put(key: String, suggestions: ForYouSuggestions) {
+        byKey[key] = Entry(suggestions, Clock.System.now().toEpochMilliseconds())
+    }
+
+    fun invalidate() = byKey.clear()
+
+    /** Long enough to cover a session's Home loads, short enough to follow a rating. */
+    private const val TTL_MILLIS = 30 * 60 * 1000L
+}
 
 /**
  * Computes "what to read next" for one library, from what the user has read and
@@ -72,8 +103,13 @@ class ForYouSuggester(
          * library's own tab has indexed once.
          */
         indexIfMissing: Boolean = true,
+        /** Recompute even if a fresh result is cached (the tab's refresh). */
+        force: Boolean = false,
         onIndexProgress: (Float?) -> Unit = {},
     ): ForYouSuggestions {
+        val cacheKey = "${'$'}{libraryId.value}:${'$'}includeRead:${'$'}limit"
+        if (!force) ForYouCache.get(cacheKey)?.let { return it }
+
         var entries = repository.entriesOf(libraryId.value)
         if (entries.isEmpty()) {
             if (!indexIfMissing) return ForYouSuggestions()
@@ -121,7 +157,7 @@ class ForYouSuggester(
         return ForYouSuggestions(
             results = resolve(scored.map { it.seriesId to it.reasons }),
             profileSize = affinities.size,
-        )
+        ).also { ForYouCache.put(cacheKey, it) }
     }
 
     /**
