@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
@@ -107,7 +108,14 @@ class HomeViewModel(
         favoriteIds = { favoriteIds.value },
         excludedLibraryIds = { excludedLibraryIds.value },
         forYouSuggester = forYouSuggester,
-        allLibraryIds = { libraryIdsFlow.first() },
+        // Waits for a NON-EMPTY list, with a bound. The libraries flow is a
+        // StateFlow seeded with an empty list, and `first()` hands that seed back
+        // immediately — the shelf then resolved on zero libraries and rendered
+        // empty, which read as "the shelf disappeared" and never recovered
+        // because every later reload hit the same seed.
+        allLibraryIds = {
+            withTimeoutOrNull(LIBRARY_WAIT_MS) { libraryIdsFlow.first { it.isNotEmpty() } } ?: emptyList()
+        },
     )
 
     private val reloadEventsEnabled = MutableStateFlow(true)
@@ -394,3 +402,6 @@ class HomeViewModel(
     }
 
 }
+
+/** Long enough for a cold start to have listed the libraries, short enough not to stall Home. */
+private const val LIBRARY_WAIT_MS = 5_000L
