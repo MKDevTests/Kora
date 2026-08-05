@@ -89,6 +89,15 @@ private object ForYouCache {
 }
 
 /**
+ * Drops every cached run.
+ *
+ * Top-level so the index sync can call it without holding a suggester: when the
+ * term index moves under it, a cached suggestion list is answers to a question
+ * about a library that no longer looks like that.
+ */
+fun invalidateForYouCache() = ForYouCache.invalidate()
+
+/**
  * Computes "what to read next" for one library, from what the user has read and
  * rated there.
  *

@@ -329,6 +329,16 @@ abstract class AppModule(
             komgaSharedState = komgaSharedState
         )
 
+        // The term index used to be a snapshot: built once, then stale until
+        // someone pressed "Re-analyse library". It now follows the server.
+        snd.komelia.similarity.SimilarityIndexSync(
+            events = komgaEvents.events,
+            repository = appRepositories.similarityIndexRepository,
+            builder = similarityIndexBuilder,
+            scope = initScope,
+            onIndexChanged = { snd.komelia.ui.suggestions.invalidateForYouCache() },
+        ).start()
+
         val readerImageFactory = createReaderImageFactory(
             imageDecoder = imageDecoder,
             pipeline = imagePipeline,
