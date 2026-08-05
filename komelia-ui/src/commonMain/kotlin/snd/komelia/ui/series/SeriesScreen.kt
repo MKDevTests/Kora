@@ -37,6 +37,8 @@ import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalUseNewLibraryUI
 import snd.komelia.ui.series.immersive.ImmersiveSeriesContent
 import snd.komelia.ui.platform.PlatformType
+import snd.komelia.ui.library.GenreSeriesScreen
+import snd.komelia.ui.library.GenreLabels
 
 fun seriesScreen(series: KomgaSeries): Screen =
     if (series.oneshot) OneshotScreen(series, BookSiblingsContext.Series())
@@ -91,6 +93,16 @@ class SeriesScreen(
         }
         if (platform == PlatformType.MOBILE && useNewUI && series != null) {
             ImmersiveSeriesContent(
+                onGenreClick = { slug ->
+                    navigator.push(
+                        GenreSeriesScreen(
+                            libraryId = series.libraryId,
+                            genreTag = GenreLabels.tagOf(slug),
+                            genreLabel = GenreLabels.label(slug),
+                        )
+                    )
+                },
+                otherVersions = vm.linksState.otherVersions,
                 series = series,
                 library = vm.library.collectAsState().value,
                 accentColor = LocalAccentColor.current,
@@ -118,7 +130,14 @@ class SeriesScreen(
                 collectionsState = vm.collectionsState,
                 linksState = vm.linksState,
                 readingOrderState = vm.readingOrderState,
-                onSeriesIdClick = { navigator.push(SeriesScreen(it)) },
+                onSeriesIdClick = { target ->
+                    // Voyager keys a screen by its series id, so pushing the
+                    // series we are already on puts the same key on the stack
+                    // twice and crashes. A reading-order graph always contains
+                    // the current series, and its box is clickable like any
+                    // other.
+                    if (target != seriesId) navigator.push(SeriesScreen(target))
+                },
                 similarState = vm.similarState,
                 onCollectionClick = { navigator.push(CollectionScreen(it.id)) },
                 onSeriesClick = { s ->
@@ -203,6 +222,23 @@ class SeriesScreen(
                         },
                         onDownload = vm::onDownload,
                         onOpenInKomga = openInKomga,
+                        // Genres lead to the genre listing of the SAME library:
+                        // a genre is a way of browsing, and browsing someone
+                        // else's library from here would be a different app.
+                        onGenreClick = { slug ->
+                            val current = vm.series.value
+                            navigator.push(
+                                GenreSeriesScreen(
+                                    libraryId = current?.libraryId,
+                                    genreTag = GenreLabels.tagOf(slug),
+                                    genreLabel = GenreLabels.label(slug),
+                                )
+                            )
+                        },
+                        otherVersions = vm.linksState.otherVersions,
+                        onVersionClick = { target ->
+                            if (target != seriesId) navigator.push(SeriesScreen(target))
+                        },
                         onRandomSiblingClick = {
                             vm.openRandomSiblingSeries { newSeries ->
                                 navigator.replace(seriesScreen(newSeries))

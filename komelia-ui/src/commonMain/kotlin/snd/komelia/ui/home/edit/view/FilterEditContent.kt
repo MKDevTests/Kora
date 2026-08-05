@@ -214,7 +214,7 @@ fun AddConditionButton(
         ) {
             FilterEditViewModel.FilterType.entries.forEach {
                 DropdownMenuItem(
-                    text = { Text(it.name) },
+                    text = { Text(shelfPatternLabel(it)) },
                     onClick = {
                         dropDownExpanded = false
                         onConditionAdd(it)
@@ -352,8 +352,8 @@ private fun BookFilterEditContent(state: BookFilterEditState) {
         val filter = state.filter.collectAsState().value
         val type = state.type.collectAsState().value
         DropdownChoiceMenu(
-            selectedOption = LabeledEntry(type, type.name),
-            options = remember { BookFilterEditState.FilterType.entries.map { LabeledEntry(it, it.name) } },
+            selectedOption = LabeledEntry(type, shelfPatternLabel(type)),
+            options = BookFilterEditState.FilterType.entries.map { LabeledEntry(it, shelfPatternLabel(it)) },
             onOptionChange = { state.onTypeChange(it.value) },
         )
 
@@ -395,8 +395,8 @@ private fun SeriesFilterEditContent(state: SeriesFilterEditState) {
         val filter = state.filter.collectAsState().value
         val type = state.type.collectAsState().value
         DropdownChoiceMenu(
-            selectedOption = LabeledEntry(type, type.name),
-            options = remember { SeriesFilterEditState.FilterType.entries.map { LabeledEntry(it, it.name) } },
+            selectedOption = LabeledEntry(type, shelfPatternLabel(type)),
+            options = SeriesFilterEditState.FilterType.entries.map { LabeledEntry(it, shelfPatternLabel(it)) },
             onOptionChange = { state.onTypeChange(it.value) },
         )
 
@@ -456,5 +456,32 @@ private fun SeriesFilterEditContent(state: SeriesFilterEditState) {
                 SeriesImageCard(series = it, modifier = Modifier.width(cardWidth))
             }
         }
+    }
+}
+
+/**
+ * Readable name for a shelf pattern.
+ *
+ * The three editors each have their own FilterType enum, and every dropdown was
+ * printing the constant itself — which is why "Forgotten", "AlmostFinished" and
+ * "Discover" survived a full translation pass untouched.
+ */
+@Composable
+private fun shelfPatternLabel(type: Any): String {
+    val patterns = LocalStrings.current.shelfPatterns
+    return when (type) {
+        BookFilterEditState.FilterType.Custom,
+        SeriesFilterEditState.FilterType.Custom,
+        FilterEditViewModel.FilterType.Series -> patterns.custom
+
+        BookFilterEditState.FilterType.OnDeck -> patterns.onDeck
+        BookFilterEditState.FilterType.Forgotten -> patterns.forgotten
+        SeriesFilterEditState.FilterType.RecentlyAdded -> patterns.recentlyAdded
+        SeriesFilterEditState.FilterType.RecentlyUpdated -> patterns.recentlyUpdated
+        SeriesFilterEditState.FilterType.AlmostFinished -> patterns.almostFinished
+        SeriesFilterEditState.FilterType.Favorites -> patterns.favorites
+        FilterEditViewModel.FilterType.Book -> patterns.book
+        FilterEditViewModel.FilterType.Discover -> patterns.discover
+        else -> type.toString()
     }
 }

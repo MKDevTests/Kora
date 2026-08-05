@@ -84,6 +84,17 @@ class BookScreen(
 
             val coroutineScope = rememberCoroutineScope()
             ImmersiveBookContent(
+                onGenreClick = { slug ->
+                    val libraryId = vm.book.value?.libraryId
+                    navigator.push(
+                        snd.komelia.ui.library.GenreSeriesScreen(
+                            libraryId = libraryId,
+                            genreTag = snd.komelia.ui.library.GenreLabels.tagOf(slug),
+                            genreLabel = snd.komelia.ui.library.GenreLabels.label(slug),
+                        )
+                    )
+                },
+                seriesGenres = vm.seriesGenres,
                 book = book,
                 siblingBooks = siblings,
                 library = vm.library,
@@ -138,6 +149,17 @@ class BookScreen(
             onRefresh = vm::reload
         ) {
             BookScreenContent(
+                onGenreClick = { slug ->
+                    val libraryId = vm.book.value?.libraryId
+                    navigator.push(
+                        snd.komelia.ui.library.GenreSeriesScreen(
+                            libraryId = libraryId,
+                            genreTag = snd.komelia.ui.library.GenreLabels.tagOf(slug),
+                            genreLabel = snd.komelia.ui.library.GenreLabels.label(slug),
+                        )
+                    )
+                },
+                seriesGenres = vm.seriesGenres,
                 library = vm.library,
                 book = book,
                 bookMenuActions = vm.bookMenuActions,

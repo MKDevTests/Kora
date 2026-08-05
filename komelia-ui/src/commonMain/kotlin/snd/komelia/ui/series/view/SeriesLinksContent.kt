@@ -55,6 +55,9 @@ import snd.komelia.ui.series.AniListSuggestionRow
 import snd.komelia.ui.series.SeriesLinksState
 import snd.komga.client.series.KomgaSeries
 import snd.komelia.ui.LocalStrings
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.layout.ContentScale
+import snd.komelia.ui.common.images.SeriesThumbnail
 
 /** Display order + labels for related-series sections (from this series' view). */
 private val relationDisplayOrder = listOf(
@@ -254,16 +257,7 @@ private fun AddLinkDialog(
                 when {
                     loading -> CircularProgressIndicator(Modifier.padding(8.dp))
                     sel == null -> LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
-                        items(results, key = { it.id.value }) { s ->
-                            Text(
-                                text = s.metadata.title,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selected = s }
-                                    .padding(vertical = 10.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                        }
+                        items(results, key = { it.id.value }) { s -> SearchResultRow(s) { selected = s } }
                     }
 
                     else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -285,6 +279,51 @@ private fun AddLinkDialog(
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(LocalStrings.current.ui.close) } },
     )
+}
+
+/**
+ * One candidate series, with enough to tell it apart.
+ *
+ * A title alone is useless here: the whole point of linking is that several
+ * series share it — the French edition, the English one, the colour one. The
+ * cover, the language, the publisher and the volume count are what actually
+ * distinguish them, and all four are already in the search result.
+ */
+@Composable
+private fun SearchResultRow(series: KomgaSeries, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SeriesThumbnail(
+            seriesId = series.id,
+            modifier = Modifier.width(40.dp).height(60.dp),
+            contentScale = ContentScale.Crop,
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = series.metadata.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val details = listOfNotNull(
+                series.metadata.language.takeIf { it.isNotBlank() }?.uppercase(),
+                series.metadata.publisher.takeIf { it.isNotBlank() },
+                LocalStrings.current.counts.booksCount(series.booksCount),
+            ).joinToString(" · ")
+            if (details.isNotBlank()) {
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
 }
 
 @Composable

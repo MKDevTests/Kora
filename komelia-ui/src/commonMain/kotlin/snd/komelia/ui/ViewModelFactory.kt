@@ -221,6 +221,8 @@ class ViewModelFactory(
             service = createNextReleasesService(),
             seriesApi = komgaApi.seriesApi,
             notifications = dependencies.appNotifications,
+            libraries = dependencies.komgaSharedState.libraries,
+            similarityIndexBuilder = dependencies.similarityIndexBuilder,
         )
     }
 
@@ -302,6 +304,7 @@ class ViewModelFactory(
         return BookViewModel(
             book = book,
             bookId = bookId,
+            similarityIndexRepository = appRepositories.similarityIndexRepository,
             bookSiblingsContext = bookSiblingsContext,
             bookApi = komgaApi.bookApi,
             seriesApi = komgaApi.seriesApi,

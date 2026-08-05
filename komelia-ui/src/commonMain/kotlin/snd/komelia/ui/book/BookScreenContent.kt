@@ -87,7 +87,9 @@ fun BookScreenContent(
     onReadListBookPress: (KomeliaBook, KomgaReadList) -> Unit,
     onParentSeriesPress: () -> Unit,
     onFilterClick: (SeriesScreenFilter) -> Unit,
-    cardWidth: Dp
+    cardWidth: Dp,
+    seriesGenres: List<String> = emptyList(),
+    onGenreClick: ((String) -> Unit)? = null,
 ) {
 
     val scrollState: ScrollState = rememberScrollState()
@@ -132,7 +134,10 @@ fun BookScreenContent(
 
                 BookInfoColumn(
                     publisher = null,
-                    genres = null,
+                    // The series' genres, repeated on its volumes: it is the
+                    // same handful of words on every one of them, and it is
+                    // what people navigate by. Read locally, so nothing waits.
+                    genres = seriesGenres.takeIf { it.isNotEmpty() },
                     authors = book.metadata.authors,
                     tags = book.metadata.tags,
                     links = book.metadata.links,
@@ -141,6 +146,7 @@ fun BookScreenContent(
                     isbn = book.metadata.isbn,
                     fileUrl = book.url,
                     onFilterClick = onFilterClick,
+                    onGenreClick = onGenreClick,
                 )
                 BookReadListsContent(
                     readLists = readLists,

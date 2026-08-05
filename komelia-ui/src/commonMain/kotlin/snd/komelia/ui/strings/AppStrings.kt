@@ -73,6 +73,9 @@ data class AppStrings(
     val ui: UiStrings,
     val counts: CountStrings,
     val shelves: ShelfStrings,
+    val roles: RoleStrings,
+    val editions: EditionStrings,
+    val shelfPatterns: ShelfPatternStrings,
 )
 
 /**
@@ -83,6 +86,44 @@ data class AppStrings(
  * ONLY while they still read exactly as shipped — is what keeps a renamed shelf
  * called what its owner called it.
  */
+/** What a link to another edition of the same work is called. */
+data class EditionStrings(
+    val heading: String,
+    val otherVersion: String,
+    val otherLanguage: String,
+    val colourEdition: String,
+)
+
+data class RoleStrings(
+    val writer: String,
+    val penciller: String,
+    val inker: String,
+    val colorist: String,
+    val letterer: String,
+    val cover: String,
+    val editor: String,
+    val translator: String,
+)
+
+/**
+ * Names of the shelf patterns offered in the Home editor.
+ *
+ * The dropdowns used to print the enum constants themselves — no literal in the
+ * source, so nothing to translate and nothing to notice.
+ */
+data class ShelfPatternStrings(
+    val custom: String,
+    val onDeck: String,
+    val forgotten: String,
+    val recentlyAdded: String,
+    val recentlyUpdated: String,
+    val almostFinished: String,
+    val favorites: String,
+    val series: String,
+    val book: String,
+    val discover: String,
+)
+
 data class ShelfStrings(
     val keepReading: String,
     val onDeck: String,
@@ -91,6 +132,9 @@ data class ShelfStrings(
     val recentlyAddedSeries: String,
     val recentlyUpdatedSeries: String,
     val recentlyReadBooks: String,
+    val discover: String,
+    val forgotten: String,
+    val almostFinished: String,
 )
 
 /**

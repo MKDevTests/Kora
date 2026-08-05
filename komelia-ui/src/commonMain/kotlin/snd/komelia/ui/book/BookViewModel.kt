@@ -56,12 +56,24 @@ class BookViewModel(
     private val libraries: StateFlow<List<KomgaLibrary>>,
     private val taskEmitter: OfflineTaskEmitter,
     settingsRepository: CommonSettingsRepository,
+    private val similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     readListApi: KomgaReadListApi,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
 
     var library by mutableStateOf<KomgaLibrary?>(null)
         private set
     val book = MutableStateFlow(book)
+
+    /**
+     * The genres of the series this book belongs to.
+     *
+     * They are series metadata, and the book screen never loads its series —
+     * asking the server for it would be a request for three words. The local
+     * term index already holds them, so this is a primary-key read. Empty when
+     * the library was never indexed, which is a silence rather than a wait.
+     */
+    var seriesGenres by mutableStateOf<List<String>>(emptyList())
+        private set
     private val currentBookId = MutableStateFlow(bookId)
     var isExpanded by mutableStateOf(false)
     val publisher = MutableStateFlow<String?>(null)
@@ -87,6 +99,12 @@ class BookViewModel(
     // actually decides those things.
     val bookMenuActions = BookMenuActions(bookApi, notifications, screenModelScope, taskEmitter, seriesApi)
 
+    private suspend fun loadSeriesGenres() {
+        val seriesId = book.value?.seriesId?.value ?: return
+        val entry = runCatching { similarityIndexRepository.entryOf(seriesId) }.getOrNull() ?: return
+        seriesGenres = entry.terms.genres.toList()
+    }
+
     suspend fun initialize() {
         if (state.value != Uninitialized) return
 
@@ -96,6 +114,7 @@ class BookViewModel(
         readListsState.initialize()
         loadSiblingBooks()
         loadPublisher()
+        loadSeriesGenres()
         startKomgaEventListener()
 
         reloadJobsFlow.onEach {

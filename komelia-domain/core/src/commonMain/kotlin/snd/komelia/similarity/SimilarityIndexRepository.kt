@@ -41,6 +41,9 @@ interface SimilarityIndexRepository {
     /** Every indexed series of [libraryId]. The scorer's whole input. */
     suspend fun entriesOf(libraryId: String): List<SimilarityIndexEntry>
 
+    /** One series, by id — a primary-key read, unlike [entriesOf]. */
+    suspend fun entryOf(seriesId: String): SimilarityIndexEntry?
+
     /** Insert or replace [entries]. Chunked internally; safe on thousands. */
     suspend fun upsertAll(entries: List<SimilarityIndexEntry>)
 

@@ -121,6 +121,8 @@ private enum class BookImmersiveTab { TAGS, READ_LISTS }
 @Composable
 fun ImmersiveBookContent(
     book: KomeliaBook,
+    seriesGenres: List<String> = emptyList(),
+    onGenreClick: ((String) -> Unit)? = null,
     siblingBooks: List<KomeliaBook>,
     library: KomgaLibrary?,
     accentColor: Color?,
@@ -460,7 +462,9 @@ fun ImmersiveBookContent(
                                     Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                                         BookInfoColumn(
                                             publisher = null,
-                                            genres = null,
+                                            // Same on every volume of the series,
+                                            // and what people navigate by.
+                                            genres = seriesGenres.takeIf { it.isNotEmpty() },
                                             authors = pageBook.metadata.authors,
                                             tags = pageBook.metadata.tags,
                                             links = pageBook.metadata.links,
@@ -468,6 +472,7 @@ fun ImmersiveBookContent(
                                             mediaType = pageBook.media.mediaType,
                                             isbn = pageBook.metadata.isbn,
                                             fileUrl = pageBook.url,
+                                            onGenreClick = onGenreClick,
                                             onFilterClick = onFilterClick,
                                         )
                                     }

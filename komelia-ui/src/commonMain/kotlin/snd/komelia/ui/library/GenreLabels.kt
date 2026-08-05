@@ -51,7 +51,13 @@ object GenreLabels {
      */
     val allSlugs: List<String> = labels.keys.sortedBy { labels.getValue(it).lowercase() }
 
-    /** Tag string for a slug, e.g. "fantasy" -> "kora:genre:fantasy". */
+    /**
+     * Tag string for a slug, e.g. "fantasy" -> "kora:genre:fantasy".
+     *
+     * The genre listing filters on the TAG. Handing it a bare slug quietly
+     * matches the series carrying a free tag of that name instead — five
+     * results where the genre holds five hundred.
+     */
     fun tagOf(slug: String): String = PREFIX + slug
 
     /** Pretty display name for a slug: curated label, else "foo-bar" -> "Foo Bar". */
@@ -163,6 +169,10 @@ object GenreLabels {
      * `kora:genre:*` ones, mapped to their pretty label, in tag order, de-duped.
      * Used by the series detail screen to show a "Genres : …" line.
      */
+    /** The genre slugs a series carries, in tag order. */
+    fun genreSlugs(tags: List<String>): List<String> =
+        tags.asSequence().filter { isGenreTag(it) }.map { slugOf(it) }.distinct().toList()
+
     fun genreDisplayNames(tags: List<String>): List<String> =
         tags.asSequence()
             .filter { isGenreTag(it) }

@@ -75,6 +75,7 @@ fun BookInfoColumn(
     isbn: String,
     fileUrl: String,
     onFilterClick: (SeriesScreenFilter) -> Unit,
+    onGenreClick: ((String) -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!publisher.isNullOrBlank()) {
@@ -85,12 +86,19 @@ fun BookInfoColumn(
             )
         }
 
-        val genreEntries = remember(genres) { genres?.map { stringEntry(it) } }
+        // The value carried by a chip is the SLUG — that is what the genre
+        // listing filters on — while the label is the readable French name.
+        val genreEntries = remember(genres) {
+            genres?.map { LabeledEntry(it, snd.komelia.ui.library.GenreLabels.label(it)) }
+        }
         if (genreEntries != null) {
             DescriptionChips(
                 label = LocalStrings.current.ui.genres,
                 chipValues = genreEntries,
-                onChipClick = { onFilterClick(SeriesScreenFilter(genres = listOf(it))) },
+                // The genre listing of the library, like the chips on a series:
+                // Kora keeps genres in kora:genre tags, so the native-genre
+                // filter these used to build matched nothing.
+                onChipClick = { slug -> onGenreClick?.invoke(slug) },
             )
         }
 

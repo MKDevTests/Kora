@@ -41,6 +41,27 @@ import snd.komga.client.series.KomgaSeriesStatus.ABANDONED
 import snd.komga.client.series.KomgaSeriesStatus.ENDED
 import snd.komga.client.series.KomgaSeriesStatus.HIATUS
 import snd.komga.client.series.KomgaSeriesStatus.ONGOING
+import androidx.compose.material3.AssistChip
+import androidx.compose.ui.text.style.TextOverflow
+import snd.komelia.ui.library.GenreLabels
+import androidx.compose.material3.AssistChipDefaults
+
+/**
+ * Another edition of the same work: what it is, and where it leads.
+ *
+ * The KIND, not a ready-made string: "Berserk" in a chip next to a series
+ * already called Berserk says nothing — what the reader needs to know is that
+ * this one is the colour edition. The name only earns its place when it
+ * differs, and the wording belongs to the translation, not to the state.
+ */
+data class OtherVersion(
+    val seriesId: snd.komga.client.series.KomgaSeriesId,
+    val kind: Kind,
+    /** Language code or differing title; null when the name adds nothing. */
+    val detail: String? = null,
+) {
+    enum class Kind { VERSION, LANGUAGE, COLOURED }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -62,6 +83,9 @@ fun SeriesDescriptionRow(
     accentColor: Color? = null,
     showReleaseYear: Boolean = true,
     genres: List<String> = emptyList(),
+    onGenreClick: ((String) -> Unit)? = null,
+    otherVersions: List<OtherVersion> = emptyList(),
+    onVersionClick: ((snd.komga.client.series.KomgaSeriesId) -> Unit)? = null,
     nextRelease: NextReleaseLabels.NextRelease? = null,
     modifier: Modifier
 ) {
@@ -190,14 +214,61 @@ fun SeriesDescriptionRow(
             }
         }
 
-        // Kora genre tags (kora:genre:*) shown as a plain readable line below the
-        // chips. Pre-cleaned by the caller via GenreLabels; empty on screens that
-        // don't pass them (oneshots / books).
+        // Kora genre tags (kora:genre:*), as chips rather than a comma line:
+        // they are the one piece of metadata people navigate BY, and a chip
+        // says "you can tap this" where a sentence does not.
         if (genres.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                genres.forEach { genre ->
+                    AssistChip(
+                        onClick = { onGenreClick?.invoke(genre) },
+                        enabled = onGenreClick != null,
+                        colors = tappableChipColors(),
+                        label = {
+                            Text(
+                                text = GenreLabels.label(genre),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        // The other editions of this same work — languages, colour editions,
+        // reprints. They live in the Links tab, which is one tap away and one
+        // the user has to think of; here they sit where the eye already is.
+        if (otherVersions.isNotEmpty()) {
+            val editions = LocalStrings.current.editions
             Text(
-                text = LocalStrings.current.ui.genres2 + genres.joinToString(", "),
-                style = MaterialTheme.typography.bodyMedium,
+                text = editions.heading,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                otherVersions.forEach { version ->
+                    val kind = when (version.kind) {
+                        OtherVersion.Kind.VERSION -> editions.otherVersion
+                        OtherVersion.Kind.LANGUAGE -> editions.otherLanguage
+                        OtherVersion.Kind.COLOURED -> editions.colourEdition
+                    }
+                    AssistChip(
+                        onClick = { onVersionClick?.invoke(version.seriesId) },
+                        enabled = onVersionClick != null,
+                        colors = tappableChipColors(),
+                        label = {
+                            Text(
+                                text = version.detail?.let { "$kind · $it" } ?: kind,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                    )
+                }
+            }
         }
 
         if (alternateTitles.isNotEmpty()) {
@@ -243,3 +314,17 @@ fun SeriesSummary(
         )
     }
 }
+/**
+ * Chip colours that read as "you can tap this".
+ *
+ * The default assist chip is a transparent outline, which sits at the same
+ * visual weight as the sentences around it — these are navigation, and they
+ * have to look like it without turning into buttons.
+ */
+@Composable
+private fun tappableChipColors() = AssistChipDefaults.assistChipColors(
+    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+)

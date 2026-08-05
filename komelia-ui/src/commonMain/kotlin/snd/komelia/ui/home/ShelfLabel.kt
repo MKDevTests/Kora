@@ -21,5 +21,9 @@ fun shelfLabel(label: String, strings: ShelfStrings): String = when (label) {
     "Recently added series" -> strings.recentlyAddedSeries
     "Recently updated series" -> strings.recentlyUpdatedSeries
     "Recently read books" -> strings.recentlyReadBooks
+    // Labels the Home editor writes when a preset shelf is created.
+    "Discover" -> strings.discover
+    "Forgotten" -> strings.forgotten
+    "Almost finished" -> strings.almostFinished
     else -> label
 }

@@ -84,6 +84,33 @@ class MaintenanceScreen : Screen {
 
                 HorizontalDivider()
 
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            LocalStrings.current.ui.reAnalyseLibrary,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            LocalStrings.current.ui.oncePerLibrarySuggestionsAre,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    val progress = vm.reindexProgress
+                    if (progress == null) {
+                        TextButton(onClick = vm::reindexAllLibraries) {
+                            Text(LocalStrings.current.ui.reAnalyseLibrary)
+                        }
+                    } else {
+                        Text(progress, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                HorizontalDivider()
+
                 if (vm.loading) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -148,7 +175,37 @@ class MaintenanceViewModel(
     private val service: NextReleasesService,
     private val seriesApi: KomgaSeriesApi,
     private val notifications: AppNotifications,
+    private val libraries: kotlinx.coroutines.flow.StateFlow<List<snd.komga.client.library.KomgaLibrary>>,
+    private val similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
 ) : ScreenModel {
+
+    /** Null when idle, else "library i of n" while rebuilding. */
+    var reindexProgress by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Rebuilds the term index of every library.
+     *
+     * The index is what "Similar", "For you" and the genres of a volume are
+     * read from, and until now it could only be rebuilt one library at a time,
+     * from the Similar tab of some series inside it — which is a strange place
+     * to look for it. It also follows the server on its own now; this is the
+     * button for when you would rather not wonder whether it did.
+     */
+    fun reindexAllLibraries() {
+        val builder = similarityIndexBuilder ?: return
+        if (reindexProgress != null) return
+        screenModelScope.launch {
+            notifications.runCatchingToNotifications {
+                val all = libraries.value
+                all.forEachIndexed { index, library ->
+                    reindexProgress = "${index + 1}/${all.size}"
+                    builder.build(library.id)
+                }
+            }
+            reindexProgress = null
+        }
+    }
 
     data class ExpiredEntry(
         val tag: String,

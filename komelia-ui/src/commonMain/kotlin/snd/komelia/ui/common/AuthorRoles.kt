@@ -28,8 +28,27 @@ val authorRolesOrder = listOf(
     translatorRole,
 )
 
-/** "writer" -> "Writer". Komga stores roles lowercase. */
-fun authorRoleLabel(role: String): String = role.replaceFirstChar { it.uppercase() }
+/**
+ * "writer" -> "Scénario". Komga stores roles lowercase.
+ *
+ * The eight roles Komga fills are named; anything else it may add later falls
+ * back to the capitalised raw value, which is still readable.
+ */
+@androidx.compose.runtime.Composable
+fun authorRoleLabel(role: String): String {
+    val roles = snd.komelia.ui.LocalStrings.current.roles
+    return when (role.lowercase()) {
+        "writer" -> roles.writer
+        "penciller" -> roles.penciller
+        "inker" -> roles.inker
+        "colorist" -> roles.colorist
+        "letterer" -> roles.letterer
+        "cover" -> roles.cover
+        "editor" -> roles.editor
+        "translator" -> roles.translator
+        else -> role.replaceFirstChar { it.uppercase() }
+    }
+}
 
 /**
  * Drops the credits whose role the user hid.

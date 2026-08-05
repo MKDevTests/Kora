@@ -120,6 +120,9 @@ fun SeriesContent(
     onDownload: () -> Unit,
     onOpenInKomga: (() -> Unit)? = null,
     onRandomSiblingClick: (() -> Unit)? = null,
+    onGenreClick: ((String) -> Unit)? = null,
+    otherVersions: List<OtherVersion> = emptyList(),
+    onVersionClick: ((snd.komga.client.series.KomgaSeriesId) -> Unit)? = null,
 ) {
     val windowWidth = LocalWindowWidth.current
     val contentPadding = when (windowWidth) {
@@ -178,6 +181,9 @@ fun SeriesContent(
                             library = library,
                             onLibraryClick = onLibraryClick,
                             onFilterClick = onFilterClick,
+                            onGenreClick = onGenreClick,
+                            otherVersions = otherVersions,
+                            onVersionClick = onVersionClick,
                         )
                     }
 
@@ -363,6 +369,9 @@ fun Series(
     library: KomgaLibrary,
     onLibraryClick: (KomgaLibrary) -> Unit,
     onFilterClick: (SeriesScreenFilter) -> Unit,
+    onGenreClick: ((String) -> Unit)? = null,
+    otherVersions: List<OtherVersion> = emptyList(),
+    onVersionClick: ((snd.komga.client.series.KomgaSeriesId) -> Unit)? = null,
 ) {
     val width = LocalWindowWidth.current
     val animation: FiniteAnimationSpec<IntSize> = remember(series) {
@@ -398,7 +407,10 @@ fun Series(
                         deleted = series.deleted || library.unavailable,
                         alternateTitles = series.metadata.alternateTitles,
                         onFilterClick = onFilterClick,
-                        genres = GenreLabels.genreDisplayNames(series.metadata.tags),
+                        genres = GenreLabels.genreSlugs(series.metadata.tags),
+                        onGenreClick = onGenreClick,
+                        otherVersions = otherVersions,
+                        onVersionClick = onVersionClick,
                         nextRelease = NextReleaseLabels.upcomingRelease(series.metadata.tags),
                         modifier = Modifier,
                     )

@@ -97,6 +97,43 @@ class SeriesLinksState(
     var relations by mutableStateOf<Map<SeriesRelationType, List<KomgaSeries>>>(emptyMap())
         private set
 
+    /**
+     * The other editions of this work, for the details block: versions, other
+     * languages, colour editions. Not the sequels or spin-offs — those are
+     * other works, and belong in the Links tab where the user goes looking for
+     * them, not next to this one's genres.
+     */
+    val otherVersions: List<snd.komelia.ui.series.view.OtherVersion>
+        get() {
+            val currentTitle = series.value?.metadata?.title
+            fun detailOf(other: snd.komga.client.series.KomgaSeries): String? {
+                val language = other.metadata.language.takeIf { it.isNotBlank() }?.uppercase()
+                // The title only earns its place when it differs: repeating the
+                // name of the series you are already on is noise.
+                val title = other.metadata.title.takeIf { it != currentTitle }
+                return language ?: title
+            }
+            return versions.map {
+                snd.komelia.ui.series.view.OtherVersion(
+                    seriesId = it.id,
+                    kind = snd.komelia.ui.series.view.OtherVersion.Kind.VERSION,
+                    detail = detailOf(it),
+                )
+            } + (relations[SeriesRelationType.LANGUAGE] ?: emptyList()).map {
+                snd.komelia.ui.series.view.OtherVersion(
+                    seriesId = it.id,
+                    kind = snd.komelia.ui.series.view.OtherVersion.Kind.LANGUAGE,
+                    detail = detailOf(it),
+                )
+            } + (relations[SeriesRelationType.COLORED] ?: emptyList()).map {
+                snd.komelia.ui.series.view.OtherVersion(
+                    seriesId = it.id,
+                    kind = snd.komelia.ui.series.view.OtherVersion.Kind.COLOURED,
+                    detail = detailOf(it),
+                )
+            }
+        }
+
     /** Ids of related series coming from the shared Komga layer (badge + unlink gating). */
     var sharedRelationIds by mutableStateOf<Set<String>>(emptySet())
         private set
@@ -192,6 +229,11 @@ class SeriesLinksState(
                 .groupBy({ it.first }, { it.second })
                 .filterValues { it.isNotEmpty() }
             mutableState.value = LoadState.Success(Unit)
+            logger.info {
+                "Series links for ${current.id.value}: ${versions.size} version(s), " +
+                    relations.entries.joinToString { "${it.key}=${it.value.size}" } +
+                    " -> ${otherVersions.size} shown as other editions"
+            }
 
             linksCacheRepository.put(
                 current.id.value,

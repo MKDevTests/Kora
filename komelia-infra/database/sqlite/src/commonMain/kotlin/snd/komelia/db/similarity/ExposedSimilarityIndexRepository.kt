@@ -26,6 +26,24 @@ class ExposedSimilarityIndexRepository(
     database: Database,
 ) : ExposedRepository(database), SimilarityIndexRepository {
 
+    override suspend fun entryOf(seriesId: String): SimilarityIndexEntry? = transaction {
+        SeriesSimilarityIndexTable
+            .selectAll()
+            .where { SeriesSimilarityIndexTable.seriesId eq seriesId }
+            .firstOrNull()
+            ?.let { row ->
+                val terms = runCatching {
+                    JsonDbDefault.decodeFromString<SeriesTerms>(row[SeriesSimilarityIndexTable.terms])
+                }.getOrNull() ?: return@let null
+                SimilarityIndexEntry(
+                    seriesId = row[SeriesSimilarityIndexTable.seriesId],
+                    libraryId = row[SeriesSimilarityIndexTable.libraryId],
+                    titleSort = row[SeriesSimilarityIndexTable.titleSort],
+                    terms = terms,
+                )
+            }
+    }
+
     override suspend fun entriesOf(libraryId: String): List<SimilarityIndexEntry> {
         return transaction {
             SeriesSimilarityIndexTable.selectAll()
