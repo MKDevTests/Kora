@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
@@ -95,9 +94,6 @@ class HomeViewModel(
     cardWidthFlow: Flow<Dp>,
     favoriteIdsFlow: Flow<Set<String>>,
     excludedLibraryIdsFlow: Flow<Set<String>> = flowOf(emptySet()),
-    /** Same pipeline as the library "For you" tab; null where it isn't available. */
-    private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
-    libraryIdsFlow: Flow<List<String>> = flowOf(emptyList()),
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
     private val favoriteIds = favoriteIdsFlow.stateIn(screenModelScope, Eagerly, emptySet())
@@ -107,15 +103,6 @@ class HomeViewModel(
         bookApi = bookApi,
         favoriteIds = { favoriteIds.value },
         excludedLibraryIds = { excludedLibraryIds.value },
-        forYouSuggester = forYouSuggester,
-        // Waits for a NON-EMPTY list, with a bound. The libraries flow is a
-        // StateFlow seeded with an empty list, and `first()` hands that seed back
-        // immediately — the shelf then resolved on zero libraries and rendered
-        // empty, which read as "the shelf disappeared" and never recovered
-        // because every later reload hit the same seed.
-        allLibraryIds = {
-            withTimeoutOrNull(LIBRARY_WAIT_MS) { libraryIdsFlow.first { it.isNotEmpty() } } ?: emptyList()
-        },
     )
 
     private val reloadEventsEnabled = MutableStateFlow(true)
@@ -197,17 +184,15 @@ class HomeViewModel(
                 else listOf(
                     SeriesHomeScreenFilter.Favorites(order = -1, label = "Favoris", enabled = true, pageSize = 20)
                 ) + persisted
-            // Same treatment for the suggestions shelf: it only earns its keep on
-            // the screen people actually open, and it stays editable (reorder,
-            // rename, disable) like any other.
-            val withForYou =
-                if (withFavorites.any { it is SeriesHomeScreenFilter.ForYou }) withFavorites
-                else withFavorites + SeriesHomeScreenFilter.ForYou(
-                    order = withFavorites.size,
-                    label = "For you",
-                    enabled = true,
-                    pageSize = 12,
-                )
+            // The suggestions shelf was withdrawn: it could not be reordered
+            // without vanishing (the snapshot is keyed by order, and rebuilding
+            // a taste profile is far too slow to arrive on a Home load), and a
+            // shelf that misbehaves on the app's first screen is worse than no
+            // shelf. Suggestions live in the library's "For you" tab, which is
+            // opened on purpose. Any shelf left in a saved layout is dropped
+            // here rather than deleted from the type, so old configurations
+            // still parse.
+            val withForYou = withFavorites.filterNot { it is SeriesHomeScreenFilter.ForYou }
 
             // Paint the last known shelves from disk BEFORE touching the network.
             // Every shelf costs a server round-trip and the awaitAll below waits on
@@ -402,6 +387,3 @@ class HomeViewModel(
     }
 
 }
-
-/** Long enough for a cold start to have listed the libraries, short enough not to stall Home. */
-private const val LIBRARY_WAIT_MS = 5_000L

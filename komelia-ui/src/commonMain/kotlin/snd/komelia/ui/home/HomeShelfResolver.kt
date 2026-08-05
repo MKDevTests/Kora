@@ -38,15 +38,6 @@ class HomeShelfResolver(
     private val bookApi: KomgaBookApi,
     private val favoriteIds: () -> Set<String>,
     private val excludedLibraryIds: () -> Set<String> = { emptySet() },
-    /** Same pipeline as the library's "For you" tab; null on platforms without it. */
-    private val forYouSuggester: snd.komelia.ui.suggestions.ForYouSuggester? = null,
-    /**
-     * Libraries the "For you" shelf can draw from. Suspending on purpose: the
-     * list arrives from the server after the first emission, and Home resolves
-     * its shelves immediately at startup — reading a seeded StateFlow value
-     * returned nothing and left the shelf empty.
-     */
-    private val allLibraryIds: suspend () -> List<String> = { emptyList() },
 ) {
 
     suspend fun resolve(filter: HomeScreenFilter): HomeFilterData? =
@@ -105,44 +96,9 @@ class HomeShelfResolver(
                 )
             }
 
-            is SeriesHomeScreenFilter.ForYou -> {
-                val suggester = forYouSuggester
-                val libraries = allLibraryIds().filterNot { it in filter.excludedLibraryIds }
-                if (suggester == null || libraries.isEmpty()) SeriesFilterData(emptyList(), filter)
-                else {
-                    // Each library is scored on its own index — cosine scores
-                    // are not comparable between two different vocabularies —
-                    // so the lists are interleaved rather than merged by score.
-                    // Otherwise the library with the denser tags would take the
-                    // whole shelf.
-                    //
-                    // No index building from Home: that is a one-off burst of
-                    // requests the user did not ask for by scrolling past a
-                    // shelf. A library stays out until its own tab indexed once.
-                    val perLibrary = libraries.mapNotNull { id ->
-                        // One slow or failed library must not take the whole
-                        // Home load down with it: every other shelf is awaited
-                        // in the same awaitAll.
-                        runCatching {
-                            suggester.suggest(
-                                libraryId = KomgaLibraryId(id),
-                                limit = filter.pageSize,
-                                indexIfMissing = false,
-                            ).results
-                        }.getOrNull()
-                    }.filter { it.isNotEmpty() }
-                    val interleaved = buildList {
-                        var index = 0
-                        while (size < filter.pageSize && perLibrary.any { index < it.size }) {
-                            perLibrary.forEach { list ->
-                                if (size < filter.pageSize && index < list.size) add(list[index].series)
-                            }
-                            index++
-                        }
-                    }
-                    SeriesFilterData(series = interleaved, filter = filter)
-                }
-            }
+            // Withdrawn from Home (see HomeViewModel): a saved layout may still
+            // carry one, and it resolves to nothing.
+            is SeriesHomeScreenFilter.ForYou -> null
 
             is SeriesHomeScreenFilter.Favorites -> {
                 // Local favorites: resolve a bounded sample by id (getOneSeries is

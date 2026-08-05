@@ -171,24 +171,6 @@ class FilterEditViewModel(
                 initialBooks = null,
             )
 
-            // One-tap "For you": the suggestions shelf. It is auto-added once,
-            // but a shelf that can be deleted must also be re-addable — the
-            // Discover entry exists for the same reason.
-            FilterType.ForYou -> SeriesFilterEditState(
-                seriesApi = seriesApi,
-                collectionApi = collectionApi,
-                appNotifications = appNotifications,
-                coroutineScope = screenModelScope,
-                options = filterSuggestionOptions,
-                cardWidth = cardWidth,
-                initialFilter = SeriesHomeScreenFilter.ForYou(
-                    order = 0,
-                    label = "For you",
-                    pageSize = 12,
-                ),
-                initialSeries = null,
-            )
-
             // One-tap "Discover": a random-sorted *series* shelf — discovering a
             // series to read, not an individual volume. The user scopes it to a
             // library via the standard Library condition in the editor. order is
@@ -260,6 +242,6 @@ class FilterEditViewModel(
     }
 
     enum class FilterType {
-        Series, Book, Discover, ForYou
+        Series, Book, Discover
     }
 }

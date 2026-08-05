@@ -119,7 +119,7 @@ class SeriesFilterEditState(
             is SeriesRecentlyAddedFilterState -> FilterType.RecentlyAdded
             is SeriesRecentlyUpdatedFilterState -> FilterType.RecentlyUpdated
             is SeriesAlmostFinishedFilterState -> FilterType.AlmostFinished
-            is SeriesForYouFilterState -> FilterType.ForYou
+            is SeriesForYouFilterState -> FilterType.Favorites
             is SeriesFavoritesFilterState -> FilterType.Favorites
         }
     }.stateIn(coroutineScope, SharingStarted.Eagerly, FilterType.Custom)
@@ -208,13 +208,16 @@ class SeriesFilterEditState(
                 initialSeries = null,
             )
 
-            FilterType.ForYou -> SeriesForYouFilterState(options = options, initial = null, initialSeries = null)
             FilterType.Favorites -> SeriesFavoritesFilterState(initial = null, initialSeries = null)
         }
     }
 
 
-    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished, ForYou, Favorites }
+    /**
+     * ForYou is intentionally absent: the shelf was withdrawn from Home. Its
+     * state and mappings stay so a layout saved while it existed still parses.
+     */
+    enum class FilterType { Custom, RecentlyAdded, RecentlyUpdated, AlmostFinished, Favorites }
 }
 
 sealed interface SeriesFilterStateType {
