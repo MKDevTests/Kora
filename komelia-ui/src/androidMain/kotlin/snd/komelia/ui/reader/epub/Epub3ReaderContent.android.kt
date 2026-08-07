@@ -112,24 +112,39 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
         epub3State?.showControls ?: MutableStateFlow(true)
     }.collectAsState()
 
-    // Provide null hazeState when fullscreen (controls hidden) so overlays use solid surface
-    // instead of an unsourced blur. hazeSource is also gated on showControls for the same reason.
-    CompositionLocalProvider(LocalHazeState provides if (showControls) readerHazeState else null) {
+    CompositionLocalProvider(LocalHazeState provides readerHazeState) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(themeBgColor)
         ) {
-            // hazeSource is only active when controls are visible (non-fullscreen).
-            // hazeEffect + WebView in fullscreen causes continuous WebView invalidation/flicker.
-            // When controls are hidden the mini player's hazeEffect blurs the solid background
-            // instead of live page content — visually indistinguishable since they match.
-            Box(
-                Modifier.fillMaxSize().then(
-                    if (readerHazeState != null && showControls) Modifier.hazeSource(readerHazeState) else Modifier
+            Box(Modifier.fillMaxSize()) {
+                // The haze source is the background, never the WebView.
+                //
+                // hazeEffect reads back whatever it is sourced from, every frame.
+                // Sourced from a WebView that means invalidating the WebView every
+                // frame, and the WebView redrawing is what the reader sees as
+                // flicker. This was already known: the source used to be gated on
+                // the controls being visible, which fixed the fullscreen case and
+                // left the one that actually happens — tapping the page to show the
+                // bar, and watching the text shimmer underneath it for as long as
+                // the bar is up.
+                //
+                // Nothing is lost by sourcing the flat background instead. An epub
+                // page is drawn on this very colour, so a blur of the page and a
+                // blur of the background differ only where text happens to sit
+                // behind the card — and the card is opaque enough (thin material
+                // over a 0.4 alpha surface) that the difference was never legible.
+                // The gate is gone too: the source no longer costs anything, so
+                // there is nothing left to turn off.
+                Spacer(
+                    Modifier.fillMaxSize()
+                        .background(themeBgColor)
+                        .then(
+                            if (readerHazeState != null) Modifier.hazeSource(readerHazeState)
+                            else Modifier
+                        )
                 )
-            ) {
-                Spacer(Modifier.fillMaxSize().background(themeBgColor))
                 AndroidView(
                     factory = { ctx ->
                         EpubView(context = ctx, activity = activity, shouldApplyInsetsPadding = false).also { view ->
