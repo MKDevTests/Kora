@@ -34,6 +34,16 @@ data class Epub3NativeSettings(
     val paragraphSpacing: Double = 0.5,
     val textAlign: Epub3TextAlign = Epub3TextAlign.JUSTIFY,
     val readAloudColor: Epub3ReadAloudColor = Epub3ReadAloudColor.YELLOW,
+    /**
+     * Which edges turn pages, reusing the image reader's enum so both settings
+     * screens offer the same four choices under the same names.
+     *
+     * Persisted per reader rather than shared: this lands in the existing
+     * `epub3_native_settings_json` column, so it costs no migration and leaves
+     * the image reader's shipped setting alone. The default matches what the
+     * reader did before — left back, right forward.
+     */
+    val tapNavigationMode: ReaderTapNavigationMode = ReaderTapNavigationMode.LEFT_RIGHT,
     val scroll: Boolean = false,
     val columnCount: Epub3ColumnCount = Epub3ColumnCount.AUTO,
     val pageMargins: Double = 1.0,

@@ -33,4 +33,9 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:1.8.5"
     implementation "androidx.core:core-ktx:1.13.1"
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+
+    // Plain JVM unit tests. Everything else in this module touches a view or a
+    // publication; the tap-zone logic is deliberately kept pure so it can be
+    // tested here instead of under Robolectric.
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
 }

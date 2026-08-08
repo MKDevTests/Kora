@@ -23,7 +23,6 @@ import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.navigator.preferences.ColumnCount
 import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.preferences.TextAlign
-import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.InternalReadiumApi
 import org.readium.r2.shared.publication.Locator
@@ -134,6 +133,13 @@ class EpubView(
     }
 
     var navigator: EpubNavigatorFragment? = null
+
+    /**
+     * Which edges turn pages. Read on every tap, so setting it takes effect at
+     * once — it must NOT go through [pendingProps], which rebuilds the navigator
+     * and would reload the book to move a tap zone.
+     */
+    var tapNavigationMode: TapNavigationMode = TapNavigationMode.LEFT_RIGHT
 
     var locationEmitter: Job? = null
 
@@ -308,9 +314,13 @@ class EpubView(
 
         navigator?.addDecorationListener("highlights", this)
 
+        // Ours instead of Readium's DirectionalNavigationAdapter: that one only
+        // knew left/right with its default tapEdges, and its vertical edge cannot
+        // be reversed. See TapNavigationAdapter.
         navigator?.addInputListener(
-            DirectionalNavigationAdapter(
-                navigator!!,
+            TapNavigationAdapter(
+                navigator = navigator!!,
+                mode = { tapNavigationMode },
                 animatedTransition = true,
             )
         )

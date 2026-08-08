@@ -7,6 +7,7 @@ import com.storyteller.reader.CustomFont
 import com.storyteller.reader.EpubView
 import com.storyteller.reader.EpubViewListener
 import com.storyteller.reader.OverlayPar
+import com.storyteller.reader.TapNavigationMode
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.name
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -35,6 +36,7 @@ import snd.komelia.settings.EpubReaderSettingsRepository
 import snd.komelia.settings.model.Epub3ColumnCount
 import snd.komelia.settings.model.Epub3NativeSettings
 import snd.komelia.settings.model.Epub3TextAlign
+import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.ui.BookSiblingsContext
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.MainScreen
@@ -553,6 +555,15 @@ class Epub3ReaderState(
         view.pendingProps.paragraphSpacing = s.paragraphSpacing
         view.pendingProps.textAlign        = ta
         view.pendingProps.readaloudColor   = s.readAloudColor.colorInt
+        // Not a prop: finalizeProps() rebuilds the navigator, and moving a tap
+        // zone must not reload the book. See EpubView.tapNavigationMode.
+        view.tapNavigationMode = when (s.tapNavigationMode) {
+            ReaderTapNavigationMode.LEFT_RIGHT -> TapNavigationMode.LEFT_RIGHT
+            ReaderTapNavigationMode.RIGHT_LEFT -> TapNavigationMode.RIGHT_LEFT
+            ReaderTapNavigationMode.HORIZONTAL_SPLIT -> TapNavigationMode.HORIZONTAL_SPLIT
+            ReaderTapNavigationMode.REVERSED_HORIZONTAL_SPLIT ->
+                TapNavigationMode.REVERSED_HORIZONTAL_SPLIT
+        }
         view.pendingProps.scroll           = s.scroll
         view.pendingProps.columnCount      = when (s.columnCount) {
             Epub3ColumnCount.AUTO -> ColumnCount.AUTO

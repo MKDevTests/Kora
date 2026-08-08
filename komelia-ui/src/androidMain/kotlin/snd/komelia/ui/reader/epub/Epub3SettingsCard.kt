@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Add
@@ -77,6 +78,7 @@ import snd.komelia.settings.model.Epub3ReadAloudColor
 import snd.komelia.settings.model.Epub3TextAlign
 import snd.komelia.settings.model.Epub3Theme
 import snd.komelia.settings.model.Epub3NativeSettings
+import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.common.components.AppSlider
 import snd.komelia.ui.common.components.AppSliderDefaults
@@ -228,6 +230,53 @@ private fun AppearanceTab(
                     onClick = { onSettingsChange(settings.copy(scroll = true)) },
                     label = { Text(LocalStrings.current.ui.scroll) },
                 )
+            }
+        }
+
+        // Tap navigation. Two rows of two rather than the image reader's radio
+        // list with diagrams: that list is ~400dp tall and this is a bottom
+        // sheet capped at two thirds of the screen. Same labels, so the two
+        // settings screens still name the modes the same way.
+        Text(
+            text = LocalStrings.current.reader.tapNavigation,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        )
+        val readerStrings = LocalStrings.current.reader
+        val tapModes = listOf(
+            ReaderTapNavigationMode.LEFT_RIGHT to readerStrings.modeLeftRight,
+            ReaderTapNavigationMode.RIGHT_LEFT to readerStrings.modeRightLeft,
+            ReaderTapNavigationMode.HORIZONTAL_SPLIT to readerStrings.modeHorizontalSplit,
+            ReaderTapNavigationMode.REVERSED_HORIZONTAL_SPLIT to readerStrings.modeReversedHorizontalSplit,
+        )
+        tapModes.chunked(2).forEach { row ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                row.forEach { (mode, label) ->
+                    val selected = settings.tapNavigationMode == mode
+                    FilterChip(
+                        selected = selected,
+                        onClick = { onSettingsChange(settings.copy(tapNavigationMode = mode)) },
+                        label = {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        leadingIcon = if (selected) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                        } else null,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
 
