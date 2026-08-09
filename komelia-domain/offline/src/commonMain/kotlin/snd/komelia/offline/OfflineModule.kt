@@ -138,9 +138,13 @@ abstract class OfflineModule(
 ) {
     private val moduleScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var taskProcessor: TaskProcessor? = null
+    private var syncManager: SyncManager? = null
 
     fun close() {
+        syncManager?.close()
+        syncManager = null
         taskProcessor?.close()
+        taskProcessor = null
         moduleScope.cancel()
     }
 
@@ -287,6 +291,7 @@ abstract class OfflineModule(
             bookMarkDeletedAction = actions.get(),
             syncReadProgressAction = actions.get(),
         )
+        this.syncManager = syncManager
         taskProcessor.initialize()
 
         val offlineScannerService = OfflineScannerService(

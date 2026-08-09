@@ -6,6 +6,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -63,6 +64,10 @@ class SyncManager(
     init {
         onlineUser.filterNotNull().onEach { user -> doSync(user) }
             .launchIn(coroutineScope)
+    }
+
+    fun close() {
+        coroutineScope.cancel()
     }
 
     private suspend fun doSync(
