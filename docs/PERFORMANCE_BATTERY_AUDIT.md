@@ -1503,7 +1503,7 @@ Cette section distingue l’audit initial des corrections effectivement dévelop
 | File NCNN bornée/priorisée | Non implémenté | Le canal illimité et l’inférence `NonCancellable` nécessitent une refonte du scheduler et des tests de destruction de bitmaps/contexte GPU |
 | Tiling pendant le pinch | Non implémenté | Demande des mesures de viewport, jank et heap bitmap sur appareil ; une modification aveugle risquerait une régression visuelle ou native |
 | Pré-détection panneaux adaptative | Non implémenté | Nécessite une politique de préchargement et un cache versionné, puis des mesures ONNX réelles |
-| Macrobenchmark et mesure batterie | Bloqué par l’environnement matériel | Aucun appareil ADB connecté pendant cette session ; aucun pourcentage de gain n’est donc annoncé |
+| Macrobenchmark et mesure batterie | Mesure initiale sur appareil effectuée | Démarrage, CPU premier plan/arrière-plan, mémoire, défilement et thermique mesurés sur une Galaxy Tab S7 FE ; la décharge batterie longue durée reste à mesurer hors alimentation USB |
 
 ### 16.3 Validation effectuée
 
@@ -1514,11 +1514,45 @@ Cette section distingue l’audit initial des corrections effectivement dévelop
 - APK produit dans `komelia-app/build/outputs/apk/debug/kora-app-debug.apk` ;
 - graphe Graphify reconstruit après le dernier changement : 23 381 nœuds et 35 109 arêtes ;
 - sous-modules restés sur leurs commits verrouillés ;
-- aucun appareil détecté par `adb devices`, donc aucune installation ni mesure runtime.
+- APK debug installé avec `adb install -r` sur une Samsung Galaxy Tab S7 FE, sans désinstaller ni modifier le paquet release ;
+- paquet contrôlé après installation : `io.github.mkdevtests.kora.debug`, version `1.4.6` ;
+- campagne runtime détaillée dans la section suivante ; aucun effacement de données, aucun reset de `batterystats` et aucun test release.
 
 Le build émet encore des avertissements D8 de réécriture de métadonnées Kotlin (`Should never be called`). Ils étaient déjà reproductibles avant les derniers lots, n’empêchent pas la génération de l’APK et doivent faire l’objet d’un chantier séparé d’alignement Kotlin/AGP/R8.
 
-### 16.4 Prochaine validation recommandée
+### 16.4 Mesures runtime sur appareil physique
+
+Mesures réalisées le 9 août 2026 sur une Samsung Galaxy Tab S7 FE (`SM-T733`, Android 14/API 34, arm64-v8a, 1600 × 2560). La tablette était alimentée par USB, avec un état thermique Android nominal (`Thermal Status: 0`). Ces chiffres décrivent donc la charge CPU, mémoire et graphique, mais pas encore une autonomie en pourcentage par heure.
+
+Le protocole est non destructif : paquet debug uniquement, données applicatives conservées, aucune installation release, aucun reset ART, aucune remise à zéro globale de `batterystats`. Les démarrages utilisent `am start -W -S`, ce qui arrête seulement le processus debug entre deux passages.
+
+| Mesure | Résultat | Interprétation |
+|---|---:|---|
+| Démarrage, 10 passages | min 1 922 ms ; médiane 1 939 ms ; moyenne 1 951,5 ms ; p90 1 956 ms ; max 2 047 ms | Temps très stable, mais proche de deux secondes |
+| Démarrage graphique isolé | 133 frames ; 8 janky modernes (6,02 %) ; p90 38 ms ; p95 89 ms ; p99 1 050 ms | Le chemin critique initial contient un blocage long |
+| Repos au premier plan, 20 s | CPU moyen 5,05 % ; max 25 % ; 89 threads | Réveils périodiques visibles tant que Home est affiché |
+| Repos en arrière-plan, 20 s | CPU moyen 0,35 % ; max 5 % | La charge résiduelle chute fortement une fois Home masqué |
+| Mémoire au premier plan | PSS 340 528 KiB ; RSS 419 708 KiB | Empreinte élevée, en partie propre au build debug et aux bibliothèques natives |
+| Mémoire en arrière-plan | PSS 283 008 KiB ; RSS 365 988 KiB | Environ 57,5 MiB de PSS rendus/récupérés après passage sur Home Android |
+| Défilement Home, 12 balayages | 405 frames ; 38 janky (9,38 %) ; p50 24 ms ; p90 36 ms ; p95 57 ms ; p99 200 ms | Fluidité perfectible sur une page réelle riche en couvertures |
+| Température après scénario | AP 36 °C ; batterie 30,7 °C ; peau 32,4 °C ; statut 0 | Aucun throttling thermique pendant la mesure courte |
+
+Le démarrage isolé a produit `Skipped 60 frames` et un GC concurrent de 202 ms après environ 31 MiB libérés. Le GPU reste rapide sur la majorité des frames ; le coût initial se situe surtout sur le thread principal, les allocations et le chargement applicatif.
+
+Le profil par thread au premier plan attribue l’essentiel des pointes à `OkHttp TaskRunner`, aux `DefaultDispatcher`, au nettoyeur de références Komelia et à la connexion SSE vers le serveur local. `RenderThread` reste presque inactif hors interaction. Le journal montre aussi un `TaskQueueStatus(count=0)` reçu environ toutes les dix secondes : même vide, cet événement est loggé en debug, diffusé et observable par l’UI. Il ne suffit pas à expliquer seul tout le CPU moyen, mais constitue un réveil réseau/coroutine mesurable et une piste de coalescence ou de filtrage (`distinctUntilChanged`) pour l’état identique.
+
+Un script reproductible a été ajouté dans `scripts/measure-kora-debug.ps1`. Il :
+
+- refuse de s’exécuter depuis `main` ;
+- cible en dur `io.github.mkdevtests.kora.debug` ;
+- vérifie ADB, l’appareil et l’installation du paquet debug ;
+- mesure les démarrages, le CPU au premier plan et en arrière-plan, la mémoire, le défilement et la température ;
+- écrit `summary.json`, `startup.csv` et les dumps bruts sous `komelia-app/build/perf/<horodatage>` ;
+- ne construit, n’installe, n’efface ni ne réinitialise rien.
+
+La mesure courte de décharge n’est pas pertinente tant que la tablette est alimentée en USB. Un protocole batterie valable devra être réalisé batterie débranchée, luminosité et Wi-Fi fixés, après stabilisation thermique, sur des fenêtres de 30 à 60 minutes répétées au moins trois fois par scénario.
+
+### 16.5 Prochaine validation recommandée
 
 Connecter un appareil Android de test avec débogage USB, installer uniquement l’APK au suffixe `.debug`, puis exécuter dans cet ordre :
 
