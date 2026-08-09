@@ -26,6 +26,7 @@ class AudioPreReader(
     private val context: Context,
     private val tracks: List<AudioTranscriptTrack>,
     private val getPlaybackMs: () -> Long,
+    private val isPlaybackActive: () -> Boolean,
 ) {
     companion object {
         const val PRE_READ_AHEAD_MS = 11_000L
@@ -41,6 +42,10 @@ class AudioPreReader(
         readHeadMs = getPlaybackMs() + PRE_READ_AHEAD_MS
 
         while (!cancelled) {
+            if (!isPlaybackActive()) {
+                delay(1_000)
+                continue
+            }
             val playbackMs = getPlaybackMs()
 
             when {

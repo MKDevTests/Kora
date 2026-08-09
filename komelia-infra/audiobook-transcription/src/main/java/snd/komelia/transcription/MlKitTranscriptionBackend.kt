@@ -11,6 +11,7 @@ import com.google.mlkit.genai.speechrecognition.SpeechRecognizerOptions
 import com.google.mlkit.genai.speechrecognition.SpeechRecognizerResponse
 import com.google.mlkit.genai.speechrecognition.speechRecognizerRequest
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +38,9 @@ class MlKitTranscriptionBackend(
     val lastResponseType = AtomicReference<String>("none")
     val lastErrorMsg = AtomicReference<String>("-")
 
-    private val innerScope = CoroutineScope(scope.coroutineContext + SupervisorJob())
+    private val innerScope = CoroutineScope(
+        scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job])
+    )
     private val pipeWriter = MlKitAudioPipeWriter(innerScope)
     private var recognizer: SpeechRecognizer? = null
 

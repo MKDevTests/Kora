@@ -14,6 +14,7 @@ class LiveTranscriptEngine(
     private val context: Context,
     private val tracks: List<AudioTranscriptTrack>,
     private val getPlaybackMs: () -> Long,
+    private val isPlaybackActive: () -> Boolean,
     private val scope: CoroutineScope,
     private val backend: TranscriptionBackend,
     private val store: TranscriptStore,
@@ -22,7 +23,7 @@ class LiveTranscriptEngine(
         const val UI_TICK_INTERVAL_MS = 1_000L
     }
 
-    private val preReader = AudioPreReader(context, tracks, getPlaybackMs)
+    private val preReader = AudioPreReader(context, tracks, getPlaybackMs, isPlaybackActive)
 
     private val _engineState = MutableStateFlow<TranscriptEngineState>(TranscriptEngineState.Idle)
     val state: StateFlow<TranscriptEngineState> = _engineState
@@ -52,9 +53,14 @@ class LiveTranscriptEngine(
 
         tickerJob = scope.launch {
             while (isActive) {
+                val baseState = backend.state.value
+                if (!isPlaybackActive()) {
+                    _engineState.value = baseState
+                    delay(UI_TICK_INTERVAL_MS)
+                    continue
+                }
                 val playMs = getPlaybackMs()
                 _visibleSegments.value = store.visibleSegmentsForPlayback(playMs)
-                val baseState = backend.state.value
                 _engineState.value = if (baseState is TranscriptEngineState.Active) {
                     val totalSegs = store.segments.value.size
                     val vis = _visibleSegments.value.size

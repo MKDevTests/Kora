@@ -10,6 +10,7 @@ import com.storyteller.reader.Track
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -92,6 +93,9 @@ class AudiobookFolderController(
     private var trackStartOffsetsSeconds: List<Double> = emptyList()
 
     private var transcriptEngine: LiveTranscriptEngine? = null
+    private var transcriptionStartJob: Job? = null
+    private var transcriptStateJob: Job? = null
+    private var transcriptSegmentsJob: Job? = null
     private val _transcriptState = MutableStateFlow<TranscriptEngineState>(TranscriptEngineState.Idle)
     private val _liveTranscriptSegments = MutableStateFlow<List<TranscriptSegment>>(emptyList())
 
@@ -340,7 +344,9 @@ class AudiobookFolderController(
     }
 
     override fun startTranscription() {
-        coroutineScope.launch {
+        if (transcriptEngine != null || transcriptionStartJob?.isActive == true) return
+
+        transcriptionStartJob = coroutineScope.launch {
             val settings = transcriptionSettingsRepository.getSettings().first()
 
             val store = TranscriptStore()
@@ -377,22 +383,35 @@ class AudiobookFolderController(
                 context = context,
                 tracks = buildTranscriptTracks(),
                 getPlaybackMs = { (_elapsedSeconds.value * 1000).toLong() },
+                isPlaybackActive = { _isPlaying.value },
                 scope = coroutineScope,
                 backend = backend,
                 store = store,
             )
             transcriptEngine = engine
 
-            engine.state.onEach { _transcriptState.value = it }.launchIn(coroutineScope)
-            engine.visibleSegments.onEach { _liveTranscriptSegments.value = it }.launchIn(coroutineScope)
+            transcriptStateJob = engine.state
+                .onEach { _transcriptState.value = it }
+                .launchIn(coroutineScope)
+            transcriptSegmentsJob = engine.visibleSegments
+                .onEach { _liveTranscriptSegments.value = it }
+                .launchIn(coroutineScope)
 
             engine.start()
         }
     }
 
     override fun stopTranscription() {
+        transcriptionStartJob?.cancel()
+        transcriptionStartJob = null
+        transcriptStateJob?.cancel()
+        transcriptStateJob = null
+        transcriptSegmentsJob?.cancel()
+        transcriptSegmentsJob = null
         transcriptEngine?.stop()
         transcriptEngine = null
+        _liveTranscriptSegments.value = emptyList()
+        _transcriptState.value = TranscriptEngineState.Idle
     }
 
     override fun onTranscriptSeek(newPositionMs: Long) {
