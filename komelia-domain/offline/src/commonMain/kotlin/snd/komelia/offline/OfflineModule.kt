@@ -148,7 +148,7 @@ abstract class OfflineModule(
 
         val komgaEvents = MutableSharedFlow<KomgaEvent>(
             replay = 0,
-            extraBufferCapacity = Int.MAX_VALUE,
+            extraBufferCapacity = OFFLINE_EVENT_BUFFER_CAPACITY,
             onBufferOverflow = BufferOverflow.SUSPEND
         )
 
@@ -156,7 +156,13 @@ abstract class OfflineModule(
             .stateIn(moduleScope, SharingStarted.Eagerly, OfflineUser.ROOT)
 
 
-        val taskAddedEventFlow = MutableSharedFlow<TaskAddedEvent>(0, Int.MAX_VALUE, BufferOverflow.SUSPEND)
+        // Tasks are persisted before this wake-up signal is emitted. Conflating
+        // bursts cannot lose work because the processor scans the repository.
+        val taskAddedEventFlow = MutableSharedFlow<TaskAddedEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
         val taskEmitter = OfflineTaskEmitter(
             tasksRepository = repositories.tasksRepository,
             tasksFlow = taskAddedEventFlow
@@ -519,4 +525,8 @@ abstract class OfflineModule(
         logJournalRepository: LogJournalRepository,
         events: MutableSharedFlow<DownloadEvent>,
     ): PlatformDownloadManager
+
+    private companion object {
+        const val OFFLINE_EVENT_BUFFER_CAPACITY = 64
+    }
 }

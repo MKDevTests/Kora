@@ -5,7 +5,9 @@ import coil3.memory.MemoryCache
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -131,5 +133,14 @@ class ManagedKomgaEvents(
         memoryCache?.remove(MemoryCache.Key(key, mapOf("scale" to "Crop")))
         memoryCache?.remove(MemoryCache.Key(key, mapOf("scale" to "")))
 
+    }
+
+    suspend fun close() {
+        // Stop the manager first so it cannot publish a replacement session
+        // while the current one and its broadcaster are being torn down.
+        manageScope.coroutineContext[Job]?.cancelAndJoin()
+        session?.cancel()
+        session = null
+        broadcastScope.coroutineContext[Job]?.cancelAndJoin()
     }
 }

@@ -7,10 +7,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,7 +47,7 @@ class TaskProcessor(
                 SupervisorJob() +
                 CoroutineName("TaskDispatcher")
     )
-    private val taskFinishedEvents = MutableSharedFlow<JobId>(extraBufferCapacity = Int.MAX_VALUE)
+    private val taskFinishedEvents = Channel<JobId>(capacity = MAX_CONCURRENT_TASKS)
 
     private val jobCounter = AtomicInt(0)
     private val jobs = mutableMapOf<JobId, Job>()
@@ -61,7 +62,7 @@ class TaskProcessor(
 
             processAvailableTasks()
             taskAddedEvents.onEach { processAvailableTasks() }.launchIn(managementScope)
-            taskFinishedEvents.onEach { onTaskFinish(it) }.launchIn(managementScope)
+            taskFinishedEvents.receiveAsFlow().onEach { onTaskFinish(it) }.launchIn(managementScope)
         }
     }
 
@@ -70,16 +71,15 @@ class TaskProcessor(
             taskHandler.handleTask(task)
             tasksRepository.delete(task.uniqueName)
         } catch (e: CancellationException) {
-            logger.catching(e)
-            logJournalRepository.logError(e) { "Task processing error" }
-            tasksRepository.delete(task.uniqueName)
+            // Keep the persisted task. initialize() resets orphaned RUNNING
+            // entries so a module/server restart can resume it safely.
             throw e
         } catch (e: Exception) {
             logger.catching(e)
             logJournalRepository.logError(e) { "Task processing error" }
             tasksRepository.delete(task.uniqueName)
         } finally {
-            taskFinishedEvents.emit(jobId)
+            taskFinishedEvents.send(jobId)
         }
     }
 
@@ -90,19 +90,23 @@ class TaskProcessor(
 
     private suspend fun processAvailableTasks() {
         mutex.withLock {
-            do {
+            while (jobs.size < MAX_CONCURRENT_TASKS) {
                 val task = tasksRepository.takeNew()
-                if (task != null) {
-                    val jobId = jobCounter.incrementAndFetch()
-                    val job = processorScope.launch { processTask(jobId, task) }
-                    jobs[jobId] = job
-                }
-            } while (task != null)
+                    ?: break
+                val jobId = jobCounter.incrementAndFetch()
+                val job = processorScope.launch { processTask(jobId, task) }
+                jobs[jobId] = job
+            }
         }
     }
 
     fun close() {
         managementScope.cancel()
         processorScope.cancel()
+        taskFinishedEvents.cancel()
+    }
+
+    private companion object {
+        const val MAX_CONCURRENT_TASKS = 2
     }
 }

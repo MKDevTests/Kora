@@ -17,6 +17,7 @@ import androidx.work.WorkManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
@@ -40,13 +41,13 @@ class App : Application() {
         super.onCreate()
         initLogging()
         GlobalExceptionHandler.initialize(applicationContext)
-        saveLogcatSnapshot()
         setupNotificationChannels()
         initWorkManager()
         startAutobackupScheduler()
         startWidgetRefresher()
         observeAppBackgroundForWidgetRefresh()
         observeToolkitCompletion()
+        scheduleLogcatSnapshot()
     }
 
     /**
@@ -154,6 +155,17 @@ class App : Application() {
         lc.putProperty("LOG_LEVEL", logLevel)
     }
 
+    /**
+     * Keep native-crash diagnostics without blocking Application.onCreate().
+     * The delay lets the first frame and critical startup I/O finish first.
+     */
+    private fun scheduleLogcatSnapshot() {
+        appScope.launch(Dispatchers.IO) {
+            delay(LOGCAT_SNAPSHOT_DELAY_MS)
+            saveLogcatSnapshot()
+        }
+    }
+
     private fun saveLogcatSnapshot() {
         val logDir = File(getExternalFilesDir(null), "komelia/logs")
         logDir.mkdirs()
@@ -161,9 +173,11 @@ class App : Application() {
         try {
             val process = ProcessBuilder("logcat", "-d", "-t", "500", "-v", "threadtime", "*:D")
                 .redirectErrorStream(true)
+                .redirectOutput(outFile)
                 .start()
-            outFile.writeText(process.inputStream.bufferedReader().readText())
-            process.waitFor(5, TimeUnit.SECONDS)
+            if (!process.waitFor(LOGCAT_SNAPSHOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                process.destroy()
+            }
         } catch (_: Exception) {
             // best effort — non-fatal
         }
@@ -196,6 +210,11 @@ class App : Application() {
 
     private val toolkitChannelId = "kora_toolkit"
     private val toolkitNotificationId = 4201
+
+    private companion object {
+        const val LOGCAT_SNAPSHOT_DELAY_MS = 5_000L
+        const val LOGCAT_SNAPSHOT_TIMEOUT_SECONDS = 5L
+    }
 
     private fun initWorkManager() {
         val config = Configuration.Builder()

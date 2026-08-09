@@ -190,8 +190,9 @@ class OfflineTaskEmitter(
     }
 
     private suspend fun submitTasks(entries: Collection<TaskEntry>) {
+        if (entries.isEmpty()) return
         tasksRepository.save(entries)
-        entries.forEach { _ -> tasksFlow.emit(TaskAddedEvent) }
+        tasksFlow.emit(TaskAddedEvent)
     }
 
 }
