@@ -16,6 +16,7 @@ class RefreshNextBookWidgetAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
+        WidgetCache(context).markStale()
         NextBookWidget().update(context, glanceId)
     }
 }

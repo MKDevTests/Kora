@@ -31,6 +31,7 @@ data class WidgetCachedBook(
 class WidgetCache(private val context: Context) {
     private val dir: File = File(context.cacheDir, "widget_covers").apply { mkdirs() }
     private val indexFile: File = File(dir, "index.json")
+    private val refreshAttemptFile: File = File(dir, "last_refresh_attempt")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun load(): List<WidgetCachedBook> {
@@ -48,6 +49,32 @@ class WidgetCache(private val context: Context) {
         runCatching {
             indexFile.writeText(json.encodeToString(items))
         }.onFailure { logger.warn(it) { "Could not write widget cache index" } }
+    }
+
+    fun isRefreshDue(
+        nowMillis: Long = System.currentTimeMillis(),
+        maxAgeMillis: Long = DEFAULT_REFRESH_TTL_MS,
+    ): Boolean {
+        if (indexFile.isFile) {
+            val cacheAgeMillis = nowMillis - indexFile.lastModified()
+            if (cacheAgeMillis in 0 until maxAgeMillis) return false
+        }
+        if (!refreshAttemptFile.isFile) return true
+        val attemptAgeMillis = nowMillis - refreshAttemptFile.lastModified()
+        return attemptAgeMillis < 0L || attemptAgeMillis >= FAILED_REFRESH_RETRY_DELAY_MS
+    }
+
+    fun markRefreshAttempted() {
+        runCatching { refreshAttemptFile.writeText("") }
+            .onFailure { logger.debug(it) { "Could not record widget refresh attempt" } }
+    }
+
+    /** Force the next Glance update to fetch fresh data. */
+    fun markStale() {
+        runCatching { refreshAttemptFile.delete() }
+        if (indexFile.isFile && !indexFile.setLastModified(0L)) {
+            logger.debug { "Could not mark widget cache stale" }
+        }
     }
 
     /**
@@ -78,5 +105,10 @@ class WidgetCache(private val context: Context) {
         dir.listFiles { f -> f.extension == "webp" }
             ?.filter { it.absolutePath !in referenced }
             ?.forEach { runCatching { it.delete() } }
+    }
+
+    private companion object {
+        const val DEFAULT_REFRESH_TTL_MS = 30 * 60 * 1_000L
+        const val FAILED_REFRESH_RETRY_DELAY_MS = 5 * 60 * 1_000L
     }
 }

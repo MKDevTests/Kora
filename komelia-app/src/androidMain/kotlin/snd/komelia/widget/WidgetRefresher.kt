@@ -30,8 +30,10 @@ class WidgetRefresher(
         // Initial poke so the widget reflects the freshly-loaded dependency
         // graph as soon as the app starts (the user may not finish a book
         // before backgrounding, so onStop alone wouldn't cover this).
+        WidgetCache(context).markStale()
         refreshNow()
         events.events.collect {
+            WidgetCache(context).markStale()
             refreshNow()
         }
     }
