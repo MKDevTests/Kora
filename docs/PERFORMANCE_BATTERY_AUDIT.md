@@ -1470,7 +1470,68 @@ La priorité est de renforcer les frontières de cycle de vie et les politiques 
 
 ---
 
-## 16. Conclusion
+## 16. Journal d’implémentation sur la branche de travail
+
+Cette section distingue l’audit initial des corrections effectivement développées et validées le 9 août 2026. Tous les changements sont isolés sur la branche [`agent/debug-performance-battery`](https://github.com/MKDevTests/Kora/tree/agent/debug-performance-battery). La branche `main` est restée sur `9b83935ca673c4fd2c3c13583acb2cf479871662`. Aucune tâche Gradle release, signature release, installation sur appareil, fusion ou création de tag n’a été exécutée.
+
+### 16.1 Commits publiés
+
+| Commit | Lot | Résultat principal |
+|---|---|---|
+| `c7452dc9` | Réseau, démarrage et offline | Snapshot `logcat` sorti du démarrage principal, reconnexion SSE avec backoff/jitter, buffers offline bornés, processeur de tâches limité à deux travaux |
+| `f22d7eeb` | Téléchargements et widgets | Réseau requis par WorkManager, conservation du travail identique en cours, TTL/backoff/mutex de widget et invalidations ciblées |
+| `a5a54502` | Horloge audio | Suppression des pollings redondants à 500 ms, réutilisation du callback du lecteur et offsets de pistes pré-calculés |
+| `ed16b10c` | Cycle de vie | `SyncManager` possédé et fermé par `OfflineModule`, fermeture explicite de NCNN hors du thread principal |
+| `166d6bc1` | Transcription | Ticker ramené à 1 Hz, prélecture suspendue en pause, tampon PCM primitif, scopes enfants rattachés, suppression de `GlobalScope`, démarrage unique et collecteurs annulables |
+
+### 16.2 État par recommandation
+
+| Domaine | État | Détail et limite actuelle |
+|---|---|---|
+| Dump `logcat` au démarrage | Implémenté | Différé de cinq secondes, exécuté hors du thread principal, flux écrit directement dans le fichier et processus borné par timeout |
+| Reconnexion SSE | Implémenté en grande partie | Backoff exponentiel de 1 à 120 secondes, jitter de 25 %, remise à zéro après événement, arrêt sur 401/403 et annulation explicite de session ; l’observation dédiée de la connectivité reste à ajouter |
+| Buffers et tâches offline | Implémenté en grande partie | Buffers critiques bornés et concurrence limitée à deux ; la synchronisation serveur N+1 reste inchangée faute d’API bulk/delta validée |
+| WorkManager | Partiel | Contrainte réseau `CONNECTED` et déduplication `KEEP` ajoutées ; la classification fine des erreurs transitoires, le retry et les réglages Wi-Fi/charge restent à faire |
+| Widgets | Implémenté pour les réveils principaux | TTL succès de 30 minutes, backoff échec de 5 minutes, mutex partagé, cache réutilisé et invalidation sur événements utiles |
+| Horloge audio | Implémenté | Les contrôleurs n’ajoutent plus leur propre boucle à 2 Hz ; ils consomment la publication de position déjà produite par `AudiobookPlayer` |
+| Offsets audio | Implémenté | Table d’offsets calculée une fois au chargement et réutilisée pour la position globale, les seeks et les pistes de transcription |
+| Transcription en pause | Implémenté | Le prélecteur ne décode plus de nouveaux blocs PCM en pause ; le ticker ne rescane plus les segments dans cet état |
+| Boxing PCM Whisper | Implémenté | `MutableList<Short>` et `ShortArray.toList()` supprimés au profit d’un `ShortArray` extensible et réutilisé |
+| Cycle de vie transcription | Amélioré, à tester sur appareil | Démarrage doublon bloqué, collecteurs conservés/annulés, scopes rattachés au parent, contexte chargé par une session annulée immédiatement libéré ; l’attente explicite de tous les jobs à `stop()` reste à finaliser |
+| Création répétée de `MediaCodec` | Non implémenté | Refonte native sensible : nécessite des tests de seek, changement de piste, pause/reprise et compatibilité codec sur plusieurs appareils |
+| Fermeture NCNN | Implémenté, validation runtime requise | L’instance est explicitement fermée sur `Dispatchers.Default` lors de la fermeture du module ; les pilotes Vulkan doivent être testés sur appareil réel |
+| File NCNN bornée/priorisée | Non implémenté | Le canal illimité et l’inférence `NonCancellable` nécessitent une refonte du scheduler et des tests de destruction de bitmaps/contexte GPU |
+| Tiling pendant le pinch | Non implémenté | Demande des mesures de viewport, jank et heap bitmap sur appareil ; une modification aveugle risquerait une régression visuelle ou native |
+| Pré-détection panneaux adaptative | Non implémenté | Nécessite une politique de préchargement et un cache versionné, puis des mesures ONNX réelles |
+| Macrobenchmark et mesure batterie | Bloqué par l’environnement matériel | Aucun appareil ADB connecté pendant cette session ; aucun pourcentage de gain n’est donc annoncé |
+
+### 16.3 Validation effectuée
+
+- compilation `:komelia-infra:audiobook-transcription:compileDebugKotlinAndroid` réussie ;
+- compilation `:komelia-app:compileDebugSources` réussie ;
+- script officiel `scripts/build-kora-debug.sh` réussi sur la branche de travail ;
+- APK contrôlé avec `aapt` : package `io.github.mkdevtests.kora.debug`, version `1.4.6`, `minSdk 26`, `targetSdk 36` ;
+- APK produit dans `komelia-app/build/outputs/apk/debug/kora-app-debug.apk` ;
+- graphe Graphify reconstruit après le dernier changement : 23 381 nœuds et 35 109 arêtes ;
+- sous-modules restés sur leurs commits verrouillés ;
+- aucun appareil détecté par `adb devices`, donc aucune installation ni mesure runtime.
+
+Le build émet encore des avertissements D8 de réécriture de métadonnées Kotlin (`Should never be called`). Ils étaient déjà reproductibles avant les derniers lots, n’empêchent pas la génération de l’APK et doivent faire l’objet d’un chantier séparé d’alignement Kotlin/AGP/R8.
+
+### 16.4 Prochaine validation recommandée
+
+Connecter un appareil Android de test avec débogage USB, installer uniquement l’APK au suffixe `.debug`, puis exécuter dans cet ordre :
+
+1. vingt changements de serveur en observant connexions SSE, jobs, threads et heap ;
+2. trente minutes de veille écran éteint pour mesurer les réveils réseau et widgets ;
+3. lecture audio et transcription Whisper avec séquences pause/reprise/seek/changement de piste ;
+4. fermeture du lecteur pendant le chargement du modèle et pendant une inférence ;
+5. lecture image avec pinch continu, NCNN activé puis désactivé, en relevant jank, heap native, température et énergie ;
+6. seulement après ces mesures, refonte du décodeur persistant, de la file NCNN et du tiling.
+
+---
+
+## 17. Conclusion
 
 Kora ne semble pas souffrir d’un unique défaut général d’architecture. Les coûts viennent surtout de quelques mécanismes puissants dont la politique d’exécution est trop permissive : bibliothèques natives initialisées tôt, préchargement IA, queues sans limite, scopes indépendants et polling fréquent.
 
