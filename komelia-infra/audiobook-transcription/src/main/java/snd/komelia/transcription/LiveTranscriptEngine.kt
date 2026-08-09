@@ -18,6 +18,10 @@ class LiveTranscriptEngine(
     private val backend: TranscriptionBackend,
     private val store: TranscriptStore,
 ) {
+    private companion object {
+        const val UI_TICK_INTERVAL_MS = 1_000L
+    }
+
     private val preReader = AudioPreReader(context, tracks, getPlaybackMs)
 
     private val _engineState = MutableStateFlow<TranscriptEngineState>(TranscriptEngineState.Idle)
@@ -60,7 +64,7 @@ class LiveTranscriptEngine(
                 } else {
                     baseState
                 }
-                delay(200)
+                delay(UI_TICK_INTERVAL_MS)
             }
         }
     }

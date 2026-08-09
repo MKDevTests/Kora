@@ -10,8 +10,6 @@ import com.storyteller.reader.Track
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -91,7 +89,7 @@ class AudiobookFolderController(
     val isCurrentPositionBookmarked: StateFlow<Boolean> = _isCurrentPositionBookmarked
 
     private var loadedTracks: List<Track> = emptyList()
-    private var elapsedTimeJob: Job? = null
+    private var trackStartOffsetsSeconds: List<Double> = emptyList()
 
     private var transcriptEngine: LiveTranscriptEngine? = null
     private val _transcriptState = MutableStateFlow<TranscriptEngineState>(TranscriptEngineState.Idle)
@@ -109,22 +107,17 @@ class AudiobookFolderController(
             }
 
             override fun onPositionChanged(position: Double) {
-                // Not used — elapsed time is tracked via polling loop
+                updatePlaybackPosition(player.getCurrentTrackIndex(), position)
             }
 
             override fun onTrackChanged(track: Track, position: Double, index: Int) {
-                _currentTrackIndex.value = index
-                _currentChapterIndex.value = findCurrentChapter(_chapters.value, index, position)
-                updateIsCurrentPositionBookmarked()
+                updatePlaybackPosition(index, position)
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
-                if (isPlaying) {
-                    startElapsedTimePolling()
-                } else {
-                    elapsedTimeJob?.cancel()
-                    elapsedTimeJob = null
+                if (!isPlaying) {
+                    updatePlaybackPosition(player.getCurrentTrackIndex(), player.getPosition())
                     savePosition()
                 }
             }
@@ -212,6 +205,7 @@ class AudiobookFolderController(
         val (folderTracks, playerTracks, chapters) = trackData
 
         _tracks.value = folderTracks
+        trackStartOffsetsSeconds = buildTrackStartOffsets(folderTracks)
         _chapters.value = chapters
         _totalDurationSeconds.value = if (chapters.isNotEmpty()) {
             chapters.sumOf { it.durationSeconds }
@@ -233,7 +227,7 @@ class AudiobookFolderController(
         // Must be called on Main — MediaController.buildAsync() requires a looper thread
         player.loadTracks(playerTracks, initialIndex, initialPositionMs)
         _currentTrackIndex.value = initialIndex
-        _elapsedSeconds.value = folderTracks.take(initialIndex).sumOf { it.durationSeconds } + initialPositionMs
+        _elapsedSeconds.value = trackStartOffsetSeconds(initialIndex) + initialPositionMs
 
         val initialChapterIndex = if (chapters.isNotEmpty()) {
             findCurrentChapter(chapters, initialIndex, initialPositionMs)
@@ -342,8 +336,6 @@ class AudiobookFolderController(
     override fun release() {
         stopTranscription()
         savePosition()
-        elapsedTimeJob?.cancel()
-        elapsedTimeJob = null
         player.unload()
     }
 
@@ -409,7 +401,7 @@ class AudiobookFolderController(
 
     private fun buildTranscriptTracks(): List<AudioTranscriptTrack> {
         return loadedTracks.mapIndexed { idx, track ->
-            val offsetMs = _tracks.value.take(idx).sumOf { it.durationSeconds * 1000 }.toLong()
+            val offsetMs = (trackStartOffsetSeconds(idx) * 1000).toLong()
             AudioTranscriptTrack(
                 uri = track.uri,
                 bookOffsetMs = offsetMs,
@@ -432,10 +424,7 @@ class AudiobookFolderController(
         val track = tracks[index]
         player.seekTo(track.relativeUri, positionSeconds, skipEmit = false)
         // Immediately update StateFlows so the UI doesn't jump back when paused
-        val prevDuration = _tracks.value.take(index).sumOf { it.durationSeconds }
-        _elapsedSeconds.value = prevDuration + positionSeconds
-        _currentTrackIndex.value = index
-        updateIsCurrentPositionBookmarked()
+        updatePlaybackPosition(index, positionSeconds)
         onTranscriptSeek((_elapsedSeconds.value * 1000).toLong())
     }
 
@@ -498,20 +487,26 @@ class AudiobookFolderController(
         return player.getPosition()
     }
 
-    private fun startElapsedTimePolling() {
-        elapsedTimeJob?.cancel()
-        elapsedTimeJob = coroutineScope.launch {
-            while (true) {
-                val index = player.getCurrentTrackIndex()
-                val position = player.getPosition()
-                _currentTrackIndex.value = index
-                val prevDuration = _tracks.value.take(index).sumOf { it.durationSeconds }
-                _elapsedSeconds.value = prevDuration + position
-                _currentChapterIndex.value = findCurrentChapter(_chapters.value, index, position)
-                updateIsCurrentPositionBookmarked()
-                delay(500)
-            }
+    private fun updatePlaybackPosition(index: Int, positionSeconds: Double) {
+        if (index !in loadedTracks.indices) return
+        _currentTrackIndex.value = index
+        _elapsedSeconds.value = trackStartOffsetSeconds(index) + positionSeconds
+        _currentChapterIndex.value = findCurrentChapter(_chapters.value, index, positionSeconds)
+        updateIsCurrentPositionBookmarked(index, positionSeconds)
+    }
+
+    private fun trackStartOffsetSeconds(index: Int): Double {
+        return trackStartOffsetsSeconds.getOrElse(index) { 0.0 }
+    }
+
+    private fun buildTrackStartOffsets(tracks: List<AudioFolderTrack>): List<Double> {
+        val offsets = ArrayList<Double>(tracks.size)
+        var elapsedSeconds = 0.0
+        for (track in tracks) {
+            offsets += elapsedSeconds
+            elapsedSeconds += track.durationSeconds
         }
+        return offsets
     }
 
     private fun extractChapters(
@@ -607,9 +602,10 @@ class AudiobookFolderController(
         }
     }
 
-    private fun updateIsCurrentPositionBookmarked() {
-        val index = _currentTrackIndex.value
-        val positionSeconds = player.getPosition()
+    private fun updateIsCurrentPositionBookmarked(
+        index: Int = _currentTrackIndex.value,
+        positionSeconds: Double = player.getPosition(),
+    ) {
         _isCurrentPositionBookmarked.value = _audioBookmarks.value.any { bookmark ->
             bookmark.trackIndex == index && kotlin.math.abs(bookmark.positionSeconds - positionSeconds) < 5.0
         }

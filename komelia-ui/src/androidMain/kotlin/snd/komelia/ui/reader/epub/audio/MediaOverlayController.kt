@@ -44,8 +44,7 @@ class MediaOverlayController(
     override val totalDurationSeconds: StateFlow<Double> = _totalDurationSeconds
 
     private var loadedTracks: List<Track> = emptyList()
-    private var currentTrackIndex = 0
-    private var elapsedTimeJob: Job? = null
+    private var trackStartOffsetsSeconds: List<Double> = emptyList()
 
     override fun setVolume(v: Float) {
         val clamped = v.coerceIn(0f, 1f)
@@ -90,29 +89,25 @@ class MediaOverlayController(
                 if (isPlaying) {
                     // onClipChanged doesn't fire for the clip already current when play() is called.
                     // Apply lastHighlightedClip here so the first segment is highlighted immediately.
-                    val clip = lastHighlightedClip ?: return
-                    val view = epubView ?: return
-                    audioNavigatingAt = System.currentTimeMillis()
-                    view.pendingProps.isPlaying = true
-                    view.pendingProps.locator = clip.locator
-                    view.finalizeProps()
-                    schedulePageTurnIfNeeded(clip)
-                    elapsedTimeJob = coroutineScope.launch {
-                        while (true) {
-                            val prev = loadedTracks.take(currentTrackIndex).sumOf { it.duration }
-                            _elapsedSeconds.value = prev + player.getPosition()
-                            delay(500)
-                        }
+                    val clip = lastHighlightedClip
+                    val view = epubView
+                    if (clip != null && view != null) {
+                        audioNavigatingAt = System.currentTimeMillis()
+                        view.pendingProps.isPlaying = true
+                        view.pendingProps.locator = clip.locator
+                        view.finalizeProps()
+                        schedulePageTurnIfNeeded(clip)
                     }
                 } else {
+                    updateElapsedPosition(player.getCurrentTrackIndex(), player.getPosition())
                     pageTurnJob?.cancel()
                     lastScheduledClip = null
                     epubView?.clearHighlightFragment()
-                    elapsedTimeJob?.cancel()
                 }
             }
 
             override fun onPositionChanged(position: Double) {
+                updateElapsedPosition(player.getCurrentTrackIndex(), position)
                 if (!_isPlaying.value) return
                 val currentClip = player.getCurrentClip() ?: return
                 if (currentClip == lastHighlightedClip) return
@@ -125,10 +120,25 @@ class MediaOverlayController(
             }
 
             override fun onTrackChanged(track: Track, position: Double, index: Int) {
-                currentTrackIndex = index
+                updateElapsedPosition(index, position)
             }
         }
     )
+
+    private fun updateElapsedPosition(index: Int, positionSeconds: Double) {
+        if (index !in loadedTracks.indices) return
+        _elapsedSeconds.value = trackStartOffsetsSeconds.getOrElse(index) { 0.0 } + positionSeconds
+    }
+
+    private fun buildTrackStartOffsets(tracks: List<Track>): List<Double> {
+        val offsets = ArrayList<Double>(tracks.size)
+        var elapsedSeconds = 0.0
+        for (track in tracks) {
+            offsets += elapsedSeconds
+            elapsedSeconds += track.duration
+        }
+        return offsets
+    }
 
     @OptIn(InternalReadiumApi::class)
     suspend fun initialize(clips: List<OverlayPar>, initialLocator: Locator?) {
@@ -178,6 +188,7 @@ class MediaOverlayController(
 
         if (tracks.isNotEmpty()) {
             loadedTracks = tracks
+            trackStartOffsetsSeconds = buildTrackStartOffsets(tracks)
             _totalDurationSeconds.value = tracks.sumOf { it.duration }
 
             val initialClip = initialLocator?.let { findClipForLocator(it) }
@@ -188,6 +199,7 @@ class MediaOverlayController(
 
             logger.debug { "[epub3-audio] initialize: calling loadTracks with initialIndex=$initialIndex initialPosition=$initialPosition" }
             player.loadTracks(tracks, initialIndex, initialPosition)
+            updateElapsedPosition(initialIndex, initialPosition)
             logger.info { "[EPUB-DIAG] [AUDIO-READY] ClipsLoaded: ${clips.size} | TracksCreated: ${loadedTracks.size}" }
             logger.debug { "[epub3-audio] initialize: loadTracks returned" }
         }
@@ -392,7 +404,6 @@ class MediaOverlayController(
     }
 
     override fun release() {
-        elapsedTimeJob?.cancel()
         pageTurnJob?.cancel()
         player.unload()
         epubView = null
