@@ -68,6 +68,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import com.storyteller.reader.BundledFonts
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
@@ -411,6 +412,26 @@ private fun AppearanceTab(
     }
 }
 
+@Composable
+private fun FontGroupHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
+    )
+}
+
+/** Occupies the leading slot either way, so the labels stay on one line. */
+@Composable
+private fun SelectedFontMark(selected: Boolean) {
+    if (selected) {
+        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+    } else {
+        Box(Modifier.size(18.dp))
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FontTextTab(
@@ -421,28 +442,33 @@ private fun FontTextTab(
     onLoadFont: (PlatformFile) -> Unit,
     onDeleteFont: (UserFont) -> Unit,
 ) {
-    val builtInFonts = listOf("Literata", "OpenDyslexic")
     var dropdownExpanded by remember { mutableStateOf(false) }
     val fontPicker = rememberFilePickerLauncher(
         type = FileKitType.File(listOf("ttf", "otf")),
     ) { file -> file?.let { onLoadFont(it) } }
+    val strings = LocalStrings.current.ui
+    // What the field shows: the picker's label, not the css family name, so the
+    // list reads "Source Serif" rather than "Source Serif 4".
+    val selectedLabel = BundledFonts.all.firstOrNull { it.family == settings.fontFamily }?.label
+        ?: userFonts.firstOrNull { it.canonicalName == settings.fontFamily }?.name
+        ?: settings.fontFamily
 
     Column {
-        // Font family — dropdown with built-in + user fonts
+        // Font family — dropdown with bundled + user fonts
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            Text(LocalStrings.current.ui.font, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
+            Text(strings.font, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(112.dp))
             ExposedDropdownMenuBox(
                 expanded = dropdownExpanded,
                 onExpandedChange = { dropdownExpanded = it },
                 modifier = Modifier.weight(1f),
             ) {
                 OutlinedTextField(
-                    value = settings.fontFamily,
+                    value = selectedLabel,
                     onValueChange = {},
                     readOnly = true,
                     singleLine = true,
@@ -456,21 +482,33 @@ private fun FontTextTab(
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false },
                 ) {
-                    builtInFonts.forEach { name ->
-                        DropdownMenuItem(
-                            text = { Text(name) },
-                            onClick = {
-                                onSettingsChange(settings.copy(fontFamily = name))
-                                dropdownExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                        )
+                    val groups = listOf(
+                        strings.fontGroupSerif to BundledFonts.serif,
+                        strings.fontGroupAccessible to BundledFonts.accessible,
+                        strings.fontGroupSystem to BundledFonts.system,
+                    )
+                    groups.forEachIndexed { index, (header, fonts) ->
+                        if (index > 0) HorizontalDivider()
+                        FontGroupHeader(header)
+                        fonts.forEach { font ->
+                            DropdownMenuItem(
+                                text = { Text(font.label) },
+                                leadingIcon = { SelectedFontMark(font.family == settings.fontFamily) },
+                                onClick = {
+                                    onSettingsChange(settings.copy(fontFamily = font.family))
+                                    dropdownExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                            )
+                        }
                     }
                     if (userFonts.isNotEmpty()) {
                         HorizontalDivider()
+                        FontGroupHeader(strings.fontGroupYours)
                         userFonts.forEach { font ->
                             DropdownMenuItem(
                                 text = { Text(font.name) },
+                                leadingIcon = { SelectedFontMark(font.canonicalName == settings.fontFamily) },
                                 onClick = {
                                     onSettingsChange(settings.copy(fontFamily = font.canonicalName))
                                     dropdownExpanded = false
@@ -478,7 +516,7 @@ private fun FontTextTab(
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         if (settings.fontFamily == font.canonicalName) {
-                                            onSettingsChange(settings.copy(fontFamily = builtInFonts.first()))
+                                            onSettingsChange(settings.copy(fontFamily = BundledFonts.default.family))
                                         }
                                         onDeleteFont(font)
                                         dropdownExpanded = false
@@ -496,7 +534,7 @@ private fun FontTextTab(
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text(LocalStrings.current.ui.loadFont) },
+                        text = { Text(strings.loadFont) },
                         leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             dropdownExpanded = false

@@ -70,46 +70,27 @@ class EpubFragment : Fragment {
                 lst.props!!.locator,
                 listener = lst,
                 configuration = EpubNavigatorFragment.Configuration {
-                    servedAssets = listOf(
-                        "fonts/OpenDyslexic-Regular.otf",
-                        "fonts/OpenDyslexic-Bold.otf",
-                        "fonts/OpenDyslexic-Bold-Italic.otf",
-                        "fonts/OpenDyslexic-Italic.otf",
-                        "fonts/Literata_500Medium.ttf"
-                    )
+                    servedAssets = BundledFonts.servedAssets
                     shouldApplyInsetsPadding = lst.shouldApplyInsetsPadding
 
-                    addFontFamilyDeclaration(FontFamily("OpenDyslexic")) {
-                        addFontFace {
-                            addSource("fonts/OpenDyslexic-Regular.otf")
-                            setFontStyle(FontStyle.NORMAL)
-                            setFontWeight(FontWeight.NORMAL)
-                        }
-
-                        addFontFace {
-                            addSource("fonts/OpenDyslexic-Bold.otf")
-                            setFontStyle(FontStyle.NORMAL)
-                            setFontWeight(FontWeight.BOLD)
-                        }
-
-                        addFontFace {
-                            addSource("fonts/OpenDyslexic-Bold-Italic.otf")
-                            setFontStyle(FontStyle.ITALIC)
-                            setFontWeight(FontWeight.BOLD)
-                        }
-
-                        addFontFace {
-                            addSource("fonts/OpenDyslexic-Italic.otf")
-                            setFontStyle(FontStyle.ITALIC)
-                            setFontWeight(FontWeight.NORMAL)
-                        }
-                    }
-
-                    addFontFamilyDeclaration(FontFamily("Literata")) {
-                        addFontFace {
-                            addSource("fonts/Literata_500Medium.ttf")
-                            setFontStyle(FontStyle.NORMAL)
-                            setFontWeight(FontWeight.NORMAL)
+                    // Declared from the same list the picker offers, so a font
+                    // can no longer be offered without being served — which is
+                    // precisely how the default came to point at a file that did
+                    // not exist. Families with no faces need no declaration: the
+                    // system or Readium's own assets answer for those.
+                    BundledFonts.all.forEach { font ->
+                        if (font.faces.isEmpty()) return@forEach
+                        addFontFamilyDeclaration(FontFamily(font.family)) {
+                            font.faces.forEach { face ->
+                                addFontFace {
+                                    addSource(face.asset)
+                                    setFontStyle(if (face.italic) FontStyle.ITALIC else FontStyle.NORMAL)
+                                    when (face) {
+                                        is BundledFontFace.Static -> setFontWeight(face.weight)
+                                        is BundledFontFace.Variable -> setFontWeight(face.weights)
+                                    }
+                                }
+                            }
                         }
                     }
 
