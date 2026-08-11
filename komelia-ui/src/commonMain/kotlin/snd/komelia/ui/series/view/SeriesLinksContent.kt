@@ -2,6 +2,8 @@ package snd.komelia.ui.series.view
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +21,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -209,6 +212,7 @@ private fun LinkSection(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddLinkDialog(
     state: SeriesLinksState,
@@ -264,20 +268,28 @@ private fun AddLinkDialog(
                         items(results, key = { it.id.value }) { s -> SearchResultRow(s) { selected = s } }
                     }
 
+                    // Chips wrapping across a few rows rather than nine
+                    // full-width buttons stacked: stacked, the list overflowed
+                    // the dialog's 480 dp and everything past "Colour edition"
+                    // was clipped away with nothing on screen to suggest it was
+                    // there. Every kind has to be visible at once — a kind you
+                    // have to go looking for is a kind nobody picks.
                     else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "Link “${sel.metadata.title}” as:",
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        KindButton("Other version") { state.linkVersion(sel.id); onDismiss() }
-                        KindButton("Sequel") { state.linkRelation(sel.id, SeriesRelationType.SEQUEL); onDismiss() }
-                        KindButton("Prequel") { state.linkRelation(sel.id, SeriesRelationType.PREQUEL); onDismiss() }
-                        KindButton("Spin-off") { state.linkRelation(sel.id, SeriesRelationType.SPIN_OFF); onDismiss() }
-                        KindButton("Other language") { state.linkRelation(sel.id, SeriesRelationType.LANGUAGE); onDismiss() }
-                        KindButton("Colour edition") { state.linkRelation(sel.id, SeriesRelationType.COLORED); onDismiss() }
-                        KindButton("Chapters") { state.linkRelation(sel.id, SeriesRelationType.CHAPTERS); onDismiss() }
-                        KindButton("Volumes") { state.linkRelation(sel.id, SeriesRelationType.VOLUMES); onDismiss() }
-                        KindButton("Related") { state.linkRelation(sel.id, SeriesRelationType.RELATED); onDismiss() }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            KindChip("Other version") { state.linkVersion(sel.id); onDismiss() }
+                            KindChip("Sequel") { state.linkRelation(sel.id, SeriesRelationType.SEQUEL); onDismiss() }
+                            KindChip("Prequel") { state.linkRelation(sel.id, SeriesRelationType.PREQUEL); onDismiss() }
+                            KindChip("Spin-off") { state.linkRelation(sel.id, SeriesRelationType.SPIN_OFF); onDismiss() }
+                            KindChip("Other language") { state.linkRelation(sel.id, SeriesRelationType.LANGUAGE); onDismiss() }
+                            KindChip("Colour edition") { state.linkRelation(sel.id, SeriesRelationType.COLORED); onDismiss() }
+                            KindChip("Chapters") { state.linkRelation(sel.id, SeriesRelationType.CHAPTERS); onDismiss() }
+                            KindChip("Volumes") { state.linkRelation(sel.id, SeriesRelationType.VOLUMES); onDismiss() }
+                            KindChip("Related") { state.linkRelation(sel.id, SeriesRelationType.RELATED); onDismiss() }
+                        }
                         TextButton(onClick = { selected = null }) { Text(LocalStrings.current.ui.backToResults) }
                     }
                 }
@@ -333,8 +345,8 @@ private fun SearchResultRow(series: KomgaSeries, onClick: () -> Unit) {
 }
 
 @Composable
-private fun KindButton(label: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label) }
+private fun KindChip(label: String, onClick: () -> Unit) {
+    AssistChip(onClick = onClick, label = { Text(label) })
 }
 
 /** Debounced reaction to a changing query string. */
