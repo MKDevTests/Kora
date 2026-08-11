@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import snd.komelia.image.processing.ImageProcessingPipeline
 import kotlin.concurrent.Volatile
+import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlin.time.TimeSource
@@ -40,6 +41,9 @@ import kotlin.time.measureTime
 private const val tileThreshold1 = 2048 * 2048
 private const val tileThreshold2 = 4096 * 4096
 private const val tileThreshold3 = 6144 * 6144
+
+/** Quarter steps: the decode zoom snaps to 1.25, 1.5, 1.75, 2… See quantizeDecodeZoom. */
+private const val DECODE_ZOOM_STEPS = 4f
 
 
 expect class RenderImage
@@ -261,6 +265,25 @@ abstract class TilingReaderImage(
         )
     }
 
+    /**
+     * Snaps the zoom used to decode pixels onto quarter steps.
+     *
+     * A pinch produces a new scale factor on essentially every frame, and any
+     * change makes [doTile] rebuild every tile of the page — the full-image
+     * window is deliberate there, it guarantees coverage whichever way the
+     * reader then navigates. With the raw factor a single pinch could rebuild
+     * the page twenty times a second.
+     *
+     * Rounding up rather than down matters: the decoded tiles are then always
+     * at least as detailed as what is on screen, so this trades a little
+     * memory for never showing a softer page than before. Zoom at or below 1,
+     * which is ordinary page-by-page reading, is left exactly as it was.
+     */
+    private fun quantizeDecodeZoom(zoom: Float): Float {
+        if (zoom <= 1f) return zoom
+        return ceil(zoom * DECODE_ZOOM_STEPS) / DECODE_ZOOM_STEPS
+    }
+
     private suspend fun doUpdate(request: UpdateRequest) {
         lastUpdateRequest = request
 
@@ -273,7 +296,10 @@ abstract class TilingReaderImage(
         val zoomFactor = request.zoomFactor
         val visibleDisplaySize = request.visibleDisplaySize
 
-        val actualScaleFactor = displayScaleFactor * zoomFactor
+        // Decode resolution only. Everything below still uses the raw zoom, so
+        // the layout, the tile geometry and the scroll bounds are untouched —
+        // quantizing those would move the image under the user's fingers.
+        val actualScaleFactor = displayScaleFactor * quantizeDecodeZoom(zoomFactor)
 
         val dstWidth = displaySize.width * zoomFactor
         val dstHeight = displaySize.height * zoomFactor
