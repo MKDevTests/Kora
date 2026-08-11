@@ -29,9 +29,21 @@
 # is why release builds since R8 was enabled wrote nothing to komelia.log:
 # RollingFileAppender and AsyncAppender were both gone, and even
 # PatternLayoutEncoder had lost its no-arg constructor.
-# Keeping the whole tree rather than naming classes one by one: the XML can
-# reference any of them, and logback-android is small next to a 25 MB dex.
--keep class ch.qos.logback.** { *; }
+# Keep exactly what logback.xml names, and nothing more. Keeping the whole
+# ch.qos.logback tree also retains SMTPAppenderBase, whose javax.mail imports
+# are not on the classpath, and R8 fails the build on the missing classes.
+-keep class ch.qos.logback.classic.android.** { *; }
+-keep class ch.qos.logback.classic.pattern.** { *; }
+-keep class ch.qos.logback.core.rolling.** { *; }
+-keep class ch.qos.logback.classic.AsyncAppender { *; }
+-keep class ch.qos.logback.core.AsyncAppenderBase { *; }
+-keep class ch.qos.logback.classic.encoder.** { *; }
+-keep class ch.qos.logback.core.encoder.** { *; }
+# FileSize backs <maxFileSize>; Joran converts the string through it.
+-keep class ch.qos.logback.core.util.FileSize { *; }
+# Insurance: if any keep above ever drags the mail appender back in, this
+# turns a build failure into silence rather than another round trip.
+-dontwarn javax.mail.**
 -keep class io.github.snd_r.komelia.** { *; }
 -keep class snd.komelia.** { *; }
 
