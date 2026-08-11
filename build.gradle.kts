@@ -1,6 +1,25 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 
+// AGP 8.13 ships an R8 that predates Kotlin 2.4's metadata format, so every
+// class it cannot parse produces "An error occurred when parsing kotlin
+// metadata" — hundreds of lines per release build. Google's compatibility
+// table pairs Kotlin 2.4 with R8 9.1.29, which AGP will not bundle until a
+// later release, so it is pinned here instead of moving to AGP 9.
+//
+// This is a cross-major override of the R8 that AGP was built against.
+// Validate it on the releaseTest variant (KoraR8), never on debug: AGP
+// disables optimization for debuggable builds, so a debug build proves
+// nothing about R8.
+buildscript {
+    repositories {
+        maven("https://storage.googleapis.com/r8-releases/raw")
+    }
+    dependencies {
+        classpath("com.android.tools:r8:9.1.29")
+    }
+}
+
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times
     // in each subproject's classloader
