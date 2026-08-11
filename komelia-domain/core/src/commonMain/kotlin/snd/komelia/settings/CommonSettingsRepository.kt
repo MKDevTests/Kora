@@ -2,6 +2,7 @@ package snd.komelia.settings
 
 import kotlinx.coroutines.flow.Flow
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.settings.model.StartupScreen
@@ -188,9 +189,9 @@ interface CommonSettingsRepository {
     fun getShareLinksViaKomga(): Flow<Boolean>
     suspend fun putShareLinksViaKomga(enabled: Boolean)
 
-    /** Hide series whose title ends with "(Chap)", everywhere. */
-    fun getHideChapterSeries(): Flow<Boolean>
-    suspend fun putHideChapterSeries(enabled: Boolean)
+    /** What to do with series whose title ends with "(Chap)", everywhere. */
+    fun getChapterSeriesFilter(): Flow<ChapterSeriesFilter>
+    suspend fun putChapterSeriesFilter(filter: ChapterSeriesFilter)
 
     /**
      * Author-role display filter, applied everywhere credits are listed (book

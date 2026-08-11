@@ -12,6 +12,7 @@ import snd.komelia.db.AppSettings
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.tables.AppSettingsTable
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
@@ -67,7 +68,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
                 it[aniListLinkSuggestionsEnabled] = settings.aniListLinkSuggestionsEnabled
                 it[shareLinksViaKomga] = settings.shareLinksViaKomga
-                it[hideChapterSeries] = settings.hideChapterSeries
+                it[chapterSeriesFilter] = settings.chapterSeriesFilter.name
                 it[showLanguageOnCovers] = settings.showLanguageOnCovers
                 it[languageBadgeScale] = settings.languageBadgeScale
                 it[languageBadgeAtBottom] = settings.languageBadgeAtBottom
@@ -160,7 +161,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
             aniListLinkSuggestionsEnabled = get(AppSettingsTable.aniListLinkSuggestionsEnabled),
             shareLinksViaKomga = get(AppSettingsTable.shareLinksViaKomga),
-            hideChapterSeries = get(AppSettingsTable.hideChapterSeries),
+            chapterSeriesFilter = ChapterSeriesFilter.valueOf(get(AppSettingsTable.chapterSeriesFilter)),
             showLanguageOnCovers = get(AppSettingsTable.showLanguageOnCovers),
             languageBadgeScale = get(AppSettingsTable.languageBadgeScale),
             languageBadgeAtBottom = get(AppSettingsTable.languageBadgeAtBottom),

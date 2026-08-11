@@ -212,11 +212,12 @@ abstract class AppModule(
             appRepositories.settingsRepository.getIgnoredSeriesIds(),
         ) { enabled, ids -> if (enabled) ids else emptySet() }.stateIn(initScope)
 
-        // "Hide chapter series": one setting for the whole app rather than one per
-        // library, because the home shelves and search span every library at once
-        // and would have had none to read.
-        val hideChapterSeriesFlow = appRepositories.settingsRepository
-            .getHideChapterSeries()
+        // Chapter series (titles ending in "(Chap)"): hide them, show only them,
+        // or leave every series alone. One setting for the whole app rather than
+        // one per library, because the home shelves and search span every library
+        // at once and would have had none to read.
+        val chapterSeriesFilterFlow = appRepositories.settingsRepository
+            .getChapterSeriesFilter()
             .stateIn(initScope)
 
         // Raw (undecorated) api the hidden-series discovery query runs against —
@@ -258,7 +259,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds).withChapterFilter(hideChapterSeriesFlow)
+            ).withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
@@ -272,7 +273,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds).withChapterFilter(hideChapterSeriesFlow)
+            ).withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
         }.stateIn(initScope)
 
         val komgaSharedState = KomgaAuthenticationState(

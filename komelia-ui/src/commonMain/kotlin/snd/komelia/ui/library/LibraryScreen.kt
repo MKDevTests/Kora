@@ -464,8 +464,8 @@ class LibraryScreen(
                     onSeriesSelect = seriesTabState::onSeriesSelect,
 
                     filterState = seriesTabState.filterState,
-                    hideChapterSeries = seriesTabState.hideChapterSeriesUi,
-                    onHideChapterSeriesChange = seriesTabState::onHideChapterSeriesChange,
+                    chapterSeriesFilter = seriesTabState.chapterSeriesFilter,
+                    onChapterSeriesFilterCycle = seriesTabState::onChapterSeriesFilterCycle,
 
                     currentPage = seriesTabState.currentSeriesPage,
                     totalPages = seriesTabState.totalSeriesPages,

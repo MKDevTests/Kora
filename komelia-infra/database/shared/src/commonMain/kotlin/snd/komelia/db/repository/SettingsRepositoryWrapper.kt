@@ -7,6 +7,7 @@ import snd.komelia.db.AppSettings
 import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.AppTheme
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.settings.model.BooksLayout
 import snd.komelia.settings.model.StartupScreen
@@ -382,11 +383,11 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(shareLinksViaKomga = enabled) }
     }
 
-    override fun getHideChapterSeries(): Flow<Boolean> =
-        wrapper.state.map { it.hideChapterSeries }.distinctUntilChanged()
+    override fun getChapterSeriesFilter(): Flow<ChapterSeriesFilter> =
+        wrapper.state.map { it.chapterSeriesFilter }.distinctUntilChanged()
 
-    override suspend fun putHideChapterSeries(enabled: Boolean) {
-        wrapper.transform { it.copy(hideChapterSeries = enabled) }
+    override suspend fun putChapterSeriesFilter(filter: ChapterSeriesFilter) {
+        wrapper.transform { it.copy(chapterSeriesFilter = filter) }
     }
 
     override fun getUiLanguage(): Flow<String> =

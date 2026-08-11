@@ -47,7 +47,7 @@ object AppSettingsTable : Table("AppSettings") {
     val searchFuzzyEnabled = bool("search_fuzzy_enabled").default(true)
     val aniListLinkSuggestionsEnabled = bool("anilist_link_suggestions_enabled").default(false)
     val shareLinksViaKomga = bool("share_links_via_komga").default(false)
-    val hideChapterSeries = bool("hide_chapter_series").default(false)
+    val chapterSeriesFilter = text("chapter_series_filter")
     val showLanguageOnCovers = bool("show_language_on_covers").default(false)
     val languageBadgeScale = float("language_badge_scale").default(1.0f)
     val languageBadgeAtBottom = bool("language_badge_at_bottom").default(false)

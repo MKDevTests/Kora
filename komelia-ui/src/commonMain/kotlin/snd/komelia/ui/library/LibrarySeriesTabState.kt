@@ -44,6 +44,7 @@ import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komelia.settings.CommonSettingsRepository
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.BookMenuActions
@@ -204,11 +205,11 @@ class LibrarySeriesTabState(
         private set
 
     /**
-     * Mirrors the app-wide "hide chapter series" setting, purely so the filter
-     * panel can draw a checkbox from it. The filtering itself happens in
+     * Mirrors the app-wide chapter-series setting, purely so the filter panel can
+     * draw a tri-state checkbox from it. The filtering itself happens in
      * `withChapterFilter`, not here — see the note in [getAllSeries].
      */
-    var hideChapterSeriesUi by mutableStateOf(false)
+    var chapterSeriesFilter by mutableStateOf(ChapterSeriesFilter.ANY)
         private set
     var currentSeriesPage by mutableStateOf(1)
         private set
@@ -251,7 +252,7 @@ class LibrarySeriesTabState(
                 }
             }
 
-            hideChapterSeriesUi = settingsRepository.getHideChapterSeries().first()
+            chapterSeriesFilter = settingsRepository.getChapterSeriesFilter().first()
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
             // Paint the cached first page instantly, then load. The grid must not
             // wait on the filter panel's referential data (genres / tags /
@@ -290,10 +291,10 @@ class LibrarySeriesTabState(
 
         // Reload on change: the filtering happens as the page is received, so
         // the page currently on screen was built under the old setting.
-        settingsRepository.getHideChapterSeries()
+        settingsRepository.getChapterSeriesFilter()
             .onEach {
-                if (hideChapterSeriesUi != it) {
-                    hideChapterSeriesUi = it
+                if (chapterSeriesFilter != it) {
+                    chapterSeriesFilter = it
                     loadSeriesPage(1)
                 }
             }.launchIn(screenModelScope)
@@ -307,10 +308,11 @@ class LibrarySeriesTabState(
 
     /**
      * Writes the setting only. The reload comes back through the settings flow
-     * observer, so toggling it from anywhere reaches every open library.
+     * observer, so cycling it from anywhere reaches every open library.
      */
-    fun onHideChapterSeriesChange(enabled: Boolean) {
-        screenModelScope.launch { settingsRepository.putHideChapterSeries(enabled) }
+    fun onChapterSeriesFilterCycle() {
+        val next = chapterSeriesFilter.next()
+        screenModelScope.launch { settingsRepository.putChapterSeriesFilter(next) }
     }
 
     fun reload() {

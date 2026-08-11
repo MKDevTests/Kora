@@ -21,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.FilterDialogMultiChoiceWithSearch
@@ -64,8 +64,8 @@ import snd.komga.client.series.KomgaSeriesStatus
 @Composable
 fun SeriesFilterContent(
     filterState: SeriesFilterState,
-    hideChapterSeries: Boolean = false,
-    onHideChapterSeriesChange: ((Boolean) -> Unit)? = null,
+    chapterSeriesFilter: ChapterSeriesFilter = ChapterSeriesFilter.ANY,
+    onChapterSeriesFilterCycle: (() -> Unit)? = null,
 ) {
     val strings = LocalStrings.current.seriesFilter
     val widthClass = LocalWindowWidth.current
@@ -277,24 +277,36 @@ fun SeriesFilterContent(
             // but unlike its neighbours it is one setting for the whole app, not
             // one per library: the home shelves and search span every library at
             // once and would have had none to read.
-            if (onHideChapterSeriesChange != null) {
+            if (onChapterSeriesFilterCycle != null) {
                 Row(
                     modifier = Modifier
                         .width(width)
                         .height(40.dp)
-                        .clickable { onHideChapterSeriesChange(!hideChapterSeries) }
+                        .clickable { onChapterSeriesFilterCycle() }
                         .cursorForHand()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clip(RoundedCornerShape(5.dp)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(
-                        checked = hideChapterSeries,
-                        onCheckedChange = onHideChapterSeriesChange,
+                    // Tri-state like its two neighbours, and the label says which
+                    // state it is in: "off / on / third thing" is not readable
+                    // from a half-ticked box alone.
+                    TriStateCheckbox(
+                        state = when (chapterSeriesFilter) {
+                            ChapterSeriesFilter.ANY -> ToggleableState.Off
+                            ChapterSeriesFilter.HIDE_CHAPTERS -> ToggleableState.On
+                            ChapterSeriesFilter.ONLY_CHAPTERS -> ToggleableState.Indeterminate
+                        },
+                        onClick = onChapterSeriesFilterCycle,
                         modifier = Modifier.size(30.dp)
                     )
+                    val strings = LocalStrings.current.ui
                     Text(
-                        text = LocalStrings.current.ui.hideChapterSeries,
+                        text = when (chapterSeriesFilter) {
+                            ChapterSeriesFilter.ANY -> strings.chapterSeriesAny
+                            ChapterSeriesFilter.HIDE_CHAPTERS -> strings.chapterSeriesHidden
+                            ChapterSeriesFilter.ONLY_CHAPTERS -> strings.chapterSeriesOnly
+                        },
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 2,
                     )
