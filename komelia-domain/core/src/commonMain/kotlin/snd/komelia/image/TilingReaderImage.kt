@@ -104,6 +104,11 @@ abstract class TilingReaderImage(
                     currentCoroutineContext().ensureActive()
                     logger.catching(e)
                     this.error.value = e
+                    // A failed update must not be remembered as done, or the
+                    // repeat-request guard in doUpdate would drop the identical
+                    // request the next scroll tick sends and the page would stay
+                    // broken until it moved.
+                    lastUpdateRequest = null
                 }
 
                 delay(50)
@@ -170,8 +175,19 @@ abstract class TilingReaderImage(
         }
     }
 
+    /**
+     * Re-runs the last request after something the request itself doesn't
+     * describe has changed — stretch, downsampling kernel, colour correction,
+     * upscaling.
+     *
+     * Clearing [lastUpdateRequest] is what makes this still work now that
+     * [doUpdate] drops a request identical to the previous one: without it the
+     * re-emitted request would be recognised as a repeat and thrown away, and
+     * flipping any of those settings would leave the page as it was.
+     */
     protected suspend fun reloadLastRequest() {
         lastUpdateRequest?.let { lastRequest ->
+            lastUpdateRequest = null
             lastUsedScaleFactor = null
             jobFlow.emit(lastRequest)
         }
@@ -285,6 +301,16 @@ abstract class TilingReaderImage(
     }
 
     private suspend fun doUpdate(request: UpdateRequest) {
+        // A webtoon scroll drives updateVisibleImages() at 10 Hz and every tick
+        // calls requestUpdate on each visible image, so a page that has stopped
+        // moving — the middle ones always, the first and last whenever the
+        // scroll pauses — used to re-enter doTile and recompute the intersection
+        // of every tile of the page for nothing. doFullResize has had this guard
+        // (lastUsedScaleFactor) since forever; the tiled path never did.
+        //
+        // Anything that changes the image without changing the request goes
+        // through reloadLastRequest(), which clears the marker first.
+        if (request == lastUpdateRequest) return
         lastUpdateRequest = request
 
         val image = getCurrentImage()
