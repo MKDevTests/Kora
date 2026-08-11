@@ -108,6 +108,16 @@ class HomeViewModel(
     private val reloadEventsEnabled = MutableStateFlow(true)
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, DROP_OLDEST)
 
+    /**
+     * Set whenever read progress moves anywhere — reader, book screen, another
+     * device. Consumed when Home comes back on screen, so the progress shelves
+     * are correct no matter WHERE the book was opened from. The reader's
+     * onExit callback stays as the fast path, but it can't be the only one:
+     * it is @Transient on the reader screen (so it is null after a process
+     * restore) and it only exists on the two Home entry points.
+     */
+    private val progressShelvesDirty = MutableStateFlow(false)
+
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
 
@@ -138,6 +148,9 @@ class HomeViewModel(
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
             load()
+            // A full load already refreshed the progress shelves, so the resume
+            // hook has nothing left to do.
+            progressShelvesDirty.value = false
             delay(5000)
         }.launchIn(screenModelScope)
     }
@@ -165,8 +178,69 @@ class HomeViewModel(
             // OLD progress. A short grace period makes the refresh reliable; the
             // Komga read-progress SSE event is the backstop if it still lands late.
             delay(600)
-            load(force = false)
+            // Only the shelves that depend on read progress, not all eleven:
+            // this used to be a full load(), i.e. a round-trip per non-random
+            // shelf every time a book was closed.
+            progressShelvesDirty.value = false
+            val changed = refreshProgressShelves()
+            // A single retry, and only when the server answered with exactly
+            // what we already had — that means the 600ms grace lost the race
+            // against the progress flush. Costs nothing in the nominal case.
+            if (!changed) {
+                delay(1_500)
+                refreshProgressShelves()
+            }
         }
+    }
+
+    /**
+     * Re-resolves only the shelves whose content depends on read progress and
+     * swaps them in place. Returns true when at least one shelf actually
+     * changed, which is what tells [refreshAfterReading] whether it read back
+     * stale data.
+     */
+    private suspend fun refreshProgressShelves(): Boolean {
+        val current = currentFilters.value
+        val targets = current.withIndex().filter { it.value.filter.dependsOnReadProgress() }
+        if (targets.isEmpty()) return true
+
+        val slots = current.toMutableList()
+        val publishLock = Mutex()
+        var changed = false
+
+        targets.map { (index, existing) ->
+            screenModelScope.async {
+                val fresh = shelfResolver.resolve(existing.filter) ?: return@async
+                if (fresh == existing) return@async
+                publishLock.withLock {
+                    changed = true
+                    slots[index] = fresh
+                    currentFilters.value = slots.toList()
+                }
+            }
+        }.awaitAll()
+
+        // Keep the disk snapshot in step, otherwise the next cold start repaints
+        // the stale progress before the network answers.
+        if (changed) {
+            val snapshot = currentFilters.value
+            screenModelScope.launch { HomeShelfCache.save(snapshot) }
+        }
+        return changed
+    }
+
+    /**
+     * Shelves built from read progress. "Keep reading" is [BooksHomeScreenFilter.OnDeck].
+     * Custom shelves are deliberately excluded: detecting a readStatus condition
+     * inside an arbitrary search tree is fragile, and they are still covered by
+     * the full reload the SSE listener triggers.
+     */
+    private fun HomeScreenFilter.dependsOnReadProgress(): Boolean = when (this) {
+        is BooksHomeScreenFilter.OnDeck,
+        is BooksHomeScreenFilter.ForgottenBooks,
+        is SeriesHomeScreenFilter.AlmostFinished -> true
+
+        else -> false
     }
 
     private suspend fun load(force: Boolean = false) {
@@ -367,15 +441,27 @@ class HomeViewModel(
 
     fun startKomgaEventsHandler() {
         reloadEventsEnabled.value = true
+        // Home is back on screen. If progress moved while it was away — the book
+        // was opened from a series or book screen, from the widget, or read on
+        // another device — refresh the progress shelves now rather than showing
+        // what was true before the reader opened.
+        if (progressShelvesDirty.value && state.value is LoadState.Success) {
+            progressShelvesDirty.value = false
+            screenModelScope.launch { refreshProgressShelves() }
+        }
     }
 
     private fun startKomgaEventListener() {
         komgaEvents.onEach { event ->
             when (event) {
-                is BookEvent,
-                is SeriesEvent,
                 is ReadProgressEvent,
-                is ReadProgressSeriesEvent -> reloadJobsFlow.tryEmit(Unit)
+                is ReadProgressSeriesEvent -> {
+                    progressShelvesDirty.value = true
+                    reloadJobsFlow.tryEmit(Unit)
+                }
+
+                is BookEvent,
+                is SeriesEvent -> reloadJobsFlow.tryEmit(Unit)
 
                 else -> {}
             }
