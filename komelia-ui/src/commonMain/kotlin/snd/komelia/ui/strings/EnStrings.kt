@@ -644,6 +644,7 @@ val EnStrings = AppStrings(
         "kavitaProcessing" to "Kavita Processing",
         "kavitaUrl" to "Kavita Url",
         "keepScreenOnWhileReading" to "Keep screen on while reading",
+        "hideChapterSeries" to "Hide chapter series (Chap)",
         "key" to "Key",
         "komfSeriesAutoIdentify" to "Komf series auto-identify",
         "komfSettings" to "Komf Settings",

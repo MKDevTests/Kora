@@ -188,6 +188,10 @@ interface CommonSettingsRepository {
     fun getShareLinksViaKomga(): Flow<Boolean>
     suspend fun putShareLinksViaKomga(enabled: Boolean)
 
+    /** Hide series whose title ends with "(Chap)", everywhere. */
+    fun getHideChapterSeries(): Flow<Boolean>
+    suspend fun putHideChapterSeries(enabled: Boolean)
+
     /**
      * Author-role display filter, applied everywhere credits are listed (book
      * page, series pages). Off by default → every role is shown, as before.

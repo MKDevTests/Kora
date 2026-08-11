@@ -103,6 +103,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V91__keep_reading_cache.sql",
         "V92__series_links_cache.sql",
         "V93__series_books_cache.sql",
+        "V94__hide_chapter_series.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

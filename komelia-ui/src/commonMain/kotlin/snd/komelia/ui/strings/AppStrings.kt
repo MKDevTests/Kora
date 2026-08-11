@@ -538,6 +538,7 @@ class UiStrings(private val values: Map<String, String>) {
     val kavitaProcessing: String get() = at("kavitaProcessing")
     val kavitaUrl: String get() = at("kavitaUrl")
     val keepScreenOnWhileReading: String get() = at("keepScreenOnWhileReading")
+    val hideChapterSeries: String get() = at("hideChapterSeries")
     val key: String get() = at("key")
     val komfSeriesAutoIdentify: String get() = at("komfSeriesAutoIdentify")
     val komfSettings: String get() = at("komfSettings")

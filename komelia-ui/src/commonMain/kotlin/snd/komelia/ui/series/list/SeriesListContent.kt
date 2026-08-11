@@ -89,6 +89,8 @@ fun SeriesListContent(
     onSeriesSelect: (KomgaSeries) -> Unit,
 
     filterState: SeriesFilterState?,
+    hideChapterSeries: Boolean = false,
+    onHideChapterSeriesChange: ((Boolean) -> Unit)? = null,
 
     totalPages: Int,
     currentPage: Int,
@@ -159,7 +161,11 @@ fun SeriesListContent(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    SeriesFilterContent(filterState = filterState)
+                    SeriesFilterContent(
+                        filterState = filterState,
+                        hideChapterSeries = hideChapterSeries,
+                        onHideChapterSeriesChange = onHideChapterSeriesChange,
+                    )
                 }
                 HorizontalDivider()
                 Row(

@@ -77,6 +77,14 @@ data class AppSettings(
      */
     val shareLinksViaKomga: Boolean = false,
 
+    /**
+     * Keep series whose title ends with "(Chap)" out of every list — the
+     * library grid, the home shelves, search, upcoming releases. One setting
+     * rather than one per library: the shelves and search span every library at
+     * once and would have had none to read. Off by default (V94).
+     */
+    val hideChapterSeries: Boolean = false,
+
     /** Optional FR/EN language pill on series covers (Home / Library). */
     val showLanguageOnCovers: Boolean = false,
     val languageBadgeScale: Float = 1.0f,

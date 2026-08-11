@@ -65,6 +65,7 @@ import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.stats.withStatsTracking
+import snd.komelia.chapters.withChapterFilter
 import snd.komelia.ignore.withIgnoreFilter
 import snd.komelia.hidden.HiddenSeriesController
 import snd.komelia.ui.DependencyContainer
@@ -211,6 +212,13 @@ abstract class AppModule(
             appRepositories.settingsRepository.getIgnoredSeriesIds(),
         ) { enabled, ids -> if (enabled) ids else emptySet() }.stateIn(initScope)
 
+        // "Hide chapter series": one setting for the whole app rather than one per
+        // library, because the home shelves and search span every library at once
+        // and would have had none to read.
+        val hideChapterSeriesFlow = appRepositories.settingsRepository
+            .getHideChapterSeries()
+            .stateIn(initScope)
+
         // Raw (undecorated) api the hidden-series discovery query runs against —
         // the ignore/hidden filter would otherwise drop kora:hidden series from
         // its own lookup. The app-facing decorated api is derived from this below.
@@ -250,7 +258,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds)
+            ).withIgnoreFilter(filterIds).withChapterFilter(hideChapterSeriesFlow)
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
@@ -264,7 +272,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds)
+            ).withIgnoreFilter(filterIds).withChapterFilter(hideChapterSeriesFlow)
         }.stateIn(initScope)
 
         val komgaSharedState = KomgaAuthenticationState(

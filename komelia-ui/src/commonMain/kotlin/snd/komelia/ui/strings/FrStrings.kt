@@ -656,6 +656,7 @@ val FrStrings = AppStrings(
         "kavitaProcessing" to "Traitement Kavita",
         "kavitaUrl" to "URL Kavita",
         "keepScreenOnWhileReading" to "Garder l'écran allumé pendant la lecture",
+        "hideChapterSeries" to "Masquer les séries de chapitres (Chap)",
         "key" to "Clé",
         "komfSeriesAutoIdentify" to "Identification automatique des séries par Komf",
         "komfSettings" to "Réglages Komf",

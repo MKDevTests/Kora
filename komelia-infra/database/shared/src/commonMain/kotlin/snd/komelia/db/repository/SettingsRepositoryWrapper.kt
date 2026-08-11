@@ -382,6 +382,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(shareLinksViaKomga = enabled) }
     }
 
+    override fun getHideChapterSeries(): Flow<Boolean> =
+        wrapper.state.map { it.hideChapterSeries }.distinctUntilChanged()
+
+    override suspend fun putHideChapterSeries(enabled: Boolean) {
+        wrapper.transform { it.copy(hideChapterSeries = enabled) }
+    }
+
     override fun getUiLanguage(): Flow<String> =
         wrapper.state.map { it.uiLanguage }.distinctUntilChanged()
 

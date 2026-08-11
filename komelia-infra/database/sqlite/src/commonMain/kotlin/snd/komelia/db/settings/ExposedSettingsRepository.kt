@@ -67,6 +67,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[searchFuzzyEnabled] = settings.searchFuzzyEnabled
                 it[aniListLinkSuggestionsEnabled] = settings.aniListLinkSuggestionsEnabled
                 it[shareLinksViaKomga] = settings.shareLinksViaKomga
+                it[hideChapterSeries] = settings.hideChapterSeries
                 it[showLanguageOnCovers] = settings.showLanguageOnCovers
                 it[languageBadgeScale] = settings.languageBadgeScale
                 it[languageBadgeAtBottom] = settings.languageBadgeAtBottom
@@ -159,6 +160,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
             aniListLinkSuggestionsEnabled = get(AppSettingsTable.aniListLinkSuggestionsEnabled),
             shareLinksViaKomga = get(AppSettingsTable.shareLinksViaKomga),
+            hideChapterSeries = get(AppSettingsTable.hideChapterSeries),
             showLanguageOnCovers = get(AppSettingsTable.showLanguageOnCovers),
             languageBadgeScale = get(AppSettingsTable.languageBadgeScale),
             languageBadgeAtBottom = get(AppSettingsTable.languageBadgeAtBottom),

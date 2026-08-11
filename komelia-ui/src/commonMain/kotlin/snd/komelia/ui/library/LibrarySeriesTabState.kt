@@ -1,5 +1,6 @@
 package snd.komelia.ui.library
 
+import snd.komelia.chapters.CHAPTER_TITLE_SUFFIX
 import snd.komelia.perf.PerfTrace
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -194,6 +195,14 @@ class LibrarySeriesTabState(
         private set
     var totalSeriesCount by mutableStateOf(0)
         private set
+
+    /**
+     * Mirrors the app-wide "hide chapter series" setting. Observable because the
+     * filter panel draws a checkbox from it; read straight in [getAllSeries] to
+     * build the server-side condition.
+     */
+    var hideChapterSeriesUi by mutableStateOf(false)
+        private set
     var currentSeriesPage by mutableStateOf(1)
         private set
 
@@ -235,6 +244,7 @@ class LibrarySeriesTabState(
                 }
             }
 
+            hideChapterSeriesUi = settingsRepository.getHideChapterSeries().first()
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
             // Paint the cached first page instantly, then load. The grid must not
             // wait on the filter panel's referential data (genres / tags /
@@ -271,11 +281,29 @@ class LibrarySeriesTabState(
         }
         startKomgaEventListener()
 
+        // The chapter filter is a server-side condition, so a change has to
+        // rebuild the query rather than just re-render what is already loaded.
+        settingsRepository.getHideChapterSeries()
+            .onEach {
+                if (hideChapterSeriesUi != it) {
+                    hideChapterSeriesUi = it
+                    loadSeriesPage(1)
+                }
+            }.launchIn(screenModelScope)
+
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
             loadSeriesPage(currentSeriesPage)
             delay(1000)
         }.launchIn(screenModelScope)
+    }
+
+    /**
+     * Writes the setting only. The reload comes back through the settings flow
+     * observer, so toggling it from anywhere reaches every open library.
+     */
+    fun onHideChapterSeriesChange(enabled: Boolean) {
+        screenModelScope.launch { settingsRepository.putHideChapterSeries(enabled) }
     }
 
     fun reload() {
@@ -322,6 +350,7 @@ class LibrarySeriesTabState(
                 libraryId?.let { library { isEqualTo(it) } }
                 baseTagFilter?.let { tag { isEqualTo(it) } }
                 tag { isNotEqualTo(HIDDEN_TAG) }
+                if (hideChapterSeriesUi) title { doesNotEndWith(CHAPTER_TITLE_SUFFIX) }
                 filter.addConditionTo(this)
             }
             // An offset is only meaningful under a stable order, so when the list
@@ -540,6 +569,11 @@ class LibrarySeriesTabState(
             // strips them AFTER fetching, leaving a 100-item page as 97-98 items
             // -> ragged last row + page/element counts that overstate reality.
             tag { isNotEqualTo(HIDDEN_TAG) }
+            // Same reasoning as the hidden tag above: the app-wide chapter filter
+            // (withChapterFilter) would strip these AFTER the page was counted,
+            // leaving short pages and a total that overstates what is on screen.
+            // Here the server never counts them in the first place.
+            if (hideChapterSeriesUi) title { doesNotEndWith(CHAPTER_TITLE_SUFFIX) }
             filter.addConditionTo(this)
         }
 
