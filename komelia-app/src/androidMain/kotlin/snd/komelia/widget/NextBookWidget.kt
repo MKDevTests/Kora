@@ -41,6 +41,8 @@ import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.toBitmap
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import snd.komelia.MainActivity
 import snd.komelia.dependencies
 import snd.komelia.ui.platform.WidgetLibraryFilterSettings
@@ -48,6 +50,9 @@ import snd.komelia.image.coil.BookDefaultThumbnailRequest
 import snd.komelia.komga.api.model.KomeliaBook
 
 private val logger = KotlinLogging.logger { }
+
+/** Serialises the refresh across every widget instance. */
+private val widgetRefreshMutex = Mutex()
 
 /** Intent action used by widget taps to ask MainActivity to open a book. */
 const val widgetActionOpenBook = "snd.komelia.action.OPEN_BOOK"
@@ -87,18 +92,27 @@ class NextBookWidget : GlanceAppWidget() {
         // success. We then render whatever the cache holds AFTER that
         // attempt, so a successful refresh shows up immediately.
         container?.let { c ->
-            runCatching {
-                // Optional per-library filter, set from Settings → Navigation.
-                // Read directly from SharedPreferences: this render path runs
-                // without the app's DI graph being guaranteed warm.
-                val libraryFilter = WidgetLibraryFilterSettings.getLibraryId(context)
-                val books = c.nextBookService.getNextUpBooks(slotCount, libraryFilter).getOrNull()
-                if (books != null) {
-                    val refreshed = persistFresh(context, c.coilImageLoader, cache, books)
-                    cache.save(refreshed)
-                    cache.pruneOrphans(refreshed)
+            // One fetch, not one per widget instance: update() is called for
+            // every Glance id, and they all want the same books. The mutex
+            // serialises them, and the TTL means the ones behind the first do
+            // no work at all.
+            widgetRefreshMutex.withLock {
+                if (cache.isRefreshDue()) {
+                    cache.markRefreshAttempted()
+                    runCatching {
+                        // Optional per-library filter, set from Settings → Navigation.
+                        // Read directly from SharedPreferences: this render path runs
+                        // without the app's DI graph being guaranteed warm.
+                        val libraryFilter = WidgetLibraryFilterSettings.getLibraryId(context)
+                        val books = c.nextBookService.getNextUpBooks(slotCount, libraryFilter).getOrNull()
+                        if (books != null) {
+                            val refreshed = persistFresh(context, c.coilImageLoader, cache, books)
+                            cache.save(refreshed)
+                            cache.pruneOrphans(refreshed)
+                        }
+                    }.onFailure { logger.warn(it) { "Could not refresh widget cache" } }
                 }
-            }.onFailure { logger.warn(it) { "Could not refresh widget cache" } }
+            }
         }
 
         val rendered = cache.load().ifEmpty { initial }

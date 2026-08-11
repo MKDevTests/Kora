@@ -31,6 +31,7 @@ data class WidgetCachedBook(
 class WidgetCache(private val context: Context) {
     private val dir: File = File(context.cacheDir, "widget_covers").apply { mkdirs() }
     private val indexFile: File = File(dir, "index.json")
+    private val attemptFile: File = File(dir, "last_refresh_attempt")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun load(): List<WidgetCachedBook> {
@@ -48,6 +49,36 @@ class WidgetCache(private val context: Context) {
         runCatching {
             indexFile.writeText(json.encodeToString(items))
         }.onFailure { logger.warn(it) { "Could not write widget cache index" } }
+    }
+
+    /**
+     * Whether a network refresh is worth doing.
+     *
+     * Every Glance update re-queried the server and re-encoded the covers to
+     * WebP, and an update fires per widget instance, on every book-completion
+     * event and on every trip to the background. The timestamp is written into
+     * a file of our own rather than read off the index's mtime: File
+     * .setLastModified() silently fails on some storage, and a stale-marking
+     * that quietly does nothing is worse than no TTL at all.
+     */
+    fun isRefreshDue(nowMillis: Long = System.currentTimeMillis()): Boolean {
+        val lastAttempt = runCatching { attemptFile.readText().trim().toLong() }.getOrNull()
+            ?: return true
+        val age = nowMillis - lastAttempt
+        // Negative means the clock moved backwards; treat it as due.
+        if (age < 0) return true
+        val succeeded = load().isNotEmpty()
+        return age >= if (succeeded) SUCCESS_TTL_MS else FAILURE_RETRY_MS
+    }
+
+    fun markRefreshAttempted(nowMillis: Long = System.currentTimeMillis()) {
+        runCatching { attemptFile.writeText(nowMillis.toString()) }
+            .onFailure { logger.debug(it) { "Could not record widget refresh attempt" } }
+    }
+
+    /** Forces the next update to hit the network — progress actually changed. */
+    fun markStale() {
+        runCatching { attemptFile.delete() }
     }
 
     /**
@@ -78,5 +109,10 @@ class WidgetCache(private val context: Context) {
         dir.listFiles { f -> f.extension == "webp" }
             ?.filter { it.absolutePath !in referenced }
             ?.forEach { runCatching { it.delete() } }
+    }
+
+    private companion object {
+        const val SUCCESS_TTL_MS = 30 * 60 * 1_000L
+        const val FAILURE_RETRY_MS = 5 * 60 * 1_000L
     }
 }

@@ -6,9 +6,9 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 
 /**
- * Fired by the small refresh icon in the widget header. Re-poking the
- * widget instance is enough — `NextBookWidget.provideGlance` does the
- * actual refetch + cache rewrite on every update.
+ * Fired by the small refresh icon in the widget header. The update alone is no
+ * longer enough now that `NextBookWidget.provideGlance` honours a TTL — an
+ * explicit tap has to mean "go and look", so it clears the marker first.
  */
 class RefreshNextBookWidgetAction : ActionCallback {
     override suspend fun onAction(
@@ -16,6 +16,7 @@ class RefreshNextBookWidgetAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
+        WidgetCache(context).markStale()
         NextBookWidget().update(context, glanceId)
     }
 }

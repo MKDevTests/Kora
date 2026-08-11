@@ -32,6 +32,10 @@ class WidgetRefresher(
         // before backgrounding, so onStop alone wouldn't cover this).
         refreshNow()
         events.events.collect {
+            // A finished book is the one signal that certainly changes what the
+            // widget shows, so it bypasses the TTL. Everything else — the poke
+            // above, the trip to the background — goes through it.
+            WidgetCache(context).markStale()
             refreshNow()
         }
     }
