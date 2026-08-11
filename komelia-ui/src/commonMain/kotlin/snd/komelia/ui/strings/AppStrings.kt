@@ -92,6 +92,8 @@ data class EditionStrings(
     val otherVersion: String,
     val otherLanguage: String,
     val colourEdition: String,
+    val chapters: String,
+    val volumes: String,
 )
 
 data class RoleStrings(

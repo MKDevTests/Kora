@@ -29,7 +29,22 @@ enum class SeriesRelationType {
     LANGUAGE,
 
     /** Colour edition of a black-and-white one, or the reverse. Symmetric. */
-    COLORED;
+    COLORED,
+
+    /**
+     * The same work released chapter by chapter rather than in collected
+     * volumes. Not another work to read after this one — the same content,
+     * packaged differently — so it belongs with the editions above and never
+     * enters the reading-order graph.
+     *
+     * Asymmetric, like [SEQUEL]/[PREQUEL]: the volumes side says "Chapters",
+     * the chapters side says "Volumes". A symmetric type would have made the
+     * chapters series claim the volumes were its chapters.
+     */
+    CHAPTERS,
+
+    /** Inverse of [CHAPTERS]: the collected edition of a chapter release. */
+    VOLUMES;
 
     fun inverse(): SeriesRelationType = when (this) {
         SEQUEL -> PREQUEL
@@ -39,6 +54,8 @@ enum class SeriesRelationType {
         RELATED -> RELATED
         LANGUAGE -> LANGUAGE
         COLORED -> COLORED
+        CHAPTERS -> VOLUMES
+        VOLUMES -> CHAPTERS
     }
 }
 

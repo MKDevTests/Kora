@@ -68,6 +68,8 @@ object KoraLinkCodec {
         SeriesRelationType.RELATED -> "related"
         SeriesRelationType.LANGUAGE -> "language"
         SeriesRelationType.COLORED -> "colored"
+        SeriesRelationType.CHAPTERS -> "chapters"
+        SeriesRelationType.VOLUMES -> "volumes"
     }
 
     private fun tokenToType(token: String): SeriesRelationType? = when (token) {
@@ -78,6 +80,8 @@ object KoraLinkCodec {
         "related" -> SeriesRelationType.RELATED
         "language" -> SeriesRelationType.LANGUAGE
         "colored" -> SeriesRelationType.COLORED
+        "chapters" -> SeriesRelationType.CHAPTERS
+        "volumes" -> SeriesRelationType.VOLUMES
         else -> null
     }
 
@@ -89,6 +93,8 @@ object KoraLinkCodec {
         SeriesRelationType.RELATED -> "Related"
         SeriesRelationType.LANGUAGE -> "Other language"
         SeriesRelationType.COLORED -> "Colour edition"
+        SeriesRelationType.CHAPTERS -> "Chapters"
+        SeriesRelationType.VOLUMES -> "Volumes"
     }
 
     data class ParsedRelation(val target: KomgaSeriesId, val type: SeriesRelationType)

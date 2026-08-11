@@ -292,7 +292,13 @@ private fun SeriesRelationType.toKind(): ReadingOrderKind? = when (this) {
     SeriesRelationType.SPIN_OFF -> ReadingOrderKind.SPIN_OFF
     SeriesRelationType.RELATED -> ReadingOrderKind.RELATED
     SeriesRelationType.MAIN_STORY -> ReadingOrderKind.MAIN_STORY
-    SeriesRelationType.LANGUAGE, SeriesRelationType.COLORED -> null
+    // Editions, not works: another language, a colour printing, or the same
+    // content cut into chapters instead of volumes. None of them is something
+    // else to read, so none of them belongs in a reading order.
+    SeriesRelationType.LANGUAGE,
+    SeriesRelationType.COLORED,
+    SeriesRelationType.CHAPTERS,
+    SeriesRelationType.VOLUMES -> null
 }
 
 private fun kindOrder(type: SeriesRelationType): Int = when (type) {

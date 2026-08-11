@@ -1113,6 +1113,8 @@ val EnStrings = AppStrings(
         otherVersion = "Another version",
         otherLanguage = "Another language",
         colourEdition = "Colour edition",
+        chapters = "Chapters",
+        volumes = "Volumes",
     ),
     roles = RoleStrings(
         writer = "Writer",

@@ -1125,6 +1125,8 @@ val FrStrings = AppStrings(
         otherVersion = "Autre version",
         otherLanguage = "Autre langue",
         colourEdition = "Édition couleur",
+        chapters = "Chapitres",
+        volumes = "Volumes",
     ),
     roles = RoleStrings(
         writer = "Scénario",

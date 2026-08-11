@@ -99,9 +99,9 @@ class SeriesLinksState(
 
     /**
      * The other editions of this work, for the details block: versions, other
-     * languages, colour editions. Not the sequels or spin-offs — those are
-     * other works, and belong in the Links tab where the user goes looking for
-     * them, not next to this one's genres.
+     * languages, colour editions, and the chapter/volume split. Not the sequels
+     * or spin-offs — those are other works, and belong in the Links tab where
+     * the user goes looking for them, not next to this one's genres.
      */
     val otherVersions: List<snd.komelia.ui.series.view.OtherVersion>
         get() {
@@ -129,6 +129,18 @@ class SeriesLinksState(
                 snd.komelia.ui.series.view.OtherVersion(
                     seriesId = it.id,
                     kind = snd.komelia.ui.series.view.OtherVersion.Kind.COLOURED,
+                    detail = detailOf(it),
+                )
+            } + (relations[SeriesRelationType.CHAPTERS] ?: emptyList()).map {
+                snd.komelia.ui.series.view.OtherVersion(
+                    seriesId = it.id,
+                    kind = snd.komelia.ui.series.view.OtherVersion.Kind.CHAPTERS,
+                    detail = detailOf(it),
+                )
+            } + (relations[SeriesRelationType.VOLUMES] ?: emptyList()).map {
+                snd.komelia.ui.series.view.OtherVersion(
+                    seriesId = it.id,
+                    kind = snd.komelia.ui.series.view.OtherVersion.Kind.VOLUMES,
                     detail = detailOf(it),
                 )
             }

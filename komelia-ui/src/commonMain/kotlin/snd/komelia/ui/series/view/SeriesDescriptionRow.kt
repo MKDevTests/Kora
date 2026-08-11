@@ -60,7 +60,7 @@ data class OtherVersion(
     /** Language code or differing title; null when the name adds nothing. */
     val detail: String? = null,
 ) {
-    enum class Kind { VERSION, LANGUAGE, COLOURED }
+    enum class Kind { VERSION, LANGUAGE, COLOURED, CHAPTERS, VOLUMES }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -252,6 +252,8 @@ fun SeriesDescriptionRow(
                         OtherVersion.Kind.VERSION -> editions.otherVersion
                         OtherVersion.Kind.LANGUAGE -> editions.otherLanguage
                         OtherVersion.Kind.COLOURED -> editions.colourEdition
+                        OtherVersion.Kind.CHAPTERS -> editions.chapters
+                        OtherVersion.Kind.VOLUMES -> editions.volumes
                     }
                     AssistChip(
                         onClick = { onVersionClick?.invoke(version.seriesId) },
