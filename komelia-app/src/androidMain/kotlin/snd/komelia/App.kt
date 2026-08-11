@@ -104,7 +104,14 @@ class App : Application() {
      */
     private fun observeAppBackgroundForWidgetRefresh() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                AppForegroundState.setForeground(true)
+            }
+
             override fun onStop(owner: LifecycleOwner) {
+                // Published before the widget refresh so the SSE grace period
+                // starts counting from the moment the user actually left.
+                AppForegroundState.setForeground(false)
                 appScope.launch {
                     snd.komelia.widget.WidgetRefresher.refreshAll(applicationContext)
                 }

@@ -8,10 +8,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -51,15 +54,39 @@ class ManagedKomgaEvents(
     @Volatile
     private var session: KomgaSSESession? = null
 
+    /**
+     * Whether a live SSE session should exist right now. Follows the app being
+     * in front of the user, but only after [BACKGROUND_GRACE_MS] — switching
+     * apps for a few seconds must not tear the connection down and rebuild it,
+     * which would cost more than leaving it open.
+     */
+    private val sseWanted = MutableStateFlow(true)
+
     init {
+        manageScope.launch {
+            AppForegroundState.isForeground.collectLatest { foreground ->
+                if (foreground) {
+                    sseWanted.value = true
+                } else {
+                    // collectLatest cancels this block if the app comes back
+                    // before the grace period is up, so a quick app switch
+                    // never reaches the assignment below.
+                    delay(BACKGROUND_GRACE_MS)
+                    sseWanted.value = false
+                }
+            }
+        }
+
         komgaSharedState.authenticatedUser
             .combine(komgaApi) { user, komgaApi -> user to komgaApi }
-            .onEach { (newUser, komgaApi) ->
+            .combine(sseWanted) { (user, komgaApi), wanted -> Triple(user, komgaApi, wanted) }
+            .onEach { (newUser, komgaApi, wanted) ->
                 broadcastScope.coroutineContext.cancelChildren()
                 session?.cancel()
+                session = null
 
                 try {
-                    if (newUser != null) {
+                    if (newUser != null && wanted) {
                         val newSession = komgaApi.createSSESession()
                         session = newSession
                         startBroadcast(newSession.incoming)
@@ -69,6 +96,11 @@ class ManagedKomgaEvents(
                     currentCoroutineContext().ensureActive()
                 }
             }.launchIn(manageScope)
+    }
+
+    private companion object {
+        /** How long the app must stay in the background before the SSE session is dropped. */
+        const val BACKGROUND_GRACE_MS = 60_000L
     }
 
     private val _events = MutableSharedFlow<KomgaEvent>()
