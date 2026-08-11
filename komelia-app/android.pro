@@ -21,8 +21,17 @@
 
 -keep class org.flywaydb.core.internal.logging.slf4j.** { *; }
 -keep class org.sqlite.** { *; }
--keep class ch.qos.logback.classic.android.** { *; }
--keep class ch.qos.logback.classic.pattern.** { *; }
+# logback is configured entirely from assets/logback.xml. Joran instantiates
+# every appender, rolling policy, triggering policy and encoder reflectively,
+# so R8 sees no Java reference to any of them and strips them — silently, since
+# logback's own failure goes to System.out and the app keeps running without
+# file logs. Only the LogcatAppender and the pattern classes were kept, which
+# is why release builds since R8 was enabled wrote nothing to komelia.log:
+# RollingFileAppender and AsyncAppender were both gone, and even
+# PatternLayoutEncoder had lost its no-arg constructor.
+# Keeping the whole tree rather than naming classes one by one: the XML can
+# reference any of them, and logback-android is small next to a 25 MB dex.
+-keep class ch.qos.logback.** { *; }
 -keep class io.github.snd_r.komelia.** { *; }
 -keep class snd.komelia.** { *; }
 
