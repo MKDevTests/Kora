@@ -442,10 +442,21 @@ class AndroidAppModule(
         return Path(if (serverId != null) path.resolve("server_$serverId").toString() else path.toString())
     }
 
+    /**
+     * Covers, not reader pages — the reader keeps its own cache of decoded
+     * pages and never goes through Coil's.
+     *
+     * maxSizeBytes and maxSizePercent write the same field, so the byte cap
+     * that followed simply replaced the percentage. On the tablet this was
+     * measured on (heapgrowthlimit 512m, so a 512 MB memory class) the
+     * percentage is about 102 MiB, meaning the 64 MiB cap cut the cover cache
+     * by 40% — and every eviction is a cover re-decoded on the next scroll
+     * through the library. The percentage also follows whatever device the app
+     * lands on, which a fixed number cannot.
+     */
     override fun createCoilMemoryCache(): MemoryCache {
         return MemoryCache.Builder()
             .maxSizePercent(context)
-            .maxSizeBytes(64 * 1024 * 1024) // 64 Mib
             .build()
     }
 
