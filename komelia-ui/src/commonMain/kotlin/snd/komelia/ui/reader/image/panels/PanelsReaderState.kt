@@ -79,6 +79,7 @@ class PanelsReaderState(
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var pageLoadJob: kotlinx.coroutines.Job? = null
+    private var preloadJob: kotlinx.coroutines.Job? = null
     private val imageCache = Cache.Builder<PageId, Deferred<PanelsPage>>()
         .maximumCacheSize(10)
         .eventListener {
@@ -542,18 +543,32 @@ class PanelsReaderState(
         }
     }
 
+    /**
+     * Warms the next page only, and only once the user has settled.
+     *
+     * This used to prefetch the previous page as well. Every prefetch goes
+     * through [launchDownload], which runs the full ONNX panel detection — so
+     * a single page turn paid for three detections. The previous page is
+     * almost always still in [imageCache] anyway (the reader just came from
+     * it), so that third detection bought nothing.
+     *
+     * The idle delay matters just as much: these jobs are launched straight
+     * into [pageLoadScope] rather than under [pageLoadJob], so flipping
+     * quickly through a volume used to start a detection per page and let
+     * every one of them run to completion. Cancelling the previous prefetch
+     * means only the page the user actually stops on gets the work.
+     */
     private fun preloadImagesBetween(pageIndex: Int) {
-        val previousPage = (pageIndex - 1).coerceAtLeast(0)
-        val nextPage = (pageIndex + 1).coerceAtMost(pageMetadata.value.size - 1)
-        val loadRange = (previousPage..nextPage).filter { it != pageIndex }
+        val nextPage = pageIndex + 1
+        if (nextPage !in pageMetadata.value.indices) return
 
-        for (index in loadRange) {
-            val imageJob = launchDownload(pageMetadata.value[index])
-            pageLoadScope.launch {
-                val image = imageJob.await()
-                val scale = getScaleFor(image, screenScaleState.areaSize.value, 0)
-                updateImageState(image, scale, 0)
-            }
+        preloadJob?.cancel()
+        preloadJob = pageLoadScope.launch {
+            delay(PREFETCH_IDLE_MS)
+            val imageJob = launchDownload(pageMetadata.value[nextPage])
+            val image = imageJob.await()
+            val scale = getScaleFor(image, screenScaleState.areaSize.value, 0)
+            updateImageState(image, scale, 0)
         }
     }
 
@@ -763,4 +778,12 @@ class PanelsReaderState(
         val panel: Int,
     )
 
+    private companion object {
+        /**
+         * How long the user must stay on a page before the next one is warmed.
+         * Long enough that flipping through a volume starts no detection at
+         * all, short enough to be ready by the time a reader turns the page.
+         */
+        const val PREFETCH_IDLE_MS = 400L
+    }
 }
