@@ -1,6 +1,7 @@
 package snd.komelia.autobackup
 
 import android.content.Context
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -56,10 +57,22 @@ object AutobackupScheduler {
             logger.info { "Autobackup disabled — cancelled $autobackupPeriodicWorkName" }
             return
         }
+        // The only recurring work Kora schedules, and it had no conditions at
+        // all: Android was free to wake the device to write a backup at 3%
+        // battery or with no room left to write it. A backup is never urgent —
+        // it can wait for a charge and for free space. Deliberately not
+        // setRequiresDeviceIdle: on a tablet that is picked up and put down all
+        // day, idle can go unmet for days, and a backup that never runs is
+        // worse than one that runs at an awkward moment.
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .setRequiresStorageNotLow(true)
+            .build()
+
         val request = PeriodicWorkRequestBuilder<AutobackupWorker>(
             frequency.periodDays,
             TimeUnit.DAYS,
-        ).build()
+        ).setConstraints(constraints).build()
         workManager.enqueueUniquePeriodicWork(
             autobackupPeriodicWorkName,
             ExistingPeriodicWorkPolicy.UPDATE,
@@ -74,6 +87,9 @@ object AutobackupScheduler {
      * to call even when periodic work is already enqueued: this uses a
      * separate unique work name with REPLACE so back-to-back taps don't
      * pile up.
+     *
+     * No constraints here, unlike the periodic request: the user asked for it
+     * now, and "now" means now even at 5% battery.
      */
     fun triggerImmediate(context: Context) {
         val request = OneTimeWorkRequestBuilder<AutobackupWorker>().build()
