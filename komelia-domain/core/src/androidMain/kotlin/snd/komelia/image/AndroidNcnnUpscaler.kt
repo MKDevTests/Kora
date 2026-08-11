@@ -110,20 +110,6 @@ class AndroidNcnnUpscaler(
         }
         isDownloadedFlow.value = isDownloaded()
 
-        scope.launch {
-            jniMutex.withLock {
-                if (!gpuInstanceCreated) {
-                    val result = NcnnUpscaler().createGpuInstance()
-                    if (result == 0) {
-                        gpuInstanceCreated = true
-                        logger.info { "NCNN GPU instance created" }
-                    } else {
-                        logger.error { "Failed to create NCNN GPU instance: $result" }
-                    }
-                }
-            }
-        }
-
         onnxModelDownloader?.downloadCompletionEvents
             ?.filterIsInstance<OnnxModelDownloader.CompletionEvent.NcnnModelDownloaded>()
             ?.onEach { isDownloadedFlow.value = isDownloaded() }
@@ -136,6 +122,11 @@ class AndroidNcnnUpscaler(
                         val downloaded = isDownloaded()
                         isDownloadedFlow.value = downloaded
                         if (settings.enabled && downloaded) {
+                            // The Vulkan instance used to be created here unconditionally,
+                            // at DI graph build time — i.e. on every app start, even for
+                            // users who never turn upscaling on. reinit() is the only thing
+                            // that needs it, so create it on the way in instead.
+                            ensureGpuInstance()
                             if (ncnn == null || shouldReinit(settings)) {
                                 reinit(settings)
                             } else {
@@ -156,6 +147,18 @@ class AndroidNcnnUpscaler(
                     logger.error(e) { "Failed to initialize NCNN upscaler" }
                 }
             }.launchIn(scope)
+    }
+
+    /** Must be called while holding [jniMutex]. */
+    private fun ensureGpuInstance() {
+        if (gpuInstanceCreated) return
+        val result = NcnnUpscaler().createGpuInstance()
+        if (result == 0) {
+            gpuInstanceCreated = true
+            logger.info { "NCNN GPU instance created" }
+        } else {
+            logger.error { "Failed to create NCNN GPU instance: $result" }
+        }
     }
 
     private fun isDownloaded(): Boolean {

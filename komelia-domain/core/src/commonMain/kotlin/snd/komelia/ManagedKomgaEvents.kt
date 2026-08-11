@@ -74,12 +74,24 @@ class ManagedKomgaEvents(
     private val _events = MutableSharedFlow<KomgaEvent>()
     val events: SharedFlow<KomgaEvent> = _events
 
+    /** Last queue status forwarded — see the dedupe in [startBroadcast]. */
+    private var lastTaskQueueStatus: TaskQueueStatus? = null
+
     private fun startBroadcast(events: Flow<KomgaEvent>) {
         events.onEach { event ->
             logger.debug { event }
 
             when (event) {
-                is TaskQueueStatus -> {}
+                // Komga re-sends the queue status every ~10s even when nothing
+                // changed. Re-broadcasting it woke every subscriber in the app
+                // (MainScreenViewModel, Home, offline) six times a minute for a
+                // value that is almost always the same. Only forward changes —
+                // the queue indicator sees the exact same sequence of values.
+                is TaskQueueStatus -> {
+                    if (event == lastTaskQueueStatus) return@onEach
+                    lastTaskQueueStatus = event
+                }
+
                 is ThumbnailBookAdded -> removeBookThumbnailCache(event.bookId)
                 is ThumbnailBookDeleted -> removeBookThumbnailCache(event.bookId)
 
