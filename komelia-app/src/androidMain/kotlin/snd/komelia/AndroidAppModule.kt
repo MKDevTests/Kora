@@ -11,6 +11,7 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.io.files.Path
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -536,6 +538,15 @@ override fun createWidgetBookToOpenFlow(
 
 override suspend fun close() {
     okHttpClient.dispatcher.cancelAll()
+    // The upscaler owns a Vulkan instance and an ncnn net. Nothing released
+    // them, so a server switch leaked both. Off the main thread: releasing a
+    // GPU context is a native call of unbounded duration.
+    val upscaler = ncnnUpscaler
+    ncnnUpscaler = null
+    withContext(Dispatchers.Default) {
+        runCatching { upscaler?.close() }
+            .onFailure { logger.error(it) { "Failed to close NCNN upscaler" } }
+    }
     super.close()
     databases.close()
     okHttpClient.connectionPool.evictAll()

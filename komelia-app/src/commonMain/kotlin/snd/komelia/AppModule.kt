@@ -102,6 +102,7 @@ abstract class AppModule(
     protected var ktorWithoutCache: HttpClient? = null
     protected var coil: ImageLoader? = null
     private var offlineModuleRef: OfflineModule? = null
+    private var managedKomgaEventsRef: ManagedKomgaEvents? = null
 
     suspend fun initDependencies(): DependencyContainer {
         beforeInit()
@@ -328,6 +329,7 @@ abstract class AppModule(
             libraryApi = komgaApi.map { it.libraryApi },
             komgaSharedState = komgaSharedState
         )
+        managedKomgaEventsRef = komgaEvents
 
         // The term index used to be a snapshot: built once, then stale until
         // someone pressed "Re-analyse library". It now follows the server.
@@ -645,7 +647,12 @@ abstract class AppModule(
     ): OfflineModule
 
     open suspend fun close() {
+        // Event producers first: nothing should still be publishing into a
+        // module whose scopes are about to be cancelled.
+        managedKomgaEventsRef?.close()
+        managedKomgaEventsRef = null
         offlineModuleRef?.close()
+        offlineModuleRef = null
         initScope.cancel()
         initScope.coroutineContext[Job]?.join()
         ktor?.close()

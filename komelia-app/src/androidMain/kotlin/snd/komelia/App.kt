@@ -40,7 +40,7 @@ class App : Application() {
         super.onCreate()
         initLogging()
         GlobalExceptionHandler.initialize(applicationContext)
-        saveLogcatSnapshot()
+        appScope.launch(Dispatchers.IO) { saveLogcatSnapshot() }
         setupNotificationChannels()
         initWorkManager()
         startAutobackupScheduler()
@@ -161,6 +161,19 @@ class App : Application() {
         lc.putProperty("LOG_LEVEL", logLevel)
     }
 
+    /**
+     * Captures the tail of the log buffer, which at startup still holds the end
+     * of the previous session — the point of the file is to survive a crash.
+     *
+     * Runs off the main thread: it spawns a process, waits on it and writes a
+     * file, and Application.onCreate() is on the critical path to the first
+     * frame. It is NOT delayed, though — every second of delay lets this
+     * session's own startup logs push the previous session out of the 500 line
+     * window this reads.
+     *
+     * The output goes straight to the file rather than through readText(),
+     * which used to pull the whole buffer into a String first.
+     */
     private fun saveLogcatSnapshot() {
         val logDir = File(getExternalFilesDir(null), "komelia/logs")
         logDir.mkdirs()
@@ -168,9 +181,9 @@ class App : Application() {
         try {
             val process = ProcessBuilder("logcat", "-d", "-t", "500", "-v", "threadtime", "*:D")
                 .redirectErrorStream(true)
+                .redirectOutput(outFile)
                 .start()
-            outFile.writeText(process.inputStream.bufferedReader().readText())
-            process.waitFor(5, TimeUnit.SECONDS)
+            if (!process.waitFor(5, TimeUnit.SECONDS)) process.destroy()
         } catch (_: Exception) {
             // best effort — non-fatal
         }

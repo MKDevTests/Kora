@@ -5,7 +5,9 @@ import coil3.memory.MemoryCache
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -140,6 +142,19 @@ class ManagedKomgaEvents(
 
             _events.emit(event)
         }.launchIn(broadcastScope)
+    }
+
+    /**
+     * Stops the manager before tearing the session down, so it cannot publish a
+     * replacement while the current one is being closed. Without this, swapping
+     * servers left the previous graph's manager alive on its own scope: still
+     * collecting, still reconnecting, still holding a client.
+     */
+    suspend fun close() {
+        manageScope.coroutineContext[Job]?.cancelAndJoin()
+        session?.cancel()
+        session = null
+        broadcastScope.coroutineContext[Job]?.cancelAndJoin()
     }
 
     private fun updateLibraries() {
