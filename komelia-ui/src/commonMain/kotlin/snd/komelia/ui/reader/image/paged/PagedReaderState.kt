@@ -61,6 +61,12 @@ import snd.komga.client.common.KomgaReadingDirection
 import kotlin.math.max
 import kotlin.math.roundToInt
 
+/**
+ * Quiet period before the read-ahead starts. Short enough to be invisible when
+ * turning pages, long enough that dragging the progress bar queues nothing.
+ */
+private const val PREFETCH_IDLE_MS = 250L
+
 class PagedReaderState(
     private val cleanupScope: CoroutineScope,
     private val settingsRepository: ImageReaderSettingsRepository,
@@ -77,6 +83,9 @@ class PagedReaderState(
     private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pageLoadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var loadSpreadJob: kotlinx.coroutines.Job? = null
+
+    /** Pending read-ahead, cancelled by the next navigation. See [schedulePrefetch]. */
+    private var prefetchJob: kotlinx.coroutines.Job? = null
 
     private val imageCache = Cache.Builder<PageId, Deferred<Page>>()
         .maximumCacheSize(16)
@@ -212,6 +221,7 @@ class PagedReaderState(
     fun stop() {
         stateScope.coroutineContext.cancelChildren()
         pageLoadScope.coroutineContext.cancelChildren()
+        prefetchJob = null
         screenScaleState.enableOverscrollArea(false)
         screenScaleState.edgeHandoffEnabled = false
         imageCache.invalidateAll()
@@ -445,13 +455,10 @@ class PagedReaderState(
     }
 
     private suspend fun loadSpread(loadSpreadIndex: Int) {
-        val loadRange = getSpreadLoadRange(loadSpreadIndex)
         val currentSpreadMetadata = pageSpreads.value[loadSpreadIndex]
         val currentSpreadJob = launchSpreadLoadJob(currentSpreadMetadata)
 
-        loadRange.filter { it != loadSpreadIndex }.forEach { spreadIndex ->
-            enqueueSpreadLoadJob(pageSpreads.value[spreadIndex])
-        }
+        schedulePrefetch(loadSpreadIndex)
 
         if (currentSpreadJob.isActive) {
             delay(10)
@@ -670,6 +677,35 @@ class PagedReaderState(
     private fun spreadIndexOf(page: PageMetadata): SpreadIndex {
         return pageSpreads.value.indexOfFirst { spread ->
             spread.any { it.pageNumber == page.pageNumber }
+        }
+    }
+
+    /**
+     * Queues the spreads around [loadSpreadIndex], once the reader has stopped
+     * moving.
+     *
+     * The depth itself is not the problem — [launchSpreadLoadJob] consults the
+     * cache, so reading forward decodes exactly one new spread per page turn
+     * whatever the depth is. The problem was that these jobs are launched into
+     * [pageLoadScope] as siblings of `loadSpread`, so `loadSpreadJob?.cancel()`
+     * never reached them: dragging the progress bar across ten positions queued
+     * fifty decodes that nobody would ever look at, all competing with the page
+     * actually being waited for.
+     *
+     * The current spread is deliberately outside this — it loads immediately,
+     * as it always did. Only the read-ahead waits.
+     */
+    private fun schedulePrefetch(loadSpreadIndex: Int) {
+        prefetchJob?.cancel()
+        prefetchJob = pageLoadScope.launch {
+            delay(PREFETCH_IDLE_MS)
+            // The spread map is rebuilt on a layout change, so re-read it here
+            // rather than trusting indices computed before the wait.
+            val spreads = pageSpreads.value
+            if (loadSpreadIndex !in spreads.indices) return@launch
+            getSpreadLoadRange(loadSpreadIndex)
+                .filter { it != loadSpreadIndex && it in spreads.indices }
+                .forEach { enqueueSpreadLoadJob(spreads[it]) }
         }
     }
 
