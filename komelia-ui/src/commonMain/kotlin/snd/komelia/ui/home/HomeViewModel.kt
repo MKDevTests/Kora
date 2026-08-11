@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,7 +26,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.time.TimeSource
 import snd.komelia.AppNotifications
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
@@ -118,6 +121,16 @@ class HomeViewModel(
      */
     private val progressShelvesDirty = MutableStateFlow(false)
 
+    /**
+     * Raised by events that change what a shelf contains rather than just how
+     * far the user has read — those need the full reload. Read progress on its
+     * own is served by [refreshProgressShelves].
+     */
+    private val structuralReloadPending = MutableStateFlow(false)
+
+    /** When the last reload finished, for the staleness escape hatch below. */
+    private var lastReloadMark: TimeSource.Monotonic.ValueTimeMark? = null
+
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
 
@@ -145,14 +158,38 @@ class HomeViewModel(
             }
         }.launchIn(screenModelScope)
 
-        reloadJobsFlow.onEach {
-            reloadEventsEnabled.first { it }
-            load()
-            // A full load already refreshed the progress shelves, so the resume
-            // hook has nothing left to do.
-            progressShelvesDirty.value = false
-            delay(5000)
-        }.launchIn(screenModelScope)
+        screenModelScope.launch {
+            reloadJobsFlow.collectLatest {
+                reloadEventsEnabled.first { it }
+
+                // A real quiet period rather than the old "reload, then sleep
+                // five seconds". The delay used to sit AFTER the work, so a
+                // library scan — which emits an event per book — paid for a
+                // full reload of every shelf every five seconds for the whole
+                // scan. collectLatest cancels this wait when the next event
+                // lands, so a burst now collapses into a single reload once
+                // the server goes quiet.
+                //
+                // The staleness escape hatch keeps the screen alive during a
+                // scan that never goes quiet: past that point the next event
+                // reloads immediately instead of waiting for silence.
+                val sinceLastReload = lastReloadMark?.elapsedNow()
+                if (sinceLastReload == null || sinceLastReload < RELOAD_MAX_STALENESS) {
+                    delay(RELOAD_QUIET_PERIOD)
+                }
+
+                // Read progress alone only moves the progress shelves. Falling
+                // back to a full load there would undo the cheap path taken on
+                // reader exit — the SSE event lands right after it and would
+                // re-query every shelf a second time.
+                val structural = structuralReloadPending.value
+                structuralReloadPending.value = false
+                if (structural) load() else refreshProgressShelves()
+
+                progressShelvesDirty.value = false
+                lastReloadMark = TimeSource.Monotonic.markNow()
+            }
+        }
     }
 
     /** Manual reload entry point (pull-to-refresh, etc.). Bypasses the
@@ -461,7 +498,10 @@ class HomeViewModel(
                 }
 
                 is BookEvent,
-                is SeriesEvent -> reloadJobsFlow.tryEmit(Unit)
+                is SeriesEvent -> {
+                    structuralReloadPending.value = true
+                    reloadJobsFlow.tryEmit(Unit)
+                }
 
                 else -> {}
             }
@@ -472,4 +512,14 @@ class HomeViewModel(
         this.activeFilterNumber.value = number
     }
 
+    private companion object {
+        /** How long the server must stay quiet before a reload is worth doing. */
+        val RELOAD_QUIET_PERIOD = 1.5.seconds
+
+        /**
+         * Past this long without a reload, the next event no longer waits for
+         * silence. Keeps the screen alive during a scan that never goes quiet.
+         */
+        val RELOAD_MAX_STALENESS = 30.seconds
+    }
 }
