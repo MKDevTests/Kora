@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelChildren
@@ -95,6 +96,9 @@ private const val SMART_SCROLL_SNAP_BACK_FRACTION = 0.80f
 
 /** Below this, a correction reads as a broken tap; use the plain advance instead. */
 private const val SMART_SCROLL_MIN_FRACTION = 0.15f
+
+/** Quiet period before bubble detection is launched at the visible pages. */
+private const val BUBBLE_PREFETCH_IDLE_MS = 400L
 
 class ContinuousReaderState(
     private val cleanupScope: CoroutineScope,
@@ -177,6 +181,9 @@ class ContinuousReaderState(
 
     /** Pages whose bubble detection has been kicked off, so it runs at most once each. */
     private val bubbleDetectionStarted: MutableSet<PageId> = ConcurrentSet()
+
+    /** Pending [prefetchBubbleBands] wait, cancelled by the next scroll tick. */
+    private var bubblePrefetchJob: Job? = null
     private val imageDisplayFlow: MutableSharedFlow<ReaderImage> = MutableSharedFlow()
 
     suspend fun initialize() {
@@ -309,6 +316,7 @@ class ContinuousReaderState(
         stateScope.coroutineContext.cancelChildren()
         imageLoadScope.coroutineContext.cancelChildren()
         bubbleDetectScope.coroutineContext.cancelChildren()
+        bubblePrefetchJob = null
         pageIntervals.value = emptyList()
         currentIntervalIndex.value = 0
 
@@ -613,18 +621,27 @@ class ContinuousReaderState(
      * bubble alignment this once.
      */
     private fun prefetchBubbleBands() {
-        for (item in lazyListState.layoutInfo.visibleItemsInfo) {
-            val page = item.key as? PageMetadata ?: continue
-            val pageId = page.toPageId()
-            if (BubbleBands.cached(pageId) != null) continue
-            if (!bubbleDetectionStarted.add(pageId)) continue
-            bubbleDetectScope.launch {
-                val image = imagesInUse[pageId]?.getOriginalImage()?.getOrNull()
-                if (image == null) {
-                    bubbleDetectionStarted.remove(pageId)   // retry once it is loaded
-                    return@launch
+        // The caller runs at 10 Hz while the list scrolls, and a page merely
+        // crossed on the way somewhere else used to get a full 770 ms inference
+        // launched at it. Waiting for the scroll to settle means we only pay for
+        // the pages the reader actually stopped on — and reading the visible
+        // items after the wait, rather than before, is what makes that true.
+        bubblePrefetchJob?.cancel()
+        bubblePrefetchJob = bubbleDetectScope.launch {
+            delay(BUBBLE_PREFETCH_IDLE_MS)
+            for (item in lazyListState.layoutInfo.visibleItemsInfo) {
+                val page = item.key as? PageMetadata ?: continue
+                val pageId = page.toPageId()
+                if (BubbleBands.cached(pageId) != null) continue
+                if (!bubbleDetectionStarted.add(pageId)) continue
+                bubbleDetectScope.launch {
+                    val image = imagesInUse[pageId]?.getOriginalImage()?.getOrNull()
+                    if (image == null) {
+                        bubbleDetectionStarted.remove(pageId)   // retry once it is loaded
+                        return@launch
+                    }
+                    BubbleBands.publish(pageId, detectBubbleBands(image))
                 }
-                BubbleBands.publish(pageId, detectBubbleBands(image))
             }
         }
     }
