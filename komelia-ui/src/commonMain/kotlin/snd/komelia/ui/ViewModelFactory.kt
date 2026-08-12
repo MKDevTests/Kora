@@ -928,6 +928,8 @@ class ViewModelFactory(
             rawSeriesApi = dependencies.rawKomgaApi.value.seriesApi,
             libraryApi = komgaApi.libraryApi,
             linksRepository = appRepositories.seriesLinksRepository,
+            settingsRepository = appRepositories.settingsRepository,
+            authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
             notifications = dependencies.appNotifications,
         )
     }

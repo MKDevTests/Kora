@@ -646,6 +646,7 @@ val EnStrings = AppStrings(
         "keepScreenOnWhileReading" to "Keep screen on while reading",
         "hideChapterSeries" to "Hide chapter series (Chap)",
         "chapterManagement" to "Chapter management",
+        "chapterManagementLocalOnly" to "Link sharing via Komga is off, or you are not an admin: the pairings made here stay on this device only. Turn it on in Settings -> Navigation.",
         "chapterManagementDescription" to "Pairs series released chapter by chapter with the collected volumes they belong to. Admin only.",
         "chooseLibrary" to "Choose a library",
         "chapterManagementUnlinkedOnly" to "Unlinked",

@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
 import snd.komelia.chapters.CHAPTER_MATCH_AUTO_SCORE
@@ -15,13 +17,16 @@ import snd.komelia.chapters.strippedChapterTitle
 import snd.komelia.chapters.titleMatchScore
 import snd.komelia.komga.api.KomgaLibraryApi
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.links.KoraSharedLinks
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationType
+import snd.komelia.settings.CommonSettingsRepository
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
+import snd.komga.client.user.KomgaUser
 
 private const val LOAD_PAGE_SIZE = 500
 private const val LOAD_MAX_PAGES = 10
@@ -67,6 +72,8 @@ class ChapterManagementViewModel(
     private val rawSeriesApi: KomgaSeriesApi,
     private val libraryApi: KomgaLibraryApi,
     private val linksRepository: SeriesLinksRepository,
+    private val settingsRepository: CommonSettingsRepository,
+    private val authenticatedUser: StateFlow<KomgaUser?>,
     private val notifications: AppNotifications,
 ) : ScreenModel {
 
@@ -90,6 +97,23 @@ class ChapterManagementViewModel(
     var lastOutcome by mutableStateOf<MatchOutcome?>(null)
         private set
 
+    /**
+     * Whether what this screen writes reaches the server. False means the links
+     * stay on this install only, which the screen says out loud rather than
+     * letting an admin pair a whole library into a local table by accident.
+     */
+    var sharesToServer by mutableStateOf(false)
+        private set
+
+    /**
+     * Same rule as the series Links tab: publish only when sharing is on AND
+     * the user is admin. Read fresh (suspending) rather than from a StateFlow,
+     * whose initial `false` would silently downgrade an early write to local.
+     */
+    private suspend fun shareViaKomga(): Boolean =
+        settingsRepository.getShareLinksViaKomga().first() &&
+            authenticatedUser.value?.roleAdmin() == true
+
     val visibleRows: List<ChapterSeriesRow>
         get() = when (listFilter) {
             ChapterListFilter.ALL -> rows
@@ -101,6 +125,7 @@ class ChapterManagementViewModel(
         if (libraries.isNotEmpty()) return
         notifications.runCatchingToNotifications {
             libraries = libraryApi.getLibraries()
+            sharesToServer = shareViaKomga()
         }
     }
 
@@ -160,19 +185,31 @@ class ChapterManagementViewModel(
             val linkedIds = chapterLinkedIds()
             rows = found
                 .sortedBy { it.metadata.title.lowercase() }
-                .map { ChapterSeriesRow(series = it, linked = it.id.value in linkedIds) }
+                .map { series ->
+                    // Either source counts as linked. A pairing published from
+                    // another install exists only in the series' own metadata,
+                    // and calling it "unlinked" would invite overwriting it.
+                    val published = KoraSharedLinks.relationsOf(series)
+                        .any { isChapterRelation(it.type) }
+                    ChapterSeriesRow(
+                        series = series,
+                        linked = published || series.id.value in linkedIds,
+                    )
+                }
         }
         loading = false
     }
 
-    /** Series already carrying a chapters/volumes link, in either direction. */
+    /** Series already carrying a chapters/volumes link locally, in either direction. */
     private suspend fun chapterLinkedIds(): Set<String> =
         linksRepository.getAllRelations()
-            .filter {
-                it.type == SeriesRelationType.CHAPTERS || it.type == SeriesRelationType.VOLUMES
-            }
+            .filter { isChapterRelation(it.type) }
             .flatMap { listOf(it.from.value, it.to.value) }
             .toSet()
+
+    private fun isChapterRelation(type: SeriesRelationType) =
+        type == SeriesRelationType.CHAPTERS || type == SeriesRelationType.VOLUMES
+
 
     /** Looks for the volumes of one row and links it when the answer is unambiguous. */
     fun onFindMatch(row: ChapterSeriesRow) {
@@ -273,6 +310,16 @@ class ChapterManagementViewModel(
             to = volumes.id,
             type = SeriesRelationType.VOLUMES,
         )
+        // Local always, server too when allowed — the exact rule the Links tab
+        // applies, so a pair made here is the same pair made there.
+        if (shareViaKomga()) {
+            KoraSharedLinks.link(
+                seriesApi = rawSeriesApi,
+                from = row.series.id,
+                to = volumes.id,
+                type = SeriesRelationType.VOLUMES,
+            )
+        }
         updateRow(row.series.id.value) {
             it.copy(linked = true, candidates = emptyList(), searched = true)
         }
@@ -289,10 +336,17 @@ class ChapterManagementViewModel(
     fun onUnlink(row: ChapterSeriesRow) {
         screenModelScope.launch {
             notifications.runCatchingToNotifications {
-                val volumes = linksRepository.relationsOf(row.series.id)
-                    .firstOrNull { it.type == SeriesRelationType.VOLUMES }
+                // The pairing can live locally, on the server, or both. Take the
+                // target from whichever holds it, and clear both — removing only
+                // the local copy left the published link to come back on reload.
+                val target = linksRepository.relationsOf(row.series.id)
+                    .firstOrNull { isChapterRelation(it.type) }?.series
+                    ?: KoraSharedLinks.relationsOf(rawSeriesApi.getOneSeries(row.series.id))
+                        .firstOrNull { isChapterRelation(it.type) }?.series
                     ?: return@runCatchingToNotifications
-                linksRepository.unlinkRelation(row.series.id, volumes.series)
+
+                linksRepository.unlinkRelation(row.series.id, target)
+                if (shareViaKomga()) KoraSharedLinks.unlink(rawSeriesApi, row.series.id, target)
                 updateRow(row.series.id.value) {
                     it.copy(linked = false, candidates = emptyList(), searched = false)
                 }

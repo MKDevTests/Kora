@@ -658,6 +658,7 @@ val FrStrings = AppStrings(
         "keepScreenOnWhileReading" to "Garder l'écran allumé pendant la lecture",
         "hideChapterSeries" to "Masquer les séries de chapitres (Chap)",
         "chapterManagement" to "Gestion des chapitres",
+        "chapterManagementLocalOnly" to "Le partage des liens via Komga est désactivé, ou vous n'etes pas administrateur : les associations faites ici resteront sur cet appareil. Activez-le dans Réglages -> Navigation.",
         "chapterManagementDescription" to "Associe les séries publiées chapitre par chapitre aux volumes reliés correspondants. Réservé aux administrateurs.",
         "chooseLibrary" to "Choisir une bibliothèque",
         "chapterManagementUnlinkedOnly" to "Sans lien",

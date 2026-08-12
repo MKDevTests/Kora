@@ -72,6 +72,17 @@ class ChapterManagementScreen : Screen {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
+                // Says where the links will land before any is written: without
+                // sharing on, an admin can pair a whole library into a table
+                // that never leaves this install.
+                if (!vm.sharesToServer) {
+                    Text(
+                        text = strings.chapterManagementLocalOnly,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
                 // One library at a time: the listing is one request per library
                 // and matching only ever looks inside the same one.
                 DropdownChoiceMenu(
