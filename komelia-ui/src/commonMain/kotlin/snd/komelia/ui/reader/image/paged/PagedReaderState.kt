@@ -108,6 +108,14 @@ class PagedReaderState(
     val currentSpread: MutableStateFlow<PageSpread> = MutableStateFlow(PageSpread(emptyList()))
     val transitionPage: MutableStateFlow<TransitionPage?> = MutableStateFlow(null)
 
+    /**
+     * True while the next/previous book is being fetched.
+     *
+     * The transition page stays up for that whole time — see [nextPage] — so
+     * without this the tap that starts the move looks like it did nothing.
+     */
+    val transitionLoading = MutableStateFlow(false)
+
     val layout = MutableStateFlow(SINGLE_PAGE)
     val layoutOffset = MutableStateFlow(false)
     val scaleType = MutableStateFlow(LayoutScaleType.SCREEN)
@@ -360,8 +368,18 @@ class PagedReaderState(
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
                 stateScope.launch {
                     currentSpread.value = PageSpread(emptyList())
-                    transitionPage.value = null
-                    readerState.loadNextBook()
+                    // The transition page stays up until the new book is painted.
+                    // Clearing it here handed the screen back to the pager, which
+                    // still held the finished book's spreads and was parked on its
+                    // last one — so the page you had just left was repainted from
+                    // cache for the second or two the fetch takes. onNewBookLoaded
+                    // clears it through jumpToPage once the new spreads are in.
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadNextBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
         }
@@ -393,8 +411,14 @@ class PagedReaderState(
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
                 stateScope.launch {
                     currentSpread.value = PageSpread(emptyList())
-                    transitionPage.value = null
-                    readerState.loadPreviousBook()
+                    // Same as nextPage: leave the transition page up, or the first
+                    // page of the book being left flashes back for the fetch.
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadPreviousBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -229,8 +230,9 @@ fun BoxScope.PagedReaderContent(
             flingSpec = exponentialDecay(frictionMultiplier = 0.4f),
         ) {
             val transitionPage = pagedReaderState.transitionPage.collectAsState().value
+            val transitionLoading = pagedReaderState.transitionLoading.collectAsState().value
             if (transitionPage != null) {
-                TransitionPage(transitionPage)
+                TransitionPage(transitionPage, transitionLoading)
             } else {
                 if (spreads.isNotEmpty()) {
                         HorizontalPager(
@@ -328,8 +330,7 @@ private fun annotationsForPage(
 }
 
 @Composable
-private fun TransitionPage(page: TransitionPage) {
-    // ... rest of file same
+private fun TransitionPage(page: TransitionPage, loading: Boolean = false) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -397,6 +398,14 @@ private fun TransitionPage(page: TransitionPage) {
                 }
 
             }
+        }
+
+        // The tap that starts the move leaves this page up until the new book is
+        // painted. Without a sign that something is happening, that second or
+        // two reads as a tap that did nothing.
+        if (loading) {
+            Spacer(Modifier.size(24.dp))
+            CircularProgressIndicator(Modifier.size(32.dp))
         }
     }
 }

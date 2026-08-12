@@ -102,6 +102,9 @@ class PanelsReaderState(
     val currentPageIndex = MutableStateFlow(PageIndex(0, 0))
     val currentPage: MutableStateFlow<PanelsPage?> = MutableStateFlow(null)
     val transitionPage: MutableStateFlow<TransitionPage?> = MutableStateFlow(null)
+
+    /** True while the next/previous book is being fetched. See [PagedReaderState]. */
+    val transitionLoading = MutableStateFlow(false)
     val readingDirection = MutableStateFlow(LEFT_TO_RIGHT)
 
     val fullPageDisplayMode = MutableStateFlow(PanelsFullPageDisplayMode.NONE)
@@ -371,8 +374,15 @@ class PanelsReaderState(
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
                 stateScope.launch {
                     currentPage.value = null
-                    transitionPage.value = null
-                    readerState.loadNextBook()
+                    // Same as the paged reader: keep the transition page up until
+                    // the new book is painted, or the page just left is repainted
+                    // from cache for as long as the fetch takes.
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadNextBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
         }
@@ -426,8 +436,12 @@ class PanelsReaderState(
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
                 stateScope.launch {
                     currentPage.value = null
-                    transitionPage.value = null
-                    readerState.loadPreviousBook()
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadPreviousBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
         }
