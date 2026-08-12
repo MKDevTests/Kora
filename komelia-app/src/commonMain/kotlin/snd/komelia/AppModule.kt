@@ -64,6 +64,7 @@ import snd.komelia.offline.OfflineRepositories
 import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
+import snd.komelia.progress.withReadProgressSignal
 import snd.komelia.stats.withStatsTracking
 import snd.komelia.chapters.withChapterFilter
 import snd.komelia.ignore.withIgnoreFilter
@@ -259,7 +260,8 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
+            ).withReadProgressSignal()
+                .withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
@@ -273,7 +275,8 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
+            ).withReadProgressSignal()
+                .withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
         }.stateIn(initScope)
 
         val komgaSharedState = KomgaAuthenticationState(
