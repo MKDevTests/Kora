@@ -21,8 +21,7 @@ const val CHAPTER_TITLE_SUFFIX = "(Chap)"
 
 /**
  * Returns a [KomgaApi] identical to the receiver except that series whose title
- * ends with [CHAPTER_TITLE_SUFFIX] are dropped from every list response — or are
- * the only thing kept, depending on [filter]. On
+ * ends with [CHAPTER_TITLE_SUFFIX] are dropped from every list response. On
  * [ChapterSeriesFilter.ANY] every endpoint passes through unchanged.
  *
  * This catches every list in the app — the library grid, the home shelves,
@@ -56,9 +55,6 @@ private class ChapterFilteringSeriesApi(
         ChapterSeriesFilter.ANY -> this
         ChapterSeriesFilter.HIDE_CHAPTERS ->
             copy(content = content.filterNot { isChapterSeriesTitle(it.metadata.title) })
-
-        ChapterSeriesFilter.ONLY_CHAPTERS ->
-            copy(content = content.filter { isChapterSeriesTitle(it.metadata.title) })
     }
 
     override suspend fun getSeriesList(

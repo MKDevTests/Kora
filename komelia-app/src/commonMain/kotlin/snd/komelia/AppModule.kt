@@ -365,6 +365,7 @@ abstract class AppModule(
             readerSyncService = readerSyncService,
 
             komgaApi = komgaApi,
+            rawKomgaApi = rawKomgaApi,
             hiddenSeriesController = hiddenSeriesController,
             similarityIndexBuilder = similarityIndexBuilder,
             isOffline = isOffline,

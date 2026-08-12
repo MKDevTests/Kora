@@ -161,7 +161,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             searchFuzzyEnabled = get(AppSettingsTable.searchFuzzyEnabled),
             aniListLinkSuggestionsEnabled = get(AppSettingsTable.aniListLinkSuggestionsEnabled),
             shareLinksViaKomga = get(AppSettingsTable.shareLinksViaKomga),
-            chapterSeriesFilter = ChapterSeriesFilter.valueOf(get(AppSettingsTable.chapterSeriesFilter)),
+            chapterSeriesFilter = ChapterSeriesFilter.parse(get(AppSettingsTable.chapterSeriesFilter)),
             showLanguageOnCovers = get(AppSettingsTable.showLanguageOnCovers),
             languageBadgeScale = get(AppSettingsTable.languageBadgeScale),
             languageBadgeAtBottom = get(AppSettingsTable.languageBadgeAtBottom),

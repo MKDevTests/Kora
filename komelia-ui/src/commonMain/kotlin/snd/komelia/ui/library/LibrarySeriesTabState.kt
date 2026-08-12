@@ -311,7 +311,7 @@ class LibrarySeriesTabState(
      * observer, so cycling it from anywhere reaches every open library.
      */
     fun onChapterSeriesFilterCycle() {
-        val next = chapterSeriesFilter.next()
+        val next = chapterSeriesFilter.toggled()
         screenModelScope.launch { settingsRepository.putChapterSeriesFilter(next) }
     }
 

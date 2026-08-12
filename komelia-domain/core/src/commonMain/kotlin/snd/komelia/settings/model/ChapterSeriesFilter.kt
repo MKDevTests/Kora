@@ -12,15 +12,18 @@ enum class ChapterSeriesFilter {
     ANY,
 
     /** Drop chapter series from every list. */
-    HIDE_CHAPTERS,
+    HIDE_CHAPTERS;
 
-    /** Keep only chapter series — how you check a release against its volumes. */
-    ONLY_CHAPTERS;
+    fun toggled(): ChapterSeriesFilter = if (this == ANY) HIDE_CHAPTERS else ANY
 
-    /** Cycles ANY → hide → only → ANY, for the tri-state checkbox. */
-    fun next(): ChapterSeriesFilter = when (this) {
-        ANY -> HIDE_CHAPTERS
-        HIDE_CHAPTERS -> ONLY_CHAPTERS
-        ONLY_CHAPTERS -> ANY
+    companion object {
+        /**
+         * Tolerant of values this build no longer knows. V95 briefly shipped an
+         * ONLY_CHAPTERS mode to a debug install; it filtered page by page, so it
+         * showed a handful of series per page and mostly empty ones, and it was
+         * dropped. Reading it back must not take the app down at startup.
+         */
+        fun parse(stored: String): ChapterSeriesFilter =
+            entries.firstOrNull { it.name == stored } ?: ANY
     }
 }

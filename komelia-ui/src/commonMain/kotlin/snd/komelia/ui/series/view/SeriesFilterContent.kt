@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -288,25 +289,13 @@ fun SeriesFilterContent(
                         .clip(RoundedCornerShape(5.dp)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Tri-state like its two neighbours, and the label says which
-                    // state it is in: "off / on / third thing" is not readable
-                    // from a half-ticked box alone.
-                    TriStateCheckbox(
-                        state = when (chapterSeriesFilter) {
-                            ChapterSeriesFilter.ANY -> ToggleableState.Off
-                            ChapterSeriesFilter.HIDE_CHAPTERS -> ToggleableState.On
-                            ChapterSeriesFilter.ONLY_CHAPTERS -> ToggleableState.Indeterminate
-                        },
-                        onClick = onChapterSeriesFilterCycle,
+                    Checkbox(
+                        checked = chapterSeriesFilter == ChapterSeriesFilter.HIDE_CHAPTERS,
+                        onCheckedChange = { onChapterSeriesFilterCycle() },
                         modifier = Modifier.size(30.dp)
                     )
-                    val strings = LocalStrings.current.ui
                     Text(
-                        text = when (chapterSeriesFilter) {
-                            ChapterSeriesFilter.ANY -> strings.chapterSeriesAny
-                            ChapterSeriesFilter.HIDE_CHAPTERS -> strings.chapterSeriesHidden
-                            ChapterSeriesFilter.ONLY_CHAPTERS -> strings.chapterSeriesOnly
-                        },
+                        text = LocalStrings.current.ui.hideChapterSeries,
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 2,
                     )
