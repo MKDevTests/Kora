@@ -5,9 +5,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.AppNotifications
 import snd.komelia.chapters.CHAPTER_MATCH_AUTO_SCORE
 import snd.komelia.chapters.CHAPTER_MATCH_FLOOR_SCORE
@@ -21,15 +26,26 @@ import snd.komelia.links.KoraSharedLinks
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationType
 import snd.komelia.settings.CommonSettingsRepository
+import snd.komelia.ui.series.SeriesLinksChanges
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.user.KomgaUser
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
 
 private const val LOAD_PAGE_SIZE = 500
 private const val LOAD_MAX_PAGES = 10
+
+/** Enough to tell "one match" from "duplicates"; nothing beyond that is used. */
+private const val EXACT_PAGE_SIZE = 5
+private const val FUZZY_PAGE_SIZE = 50
+
+/** Matches in flight during a bulk run. Four, like every other Komga fan-out. */
+private const val MATCH_CONCURRENCY = 4
 
 /** A possible volumes series, with how alike its title is (0-100). */
 data class ChapterCandidate(
@@ -228,17 +244,18 @@ class ChapterManagementViewModel(
             matching = true
             lastOutcome = null
             notifications.runCatchingToNotifications {
-                var linked = 0
-                var ambiguous = 0
-                var notFound = 0
-                targets.forEach { row ->
-                    when (matchOne(row)) {
-                        MatchResult.LINKED -> linked++
-                        MatchResult.AMBIGUOUS -> ambiguous++
-                        MatchResult.NOT_FOUND -> notFound++
-                    }
+                // Bounded fan-out rather than one series after another: each match
+                // is a server round-trip, and fifty of them in a row is a minute
+                // of staring at a spinner.
+                val limit = Semaphore(MATCH_CONCURRENCY)
+                val results = coroutineScope {
+                    targets.map { row -> async { limit.withPermit { matchOne(row) } } }.awaitAll()
                 }
-                lastOutcome = MatchOutcome(linked, ambiguous, notFound)
+                lastOutcome = MatchOutcome(
+                    linked = results.count { it == MatchResult.LINKED },
+                    ambiguous = results.count { it == MatchResult.AMBIGUOUS },
+                    notFound = results.count { it == MatchResult.NOT_FOUND },
+                )
                 selectedIds = emptySet()
             }
             matching = false
@@ -248,38 +265,65 @@ class ChapterManagementViewModel(
     private enum class MatchResult { LINKED, AMBIGUOUS, NOT_FOUND }
 
     /**
-     * One match attempt.
+     * One match attempt, cheap half first.
      *
-     * Candidates come from the full-text index on the stripped title — indexed,
-     * so this stays fast in bulk — and are then scored locally. Exact equality
-     * alone was not enough: the two entries are typed at different moments and
-     * drift by an accent, a colon or a stray "Vol.".
+     * An exact title is served by an index; the full-text search is not, and it
+     * is what made this screen slow. Most chapter series are named after their
+     * volumes exactly, so most rows are settled by the first query and never
+     * pay for the second.
      *
-     * A single candidate at or above [CHAPTER_MATCH_AUTO_SCORE] is applied. Two
-     * candidates that high never are, however confident each looks on its own:
-     * a library holding two series called "Berserk" gives no ground to prefer
-     * either, and a wrong link is silent once written.
+     * Scoring still applies to the exact hits — not to rank them, but because
+     * two series with the same title must come out as duplicates, and the rule
+     * below is the one place that decides.
      */
     private suspend fun matchOne(row: ChapterSeriesRow): MatchResult {
         val libraryId = selectedLibrary?.id ?: return MatchResult.NOT_FOUND
         val stripped = strippedChapterTitle(row.series.metadata.title)
         if (stripped.isBlank()) return MatchResult.NOT_FOUND
 
-        val candidates = rawSeriesApi.getSeriesList(
+        val exact = rawSeriesApi.getSeriesList(
+            conditionBuilder = allOfSeries {
+                library { isEqualTo(libraryId) }
+                title { isEqualTo(stripped) }
+            },
+            fulltextSearch = null,
+            pageRequest = KomgaPageRequest(size = EXACT_PAGE_SIZE, pageIndex = 0),
+        ).content.scoredAgainst(row, stripped)
+        if (exact.isNotEmpty()) return settle(row, exact)
+
+        // Nothing named exactly that: fall back to the index-free search, where
+        // an accent, a colon or a stray "Vol." is what stands between the two.
+        val fuzzy = rawSeriesApi.getSeriesList(
             conditionBuilder = allOfSeries { library { isEqualTo(libraryId) } },
             fulltextSearch = stripped,
-            pageRequest = KomgaPageRequest(size = 50, pageIndex = 0),
-        ).content
-            .asSequence()
-            // Never propose a chapter series as another one's volumes, and never
-            // propose the row itself.
-            .filter { it.id != row.series.id }
-            .filterNot { isChapterSeriesTitle(it.metadata.title) }
-            .map { ChapterCandidate(it, titleMatchScore(stripped, it.metadata.title)) }
-            .filter { it.score >= CHAPTER_MATCH_FLOOR_SCORE }
-            .sortedByDescending { it.score }
-            .toList()
+            pageRequest = KomgaPageRequest(size = FUZZY_PAGE_SIZE, pageIndex = 0),
+        ).content.scoredAgainst(row, stripped)
+        return settle(row, fuzzy)
+    }
 
+    /** Drop what can never be the answer, score the rest, best first. */
+    private fun List<KomgaSeries>.scoredAgainst(
+        row: ChapterSeriesRow,
+        stripped: String,
+    ): List<ChapterCandidate> = asSequence()
+        // Never propose a chapter series as another one's volumes, and never
+        // propose the row itself.
+        .filter { it.id != row.series.id }
+        .filterNot { isChapterSeriesTitle(it.metadata.title) }
+        .map { ChapterCandidate(it, titleMatchScore(stripped, it.metadata.title)) }
+        .filter { it.score >= CHAPTER_MATCH_FLOOR_SCORE }
+        .sortedByDescending { it.score }
+        .toList()
+
+    /**
+     * Apply, ask, or give up.
+     *
+     * A single candidate at or above [CHAPTER_MATCH_AUTO_SCORE] is applied. Two
+     * candidates that high never are, however confident each looks on its own:
+     * a library holding two series called "Berserk" gives no ground to prefer
+     * either, and a wrong link is silent once written.
+     */
+    private suspend fun settle(row: ChapterSeriesRow, candidates: List<ChapterCandidate>): MatchResult {
         val confident = candidates.filter { it.score >= CHAPTER_MATCH_AUTO_SCORE }
         return when {
             candidates.isEmpty() -> {
@@ -310,6 +354,10 @@ class ChapterManagementViewModel(
             to = volumes.id,
             type = SeriesRelationType.VOLUMES,
         )
+        logger.info {
+            "Chapter link: '${row.series.metadata.title}' -> '${volumes.metadata.title}' " +
+                "(${row.series.id.value} -> ${volumes.id.value})"
+        }
         // Local always, server too when allowed — the exact rule the Links tab
         // applies, so a pair made here is the same pair made there.
         if (shareViaKomga()) {
@@ -323,11 +371,15 @@ class ChapterManagementViewModel(
         updateRow(row.series.id.value) {
             it.copy(linked = true, candidates = emptyList(), searched = true)
         }
+        // Without this a series screen already on the back stack keeps the state
+        // it loaded before, so the link looks like it was never made.
+        SeriesLinksChanges.notifyChanged()
     }
 
     /** Links [row] to a candidate the user picked among several. */
     fun onPickCandidate(row: ChapterSeriesRow, candidate: ChapterCandidate) {
         screenModelScope.launch {
+            logger.info { "Chapter link picked by hand: ${candidate.series.metadata.title}" }
             notifications.runCatchingToNotifications { link(row, candidate.series) }
         }
     }
@@ -350,6 +402,7 @@ class ChapterManagementViewModel(
                 updateRow(row.series.id.value) {
                     it.copy(linked = false, candidates = emptyList(), searched = false)
                 }
+                SeriesLinksChanges.notifyChanged()
             }
         }
     }
