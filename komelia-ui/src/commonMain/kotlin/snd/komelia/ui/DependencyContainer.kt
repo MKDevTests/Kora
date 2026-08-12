@@ -46,6 +46,13 @@ data class DependencyContainer(
     val backupService: BackupService,
     val readerSyncService: ReaderSyncService,
     val komgaApi: StateFlow<KomgaApi>,
+    /**
+     * The same api with none of Kora's own filtering on top — no ignore list, no
+     * kora:hidden, no chapter filter. Only for screens whose whole job is to
+     * manage what those filters remove: asking the filtered api for the series
+     * it is built to hide returns nothing.
+     */
+    val rawKomgaApi: StateFlow<KomgaApi>,
     /** Admin "hide for everyone" (kora:hidden) handle; null on platforms without it. */
     val hiddenSeriesController: HiddenSeriesController? = null,
     /** Builds/refreshes the local term index behind "Similar series". */

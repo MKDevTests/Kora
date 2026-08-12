@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.FilterDialogMultiChoiceWithSearch
@@ -63,6 +65,8 @@ import snd.komga.client.series.KomgaSeriesStatus
 @Composable
 fun SeriesFilterContent(
     filterState: SeriesFilterState,
+    chapterSeriesFilter: ChapterSeriesFilter = ChapterSeriesFilter.ANY,
+    onChapterSeriesFilterCycle: (() -> Unit)? = null,
 ) {
     val strings = LocalStrings.current.seriesFilter
     val widthClass = LocalWindowWidth.current
@@ -267,6 +271,34 @@ fun SeriesFilterContent(
                         modifier = Modifier.size(30.dp)
                     )
                     Text(strings.oneshot, style = MaterialTheme.typography.labelLarge, maxLines = 2)
+                }
+            }
+
+            // Sits with the filters because that is where the user looks for it,
+            // but unlike its neighbours it is one setting for the whole app, not
+            // one per library: the home shelves and search span every library at
+            // once and would have had none to read.
+            if (onChapterSeriesFilterCycle != null) {
+                Row(
+                    modifier = Modifier
+                        .width(width)
+                        .height(40.dp)
+                        .clickable { onChapterSeriesFilterCycle() }
+                        .cursorForHand()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clip(RoundedCornerShape(5.dp)),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = chapterSeriesFilter == ChapterSeriesFilter.HIDE_CHAPTERS,
+                        onCheckedChange = { onChapterSeriesFilterCycle() },
+                        modifier = Modifier.size(30.dp)
+                    )
+                    Text(
+                        text = LocalStrings.current.ui.hideChapterSeries,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 2,
+                    )
                 }
             }
         }

@@ -65,6 +65,7 @@ import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komelia.onnxruntime.OnnxRuntime
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.stats.withStatsTracking
+import snd.komelia.chapters.withChapterFilter
 import snd.komelia.ignore.withIgnoreFilter
 import snd.komelia.hidden.HiddenSeriesController
 import snd.komelia.ui.DependencyContainer
@@ -211,6 +212,14 @@ abstract class AppModule(
             appRepositories.settingsRepository.getIgnoredSeriesIds(),
         ) { enabled, ids -> if (enabled) ids else emptySet() }.stateIn(initScope)
 
+        // Chapter series (titles ending in "(Chap)"): hide them, show only them,
+        // or leave every series alone. One setting for the whole app rather than
+        // one per library, because the home shelves and search span every library
+        // at once and would have had none to read.
+        val chapterSeriesFilterFlow = appRepositories.settingsRepository
+            .getChapterSeriesFilter()
+            .stateIn(initScope)
+
         // Raw (undecorated) api the hidden-series discovery query runs against —
         // the ignore/hidden filter would otherwise drop kora:hidden series from
         // its own lookup. The app-facing decorated api is derived from this below.
@@ -250,7 +259,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds)
+            ).withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
         }.stateIn(initScope)
 
         val komgaNoRemoteCacheApi = isOffline.map { offline ->
@@ -264,7 +273,7 @@ abstract class AppModule(
                 readingEvents = appRepositories.readingEventsRepository,
                 statsEnabled = statsEnabledFlow,
                 completionEvents = bookCompletionEvents,
-            ).withIgnoreFilter(filterIds)
+            ).withIgnoreFilter(filterIds).withChapterFilter(chapterSeriesFilterFlow)
         }.stateIn(initScope)
 
         val komgaSharedState = KomgaAuthenticationState(
@@ -356,6 +365,7 @@ abstract class AppModule(
             readerSyncService = readerSyncService,
 
             komgaApi = komgaApi,
+            rawKomgaApi = rawKomgaApi,
             hiddenSeriesController = hiddenSeriesController,
             similarityIndexBuilder = similarityIndexBuilder,
             isOffline = isOffline,

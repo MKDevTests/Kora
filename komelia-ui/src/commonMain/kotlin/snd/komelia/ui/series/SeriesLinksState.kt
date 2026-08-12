@@ -29,6 +29,7 @@ import snd.komelia.anilist.AniListMedia
 import snd.komelia.anilist.linkSuggestions
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.links.KoraLinkCodec
+import snd.komelia.links.KoraSharedLinks
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationType
 import snd.komelia.settings.CommonSettingsRepository
@@ -288,27 +289,13 @@ class SeriesLinksState(
         if (shareViaKomga()) komgaLinkRelation(from, to, type)
     }
 
-    private suspend fun komgaLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) {
-        writeKoraLink(on = from, target = to, type = type)
-        writeKoraLink(on = to, target = from, type = type.inverse())
-    }
+    // Both delegate to KoraSharedLinks: the admin chapter screen writes the same
+    // shared layer, and two copies of this drifted apart the moment there were two.
+    private suspend fun komgaLinkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) =
+        KoraSharedLinks.link(seriesApi, from, to, type)
 
-    private suspend fun komgaUnlinkRelation(from: KomgaSeriesId, to: KomgaSeriesId) {
-        removeKoraLink(on = from, target = to)
-        removeKoraLink(on = to, target = from)
-    }
-
-    private suspend fun writeKoraLink(on: KomgaSeriesId, target: KomgaSeriesId, type: SeriesRelationType) {
-        val s = seriesApi.getOneSeries(on)
-        val kept = s.metadata.links.filterNot { KoraLinkCodec.parse(it)?.target == target }
-        seriesApi.update(on, linksUpdate(s, kept + KoraLinkCodec.relationLink(target, type)))
-    }
-
-    private suspend fun removeKoraLink(on: KomgaSeriesId, target: KomgaSeriesId) {
-        val s = seriesApi.getOneSeries(on)
-        val newLinks = s.metadata.links.filterNot { KoraLinkCodec.parse(it)?.target == target }
-        if (newLinks.size != s.metadata.links.size) seriesApi.update(on, linksUpdate(s, newLinks))
-    }
+    private suspend fun komgaUnlinkRelation(from: KomgaSeriesId, to: KomgaSeriesId) =
+        KoraSharedLinks.unlink(seriesApi, from, to)
 
     /** Update request that touches ONLY links + linksLock, leaving all else unchanged. */
     private fun linksUpdate(s: KomgaSeries, newLinks: List<KomgaWebLink>) =

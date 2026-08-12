@@ -44,6 +44,7 @@ import snd.komelia.komga.api.KomgaReferentialApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komelia.settings.CommonSettingsRepository
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.common.cards.defaultCardWidth
 import snd.komelia.ui.common.menus.BookMenuActions
@@ -59,6 +60,7 @@ import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.common.Page
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.search.SeriesConditionBuilder
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.sse.KomgaEvent
@@ -69,6 +71,13 @@ private const val SERIES_RANDOM_SORT = "random"
 
 /** Random draws that added nothing new before we stop trying to fill a page. */
 private const val MAX_BARREN_RANDOM_DRAWS = 3
+
+/**
+ * Draws allowed for "open a random series" before giving up. A draw comes back
+ * empty when it lands on a series the client-side filters remove, so this is a
+ * miss counter, not a retry-on-error counter.
+ */
+private const val RANDOM_DRAW_ATTEMPTS = 5
 
 /**
  * Reserved key under which the genre drill-down persists its single,
@@ -194,6 +203,14 @@ class LibrarySeriesTabState(
         private set
     var totalSeriesCount by mutableStateOf(0)
         private set
+
+    /**
+     * Mirrors the app-wide chapter-series setting, purely so the filter panel can
+     * draw a tri-state checkbox from it. The filtering itself happens in
+     * `withChapterFilter`, not here — see the note in [getAllSeries].
+     */
+    var chapterSeriesFilter by mutableStateOf(ChapterSeriesFilter.ANY)
+        private set
     var currentSeriesPage by mutableStateOf(1)
         private set
 
@@ -235,6 +252,7 @@ class LibrarySeriesTabState(
                 }
             }
 
+            chapterSeriesFilter = settingsRepository.getChapterSeriesFilter().first()
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
             // Paint the cached first page instantly, then load. The grid must not
             // wait on the filter panel's referential data (genres / tags /
@@ -271,11 +289,30 @@ class LibrarySeriesTabState(
         }
         startKomgaEventListener()
 
+        // Reload on change: the filtering happens as the page is received, so
+        // the page currently on screen was built under the old setting.
+        settingsRepository.getChapterSeriesFilter()
+            .onEach {
+                if (chapterSeriesFilter != it) {
+                    chapterSeriesFilter = it
+                    loadSeriesPage(1)
+                }
+            }.launchIn(screenModelScope)
+
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
             loadSeriesPage(currentSeriesPage)
             delay(1000)
         }.launchIn(screenModelScope)
+    }
+
+    /**
+     * Writes the setting only. The reload comes back through the settings flow
+     * observer, so cycling it from anywhere reaches every open library.
+     */
+    fun onChapterSeriesFilterCycle() {
+        val next = chapterSeriesFilter.toggled()
+        screenModelScope.launch { settingsRepository.putChapterSeriesFilter(next) }
     }
 
     fun reload() {
@@ -327,16 +364,21 @@ class LibrarySeriesTabState(
             // An offset is only meaningful under a stable order, so when the list
             // is itself sorted randomly we anchor the draw on the title instead.
             val sort = if (filter.sortOrder == SeriesSort.RANDOM) SeriesSort.TITLE_ASC else filter.sortOrder
-            val index = Random.nextInt(total)
-            val page = seriesApi.getSeriesList(
-                conditionBuilder = condition,
-                fulltextSearch = filter.searchTerm.ifBlank { null },
-                pageRequest = KomgaPageRequest(
-                    size = 1,
-                    pageIndex = index,
-                    sort = sort.komgaSort
-                )
-            )
+
+            // Chapter series are removed client-side, so a draw can land on one
+            // and come back empty — the button would then do nothing at all.
+            // Draw again rather than stop: the odds of missing several times run
+            // out fast unless the library is almost entirely chapter series, and
+            // in that case doing nothing is the honest answer anyway.
+            var index = Random.nextInt(total)
+            var page = drawOneSeries(condition, filter, sort, index)
+            var attempt = 1
+            while (page.content.isEmpty() && attempt < RANDOM_DRAW_ATTEMPTS) {
+                index = Random.nextInt(total)
+                page = drawOneSeries(condition, filter, sort, index)
+                attempt++
+            }
+
             page.content.firstOrNull()?.let { picked ->
                 // pageSize = 1 makes the global index simply `index`, which is
                 // exactly what the sibling navigation reads back.
@@ -354,6 +396,22 @@ class LibrarySeriesTabState(
             }
         }
     }
+
+    /** One series at [index] under [sort]; see [openRandomSeries]. */
+    private suspend fun drawOneSeries(
+        condition: SeriesConditionBuilder,
+        filter: SeriesFilter,
+        sort: SeriesSort,
+        index: Int,
+    ) = seriesApi.getSeriesList(
+        conditionBuilder = condition,
+        fulltextSearch = filter.searchTerm.ifBlank { null },
+        pageRequest = KomgaPageRequest(
+            size = 1,
+            pageIndex = index,
+            sort = sort.komgaSort
+        )
+    )
 
     fun seriesMenuActions() = SeriesMenuActions(seriesApi, notifications, taskEmitter, screenModelScope)
     fun bookMenuActions() = BookMenuActions(bookApi, notifications, screenModelScope, taskEmitter)
@@ -539,6 +597,15 @@ class LibrarySeriesTabState(
             // comes back genuinely full. Otherwise the client-side ignore filter
             // strips them AFTER fetching, leaving a 100-item page as 97-98 items
             // -> ragged last row + page/element counts that overstate reality.
+            //
+            // The chapter filter deliberately does NOT get the same treatment.
+            // "title doesNotEndWith" is a leading-wildcard LIKE, which no index
+            // can serve: it scans the whole series table, and Komga scans it
+            // twice per page (rows, then the count). Measured at 420 SECONDS on a
+            // real library while a scan was running. The tag above is a fast
+            // indexed join; the shape looked alike and the cost did not. Chapter
+            // series are dropped client-side instead (withChapterFilter), at the
+            // price of slightly short pages and a total that counts them.
             tag { isNotEqualTo(HIDDEN_TAG) }
             filter.addConditionTo(this)
         }

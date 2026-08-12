@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.AutobackupFrequency
 import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.settings.model.StartupScreen
 import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
@@ -76,6 +77,13 @@ data class AppSettings(
      * default → purely local. See series Links tab.
      */
     val shareLinksViaKomga: Boolean = false,
+
+    /**
+     * What to do with series whose title ends with "(Chap)" in every list — the
+     * library grid, the home shelves, search, upcoming releases. Three-way since
+     * V95; V94 shipped it as a boolean.
+     */
+    val chapterSeriesFilter: ChapterSeriesFilter = ChapterSeriesFilter.ANY,
 
     /** Optional FR/EN language pill on series covers (Home / Library). */
     val showLanguageOnCovers: Boolean = false,

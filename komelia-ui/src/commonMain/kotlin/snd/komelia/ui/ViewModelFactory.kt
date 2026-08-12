@@ -54,6 +54,7 @@ import snd.komelia.ui.series.SeriesViewModel
 import snd.komelia.ui.series.SeriesViewModel.SeriesTab
 import snd.komelia.ui.settings.account.AccountSettingsViewModel
 import snd.komelia.ui.settings.analysis.MediaAnalysisViewModel
+import snd.komelia.ui.settings.chapters.ChapterManagementViewModel
 import snd.komelia.ui.settings.announcements.AnnouncementsViewModel
 import snd.komelia.ui.settings.appearance.AppSettingsViewModel
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityViewModel
@@ -917,6 +918,19 @@ class ViewModelFactory(
         return IgnoreListViewModel(
             settingsRepository = appRepositories.settingsRepository,
             seriesApi = komgaApi.seriesApi,
+        )
+    }
+
+    fun getChapterManagementViewModel(): ChapterManagementViewModel {
+        return ChapterManagementViewModel(
+            // Raw, not the filtered api: the filtered one removes exactly the
+            // series this screen is here to manage.
+            rawSeriesApi = dependencies.rawKomgaApi.value.seriesApi,
+            libraryApi = komgaApi.libraryApi,
+            linksRepository = appRepositories.seriesLinksRepository,
+            settingsRepository = appRepositories.settingsRepository,
+            authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
+            notifications = dependencies.appNotifications,
         )
     }
 

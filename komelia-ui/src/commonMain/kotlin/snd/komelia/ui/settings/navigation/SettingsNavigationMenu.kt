@@ -31,6 +31,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import snd.komelia.ui.LocalOfflineMode
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.dialogs.ConfirmationDialog
+import snd.komelia.ui.settings.chapters.ChapterManagementScreen
 import snd.komelia.ui.settings.account.AccountSettingsScreen
 import snd.komelia.ui.settings.analysis.MediaAnalysisScreen
 import snd.komelia.ui.settings.announcements.AnnouncementsScreen
@@ -226,6 +227,13 @@ fun SettingsNavigationMenu(
                             label = LocalStrings.current.ui.komgaToolkit,
                             onClick = { onNavigation(ToolkitScreen()) },
                             isSelected = currentScreen is ToolkitScreen,
+                        )
+                    )
+                    add(
+                        NavEntry(
+                            label = LocalStrings.current.ui.chapterManagement,
+                            onClick = { onNavigation(ChapterManagementScreen()) },
+                            isSelected = currentScreen is ChapterManagementScreen,
                         )
                     )
                 }

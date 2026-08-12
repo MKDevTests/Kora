@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalFloatingActionButton
+import snd.komelia.settings.model.ChapterSeriesFilter
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.LocalUseFloatingNavigationBar
@@ -89,6 +90,8 @@ fun SeriesListContent(
     onSeriesSelect: (KomgaSeries) -> Unit,
 
     filterState: SeriesFilterState?,
+    chapterSeriesFilter: ChapterSeriesFilter = ChapterSeriesFilter.ANY,
+    onChapterSeriesFilterCycle: (() -> Unit)? = null,
 
     totalPages: Int,
     currentPage: Int,
@@ -159,7 +162,11 @@ fun SeriesListContent(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    SeriesFilterContent(filterState = filterState)
+                    SeriesFilterContent(
+                        filterState = filterState,
+                        chapterSeriesFilter = chapterSeriesFilter,
+                        onChapterSeriesFilterCycle = onChapterSeriesFilterCycle,
+                    )
                 }
                 HorizontalDivider()
                 Row(
