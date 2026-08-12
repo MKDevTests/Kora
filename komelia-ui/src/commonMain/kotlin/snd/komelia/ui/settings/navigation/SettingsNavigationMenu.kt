@@ -229,6 +229,13 @@ fun SettingsNavigationMenu(
                             isSelected = currentScreen is ToolkitScreen,
                         )
                     )
+                    add(
+                        NavEntry(
+                            label = LocalStrings.current.ui.chapterManagement,
+                            onClick = { onNavigation(ChapterManagementScreen()) },
+                            isSelected = currentScreen is ChapterManagementScreen,
+                        )
+                    )
                 }
             )
         }
@@ -289,13 +296,6 @@ fun SettingsNavigationMenu(
                                 trailingContent = if (hasMediaErrors) {
                                     { ErrorIndicator() }
                                 } else null
-                            )
-                        )
-                        add(
-                            NavEntry(
-                                label = LocalStrings.current.ui.chapterManagement,
-                                onClick = { onNavigation(ChapterManagementScreen()) },
-                                isSelected = currentScreen is ChapterManagementScreen,
                             )
                         )
                         add(
