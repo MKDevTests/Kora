@@ -5,9 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
@@ -29,6 +34,8 @@ import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
+import snd.komelia.ui.common.images.SeriesThumbnail
+import snd.komelia.ui.dialogs.AppDialog
 import snd.komelia.ui.dialogs.ConfirmationDialog
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komga.client.library.KomgaLibrary
@@ -61,6 +68,39 @@ class ChapterManagementScreen : Screen {
                     vm.onMatchSelected()
                 },
                 onDialogDismiss = { confirmBulk = false },
+            )
+        }
+
+        // What just happened, series by series. A bulk run acts on rows that
+        // scroll off screen, and it is the ones it could NOT settle that need
+        // to be seen — a counter does not name them.
+        if (vm.showReport && vm.report.isNotEmpty()) {
+            AppDialog(
+                modifier = Modifier.widthIn(max = 640.dp),
+                onDismissRequest = vm::dismissReport,
+                header = {
+                    Text(
+                        text = strings.chapterManagementReport,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                },
+                content = {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        vm.report.forEach { entry -> ReportRow(entry) }
+                    }
+                },
+                controlButtons = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        FilledTonalButton(onClick = vm::dismissReport) { Text(strings.close) }
+                    }
+                },
             )
         }
 
@@ -176,6 +216,84 @@ class ChapterManagementScreen : Screen {
     }
 }
 
+/**
+ * One possible volumes series.
+ *
+ * A title alone does not decide it: the whole reason there are several is that
+ * they share it — the French edition, the English one, the colour one. The
+ * cover, the language, the publisher and the volume count are what tell them
+ * apart, and all four are already in the search result. Same row as the link
+ * suggestions on a series page, on purpose.
+ *
+ * The score is shown too: "88%" says how far apart the two titles are, which a
+ * position in a list does not.
+ */
+@Composable
+private fun CandidateRow(candidate: ChapterCandidate, onClick: () -> Unit) {
+    val strings = LocalStrings.current
+    val series = candidate.series
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SeriesThumbnail(
+            seriesId = series.id,
+            modifier = Modifier.width(40.dp).height(60.dp),
+            contentScale = ContentScale.Crop,
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = series.metadata.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val details = listOfNotNull(
+                "${candidate.score}%",
+                series.metadata.language.takeIf { it.isNotBlank() }?.uppercase(),
+                series.metadata.publisher.takeIf { it.isNotBlank() },
+                strings.counts.booksCount(series.booksCount),
+            ).joinToString(" · ")
+            Text(
+                text = details,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** One line of the end-of-run report: what happened to one series. */
+@Composable
+private fun ReportRow(entry: MatchReportEntry) {
+    val strings = LocalStrings.current.ui
+    val (label, color) = when (entry.result) {
+        MatchReportResult.LINKED -> strings.chapterManagementLinked to MaterialTheme.colorScheme.primary
+        MatchReportResult.AMBIGUOUS ->
+            strings.chapterManagementAmbiguous to MaterialTheme.colorScheme.tertiary
+        MatchReportResult.NOT_FOUND ->
+            strings.chapterManagementNoMatch to MaterialTheme.colorScheme.onSurfaceVariant
+        MatchReportResult.FAILED -> strings.chapterManagementFailedCount to MaterialTheme.colorScheme.error
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = entry.title,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = listOfNotNull(label, entry.detail).joinToString(" — "),
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+        )
+    }
+}
+
 @Composable
 private fun ChapterRow(vm: ChapterManagementViewModel, row: ChapterSeriesRow) {
     val strings = LocalStrings.current.ui
@@ -218,19 +336,7 @@ private fun ChapterRow(vm: ChapterManagementViewModel, row: ChapterSeriesRow) {
         if (row.candidates.isNotEmpty() && !row.linked) {
             Column(Modifier.padding(start = 48.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 row.candidates.forEach { candidate ->
-                    // The score is shown, not merely the order: "88%" tells the
-                    // admin how far apart the two titles actually are, which a
-                    // position in a list does not.
-                    Text(
-                        text = "${candidate.score}% · ${candidate.series.metadata.title} · " +
-                            "${candidate.series.booksCount} ${strings.books}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { vm.onPickCandidate(row, candidate) }
-                            .padding(vertical = 4.dp),
-                    )
+                    CandidateRow(candidate) { vm.onPickCandidate(row, candidate) }
                 }
             }
         }

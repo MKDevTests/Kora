@@ -73,6 +73,16 @@ data class ChapterSeriesRow(
 /** Which rows the list shows. */
 enum class ChapterListFilter { ALL, UNLINKED, LINKED }
 
+/** How one series ended up, for the report shown when the run is over. */
+data class MatchReportEntry(
+    val title: String,
+    val result: MatchReportResult,
+    /** The volumes it was linked to, why it could not be settled, or null. */
+    val detail: String? = null,
+)
+
+enum class MatchReportResult { LINKED, AMBIGUOUS, NOT_FOUND, FAILED }
+
 /** What a match attempt concluded, for the summary shown after a bulk run. */
 data class MatchOutcome(
     val linked: Int,
@@ -121,6 +131,22 @@ class ChapterManagementViewModel(
     /** Failures from the last run, kept on screen because the toast is not readable. */
     var errors by mutableStateOf<List<String>>(emptyList())
         private set
+
+    /**
+     * Per-series outcome of the last run, and whether to show it.
+     *
+     * A bulk run acts on series that scroll off screen; counts alone never say
+     * WHICH one was left undecided. The report names every series and what
+     * happened to it, and stays up until it is dismissed.
+     */
+    var report by mutableStateOf<List<MatchReportEntry>>(emptyList())
+        private set
+    var showReport by mutableStateOf(false)
+        private set
+
+    fun dismissReport() {
+        showReport = false
+    }
 
     /**
      * Whether what this screen writes reaches the server. False means the links
@@ -241,8 +267,13 @@ class ChapterManagementViewModel(
         screenModelScope.launch {
             matching = true
             errors = emptyList()
+            report = emptyList()
             runMatch(row)
             matching = false
+            // Not when there are candidates to pick: they are listed right under
+            // the row, and a dialog on top of them would be in the way. Every
+            // other ending is invisible without this.
+            showReport = report.none { it.result == MatchReportResult.AMBIGUOUS }
         }
     }
 
@@ -254,6 +285,7 @@ class ChapterManagementViewModel(
             matching = true
             lastOutcome = null
             errors = emptyList()
+            report = emptyList()
             try {
                 // Bounded fan-out rather than one series after another: each match
                 // is a server round-trip, and fifty of them in a row is a minute
@@ -269,6 +301,7 @@ class ChapterManagementViewModel(
                     failed = results.count { it == MatchResult.FAILED },
                 )
                 selectedIds = emptySet()
+                showReport = true
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -284,6 +317,9 @@ class ChapterManagementViewModel(
 
     private enum class MatchResult { LINKED, AMBIGUOUS, NOT_FOUND, FAILED }
 
+    /** A match result plus what to tell the user about it. */
+    private data class MatchAttempt(val result: MatchResult, val detail: String? = null)
+
     /**
      * Run one match without letting it end the batch.
      *
@@ -293,16 +329,28 @@ class ChapterManagementViewModel(
      * own series — inside a coroutineScope, one uncaught throw cancels every
      * sibling still in flight.
      */
-    private suspend fun runMatch(row: ChapterSeriesRow): MatchResult =
-        try {
+    private suspend fun runMatch(row: ChapterSeriesRow): MatchResult {
+        val attempt = try {
             matchOne(row)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
             logger.error(e) { "Chapter match failed for '${row.series.metadata.title}'" }
             errors = (errors + "${row.series.metadata.title}: ${describe(e)}").takeLast(MAX_SHOWN_ERRORS)
-            MatchResult.FAILED
+            MatchAttempt(MatchResult.FAILED, describe(e))
         }
+        report = report + MatchReportEntry(
+            title = row.series.metadata.title,
+            result = when (attempt.result) {
+                MatchResult.LINKED -> MatchReportResult.LINKED
+                MatchResult.AMBIGUOUS -> MatchReportResult.AMBIGUOUS
+                MatchResult.NOT_FOUND -> MatchReportResult.NOT_FOUND
+                MatchResult.FAILED -> MatchReportResult.FAILED
+            },
+            detail = attempt.detail,
+        )
+        return attempt.result
+    }
 
     /** Message + type, because a bare "null" message says nothing about what broke. */
     private fun describe(e: Throwable): String {
@@ -329,10 +377,10 @@ class ChapterManagementViewModel(
      * two series with the same title must come out as duplicates, and [settle]
      * is the one place that decides.
      */
-    private suspend fun matchOne(row: ChapterSeriesRow): MatchResult {
-        val libraryId = selectedLibrary?.id ?: return MatchResult.NOT_FOUND
+    private suspend fun matchOne(row: ChapterSeriesRow): MatchAttempt {
+        val libraryId = selectedLibrary?.id ?: return MatchAttempt(MatchResult.NOT_FOUND)
         val stripped = strippedChapterTitle(row.series.metadata.title)
-        if (stripped.isBlank()) return MatchResult.NOT_FOUND
+        if (stripped.isBlank()) return MatchAttempt(MatchResult.NOT_FOUND)
 
         val byPrefix = rawSeriesApi.getSeriesList(
             conditionBuilder = allOfSeries {
@@ -377,22 +425,26 @@ class ChapterManagementViewModel(
      * a library holding two series called "Berserk" gives no ground to prefer
      * either, and a wrong link is silent once written.
      */
-    private suspend fun settle(row: ChapterSeriesRow, candidates: List<ChapterCandidate>): MatchResult {
+    private suspend fun settle(row: ChapterSeriesRow, candidates: List<ChapterCandidate>): MatchAttempt {
         val confident = candidates.filter { it.score >= CHAPTER_MATCH_AUTO_SCORE }
         return when {
             candidates.isEmpty() -> {
                 updateRow(row.series.id.value) { it.copy(candidates = emptyList(), searched = true) }
-                MatchResult.NOT_FOUND
+                MatchAttempt(MatchResult.NOT_FOUND)
             }
 
             confident.size == 1 -> {
-                link(row, confident.first().series)
-                MatchResult.LINKED
+                val volumes = confident.first().series
+                link(row, volumes)
+                MatchAttempt(MatchResult.LINKED, volumes.metadata.title)
             }
 
             else -> {
                 updateRow(row.series.id.value) { it.copy(candidates = candidates, searched = true) }
-                MatchResult.AMBIGUOUS
+                MatchAttempt(
+                    MatchResult.AMBIGUOUS,
+                    candidates.take(3).joinToString(" · ") { c -> "${c.score}% ${c.series.metadata.title}" },
+                )
             }
         }
     }
@@ -435,14 +487,26 @@ class ChapterManagementViewModel(
         screenModelScope.launch {
             logger.info { "Chapter link picked by hand: ${candidate.series.metadata.title}" }
             errors = emptyList()
+            report = emptyList()
             try {
                 link(row, candidate.series)
+                report = listOf(
+                    MatchReportEntry(
+                        title = row.series.metadata.title,
+                        result = MatchReportResult.LINKED,
+                        detail = candidate.series.metadata.title,
+                    )
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 logger.error(e) { "Chapter link failed for '${row.series.metadata.title}'" }
                 errors = listOf("${row.series.metadata.title}: ${describe(e)}")
+                report = listOf(
+                    MatchReportEntry(row.series.metadata.title, MatchReportResult.FAILED, describe(e))
+                )
             }
+            showReport = true
         }
     }
 
