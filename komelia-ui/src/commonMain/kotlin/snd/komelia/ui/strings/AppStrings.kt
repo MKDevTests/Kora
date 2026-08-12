@@ -540,6 +540,8 @@ class UiStrings(private val values: Map<String, String>) {
     val keepScreenOnWhileReading: String get() = at("keepScreenOnWhileReading")
     val hideChapterSeries: String get() = at("hideChapterSeries")
     val chapterManagement: String get() = at("chapterManagement")
+    val chapterManagementFailedCount: String get() = at("chapterManagementFailedCount")
+    val chapterManagementErrors: String get() = at("chapterManagementErrors")
     val chapterManagementLocalOnly: String get() = at("chapterManagementLocalOnly")
     val chapterManagementDescription: String get() = at("chapterManagementDescription")
     val chooseLibrary: String get() = at("chooseLibrary")

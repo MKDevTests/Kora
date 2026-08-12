@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -47,6 +48,9 @@ private const val FUZZY_PAGE_SIZE = 50
 /** Matches in flight during a bulk run. Four, like every other Komga fan-out. */
 private const val MATCH_CONCURRENCY = 4
 
+/** Enough failures to see the pattern, few enough to stay a message and not a wall. */
+private const val MAX_SHOWN_ERRORS = 5
+
 /** A possible volumes series, with how alike its title is (0-100). */
 data class ChapterCandidate(
     val series: KomgaSeries,
@@ -74,6 +78,7 @@ data class MatchOutcome(
     val linked: Int,
     val ambiguous: Int,
     val notFound: Int,
+    val failed: Int,
 )
 
 /**
@@ -111,6 +116,10 @@ class ChapterManagementViewModel(
     var matching by mutableStateOf(false)
         private set
     var lastOutcome by mutableStateOf<MatchOutcome?>(null)
+        private set
+
+    /** Failures from the last run, kept on screen because the toast is not readable. */
+    var errors by mutableStateOf<List<String>>(emptyList())
         private set
 
     /**
@@ -231,7 +240,8 @@ class ChapterManagementViewModel(
     fun onFindMatch(row: ChapterSeriesRow) {
         screenModelScope.launch {
             matching = true
-            notifications.runCatchingToNotifications { matchOne(row) }
+            errors = emptyList()
+            runMatch(row)
             matching = false
         }
     }
@@ -243,26 +253,63 @@ class ChapterManagementViewModel(
         screenModelScope.launch {
             matching = true
             lastOutcome = null
-            notifications.runCatchingToNotifications {
+            errors = emptyList()
+            try {
                 // Bounded fan-out rather than one series after another: each match
                 // is a server round-trip, and fifty of them in a row is a minute
                 // of staring at a spinner.
                 val limit = Semaphore(MATCH_CONCURRENCY)
                 val results = coroutineScope {
-                    targets.map { row -> async { limit.withPermit { matchOne(row) } } }.awaitAll()
+                    targets.map { row -> async { limit.withPermit { runMatch(row) } } }.awaitAll()
                 }
                 lastOutcome = MatchOutcome(
                     linked = results.count { it == MatchResult.LINKED },
                     ambiguous = results.count { it == MatchResult.AMBIGUOUS },
                     notFound = results.count { it == MatchResult.NOT_FOUND },
+                    failed = results.count { it == MatchResult.FAILED },
                 )
                 selectedIds = emptySet()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                // Whatever broke outside a single match — the batch itself. Same
+                // treatment: on screen and in the log, not a toast that is gone
+                // before it can be read.
+                logger.error(e) { "Chapter bulk match failed" }
+                errors = errors + describe(e)
             }
             matching = false
         }
     }
 
-    private enum class MatchResult { LINKED, AMBIGUOUS, NOT_FOUND }
+    private enum class MatchResult { LINKED, AMBIGUOUS, NOT_FOUND, FAILED }
+
+    /**
+     * Run one match without letting it end the batch.
+     *
+     * The app's error notifications are a toast: by the time you have read which
+     * series failed, it is gone. These stay on screen until the next run, and go
+     * to the log with their stack trace. A failure also has to stay local to its
+     * own series — inside a coroutineScope, one uncaught throw cancels every
+     * sibling still in flight.
+     */
+    private suspend fun runMatch(row: ChapterSeriesRow): MatchResult =
+        try {
+            matchOne(row)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            logger.error(e) { "Chapter match failed for '${row.series.metadata.title}'" }
+            errors = (errors + "${row.series.metadata.title}: ${describe(e)}").takeLast(MAX_SHOWN_ERRORS)
+            MatchResult.FAILED
+        }
+
+    /** Message + type, because a bare "null" message says nothing about what broke. */
+    private fun describe(e: Throwable): String {
+        val message = e.message ?: e.cause?.message
+        return if (message.isNullOrBlank()) e::class.simpleName ?: "Unknown error"
+        else "$message (${e::class.simpleName})"
+    }
 
     /**
      * One match attempt, cheap half first.
@@ -380,7 +427,15 @@ class ChapterManagementViewModel(
     fun onPickCandidate(row: ChapterSeriesRow, candidate: ChapterCandidate) {
         screenModelScope.launch {
             logger.info { "Chapter link picked by hand: ${candidate.series.metadata.title}" }
-            notifications.runCatchingToNotifications { link(row, candidate.series) }
+            errors = emptyList()
+            try {
+                link(row, candidate.series)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                logger.error(e) { "Chapter link failed for '${row.series.metadata.title}'" }
+                errors = listOf("${row.series.metadata.title}: ${describe(e)}")
+            }
         }
     }
 

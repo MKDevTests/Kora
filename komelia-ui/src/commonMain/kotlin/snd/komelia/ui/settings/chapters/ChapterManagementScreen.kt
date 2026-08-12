@@ -131,9 +131,29 @@ class ChapterManagementScreen : Screen {
                         Text(
                             text = "${outcome.linked} ${strings.chapterManagementLinkedCount} · " +
                                 "${outcome.ambiguous} ${strings.chapterManagementAmbiguousCount} · " +
-                                "${outcome.notFound} ${strings.chapterManagementNoMatchCount}",
+                                "${outcome.notFound} ${strings.chapterManagementNoMatchCount} · " +
+                                "${outcome.failed} ${strings.chapterManagementFailedCount}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
+                    }
+
+                    // Stays until the next run. The app's error toast is gone
+                    // long before you can read which series it was about.
+                    if (vm.errors.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = strings.chapterManagementErrors,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            vm.errors.forEach { message ->
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
                     }
 
                     HorizontalDivider()
