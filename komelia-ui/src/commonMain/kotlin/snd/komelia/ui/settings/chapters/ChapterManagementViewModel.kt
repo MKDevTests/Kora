@@ -41,8 +41,8 @@ private val logger = KotlinLogging.logger {}
 private const val LOAD_PAGE_SIZE = 500
 private const val LOAD_MAX_PAGES = 10
 
-/** Enough to tell "one match" from "duplicates"; nothing beyond that is used. */
-private const val EXACT_PAGE_SIZE = 5
+/** A title prefix can legitimately match a handful of editions; keep them all. */
+private const val PREFIX_PAGE_SIZE = 20
 private const val FUZZY_PAGE_SIZE = 50
 
 /** Matches in flight during a bulk run. Four, like every other Komga fan-out. */
@@ -314,32 +314,39 @@ class ChapterManagementViewModel(
     /**
      * One match attempt, cheap half first.
      *
-     * An exact title is served by an index; the full-text search is not, and it
-     * is what made this screen slow. Most chapter series are named after their
-     * volumes exactly, so most rows are settled by the first query and never
-     * pay for the second.
+     * A title prefix is served by an index; the full-text search is not, and it
+     * is what made this screen slow. "Berserk (Chap)" looks for titles starting
+     * with "Berserk", which is one indexed range scan and finds the volumes of
+     * nearly every chapter series here — they are named after them.
      *
-     * Scoring still applies to the exact hits — not to rank them, but because
-     * two series with the same title must come out as duplicates, and the rule
-     * below is the one place that decides.
+     * Not `title { isEqualTo(...) }`, which cannot be serialised at all: the
+     * Title condition holds a StringOp, `Is` is generic, and its value ends up
+     * on a polymorphic Any serializer that has no entry for String. It throws
+     * before a request is ever sent. The prefix operators are concrete String
+     * classes and have no such problem.
+     *
+     * Scoring still applies to the prefix hits — not to rank them, but because
+     * two series with the same title must come out as duplicates, and [settle]
+     * is the one place that decides.
      */
     private suspend fun matchOne(row: ChapterSeriesRow): MatchResult {
         val libraryId = selectedLibrary?.id ?: return MatchResult.NOT_FOUND
         val stripped = strippedChapterTitle(row.series.metadata.title)
         if (stripped.isBlank()) return MatchResult.NOT_FOUND
 
-        val exact = rawSeriesApi.getSeriesList(
+        val byPrefix = rawSeriesApi.getSeriesList(
             conditionBuilder = allOfSeries {
                 library { isEqualTo(libraryId) }
-                title { isEqualTo(stripped) }
+                title { beginsWith(stripped) }
             },
             fulltextSearch = null,
-            pageRequest = KomgaPageRequest(size = EXACT_PAGE_SIZE, pageIndex = 0),
+            pageRequest = KomgaPageRequest(size = PREFIX_PAGE_SIZE, pageIndex = 0),
         ).content.scoredAgainst(row, stripped)
-        if (exact.isNotEmpty()) return settle(row, exact)
+        if (byPrefix.isNotEmpty()) return settle(row, byPrefix)
 
-        // Nothing named exactly that: fall back to the index-free search, where
-        // an accent, a colon or a stray "Vol." is what stands between the two.
+        // The volumes are not named after the chapters: fall back to the
+        // index-free search, where an accent, a colon or a leading article is
+        // what stands between the two.
         val fuzzy = rawSeriesApi.getSeriesList(
             conditionBuilder = allOfSeries { library { isEqualTo(libraryId) } },
             fulltextSearch = stripped,
