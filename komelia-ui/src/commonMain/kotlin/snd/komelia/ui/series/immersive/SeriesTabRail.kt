@@ -73,8 +73,10 @@ private const val RAIL_SCROLL_GUARD_MS = 80L
  * game — "tags", "links" and "similar" do not have obvious glyphs — and five
  * permanent labels would eat a column of covers on a phone.
  */
+// internal, like [ImmersiveTab] itself: the rail is part of the series screen,
+// not something another module composes.
 @Composable
-fun SeriesTabRail(
+internal fun SeriesTabRail(
     currentTab: ImmersiveTab,
     onTabChange: (ImmersiveTab) -> Unit,
     showCollectionsTab: Boolean,
