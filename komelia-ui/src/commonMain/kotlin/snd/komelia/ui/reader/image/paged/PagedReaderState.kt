@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
@@ -184,6 +185,7 @@ class PagedReaderState(
         // Clear the blank set on book change so a different book starts fresh.
         readerState.booksState
             .filterNotNull()
+            .distinctUntilChangedBy { it.currentBook.id }
             .drop(1)
             .onEach { blankPages.value = emptySet() }
             .launchIn(stateScope)
@@ -214,13 +216,22 @@ class PagedReaderState(
             }
             .launchIn(stateScope)
 
+        // Both of these mean "the book being read changed", so they key on the
+        // book's id rather than firing on every emission of the state object
+        // that carries it. The neighbouring books are now filled in shortly
+        // AFTER the swap (see ReaderState.prefetchNeighbours); that second
+        // emission used to re-run onNewBookLoaded a second or two into the new
+        // book, which re-seeked to wherever the recomputed spread landed and
+        // then pushed that page as read progress.
         readerState.booksState
             .filterNotNull()
+            .distinctUntilChangedBy { it.currentBook.id }
             .onEach { newBook -> onNewBookLoaded(newBook) }
             .launchIn(stateScope)
 
         readerState.booksState
             .filterNotNull()
+            .distinctUntilChangedBy { it.currentBook.id }
             .drop(1)
             .onEach { onBookChange() }
             .launchIn(stateScope)

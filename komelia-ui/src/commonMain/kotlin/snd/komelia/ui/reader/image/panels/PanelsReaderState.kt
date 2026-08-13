@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -191,6 +192,11 @@ class PanelsReaderState(
 
         readerState.booksState
             .filterNotNull()
+            // On a CHANGE OF BOOK, not on every emission of the state that holds
+            // it. The neighbouring books are filled in after the swap now (see
+            // ReaderState.prefetchNeighbours), and that second emission would
+            // otherwise re-run this and re-seek the book being read.
+            .distinctUntilChangedBy { it.currentBook.id }
             .onEach { newBook -> onNewBookLoaded(newBook) }
             .launchIn(stateScope)
     }

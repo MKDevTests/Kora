@@ -658,6 +658,14 @@ class ReaderState(
         val booksState = requireNotNull(booksState.value)
         if (booksState.nextBook != null) {
             val outgoingBook = booksState.currentBook
+            // The continuous reader stitches consecutive books into one scroll
+            // and reads every booksState emission as a navigation step, so its
+            // neighbour has to be in place before the swap. The paged readers
+            // only need it when they reach the end. See prefetchNeighbours.
+            val eager = readerType.value == ReaderType.CONTINUOUS
+            val eagerNext = if (eager) getNextBook(booksState.nextBook) else null
+            val eagerNextPages = if (eagerNext != null) loadBookPages(eagerNext) else emptyList()
+            if (eager) preloadFirstPage(eagerNext)
 
             // Swap the book state and reset the page in one uninterrupted block
             // (no suspension between). Setting the page BEFORE the swap left a
@@ -677,12 +685,12 @@ class ReaderState(
                 previousBook = booksState.currentBook,
                 previousBookPages = booksState.currentBookPages,
 
-                nextBook = null,
-                nextBookPages = emptyList()
+                nextBook = eagerNext,
+                nextBookPages = eagerNextPages
             )
             readProgressPage.value = 1
             currentBookId.value = booksState.nextBook.id
-            prefetchNeighbours(forward = true)
+            if (!eager) prefetchNeighbours(forward = true)
             // Moving on to the next book means we're done with the one we're
             // leaving — mark it read. This covers the "next volume" skip button
             // from mid-book (user's choice: skipping = finished); when we got
@@ -730,6 +738,12 @@ class ReaderState(
         val booksState = requireNotNull(booksState.value)
         if (booksState.previousBook != null) {
             val outgoingBook = booksState.currentBook
+            // See loadNextBook: the continuous reader needs its neighbour before
+            // the swap, the paged readers don't.
+            val eager = readerType.value == ReaderType.CONTINUOUS
+            val eagerPrevious = if (eager) getPreviousBook(booksState.previousBook.id) else null
+            val eagerPreviousPages =
+                if (eagerPrevious != null) loadBookPages(eagerPrevious) else emptyList()
 
             // Swap first, THEN set the page — no suspension between — so a
             // concurrent progress push never pairs the outgoing book with the
@@ -741,12 +755,12 @@ class ReaderState(
                 nextBook = booksState.currentBook,
                 nextBookPages = booksState.currentBookPages,
 
-                previousBook = null,
-                previousBookPages = emptyList(),
+                previousBook = eagerPrevious,
+                previousBookPages = eagerPreviousPages,
             )
             readProgressPage.value = restoredPage
             currentBookId.value = booksState.previousBook.id
-            prefetchNeighbours(forward = false)
+            if (!eager) prefetchNeighbours(forward = false)
             // Mirror of loadNextBook: backing out of a book means we're NOT done
             // with it — mark it unread. Symmetric with the "next volume" skip
             // marking the volume we leave as read. Runs AFTER the swap so a
