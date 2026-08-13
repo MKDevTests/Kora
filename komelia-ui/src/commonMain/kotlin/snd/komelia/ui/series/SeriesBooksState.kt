@@ -152,15 +152,23 @@ class SeriesBooksState(
                 filter.addConditionTo(this)
             }
 
-            val pageResponse = bookApi.getBookList(
-                conditionBuilder = condition,
-                fullTextSearch = null,
-                pageRequest = KomgaPageRequest(
-                    pageIndex = page - 1,
-                    size = pageLoadSize,
-                    sort = filter.sortOrder.komgaSort
+            // The wait the user actually sees on a series screen — the volumes
+            // area sits on its remembered snapshot until this answers. It was
+            // the only step of that screen with no timing at all.
+            val pageResponse = snd.komelia.perf.PerfTrace.measure(
+                label = "series.books page=$page",
+                count = { it.content.size },
+            ) {
+                bookApi.getBookList(
+                    conditionBuilder = condition,
+                    fullTextSearch = null,
+                    pageRequest = KomgaPageRequest(
+                        pageIndex = page - 1,
+                        size = pageLoadSize,
+                        sort = filter.sortOrder.komgaSort
+                    )
                 )
-            )
+            }
 
             val newState = when (currentState) {
                 is LoadState.Success<BooksData> -> currentState.value.copy(

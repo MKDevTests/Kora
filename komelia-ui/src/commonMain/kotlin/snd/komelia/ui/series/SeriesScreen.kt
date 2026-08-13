@@ -112,13 +112,17 @@ class SeriesScreen(
                 currentTab = vm.currentTab,
                 onTabChange = vm::onTabChange,
                 booksState = vm.booksState,
-                onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value)) },
+                onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value), series) },
                 onBookReadClick = { book, markProgress ->
                     navigator.parent?.push(
                         readerScreen(
                             book = book,
                             markReadProgress = markProgress,
                             bookSiblingsContext = BookSiblingsContext.Series(vm.booksState.filterState.state.value),
+                            // We are literally looking at the series — handing it
+                            // over saves the reader the one call its whole open
+                            // was waiting on.
+                            series = series,
                             onExit = { lastReadBook ->
                                 if (lastReadBook.id != book.id) {
                                     vm.reload()
@@ -196,13 +200,14 @@ class SeriesScreen(
                         onTabChange = vm::onTabChange,
 
                         booksState = vm.booksState,
-                        onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value)) },
+                        onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value), vm.series.value) },
                         onBookReadClick = { book, markProgress ->
                             navigator.parent?.push(
                                 readerScreen(
                                     book = book,
                                     markReadProgress = markProgress,
                                     bookSiblingsContext = BookSiblingsContext.Series(vm.booksState.filterState.state.value),
+                                    series = vm.series.value,
                                     onExit = { lastReadBook ->
                                         if (lastReadBook.id != book.id) {
                                             vm.reload()
