@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -438,6 +439,15 @@ class LibraryScreen(
                     selected = currentLetter,
                     onLetterClick = seriesTabState.filterState::onLetterFilterChange,
                 )
+                // The previous results stay on screen while the new ones load,
+                // which is the right call — but a query that takes ten seconds
+                // then looks like a tap that did nothing. Two pixels of movement
+                // under the letters answer that, without hiding the list.
+                if (seriesTabState.isRefreshing) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
+                } else {
+                    Spacer(Modifier.height(2.dp))
+                }
             }
         }
 

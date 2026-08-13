@@ -464,7 +464,31 @@ class LibrarySeriesTabState(
         if (selectedSeries.isNotEmpty() && !isInEditMode.value) onEditModeChange(true)
     }
 
+    /**
+     * True while a list already on screen is being replaced.
+     *
+     * Changing the letter, the sort or a filter deliberately keeps the previous
+     * results visible rather than flashing a spinner — but the query behind it
+     * can take ten seconds or more on a busy server, and with nothing moving,
+     * the tap looks like it was ignored. This drives a thin bar under the
+     * letters: the same wait, minus the doubt.
+     */
+    var isRefreshing by mutableStateOf(false)
+        private set
+
     private suspend fun loadSeriesPage(page: Int) {
+        // Only for a REPLACEMENT: on a first load the grid is empty and the
+        // spinner in delayLoadState already says so.
+        val replacing = state.value is LoadState.Success
+        if (replacing) isRefreshing = true
+        try {
+            loadSeriesPageInner(page)
+        } finally {
+            if (replacing) isRefreshing = false
+        }
+    }
+
+    private suspend fun loadSeriesPageInner(page: Int) {
         notifications.runCatchingToNotifications {
             val loadStateDelay = delayLoadState()
             currentSeriesPage = page
