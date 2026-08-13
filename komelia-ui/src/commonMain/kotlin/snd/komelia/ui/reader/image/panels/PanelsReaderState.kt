@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -102,6 +103,9 @@ class PanelsReaderState(
     val currentPageIndex = MutableStateFlow(PageIndex(0, 0))
     val currentPage: MutableStateFlow<PanelsPage?> = MutableStateFlow(null)
     val transitionPage: MutableStateFlow<TransitionPage?> = MutableStateFlow(null)
+
+    /** True while the next/previous book is being fetched. See [PagedReaderState]. */
+    val transitionLoading = MutableStateFlow(false)
     val readingDirection = MutableStateFlow(LEFT_TO_RIGHT)
 
     val fullPageDisplayMode = MutableStateFlow(PanelsFullPageDisplayMode.NONE)
@@ -188,6 +192,11 @@ class PanelsReaderState(
 
         readerState.booksState
             .filterNotNull()
+            // On a CHANGE OF BOOK, not on every emission of the state that holds
+            // it. The neighbouring books are filled in after the swap now (see
+            // ReaderState.prefetchNextBook), and that second emission would
+            // otherwise re-run this and re-seek the book being read.
+            .distinctUntilChangedBy { it.currentBook.id }
             .onEach { newBook -> onNewBookLoaded(newBook) }
             .launchIn(stateScope)
     }
@@ -365,14 +374,24 @@ class PanelsReaderState(
                 )
                 // Same as the paged reader: the end page means finished, and a
                 // last volume has no "next book" step to carry the mark.
-                stateScope.launch { readerState.markCurrentBookCompleted() }
+                stateScope.launch {
+                    readerState.markCurrentBookCompleted()
+                    refreshTransitionNextBook()
+                }
             }
 
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
                 stateScope.launch {
                     currentPage.value = null
-                    transitionPage.value = null
-                    readerState.loadNextBook()
+                    // Same as the paged reader: keep the transition page up until
+                    // the new book is painted, or the page just left is repainted
+                    // from cache for as long as the fetch takes.
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadNextBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
         }
@@ -426,10 +445,24 @@ class PanelsReaderState(
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
                 stateScope.launch {
                     currentPage.value = null
-                    transitionPage.value = null
-                    readerState.loadPreviousBook()
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadPreviousBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
+        }
+    }
+
+    /** Twin of the paged reader's refreshTransitionNextBook — see the note there. */
+    private suspend fun refreshTransitionNextBook() {
+        readerState.awaitNextBook()
+        val bookState = readerState.booksState.value ?: return
+        val page = transitionPage.value
+        if (page is BookEnd && page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
+            transitionPage.value = page.copy(nextBook = bookState.nextBook)
         }
     }
 

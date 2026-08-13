@@ -209,11 +209,32 @@ class ContinuousReaderState(
             RIGHT_TO_LEFT -> screenScaleState.setScrollOrientation(Orientation.Horizontal, true)
         }
 
+        var lastBookId: KomgaBookId? = null
         readerState.booksState.filterNotNull()
             .onEach { newState ->
                 val currentIntervals = pageIntervals.value
                 val currentBook = currentIntervals.getOrNull(currentIntervalIndex.value)?.book
                 val wasPreviousBookLoaded = currentBook?.id == newState.nextBook?.id
+                val bookChanged = newState.currentBook.id != lastBookId
+                lastBookId = newState.currentBook.id
+
+                // The next book is looked up AFTER the move that needs it, so it
+                // arrives in a second emission for the same current book (see
+                // ReaderState.prefetchNextBook). That is not a navigation step:
+                // the interval list gains an entry, the interval index must not
+                // move. Everything below assumes the reader stepped to another
+                // book and would shift it.
+                if (!bookChanged && currentIntervals.isNotEmpty()) {
+                    val next = newState.nextBook
+                    if (next != null && currentIntervals.none { it.book.id == next.id }) {
+                        withContext(Dispatchers.Default) {
+                            pageIntervals.value = currentIntervals.plus(
+                                BookPagesInterval(next, newState.nextBookPages)
+                            )
+                        }
+                    }
+                    return@onEach
+                }
 
                 when {
                     currentIntervals.isEmpty() -> {

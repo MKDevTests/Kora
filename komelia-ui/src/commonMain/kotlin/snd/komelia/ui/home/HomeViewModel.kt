@@ -37,6 +37,7 @@ import snd.komelia.homefilters.SeriesHomeScreenFilter
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.offline.tasks.OfflineTaskEmitter
+import snd.komelia.progress.ReadProgressChanges
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.LoadState.Uninitialized
 import snd.komelia.ui.common.cards.defaultCardWidth
@@ -146,6 +147,15 @@ class HomeViewModel(
 
         load()
         startKomgaEventListener()
+
+        // Local progress writes, straight from our own book API — see
+        // [ReadProgressChanges]. No reload is kicked off here: Home is off
+        // screen while the book is being read, and startKomgaEventsHandler
+        // consumes the flag the moment it comes back. This is what makes the
+        // shelves correct after reading a book opened from a series screen,
+        // the search, or the widget, with the SSE stream down or slow.
+        ReadProgressChanges.changes.onEach { progressShelvesDirty.value = true }
+            .launchIn(screenModelScope)
 
         // The Favorites shelf reads the favorite ids at resolve time, so it used
         // to depend on the global screen-reload that favoriting broadcast. That

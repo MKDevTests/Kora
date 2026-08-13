@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
@@ -108,6 +109,14 @@ class PagedReaderState(
     val currentSpread: MutableStateFlow<PageSpread> = MutableStateFlow(PageSpread(emptyList()))
     val transitionPage: MutableStateFlow<TransitionPage?> = MutableStateFlow(null)
 
+    /**
+     * True while the next/previous book is being fetched.
+     *
+     * The transition page stays up for that whole time — see [nextPage] — so
+     * without this the tap that starts the move looks like it did nothing.
+     */
+    val transitionLoading = MutableStateFlow(false)
+
     val layout = MutableStateFlow(SINGLE_PAGE)
     val layoutOffset = MutableStateFlow(false)
     val scaleType = MutableStateFlow(LayoutScaleType.SCREEN)
@@ -176,6 +185,7 @@ class PagedReaderState(
         // Clear the blank set on book change so a different book starts fresh.
         readerState.booksState
             .filterNotNull()
+            .distinctUntilChangedBy { it.currentBook.id }
             .drop(1)
             .onEach { blankPages.value = emptySet() }
             .launchIn(stateScope)
@@ -206,13 +216,22 @@ class PagedReaderState(
             }
             .launchIn(stateScope)
 
+        // Both of these mean "the book being read changed", so they key on the
+        // book's id rather than firing on every emission of the state object
+        // that carries it. The neighbouring books are now filled in shortly
+        // AFTER the swap (see ReaderState.prefetchNextBook); that second
+        // emission used to re-run onNewBookLoaded a second or two into the new
+        // book, which re-seeked to wherever the recomputed spread landed and
+        // then pushed that page as read progress.
         readerState.booksState
             .filterNotNull()
+            .distinctUntilChangedBy { it.currentBook.id }
             .onEach { newBook -> onNewBookLoaded(newBook) }
             .launchIn(stateScope)
 
         readerState.booksState
             .filterNotNull()
+            .distinctUntilChangedBy { it.currentBook.id }
             .drop(1)
             .onEach { onBookChange() }
             .launchIn(stateScope)
@@ -354,14 +373,27 @@ class PagedReaderState(
                 // not on the way out. A last volume has nothing to move on to,
                 // so its completion used to depend on which exit path the user
                 // took, and it stayed on the Keep-reading shelf.
-                stateScope.launch { readerState.markCurrentBookCompleted() }
+                stateScope.launch {
+                    readerState.markCurrentBookCompleted()
+                    refreshTransitionNextBook()
+                }
             }
 
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
                 stateScope.launch {
                     currentSpread.value = PageSpread(emptyList())
-                    transitionPage.value = null
-                    readerState.loadNextBook()
+                    // The transition page stays up until the new book is painted.
+                    // Clearing it here handed the screen back to the pager, which
+                    // still held the finished book's spreads and was parked on its
+                    // last one — so the page you had just left was repainted from
+                    // cache for the second or two the fetch takes. onNewBookLoaded
+                    // clears it through jumpToPage once the new spreads are in.
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadNextBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
         }
@@ -393,10 +425,35 @@ class PagedReaderState(
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
                 stateScope.launch {
                     currentSpread.value = PageSpread(emptyList())
-                    transitionPage.value = null
-                    readerState.loadPreviousBook()
+                    // Same as nextPage: leave the transition page up, or the first
+                    // page of the book being left flashes back for the fetch.
+                    transitionLoading.value = true
+                    try {
+                        readerState.loadPreviousBook()
+                    } finally {
+                        transitionLoading.value = false
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Re-reads the next book into the end-of-book page once the reader's
+     * background lookup has landed.
+     *
+     * That page is a snapshot, and the next book is fetched off the critical
+     * path after a forward move (see ReaderState.prefetchNextBook). Reaching the
+     * end of a very short volume, or jumping straight to it, can beat the
+     * lookup — and the page would say the series ends here. Costs nothing when
+     * the lookup is already done, which is the normal case.
+     */
+    private suspend fun refreshTransitionNextBook() {
+        readerState.awaitNextBook()
+        val bookState = readerState.booksState.value ?: return
+        val page = transitionPage.value
+        if (page is BookEnd && page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
+            transitionPage.value = page.copy(nextBook = bookState.nextBook)
         }
     }
 

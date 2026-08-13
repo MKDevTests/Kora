@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -171,8 +172,9 @@ fun BoxScope.PanelsReaderContent(
         ) {
             ScalableContainer(scaleState = screenScaleState) {
                 val transitionPage = panelsReaderState.transitionPage.collectAsState().value
+                val transitionLoading = panelsReaderState.transitionLoading.collectAsState().value
                 if (transitionPage != null) {
-                    TransitionPage(transitionPage)
+                    TransitionPage(transitionPage, transitionLoading)
                 } else {
                     if (metadata.isNotEmpty()) {
                         HorizontalPager(
@@ -219,7 +221,7 @@ fun BoxScope.PanelsReaderContent(
 
 
 @Composable
-private fun TransitionPage(page: TransitionPage) {
+private fun TransitionPage(page: TransitionPage, loading: Boolean = false) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -273,6 +275,14 @@ private fun TransitionPage(page: TransitionPage) {
                 }
 
             }
+        }
+
+        // The tap that starts the move leaves this page up until the new book is
+        // painted. Without a sign that something is happening, that second or
+        // two reads as a tap that did nothing.
+        if (loading) {
+            Spacer(Modifier.size(24.dp))
+            CircularProgressIndicator(Modifier.size(32.dp))
         }
     }
 }

@@ -46,6 +46,7 @@ import snd.komelia.ui.library.LibraryTab.FOR_YOU
 import snd.komelia.ui.library.LibraryTab.GENRE
 import snd.komelia.ui.library.LibraryTab.READ_LISTS
 import snd.komelia.ui.library.LibraryTab.SERIES
+import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaBooksSort
@@ -357,11 +358,16 @@ class LibraryViewModel(
                 label = "library.keepReading",
                 count = { books: List<*> -> books.size },
             ) {
+                // The `search` overload, not `conditionBuilder`: this is a browse
+                // query, and only that overload goes through the chapter filter
+                // (see ChapterFilteringBookApi). Same request either way.
                 bookApi.getBookList(
-                    conditionBuilder = allOfBooks {
-                        library { isEqualTo(libId) }
-                        readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
-                    },
+                    search = KomgaBookSearch(
+                        allOfBooks {
+                            library { isEqualTo(libId) }
+                            readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                        }.toBookCondition()
+                    ),
                     pageRequest = KomgaPageRequest(
                         sort = KomgaBooksSort.byReadDateDesc(),
                         size = 20
