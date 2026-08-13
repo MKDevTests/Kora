@@ -29,8 +29,16 @@ import snd.komga.client.series.KomgaSeriesId
 
 private val logger = KotlinLogging.logger {}
 
-/** Shared links are readable one series at a time; cap the crawl. */
-private const val MAX_SHARED_WALK = 12
+/**
+ * Shared links are readable one series at a time; cap the crawl.
+ *
+ * Unlike the node caps in the graph builder, this one IS paid in requests: one
+ * getOneSeries per series, four in flight. Twelve was exactly the size of a real
+ * franchise (Fairy Tail), so the last series' own links were never read and the
+ * picture was cut for want of one more wave. Twenty-four leaves room; the result
+ * is cached and the previous picture stays on screen while it runs.
+ */
+private const val MAX_SHARED_WALK = 24
 
 /**
  * State for the "Reading order" picture at the top of the series Links tab.

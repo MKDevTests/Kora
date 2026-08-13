@@ -81,9 +81,20 @@ data class ReadingOrderGraph(
     val hasFork: Boolean get() = nodes.any { it.forked }
 }
 
-/** Past these the picture stops being readable — the lists below it are better. */
-const val MAX_NODES = 8
-const val MAX_DEPTH = 3
+/**
+ * Safety rails, not a display budget.
+ *
+ * They used to be 8 and 3, chosen when the picture was a horizontal row of text
+ * boxes that stopped being readable past a handful. Fairy Tail has about a dozen
+ * series, so it was cut and the panel said so — while the vertical timeline that
+ * draws it now holds them all.
+ *
+ * Raising them costs nothing: [buildReadingOrder] is pure computation over
+ * relations already in hand, and titles are resolved for the whole franchise
+ * component regardless of how many nodes end up drawn.
+ */
+const val MAX_NODES = 24
+const val MAX_DEPTH = 6
 
 /**
  * Relations that are about EDITIONS, not about reading order. Two series linked

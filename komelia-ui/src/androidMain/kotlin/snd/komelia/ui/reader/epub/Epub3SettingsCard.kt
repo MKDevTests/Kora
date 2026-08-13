@@ -36,7 +36,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -56,7 +56,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.Add
@@ -79,8 +78,8 @@ import snd.komelia.settings.model.Epub3ReadAloudColor
 import snd.komelia.settings.model.Epub3TextAlign
 import snd.komelia.settings.model.Epub3Theme
 import snd.komelia.settings.model.Epub3NativeSettings
-import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.ui.LocalAccentColor
+import snd.komelia.ui.reader.image.settings.NavigationSettings
 import snd.komelia.ui.common.components.AppSlider
 import snd.komelia.ui.common.components.AppSliderDefaults
 import kotlin.math.roundToInt
@@ -98,7 +97,7 @@ fun Epub3SettingsCard(
     modifier: Modifier = Modifier,
 ) {
     var dragOffsetY by remember { mutableStateOf(0f) }
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope()
     val theme = snd.komelia.ui.LocalTheme.current
     val surfaceColor = if (theme.type == snd.komelia.ui.Theme.ThemeType.DARK) Color(43, 43, 43)
@@ -140,10 +139,15 @@ fun Epub3SettingsCard(
                 BottomSheetDefaults.DragHandle()
             }
 
-            // Tab row — sticky, not scrollable
-            SecondaryTabRow(
+            // Tab row — sticky. Scrollable, because a fourth tab does not fit
+            // on a phone otherwise; same widget as the image reader's sheet.
+            //
+            // Navigation sits at index 1, where the image reader puts it, so the
+            // two readers are found in the same place.
+            SecondaryScrollableTabRow(
                 selectedTabIndex = pagerState.currentPage,
                 containerColor = Color.Transparent,
+                edgePadding = 16.dp,
             ) {
                 Tab(
                     selected = pagerState.currentPage == 0,
@@ -153,11 +157,16 @@ fun Epub3SettingsCard(
                 Tab(
                     selected = pagerState.currentPage == 1,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = { Text(LocalStrings.current.ui.fontText) },
+                    text = { Text(LocalStrings.current.ui.navigation) },
                 )
                 Tab(
                     selected = pagerState.currentPage == 2,
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                    text = { Text(LocalStrings.current.ui.fontText) },
+                )
+                Tab(
+                    selected = pagerState.currentPage == 3,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
                     text = { Text(LocalStrings.current.ui.audio) },
                 )
             }
@@ -176,8 +185,15 @@ fun Epub3SettingsCard(
                 ) {
                     when (page) {
                         0 -> AppearanceTab(settings, onSettingsChange, accentColor)
-                        1 -> FontTextTab(settings, onSettingsChange, accentColor, userFonts, onLoadFont, onDeleteFont)
-                        2 -> AudioTab(settings, onSettingsChange, accentColor)
+                        // The image reader's own control, reused whole: same
+                        // labels, same diagrams, same four choices.
+                        1 -> NavigationSettings(
+                            currentMode = settings.tapNavigationMode,
+                            onModeChange = { onSettingsChange(settings.copy(tapNavigationMode = it)) },
+                        )
+
+                        2 -> FontTextTab(settings, onSettingsChange, accentColor, userFonts, onLoadFont, onDeleteFont)
+                        3 -> AudioTab(settings, onSettingsChange, accentColor)
                     }
                 }
             }
@@ -231,53 +247,6 @@ private fun AppearanceTab(
                     onClick = { onSettingsChange(settings.copy(scroll = true)) },
                     label = { Text(LocalStrings.current.ui.scroll) },
                 )
-            }
-        }
-
-        // Tap navigation. Two rows of two rather than the image reader's radio
-        // list with diagrams: that list is ~400dp tall and this is a bottom
-        // sheet capped at two thirds of the screen. Same labels, so the two
-        // settings screens still name the modes the same way.
-        Text(
-            text = LocalStrings.current.reader.tapNavigation,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp),
-        )
-        val readerStrings = LocalStrings.current.reader
-        val tapModes = listOf(
-            ReaderTapNavigationMode.LEFT_RIGHT to readerStrings.modeLeftRight,
-            ReaderTapNavigationMode.RIGHT_LEFT to readerStrings.modeRightLeft,
-            ReaderTapNavigationMode.HORIZONTAL_SPLIT to readerStrings.modeHorizontalSplit,
-            ReaderTapNavigationMode.REVERSED_HORIZONTAL_SPLIT to readerStrings.modeReversedHorizontalSplit,
-        )
-        tapModes.chunked(2).forEach { row ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            ) {
-                row.forEach { (mode, label) ->
-                    val selected = settings.tapNavigationMode == mode
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onSettingsChange(settings.copy(tapNavigationMode = mode)) },
-                        label = {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                        leadingIcon = if (selected) {
-                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        } else null,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
             }
         }
 

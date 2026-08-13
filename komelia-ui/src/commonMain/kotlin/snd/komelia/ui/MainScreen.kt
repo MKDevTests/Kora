@@ -444,22 +444,56 @@ class MainScreen(
                                             val fabFarRightPlaceable = measurables.firstOrNull { it.layoutId == "fab-far-right" }?.measure(loose)
 
                                             val width = constraints.maxWidth
-                                            val height = maxOf(
-                                                navPlaceable.height,
+                                            val spacing = 8.dp.roundToPx()
+
+                                            val leftExtra = fabLeftPlaceable?.let { it.width + spacing } ?: 0
+                                            val rightClusterExtra = (fabPlaceable?.let { it.width + spacing } ?: 0) +
+                                                (fabFarRightPlaceable?.let { it.width + spacing } ?: 0)
+
+                                            // On a phone the island alone is ~316dp (six destinations) and
+                                            // two FABs add 128dp: the row cannot fit, and the previous
+                                            // shift-left/shift-right corrections fought each other and
+                                            // pushed the right-hand FABs past the screen edge — the sort
+                                            // and continue-reading buttons simply disappeared.
+                                            //
+                                            // When the single row does not fit, the FABs move to their own
+                                            // row above the island instead of being squeezed next to it.
+                                            val fabRowHeight = maxOf(
                                                 fabPlaceable?.height ?: 0,
                                                 fabLeftPlaceable?.height ?: 0,
                                                 fabFarRightPlaceable?.height ?: 0,
                                             )
-                                            val spacing = 8.dp.roundToPx()
+                                            val stacked = fabRowHeight > 0 &&
+                                                leftExtra + navPlaceable.width + rightClusterExtra > width
+
+                                            val height = if (stacked) navPlaceable.height + spacing + fabRowHeight
+                                            else maxOf(navPlaceable.height, fabRowHeight)
 
                                             layout(width, height) {
+                                                if (stacked) {
+                                                    // FAB row on top, right-aligned, in reading order
+                                                    // left / filter / continue-reading.
+                                                    var x = width
+                                                    listOfNotNull(
+                                                        fabFarRightPlaceable,
+                                                        fabPlaceable,
+                                                        fabLeftPlaceable,
+                                                    ).forEach { placeable ->
+                                                        x -= placeable.width
+                                                        placeable.placeRelative(x, (fabRowHeight - placeable.height) / 2)
+                                                        x -= spacing
+                                                    }
+
+                                                    navPlaceable.placeRelative(
+                                                        ((width - navPlaceable.width) / 2).coerceAtLeast(0),
+                                                        fabRowHeight + spacing,
+                                                    )
+                                                    return@layout
+                                                }
+
                                                 // Start with nav centered
                                                 var navX = (width - navPlaceable.width) / 2
                                                 val navY = (height - navPlaceable.height) / 2
-
-                                                // Right cluster width = fab + spacing + far-right (when both present)
-                                                val rightClusterExtra = (fabPlaceable?.let { it.width + spacing } ?: 0) +
-                                                    (fabFarRightPlaceable?.let { it.width + spacing } ?: 0)
 
                                                 // Shift nav left if the whole right cluster would overflow
                                                 if (rightClusterExtra > 0) {
