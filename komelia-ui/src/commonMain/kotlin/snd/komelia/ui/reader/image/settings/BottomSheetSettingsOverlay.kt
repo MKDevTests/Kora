@@ -137,6 +137,7 @@ import snd.komelia.ui.settings.imagereader.ncnn.isNcnnSupported
 import kotlin.math.roundToInt
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.Collections
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryBooks
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
@@ -392,6 +393,16 @@ fun BottomSheetSettingsOverlay(
                                     ReaderExitDestination.Library(it.libraryId)
                                 onBackPress()
                             }
+                        }
+                    },
+                    // No book needed, unlike the other three: home has no id to
+                    // read off it. The progress flush still comes first — Home's
+                    // Keep-reading shelf refreshes the moment we land on it.
+                    onReturnHome = {
+                        coroutineScope.launch {
+                            commonReaderState.flushProgressNow()
+                            ReaderNavigationIntent.pending.value = ReaderExitDestination.Home
+                            onBackPress()
                         }
                     },
                 )
@@ -1153,6 +1164,7 @@ fun ImageReaderControlsCardNewUI(
     onReturnBook: () -> Unit = {},
     onReturnSeries: () -> Unit = {},
     onReturnLibrary: () -> Unit = {},
+    onReturnHome: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val accentColor = LocalAccentColor.current
@@ -1352,6 +1364,11 @@ fun ImageReaderControlsCardNewUI(
                             icon = Icons.Rounded.LibraryBooks,
                             label = LocalStrings.current.ui.returnLibrary,
                             onClick = onReturnLibrary,
+                        )
+                        ReturnNavButton(
+                            icon = Icons.Rounded.Home,
+                            label = LocalStrings.current.ui.returnHome,
+                            onClick = onReturnHome,
                         )
                     }
                     }

@@ -54,7 +54,9 @@ data class AppSettings(
     val cardSpacingBelow: Float = 0.0f,
     val cardShadowLevel: Float = 2.0f,
     val cardCornerRadius: Float = 8.0f,
-    val useFloatingNavigationBar: Boolean = false,
+    // Fresh-install default. Only ever read when no settings row exists yet,
+    // so an existing install keeps whatever it had -- see the note on the class.
+    val useFloatingNavigationBar: Boolean = true,
     /** Null means use default yellow (0xFFFFEB3B.toInt()). */
     val lastHighlightColor: Int? = null,
     /**
@@ -76,7 +78,9 @@ data class AppSettings(
      * the shared Komga `links` field, on top of the private local links. Off by
      * default → purely local. See series Links tab.
      */
-    val shareLinksViaKomga: Boolean = false,
+    // Fresh-install default. Only ever read when no settings row exists yet,
+    // so an existing install keeps whatever it had -- see the note on the class.
+    val shareLinksViaKomga: Boolean = true,
 
     /**
      * What to do with series whose title ends with "(Chap)" in every list — the
@@ -130,7 +134,9 @@ data class AppSettings(
      * bottom navigation bar. When false the page is still reachable via its
      * Home card. Default off, mirrors [statsInBottomNav].
      */
-    val nextReleasesInBottomNav: Boolean = false,
+    // Fresh-install default. Only ever read when no settings row exists yet,
+    // so an existing install keeps whatever it had -- see the note on the class.
+    val nextReleasesInBottomNav: Boolean = true,
 
     /**
      * App version (e.g. "1.0.3") for which the user has already
@@ -181,7 +187,9 @@ data class AppSettings(
      * cover, label override, cached count) is stored locally; a genre's series
      * are fetched live by tag.
      */
-    val experimentalGenreTab: Boolean = false,
+    // Fresh-install default. Only ever read when no settings row exists yet,
+    // so an existing install keeps whatever it had -- see the note on the class.
+    val experimentalGenreTab: Boolean = true,
 
     /**
      * Per-(library, genre) cover override for the Genre tab: key
@@ -199,7 +207,9 @@ data class AppSettings(
      * Experimental: master switch for the local Ignore List. When off, no
      * filtering happens and the "Ignore" action is hidden. Per-server.
      */
-    val ignoreListEnabled: Boolean = false,
+    // Fresh-install default. Only ever read when no settings row exists yet,
+    // so an existing install keeps whatever it had -- see the note on the class.
+    val ignoreListEnabled: Boolean = true,
 
     /**
      * One-shot flag: true once the admin's local Ignore List has been pushed to

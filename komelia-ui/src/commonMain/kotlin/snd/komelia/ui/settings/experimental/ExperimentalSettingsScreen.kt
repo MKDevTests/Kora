@@ -41,7 +41,7 @@ class ExperimentalSettingsScreen : Screen {
         LaunchedEffect(Unit) { vm.initialize() }
         val accentColor = LocalAccentColor.current
 
-        SettingsScreenContainer(LocalStrings.current.ui.experimental) {
+        SettingsScreenContainer(LocalStrings.current.ui.genreTab) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     LocalStrings.current.ui.theseFeaturesAreExperimentalThey,

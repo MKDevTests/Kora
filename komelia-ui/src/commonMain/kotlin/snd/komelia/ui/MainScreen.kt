@@ -201,9 +201,19 @@ class MainScreen(
                     // times" (SaveableStateHolder, surfaced by the AnimatedContent
                     // cross-fade). popUntil reuses the existing instance; we only
                     // push when the destination is genuinely not on the stack.
+                    // Home is the root of this navigator, not something to push:
+                    // replacing the stack is what the navigation bar's own home
+                    // button does, and it leaves no series/library behind to back
+                    // into. Handled here rather than below, which is push-shaped.
+                    if (intent is ReaderExitDestination.Home) {
+                        ReaderNavigationIntent.pending.value = null
+                        if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen())
+                        return@collect
+                    }
                     val destination = when (intent) {
                         is ReaderExitDestination.Series -> SeriesScreen(intent.id)
                         is ReaderExitDestination.Library -> LibraryScreen(intent.id)
+                        ReaderExitDestination.Home -> null
                         null -> null
                     }
                     if (destination != null) {

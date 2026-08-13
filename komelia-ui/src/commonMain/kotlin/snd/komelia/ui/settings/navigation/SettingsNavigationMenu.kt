@@ -179,7 +179,11 @@ fun SettingsNavigationMenu(
         )
 
         FilteredSettingsGroup(
-            title = LocalStrings.current.ui.experimental,
+            // Not "Experimental" any more: the genre tab, the ignore list and
+            // hidden series all shipped and all answer the same question --
+            // what shows up in the library. Not "Administration" either: two
+            // of the three are every user's business.
+            title = LocalStrings.current.ui.contentSettings,
             query = query,
             entries = buildList {
                 add(
