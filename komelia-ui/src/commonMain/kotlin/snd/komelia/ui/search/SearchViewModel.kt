@@ -7,10 +7,13 @@ import androidx.compose.runtime.snapshotFlow
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -113,6 +116,17 @@ class SearchViewModel(
     var currentTab by mutableStateOf(SearchResultsTab.SERIES)
         private set
 
+    /**
+     * The search in flight. A new one cancels it, so opening the tab and
+     * immediately typing abandons the newest-additions request instead of
+     * queueing behind it.
+     */
+    private var searchJob: Job? = null
+
+    /** True once anything has been fetched — see [SearchScreen]'s loading branch. */
+    val hasAnyResults: Boolean
+        get() = seriesResults.isNotEmpty() || bookResults.isNotEmpty() || authorNames.isNotEmpty()
+
     suspend fun initialize(initialQuery: String?) {
         // Preserve the in-memory results (and the current tab) when the user
         // returns to the search tab after opening a result. The tab opens with
@@ -126,28 +140,35 @@ class SearchViewModel(
         mutableState.value = LoadState.Loading
         fuzzyEnabled = settingsRepository.getSearchFuzzyEnabled().first()
         initialQuery?.let { query = it }
-        loadSearchResults()
 
+        // The first load goes through this collector rather than beside it.
+        // It used to be launched AFTER an inline loadSearchResults(), so while
+        // the newest-additions list was loading nothing was watching `query`:
+        // whatever was typed during those seconds was only noticed once the
+        // list came back. snapshotFlow emits the current value on collection,
+        // so the initial load is that first emission — undelayed, because a
+        // blank query (the tab's own opening) and the seed handed in by the
+        // app bar both bypass the typing debounce.
         snapshotFlow { query }
-            .drop(if (initialQuery != null) 1 else 0)
-            .debounce {
-                if (it.isBlank()) 0
-                else 500
-            }
             .distinctUntilChanged()
+            .debounce { if (it.isBlank() || it == initialQuery) 0 else 500 }
             .onEach {
                 selectedAuthor = null
-                loadSearchResults()
+                startSearch()
             }
             .launchIn(screenModelScope)
-        mutableState.value = LoadState.Success(Unit)
     }
 
     fun reload() {
-        screenModelScope.launch {
+        startSearch(reloadAuthor = true)
+    }
+
+    private fun startSearch(reloadAuthor: Boolean = false) {
+        searchJob?.cancel()
+        searchJob = screenModelScope.launch {
             mutableState.value = LoadState.Loading
             loadSearchResults()
-            selectedAuthor?.let {
+            if (reloadAuthor && selectedAuthor != null) {
                 loadAuthorSeriesPage(1)
                 loadAuthorBooksPage(1)
             }
@@ -155,11 +176,18 @@ class SearchViewModel(
         }
     }
 
-    private suspend fun loadSearchResults() {
+    /**
+     * Series, books and author names are three independent requests; they used
+     * to run one after the other, so the wait was their sum. Four in flight is
+     * the app-wide ceiling, and three is under it.
+     */
+    private suspend fun loadSearchResults() = coroutineScope {
         currentTab = userSelectedTab
-        loadSeriesPage(1)
-        loadBooksPage(1)
-        loadAuthorNames()
+        listOf(
+            async { loadSeriesPage(1) },
+            async { loadBooksPage(1) },
+            async { loadAuthorNames() },
+        ).awaitAll()
         if (seriesResults.isEmpty() && bookResults.isNotEmpty() && currentTab == SearchResultsTab.SERIES) {
             currentTab = SearchResultsTab.BOOKS
         } else if (bookResults.isEmpty() && seriesResults.isNotEmpty() && currentTab == SearchResultsTab.BOOKS) {

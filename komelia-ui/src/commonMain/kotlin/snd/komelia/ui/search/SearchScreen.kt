@@ -77,14 +77,18 @@ class SearchScreen(
                                     onFuzzyEnabledChange = vm::onFuzzyEnabledChange,
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
-                                    when (state) {
-                                        is LoadState.Error -> ErrorContent(
+                                    when {
+                                        state is LoadState.Error -> ErrorContent(
                                             (state as LoadState.Error).exception.message ?: "Error",
                                             onReload = vm::reload
                                         )
 
-                                        LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
-                                        is LoadState.Success -> SearchContent(
+                                        // Keep the results already on screen while the
+                                        // next search runs. The search bar has its own
+                                        // progress line; blanking everything to a
+                                        // spinner on each keystroke was most of what
+                                        // made searching feel slow.
+                                        state is LoadState.Success || vm.hasAnyResults -> SearchContent(
                                             query = vm.query,
                                             searchType = vm.currentTab,
                                             onSearchTypeChange = vm::onSearchTypeChange,
@@ -114,6 +118,8 @@ class SearchScreen(
                                             authorBookTotalPages = vm.authorBookTotalPages,
                                             onAuthorBookPageChange = vm::onAuthorBookPageChange,
                                         )
+
+                                        else -> LoadingMaxSizeIndicator()
                                     }
                                 }
                             }
@@ -136,14 +142,13 @@ class SearchScreen(
                     onFuzzyEnabledChange = vm::onFuzzyEnabledChange,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    when (state) {
-                        is LoadState.Error -> ErrorContent(
+                    when {
+                        state is LoadState.Error -> ErrorContent(
                             (state as LoadState.Error).exception.message ?: "Error",
                             onReload = vm::reload
                         )
 
-                        LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
-                        is LoadState.Success -> SearchContent(
+                        state is LoadState.Success || vm.hasAnyResults -> SearchContent(
                             query = vm.query,
                             searchType = vm.currentTab,
                             onSearchTypeChange = vm::onSearchTypeChange,
@@ -173,6 +178,8 @@ class SearchScreen(
                             authorBookTotalPages = vm.authorBookTotalPages,
                             onAuthorBookPageChange = vm::onAuthorBookPageChange,
                         )
+
+                        else -> LoadingMaxSizeIndicator()
                     }
                 }
                 }
@@ -181,14 +188,14 @@ class SearchScreen(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    when (val state = vm.state.collectAsState().value) {
-                        is LoadState.Error -> ErrorContent(
+                    val state = vm.state.collectAsState().value
+                    when {
+                        state is LoadState.Error -> ErrorContent(
                             state.exception.message ?: "Error",
                             onReload = vm::reload
                         )
 
-                        LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
-                        is LoadState.Success -> {
+                        state is LoadState.Success || vm.hasAnyResults -> {
                             SearchContent(
                                 query = vm.query,
                                 searchType = vm.currentTab,
@@ -220,6 +227,8 @@ class SearchScreen(
                                 onAuthorBookPageChange = vm::onAuthorBookPageChange,
                             )
                         }
+
+                        else -> LoadingMaxSizeIndicator()
                     }
                 }
             }
