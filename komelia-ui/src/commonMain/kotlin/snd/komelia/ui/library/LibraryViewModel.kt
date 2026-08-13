@@ -77,13 +77,25 @@ private object LibraryCountsCache {
 }
 
 /**
- * How long the counts refresh will wait for the series grid before giving up.
+ * How long to wait for the series grid to START loading.
  *
- * Generous, because the point is to come AFTER it — but not unbounded: open the
- * library on the Collections tab and the series grid never loads at all, and the
- * chips would then keep their remembered values until the next visit.
+ * The case being detected is "it never will": open the library on the
+ * Collections tab and the series grid is never initialized, so the counts
+ * refresh must not wait for it. Once it HAS started, we wait for the answer
+ * itself, not for a clock — see [GRID_WAIT_CAP_MS].
  */
-private const val GRID_WAIT_CAP_MS = 20_000L
+private const val GRID_START_WAIT_MS = 2_000L
+
+/**
+ * Backstop on waiting for the grid's answer, once it is known to be loading.
+ *
+ * Deliberately longer than any request that will realistically return: an
+ * earlier 20s cap was measured expiring while the grid was still running at 25
+ * and 27 seconds, which released the three count requests into exactly the
+ * traffic they were meant to avoid. This only has to beat a hung request, and
+ * the socket timeout is 30s.
+ */
+private const val GRID_WAIT_CAP_MS = 60_000L
 
 class LibraryViewModel(
     private val libraryApi: KomgaLibraryApi,
@@ -279,18 +291,28 @@ class LibraryViewModel(
         // Let the grid have the connections first. Timed on its own so the two
         // questions stay separate: how long we held the refresh back
         // (library.counts.deferred) and how long it then took (library.counts).
-        // The cap matters — on another tab the series grid may never load at
-        // all, and the chips would then never refresh.
+        //
+        // Two waits, because they answer different questions. First, is the grid
+        // loading at all — on the Collections tab it never starts, and waiting
+        // for it would strand the chips. Then, and only then, wait for its
+        // answer rather than for a clock: a fixed cap short enough to be safe
+        // was measured expiring mid-request, which released these three straight
+        // into the traffic they exist to avoid.
         // Never on a library whose counts are unknown: there the chips have
         // nothing to show, and waiting would leave them empty rather than merely
         // slightly stale.
         if (deferUntilGridReady && chipsHaveValues) {
             snd.komelia.perf.PerfTrace.measure("library.counts.deferred") {
-                kotlinx.coroutines.withTimeoutOrNull(GRID_WAIT_CAP_MS) {
-                    // firstPageSettled, not `state is Success`: the grid says
-                    // Success as soon as it paints its cached page, which is
-                    // before the request we are trying to stay behind.
-                    seriesTabState.firstPageSettled.first { it }
+                val gridIsLoading = kotlinx.coroutines.withTimeoutOrNull(GRID_START_WAIT_MS) {
+                    seriesTabState.state.first { it !is Uninitialized }
+                } != null
+                if (gridIsLoading) {
+                    kotlinx.coroutines.withTimeoutOrNull(GRID_WAIT_CAP_MS) {
+                        // firstPageSettled, not `state is Success`: the grid says
+                        // Success as soon as it paints its cached page, which is
+                        // before the request we are trying to stay behind.
+                        seriesTabState.firstPageSettled.first { it }
+                    }
                 }
             }
         }
