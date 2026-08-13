@@ -368,7 +368,10 @@ class PanelsReaderState(
                 )
                 // Same as the paged reader: the end page means finished, and a
                 // last volume has no "next book" step to carry the mark.
-                stateScope.launch { readerState.markCurrentBookCompleted() }
+                stateScope.launch {
+                    readerState.markCurrentBookCompleted()
+                    refreshTransitionNeighbours()
+                }
             }
 
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
@@ -431,6 +434,7 @@ class PanelsReaderState(
                     currentBook = bookState.currentBook,
                     previousBook = bookState.previousBook
                 )
+                stateScope.launch { refreshTransitionNeighbours() }
             }
 
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
@@ -444,6 +448,26 @@ class PanelsReaderState(
                     }
                 }
             }
+        }
+    }
+
+    /** Paged reader's [snd.komelia.ui.reader.image.paged.PagedReaderState] twin —
+     *  see the note there. */
+    private suspend fun refreshTransitionNeighbours() {
+        readerState.awaitNeighbours()
+        val bookState = readerState.booksState.value ?: return
+        when (val page = transitionPage.value) {
+            is BookEnd ->
+                if (page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
+                    transitionPage.value = page.copy(nextBook = bookState.nextBook)
+                }
+
+            is BookStart ->
+                if (page.currentBook.id == bookState.currentBook.id && page.previousBook == null) {
+                    transitionPage.value = page.copy(previousBook = bookState.previousBook)
+                }
+
+            null -> {}
         }
     }
 

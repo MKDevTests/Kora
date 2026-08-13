@@ -601,31 +601,88 @@ class ReaderState(
 
     }
 
+    /**
+     * The lookup of the book on the far side of the one just opened, running in
+     * the background — see [prefetchNeighbours]. Joined before anything reads
+     * the neighbour it fills in.
+     */
+    private var neighbourPrefetch: Job? = null
+
+    /**
+     * Waits for the neighbour lookup started by the last book change, if any.
+     *
+     * For readers that snapshot `nextBook` into their end-of-book page: the
+     * snapshot can be taken before the lookup lands (a two-page extra, or a jump
+     * straight to the last page), and would then claim the series ends here.
+     */
+    suspend fun awaitNeighbours() {
+        neighbourPrefetch?.join()
+    }
+
+    /**
+     * Fills in the neighbour the last swap deliberately left empty: the book
+     * after the new one when moving forward, before it when moving back.
+     *
+     * Off the critical path on purpose. The reader has everything it needs to
+     * paint the book the user asked for; making them wait on a lookahead they
+     * will not reach for another twenty minutes is what made changing volume
+     * feel slow — expensively so at the end of a series, where finding the next
+     * book means walking the series list and then the book pages of the series
+     * that follows.
+     *
+     * Runs on [stateScope], so leaving the reader cancels it.
+     */
+    private fun prefetchNeighbours(forward: Boolean) {
+        val anchor = booksState.value?.currentBook ?: return
+        neighbourPrefetch?.cancel()
+        neighbourPrefetch = stateScope.launch {
+            val neighbour =
+                if (forward) getNextBook(anchor)
+                else getPreviousBook(anchor.id)
+            val pages = if (neighbour != null) loadBookPages(neighbour) else emptyList()
+
+            // Only if the reader is still on the book we started from: a fast
+            // second page-turn has already moved on, and its own prefetch owns
+            // the state now.
+            val current = booksState.value ?: return@launch
+            if (current.currentBook.id != anchor.id) return@launch
+            booksState.value =
+                if (forward) current.copy(nextBook = neighbour, nextBookPages = pages)
+                else current.copy(previousBook = neighbour, previousBookPages = pages)
+            preloadFirstPage(neighbour)
+        }
+    }
+
     suspend fun loadNextBook() {
+        neighbourPrefetch?.join()
         val booksState = requireNotNull(booksState.value)
         if (booksState.nextBook != null) {
             val outgoingBook = booksState.currentBook
-            val nextBook = getNextBook(booksState.nextBook)
-            val nextBookPages = if (nextBook != null) loadBookPages(nextBook) else emptyList()
-            // preload-after-loadnext
-            preloadFirstPage(nextBook)
 
             // Swap the book state and reset the page in one uninterrupted block
             // (no suspension between). Setting the page BEFORE the swap left a
             // window where a concurrent progress push saw the OLD book paired
             // with page 1 and wiped the finished book's progress. See
             // updateCacheAndPush.
+            //
+            // Everything this swap needs is already in hand — the incoming book
+            // and its pages were prefetched when the CURRENT one was opened. The
+            // book after it is not, and looking it up here is what the user was
+            // waiting on: one sibling call when there is a next volume, but a
+            // walk through the series list and every book page of the following
+            // series when there isn't. See prefetchNeighbours.
             this.booksState.value = BookState(
                 currentBook = booksState.nextBook,
                 currentBookPages = booksState.nextBookPages,
                 previousBook = booksState.currentBook,
                 previousBookPages = booksState.currentBookPages,
 
-                nextBook = nextBook,
-                nextBookPages = nextBookPages
+                nextBook = null,
+                nextBookPages = emptyList()
             )
             readProgressPage.value = 1
             currentBookId.value = booksState.nextBook.id
+            prefetchNeighbours(forward = true)
             // Moving on to the next book means we're done with the one we're
             // leaving — mark it read. This covers the "next volume" skip button
             // from mid-book (user's choice: skipping = finished); when we got
@@ -669,12 +726,10 @@ class ReaderState(
     }
 
     suspend fun loadPreviousBook(fromStart: Boolean = false) {
+        neighbourPrefetch?.join()
         val booksState = requireNotNull(booksState.value)
         if (booksState.previousBook != null) {
             val outgoingBook = booksState.currentBook
-            val previousBook = getPreviousBook(booksState.previousBook.id)
-            val previousBookPages =
-                if (previousBook != null) loadBookPages(previousBook) else emptyList()
 
             // Swap first, THEN set the page — no suspension between — so a
             // concurrent progress push never pairs the outgoing book with the
@@ -686,11 +741,12 @@ class ReaderState(
                 nextBook = booksState.currentBook,
                 nextBookPages = booksState.currentBookPages,
 
-                previousBook = previousBook,
-                previousBookPages = previousBookPages,
+                previousBook = null,
+                previousBookPages = emptyList(),
             )
             readProgressPage.value = restoredPage
             currentBookId.value = booksState.previousBook.id
+            prefetchNeighbours(forward = false)
             // Mirror of loadNextBook: backing out of a book means we're NOT done
             // with it — mark it unread. Symmetric with the "next volume" skip
             // marking the volume we leave as read. Runs AFTER the swap so a

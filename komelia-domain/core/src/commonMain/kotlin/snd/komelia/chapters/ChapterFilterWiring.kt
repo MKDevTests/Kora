@@ -2,8 +2,11 @@ package snd.komelia.chapters
 
 import kotlinx.coroutines.flow.StateFlow
 import snd.komelia.komga.api.KomgaApi
+import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.settings.model.ChapterSeriesFilter
+import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.Page
 import snd.komga.client.library.KomgaLibraryId
@@ -37,9 +40,11 @@ const val CHAPTER_TITLE_SUFFIX = "(Chap)"
  * from a link, a bookmark or the volumes it belongs to must still open.
  */
 fun KomgaApi.withChapterFilter(filter: StateFlow<ChapterSeriesFilter>): KomgaApi {
-    val filtered = ChapterFilteringSeriesApi(seriesApi, filter)
+    val filteredSeries = ChapterFilteringSeriesApi(seriesApi, filter)
+    val filteredBooks = ChapterFilteringBookApi(bookApi, filter)
     return object : KomgaApi by this {
-        override val seriesApi: KomgaSeriesApi = filtered
+        override val seriesApi: KomgaSeriesApi = filteredSeries
+        override val bookApi: KomgaBookApi = filteredBooks
     }
 }
 
@@ -81,4 +86,51 @@ private class ChapterFilteringSeriesApi(
         deleted: Boolean?,
         pageRequest: KomgaPageRequest?,
     ): Page<KomgaSeries> = delegate.getUpdatedSeries(libraryIds, oneshot, deleted, pageRequest).filtered()
+}
+
+/**
+ * Same idea one level down: hiding a chapter series from every series list did
+ * nothing for the shelves made of BOOKS. "On deck", "Keep reading", "Forgotten"
+ * and book search all query books directly, so a volume belonging to a `(Chap)`
+ * series kept showing up on the home screen with the filter on.
+ *
+ * Which lists get filtered is decided by the overload, and that is not an
+ * accident:
+ *
+ *  - `getBookList(search = ...)`, `getBooksOnDeck`, `getLatestBooks` are the
+ *    BROWSE queries — "what should I read", search results. Filtered.
+ *  - `getBookList(conditionBuilder = ...)` is the SCOPED query: every caller
+ *    narrows it to one series (the series book list, the reader's siblings, the
+ *    book screen's siblings, oneshots) or is an admin tool. Filtering it would
+ *    empty a chapter series the moment it was opened, and — worse — break
+ *    continuous reading inside one, since the reader finds the next volume
+ *    through it. Left alone, exactly like the single-series endpoints above.
+ *
+ * A browse query that has to go through the condition builder should be moved
+ * to the search overload rather than filtered here; the library "Keep reading"
+ * row was moved for this reason.
+ */
+private class ChapterFilteringBookApi(
+    private val delegate: KomgaBookApi,
+    private val filter: StateFlow<ChapterSeriesFilter>,
+) : KomgaBookApi by delegate {
+
+    private fun Page<KomeliaBook>.filtered(): Page<KomeliaBook> = when (filter.value) {
+        ChapterSeriesFilter.ANY -> this
+        ChapterSeriesFilter.HIDE_CHAPTERS ->
+            copy(content = content.filterNot { isChapterSeriesTitle(it.seriesTitle) })
+    }
+
+    override suspend fun getBookList(
+        search: KomgaBookSearch,
+        pageRequest: KomgaPageRequest?,
+    ): Page<KomeliaBook> = delegate.getBookList(search, pageRequest).filtered()
+
+    override suspend fun getBooksOnDeck(
+        libraryIds: List<KomgaLibraryId>?,
+        pageRequest: KomgaPageRequest?,
+    ): Page<KomeliaBook> = delegate.getBooksOnDeck(libraryIds, pageRequest).filtered()
+
+    override suspend fun getLatestBooks(pageRequest: KomgaPageRequest?): Page<KomeliaBook> =
+        delegate.getLatestBooks(pageRequest).filtered()
 }

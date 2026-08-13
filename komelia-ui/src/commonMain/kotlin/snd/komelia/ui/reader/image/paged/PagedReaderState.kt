@@ -362,7 +362,10 @@ class PagedReaderState(
                 // not on the way out. A last volume has nothing to move on to,
                 // so its completion used to depend on which exit path the user
                 // took, and it stayed on the Keep-reading shelf.
-                stateScope.launch { readerState.markCurrentBookCompleted() }
+                stateScope.launch {
+                    readerState.markCurrentBookCompleted()
+                    refreshTransitionNeighbours()
+                }
             }
 
             currentTransitionPage is BookEnd && currentTransitionPage.nextBook != null -> {
@@ -406,6 +409,7 @@ class PagedReaderState(
                     currentBook = bookState.currentBook,
                     previousBook = bookState.previousBook
                 )
+                stateScope.launch { refreshTransitionNeighbours() }
             }
 
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
@@ -421,6 +425,35 @@ class PagedReaderState(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Re-reads the neighbouring books into the transition page once the reader's
+     * background lookup has landed.
+     *
+     * The transition page is a snapshot, and the neighbour it names is fetched
+     * off the critical path when a book is opened (see
+     * ReaderState.prefetchNeighbours). Reaching the end of a very short book, or
+     * jumping straight to it, can beat that lookup — and the page would say the
+     * series ends here. Costs nothing when the lookup is already done, which is
+     * the normal case.
+     */
+    private suspend fun refreshTransitionNeighbours() {
+        readerState.awaitNeighbours()
+        val bookState = readerState.booksState.value ?: return
+        when (val page = transitionPage.value) {
+            is BookEnd ->
+                if (page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
+                    transitionPage.value = page.copy(nextBook = bookState.nextBook)
+                }
+
+            is BookStart ->
+                if (page.currentBook.id == bookState.currentBook.id && page.previousBook == null) {
+                    transitionPage.value = page.copy(previousBook = bookState.previousBook)
+                }
+
+            null -> {}
         }
     }
 
