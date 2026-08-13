@@ -76,7 +76,22 @@ class SeriesBooksState(
     suspend fun initialize() {
         if (state.value != LoadState.Uninitialized) return
 
-        filterState.initialize()
+        // Off the critical path, deliberately. This fills the filter panel's tag
+        // and author dropdowns — two requests, in series, for a panel that is
+        // closed — and awaiting it held back everything below, INCLUDING the
+        // remembered first page, which answers in about ten milliseconds.
+        //
+        // Measured on a busy connection pool: the volumes area stayed empty for
+        // 1.7s, 3.9s, and twice for 14.5s, while the list itself was already in
+        // hand. The two requests wait their turn twice over — that is the whole
+        // gap. Nothing here reads what they produce: the filter VALUE is default
+        // from construction, only the option lists arrive late, and the panel
+        // that shows them is two taps away.
+        screenModelScope.launch {
+            snd.komelia.perf.PerfTrace.measure("series.books.filterOptions") {
+                filterState.initialize()
+            }
+        }
         loadBookData(1)
 
         screenModelScope.launch { startKomgaEventListener() }
