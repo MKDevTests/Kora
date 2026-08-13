@@ -187,8 +187,12 @@ class LibrarySeriesTabState(
     private val libraryId: KomgaLibraryId?,
     private val taskEmitter: OfflineTaskEmitter,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
+    private val seriesRatingsRepository: snd.komelia.ratings.SeriesRatingsRepository,
     private val baseTagFilter: String? = null,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
+    /** Same resolver Favorites and the reading list use — see [loadRatedSeries]. */
+    private val ratedSeriesLoader =
+        snd.komelia.ui.common.lists.PersonalListLoader(seriesApi, settingsRepository)
     val cardWidth: StateFlow<Dp> = settingsRepository.getCardWidth()
         .map { Dp(it.toFloat()) }
         .stateIn(screenModelScope, SharingStarted.Eagerly, defaultCardWidth.dp)
@@ -324,6 +328,14 @@ class LibrarySeriesTabState(
     }
 
     fun registerSeriesListContext(selectedSeries: KomgaSeries) {
+        // A context is a promise that the list can be replayed against the
+        // server from its filter — that is exactly what every consumer does with
+        // it (SeriesViewModel's siblings, the reader's next-series-in-filter).
+        // A rating-scoped list cannot be replayed, so registering one would make
+        // "next series" walk the UNFILTERED library while claiming otherwise.
+        // Registering nothing is the honest answer: consumers already have a
+        // no-context branch that falls back to the library in title order.
+        if (filterState.state.value.isRatingScoped) return
         SeriesNavigationContext.put(
             selectedSeries.id,
             SeriesNavigationContext.SeriesListContext(
@@ -353,6 +365,13 @@ class LibrarySeriesTabState(
     fun openRandomSeries(onSeriesSelected: (KomgaSeries) -> Unit) {
         val total = totalSeriesCount
         if (total == 0) return
+        // A rating-scoped list is already fully in hand, so draw from it rather
+        // than from a server offset it has no query for. Simpler and exact —
+        // the offset trick below only exists because the server list is paged.
+        if (filterState.state.value.isRatingScoped) {
+            series.randomOrNull()?.let(onSeriesSelected)
+            return
+        }
         notifications.runCatchingToNotifications(screenModelScope) {
             val filter = filterState.state.value
             val condition = allOfSeries {
@@ -450,6 +469,19 @@ class LibrarySeriesTabState(
             val loadStateDelay = delayLoadState()
             currentSeriesPage = page
             val currentFilter = filterState.state.value
+
+            if (currentFilter.isRatingScoped) {
+                val resolved = loadRatedSeries(currentFilter)
+                loadStateDelay.cancel()
+
+                currentSeriesPage = 1
+                totalSeriesPages = 1
+                totalSeriesCount = resolved.size
+                series = resolved
+                downloadedSeriesIds = bookApi.getDownloadedSeriesIds(resolved.map { it.id })
+                mutableState.value = LoadState.Success(Unit)
+                return@runCatchingToNotifications
+            }
 
             if (currentFilter.sortOrder == SeriesSort.RANDOM) {
                 val size = pageLoadSize.value
@@ -586,6 +618,59 @@ class LibrarySeriesTabState(
             kotlinx.serialization.json.Json.encodeToString(SeriesFilterDto.from(filter))
         }.getOrElse { filter.toString() }
 
+    /**
+     * The rated slice of the library, resolved locally.
+     *
+     * The rating lives in a per-user local table that Komga knows nothing about
+     * and must never learn about, so there is no query that returns this list —
+     * it is built from the ids we hold and resolved one series at a time, the
+     * same way Favorites and the reading list already do.
+     *
+     * That is affordable precisely because the set is small: the ratings table
+     * holds well under a hundred rows even for a heavy user, and every id whose
+     * library is already known is filtered out before any request goes out.
+     *
+     * The whole result is one page. There is no server-side count to page
+     * against, and inventing pages over a list this short would only give the
+     * user a pager that always reads "1 / 1".
+     */
+    private suspend fun loadRatedSeries(filter: SeriesFilter): List<KomgaSeries> {
+        val threshold = filter.minStars ?: 1
+        val stars = seriesRatingsRepository.listAll()
+            .filter { it.stars >= threshold }
+            .associate { it.seriesId.value to it.stars }
+        if (stars.isEmpty()) return emptyList()
+
+        val resolved = ratedSeriesLoader.resolve(
+            ids = stars.keys,
+            selectedLibraryId = libraryId?.value,
+            excludedLibraryIds = settingsRepository.getExcludedLibraryIds().first(),
+            cache = settingsRepository.getSeriesLibraryIds().first(),
+        )
+
+        return resolved
+            // Resolving by id bypasses every list-level filter, and the admin
+            // "hidden" tag is one of them: no decorator overrides getOneSeries,
+            // so a series hidden for everyone would walk back in through this
+            // door. The tag travels with the series, so dropping it is free.
+            .filterNot { it.metadata.tags.contains(HIDDEN_TAG) }
+            .let { list ->
+                if (baseTagFilter == null) list
+                else list.filter { it.metadata.tags.contains(baseTagFilter) }
+            }
+            .sortedWith(
+                if (filter.sortOrder == SeriesSort.RATING_DESC) {
+                    // Ties are common with only five possible values, so the
+                    // title decides — otherwise the order would shuffle between
+                    // two loads of the same list.
+                    compareByDescending<KomgaSeries> { stars[it.id.value] ?: 0 }
+                        .thenBy { it.metadata.titleSort.lowercase() }
+                } else {
+                    compareBy { it.metadata.titleSort.lowercase() }
+                }
+            )
+    }
+
     private suspend fun getAllSeries(
         page: Int,
         filter: SeriesFilter
@@ -680,6 +765,15 @@ class LibrarySeriesTabState(
         DATE_ADDED_DESC(KomgaSeriesSort.byCreatedDateDesc()),
         DATE_ADDED_ASC(KomgaSeriesSort.byCreatedDateAsc()),
         RANDOM(KomgaSeriesSort(listOf(KomgaSort.Order(SERIES_RANDOM_SORT, ASC)))),
+
+        /**
+         * Your own rating, best first. Komga has no such column — the rating is
+         * local and per user — so this order is applied in memory over the
+         * locally-resolved list and [komgaSort] is never sent for it. Title
+         * ascending is carried only so the field is never null if some other
+         * code path reads it.
+         */
+        RATING_DESC(KomgaSeriesSort.byTitleAsc()),
         //        FOLDER_NAME_ASC(KomgaSeriesSort.byFolderNameAsc()),
 //        FOLDER_NAME_DESC(KomgaSeriesSort.byFolderNameDesc()),
 //        BOOKS_COUNT_ASC(KomgaSeriesSort.byBooksCountAsc()),

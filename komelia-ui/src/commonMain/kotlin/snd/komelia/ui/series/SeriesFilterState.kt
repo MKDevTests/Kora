@@ -58,11 +58,28 @@ data class SeriesFilter(
     // Server-side via SeriesConditionBuilder.titleSort { beginsWith(letter) } — fast
     // and accurate; uses Komga's indexed titleSort column.
     val letterFilter: String? = null,
+    /**
+     * Keep only series rated at least this many stars; null = no rating filter.
+     *
+     * Unlike every other field here it has NO server-side expression, and it
+     * never will: the rating is this user's own, stored in a local table, and
+     * must never become a shared Komga value. So it is deliberately absent from
+     * [addConditionTo] — the library screen switches to a local data source when
+     * it is set. See [snd.komelia.ui.library.LibrarySeriesTabState].
+     */
+    val minStars: Int? = null,
 ) {
 
     companion object {
         val DEFAULT = SeriesFilter()
     }
+
+    /**
+     * True when the list can no longer be expressed as a Komga query, because
+     * the rating — a purely local, per-user value — takes part in it.
+     */
+    val isRatingScoped: Boolean
+        get() = minStars != null || sortOrder == SeriesSort.RATING_DESC
 
     fun addConditionTo(builder: SeriesConditionBuilder) {
         // Letter filter: narrow to series whose titleSort starts with a given
@@ -255,7 +272,13 @@ class SeriesFilterState(
     }
 
     fun onSortOrderChange(sortOrder: SeriesSort) {
-        mutableFilterState.update { it.copy(sortOrder = sortOrder) }
+        mutableFilterState.update {
+            // Sorting by rating only makes sense over rated series, so picking it
+            // implies "rated at all" unless a stricter threshold is already set.
+            if (sortOrder == SeriesSort.RATING_DESC && it.minStars == null) {
+                it.copy(sortOrder = sortOrder, minStars = 1)
+            } else it.copy(sortOrder = sortOrder)
+        }
         checkIfAllDefault()
     }
 
@@ -266,6 +289,22 @@ class SeriesFilterState(
 
     fun onLetterFilterChange(letter: String?) {
         mutableFilterState.update { current -> current.copy(letterFilter = letter) }
+        checkIfAllDefault()
+    }
+
+    /**
+     * [stars] null clears the filter; 1 means "rated at all", which is what
+     * sorting by rating implies — an unrated series has no place in a list
+     * ordered by rating.
+     */
+    fun onMinStarsChange(stars: Int?) {
+        mutableFilterState.update { current ->
+            if (stars == null && current.sortOrder == SeriesSort.RATING_DESC) {
+                // Dropping the filter while sorting by rating would ask for an
+                // order over series that have none. Fall back to the title.
+                current.copy(minStars = null, sortOrder = SeriesSort.TITLE_ASC)
+            } else current.copy(minStars = stars)
+        }
         checkIfAllDefault()
     }
 
