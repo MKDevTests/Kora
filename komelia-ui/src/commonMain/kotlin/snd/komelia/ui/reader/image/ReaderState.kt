@@ -320,14 +320,24 @@ class ReaderState(
                         val base = seedBook ?: freshBookDeferred.await()
                         PerfTrace.measure("reader.open currentPages", { it.size }) { loadBookPages(base) }
                     }
+                    // Traced because they were the one part of the wave that was
+                    // not: a run showing CRITICAL at 6200ms with every labelled
+                    // call at ~3.2s means the three seconds nobody could see were
+                    // spent here. Both branches are TWO serial calls — find the
+                    // sibling, then load its pages — so they can be twice the
+                    // wall of anything else in the wave.
                     val prevDeferred = async {
-                        val pb = getPreviousBook(bookId)
-                        pb to (if (pb != null) loadBookPages(pb) else emptyList())
+                        PerfTrace.measure("reader.open prev") {
+                            val pb = getPreviousBook(bookId)
+                            pb to (if (pb != null) loadBookPages(pb) else emptyList())
+                        }
                     }
                     val nextDeferred = async {
-                        val base = seedBook ?: freshBookDeferred.await()
-                        val nb = getNextBook(base)
-                        nb to (if (nb != null) loadBookPages(nb) else emptyList())
+                        PerfTrace.measure("reader.open next") {
+                            val base = seedBook ?: freshBookDeferred.await()
+                            val nb = getNextBook(base)
+                            nb to (if (nb != null) loadBookPages(nb) else emptyList())
+                        }
                     }
                     val seriesDeferred = async {
                         val seriesId = (seedBook ?: freshBookDeferred.await()).seriesId

@@ -26,6 +26,7 @@ import snd.komelia.ui.reader.readerScreen
 import snd.komelia.ui.readlist.ReadListScreen
 import snd.komelia.ui.series.SeriesScreen
 import snd.komga.client.book.KomgaBookId
+import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import kotlin.jvm.Transient
 
@@ -37,13 +38,17 @@ import snd.komelia.ui.platform.PlatformType
 
 fun bookScreen(
     book: KomeliaBook,
-    bookSiblingsContext: BookSiblingsContext? = null
+    bookSiblingsContext: BookSiblingsContext? = null,
+    /** The book's series, when the caller has it — carried through to the reader
+     *  so opening a volume by tapping its card is as cheap as the read button. */
+    series: KomgaSeries? = null,
 ): Screen {
     val context = bookSiblingsContext ?: BookSiblingsContext.Series()
     return if (book.oneshot) OneshotScreen(book, context)
     else BookScreen(
         book = book,
-        bookSiblingsContext = context
+        bookSiblingsContext = context,
+        series = series,
     )
 }
 
@@ -52,8 +57,16 @@ class BookScreen(
     private val bookSiblingsContext: BookSiblingsContext,
     @Transient
     val book: KomeliaBook? = null,
+    // Pass-through only: this screen never loads a series of its own (see
+    // BookViewModel), it just forwards the caller's copy to the reader.
+    @Transient
+    private val series: KomgaSeries? = null,
 ) : ReloadableScreen {
-    constructor(book: KomeliaBook, bookSiblingsContext: BookSiblingsContext) : this(book.id, bookSiblingsContext, book)
+    constructor(
+        book: KomeliaBook,
+        bookSiblingsContext: BookSiblingsContext,
+        series: KomgaSeries? = null,
+    ) : this(book.id, bookSiblingsContext, book, series)
 
     override val key: ScreenKey = bookId.toString()
 
@@ -108,6 +121,7 @@ class BookScreen(
                             book = selectedBook,
                             markReadProgress = markReadProgress,
                             bookSiblingsContext = bookSiblingsContext,
+                            series = series,
                             onExit = { lastReadBook ->
                                 if (lastReadBook.id != book.id) {
                                     vm.setCurrentBook(lastReadBook)
@@ -169,6 +183,7 @@ class BookScreen(
                             book = book,
                             bookSiblingsContext = bookSiblingsContext,
                             markReadProgress = markReadProgress,
+                            series = series,
                             onExit = { lastReadBook ->
                                 if (lastReadBook.id != book.id) {
                                     vm.setCurrentBook(lastReadBook)

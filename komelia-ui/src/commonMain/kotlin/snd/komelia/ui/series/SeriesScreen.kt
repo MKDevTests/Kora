@@ -112,7 +112,7 @@ class SeriesScreen(
                 currentTab = vm.currentTab,
                 onTabChange = vm::onTabChange,
                 booksState = vm.booksState,
-                onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value)) },
+                onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value), series) },
                 onBookReadClick = { book, markProgress ->
                     navigator.parent?.push(
                         readerScreen(
@@ -200,7 +200,7 @@ class SeriesScreen(
                         onTabChange = vm::onTabChange,
 
                         booksState = vm.booksState,
-                        onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value)) },
+                        onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value), vm.series.value) },
                         onBookReadClick = { book, markProgress ->
                             navigator.parent?.push(
                                 readerScreen(
