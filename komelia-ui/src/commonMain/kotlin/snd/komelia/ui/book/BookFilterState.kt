@@ -90,14 +90,31 @@ class BooksFilterState(
     var authorsOptions by mutableStateOf<List<KomgaAuthor>>(emptyList())
         private set
 
+    private var started = false
+
+    /**
+     * Fills the tag and author dropdowns. Two requests, in series, for a panel
+     * that is closed — so this is called when the panel is OPENED, never when
+     * the series is.
+     *
+     * It used to be awaited before the volumes were even asked for. On a busy
+     * connection pool (five per host, shared with every cover) those two
+     * requests queue twice over: the volumes area measured 1.7s, 3.9s and twice
+     * 14.5s of nothing, for a list that was already on disk. Idempotent, so
+     * opening and closing the panel costs one round of requests per screen.
+     */
     suspend fun initialize() {
+        if (started) return
+        started = true
 
         appNotifications.runCatchingToNotifications {
-            val series = series.filterNotNull().first()
-            tagOptions = referentialApi.getBookTags(seriesId = series.id)
-            authorsOptions = referentialApi
-                .getAuthors(seriesId = series.id, pageRequest = KomgaPageRequest(unpaged = true)).content
-                .distinctBy { it.name }
+            snd.komelia.perf.PerfTrace.measure("series.books.filterOptions") {
+                val series = series.filterNotNull().first()
+                tagOptions = referentialApi.getBookTags(seriesId = series.id)
+                authorsOptions = referentialApi
+                    .getAuthors(seriesId = series.id, pageRequest = KomgaPageRequest(unpaged = true)).content
+                    .distinctBy { it.name }
+            }
         }
     }
 

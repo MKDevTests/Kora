@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.files.Path
 import okhttp3.Cache
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import io.github.snd_r.komelia.infra.ncnn.NcnnSharedLibraries
 import snd.komelia.backup.BackupService
@@ -124,6 +125,13 @@ class AndroidAppModule(
 
     private val okHttpLogger = KotlinLogging.logger("http.logging")
     private val okHttpClientWithoutCache: OkHttpClient = OkHttpClient.Builder()
+        // OkHttp's default is five requests per host, and every cover shares
+        // this client with every API call. With covers now capped at four in
+        // flight (see AppModule.coilFetcherContext), eight leaves the screen's
+        // own requests four free slots at all times instead of queueing behind
+        // a page of thumbnails — measured as 20-58s waits, up to socket
+        // timeouts, on a server that was idle.
+        .dispatcher(Dispatcher().apply { maxRequestsPerHost = 8 })
         .connectTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(0, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS)
@@ -454,6 +462,33 @@ class AndroidAppModule(
      * through the library. The percentage also follows whatever device the app
      * lands on, which a fixed number cannot.
      */
+    /**
+     * How many covers may be fetched and decoded at once, scaled to the device.
+     *
+     * Half the cores, never fewer than two, never more than four. A fixed
+     * number would have been tuned on whatever tablet happened to be at hand:
+     * the same value that leaves half an eight-core device free would take
+     * every core of a four-core phone, and the decode is the expensive half.
+     *
+     * The ceiling is not about cores. Cold covers are limited by the network,
+     * not the CPU, and OkHttp admits eight requests per host: letting covers
+     * past four would hand them most of that queue and put the screen's own
+     * requests back behind a page of thumbnails, which is the problem this
+     * whole change exists to fix. A sixteen-core phone gains nothing from
+     * eight cover workers waiting on the same eight sockets.
+     *
+     * availableProcessors is a heuristic, not a measurement — it counts online
+     * cores, and on big.LITTLE they are not equal. It is enough to tell a
+     * low-end phone from a tablet, which is all this needs to do.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun coilFetcherContext(): kotlin.coroutines.CoroutineContext {
+        val cores = Runtime.getRuntime().availableProcessors()
+        val parallelism = (cores / 2).coerceIn(2, 4)
+        logger.info { "cover loading limited to $parallelism at a time ($cores cores)" }
+        return Dispatchers.IO.limitedParallelism(parallelism)
+    }
+
     override fun createCoilMemoryCache(): MemoryCache {
         return MemoryCache.Builder()
             .maxSizePercent(context)

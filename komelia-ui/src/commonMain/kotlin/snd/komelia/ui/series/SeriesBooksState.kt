@@ -76,7 +76,9 @@ class SeriesBooksState(
     suspend fun initialize() {
         if (state.value != LoadState.Uninitialized) return
 
-        filterState.initialize()
+        // NOT filterState.initialize() — see its own note. Its two requests are
+        // for the closed filter panel, and awaiting them here held back the
+        // volumes, remembered page included. The panel loads them itself now.
         loadBookData(1)
 
         screenModelScope.launch { startKomgaEventListener() }

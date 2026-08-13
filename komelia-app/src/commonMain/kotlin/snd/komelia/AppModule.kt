@@ -451,6 +451,23 @@ abstract class AppModule(
     protected open fun createPersistableFolderUriExtractor(): (io.github.vinceglb.filekit.PlatformFile) -> String? = { null }
 
     /**
+     * Bound on how many covers may be fetched AND decoded at once, or null to
+     * leave Coil's default (Dispatchers.IO — up to 64).
+     *
+     * Both happen on this one context: our fetchers decode inside `fetch()`
+     * rather than handing bytes back to Coil, so a cover costs a download plus
+     * a libvips decode-and-resize — JNI, blocking, CPU-bound — on the same
+     * thread. Sixty-four of those at once saturate the device and the
+     * five-per-host request queue in front of it, and the database shares that
+     * pool: a two-row SQLite read was measured at 533ms while covers loaded,
+     * against 1ms when idle. Every API call the screen was waiting on queued
+     * behind them, up to a socket timeout on a server that was doing nothing.
+     *
+     * Null on wasm, which has no Dispatchers.IO and no such pool.
+     */
+    protected open fun coilFetcherContext(): kotlin.coroutines.CoroutineContext? = null
+
+    /**
      * Resolves "open this book" requests from the home-screen widget into
      * a stream of [snd.komelia.komga.api.model.KomeliaBook]s ready to be
      * pushed onto the reader. Null on platforms without the widget.
@@ -530,6 +547,9 @@ abstract class AppModule(
                 }
                 .memoryCache(createCoilMemoryCache())
                 .diskCache { diskCache }
+                // See coilFetcherContext: covers are decoded in the fetcher, so
+                // this one bound covers both the requests and the CPU work.
+                .apply { coilFetcherContext()?.let { fetcherCoroutineContext(it) } }
                 .build()
                 .also { loader -> SingletonImageLoader.setUnsafe(loader) }
         }
