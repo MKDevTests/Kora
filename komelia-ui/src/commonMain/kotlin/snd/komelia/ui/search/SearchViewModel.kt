@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaBookApi
@@ -26,12 +28,16 @@ import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
+import snd.komelia.ui.common.authorRolesOrder
 import snd.komga.client.book.KomgaBookSearch
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
+import snd.komga.client.common.pencillerRole
+import snd.komga.client.common.writerRole
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.KomgaSearchCondition
+import snd.komga.client.search.KomgaSearchOperator
 import snd.komga.client.search.allOfBooks
 import snd.komga.client.search.allOfSeries
 import snd.komga.client.series.KomgaSeries
@@ -123,6 +129,39 @@ class SearchViewModel(
      */
     private var searchJob: Job? = null
 
+    /**
+     * The credits the Authors tab is about — writing and drawing, not
+     * lettering, inking or translation.
+     *
+     * The tab used to list every name in every role, because the endpoint it
+     * called ([KomgaReferentialApi.getAuthorsNames]) takes a search string and
+     * nothing else: translators and editors came back alongside the authors.
+     *
+     * Which roles count is not decided here. Settings → Appearance already
+     * carries that answer for the series and book screens, so the search tab
+     * reads the same setting: filter off means the historical writer +
+     * penciller, filter on means whatever the user kept. Hiding every role
+     * leaves the tab empty, which is what asking for no roles means.
+     *
+     * Read once per screen model, like [fuzzyEnabled]; a change in settings
+     * applies the next time the search screen is opened.
+     */
+    private var authorRoles: List<String> = listOf(writerRole, pencillerRole)
+
+    private suspend fun resolveAuthorRoles(): List<String> {
+        val filterEnabled = settingsRepository.getAuthorRolesFilterEnabled().first()
+        if (!filterEnabled) return listOf(writerRole, pencillerRole)
+        val hidden = settingsRepository.getHiddenAuthorRoles().first()
+        return authorRolesOrder.filterNot { it in hidden }
+    }
+
+    /** `author is (name, writer)` OR the same for every other counted role. */
+    private fun authorRoleConditions(name: String) = authorRoles.map { role ->
+        KomgaSearchCondition.Author(
+            KomgaSearchOperator.Is(KomgaSearchCondition.AuthorMatch(name, role))
+        )
+    }
+
     /** True once anything has been fetched — see [SearchScreen]'s loading branch. */
     val hasAnyResults: Boolean
         get() = seriesResults.isNotEmpty() || bookResults.isNotEmpty() || authorNames.isNotEmpty()
@@ -139,6 +178,7 @@ class SearchViewModel(
         if (state.value != LoadState.Uninitialized && (initialQuery.isNullOrBlank() || initialQuery == query)) return
         mutableState.value = LoadState.Loading
         fuzzyEnabled = settingsRepository.getSearchFuzzyEnabled().first()
+        authorRoles = resolveAuthorRoles()
         initialQuery?.let { query = it }
 
         // The first load goes through this collector rather than beside it.
@@ -276,9 +316,34 @@ class SearchViewModel(
         this.userSelectedTab = type
     }
 
+    /**
+     * One request per counted role — /authors takes a single role, and there is
+     * no names endpoint that takes any. Two in flight at most, so that with the
+     * series and book requests running alongside this stays at the app-wide
+     * ceiling of four rather than stampeding the server.
+     */
     private suspend fun loadAuthorNames() {
+        val roles = authorRoles
+        if (roles.isEmpty()) {
+            authorNames = emptyList()
+            return
+        }
         appNotifications.runCatchingToNotifications {
-            authorNames = referentialApi.getAuthorsNames(query.ifBlank { null })
+            val search = query.ifBlank { null }
+            val limit = Semaphore(2)
+            authorNames = coroutineScope {
+                roles.map { role ->
+                    async {
+                        limit.withPermit {
+                            referentialApi.getAuthors(
+                                search = search,
+                                role = role,
+                                pageRequest = KomgaPageRequest(unpaged = true),
+                            ).content.map { it.name }
+                        }
+                    }
+                }.awaitAll().flatten().distinct().sorted()
+            }
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
 
@@ -314,13 +379,23 @@ class SearchViewModel(
 
     private suspend fun loadAuthorSeriesPage(pageNumber: Int) {
         val authorName = selectedAuthor ?: return
+        val roleConditions = authorRoleConditions(authorName)
+        if (roleConditions.isEmpty()) return
         appNotifications.runCatchingToNotifications {
             val libId = selectedLibraryId
-            val condition = allOfSeries {
-                author { isEqualTo(KomgaSearchCondition.AuthorMatch(authorName, null)) }
-                libId?.let { library { isEqualTo(it) } }
-                tag { isNotEqualTo(HIDDEN_TAG) }
-            }.toSeriesCondition()
+            // The role has to be pinned here too. `AuthorMatch(name, null)`
+            // matches ANY role, so filtering the names list alone would have
+            // moved the problem rather than fixed it: picking a name would
+            // still have pulled in the series that name only translated.
+            val condition = KomgaSearchCondition.AllOfSeries(
+                listOf(
+                    KomgaSearchCondition.AnyOfSeries(roleConditions),
+                    allOfSeries {
+                        libId?.let { library { isEqualTo(it) } }
+                        tag { isNotEqualTo(HIDDEN_TAG) }
+                    }.toSeriesCondition(),
+                )
+            )
             val page = seriesApi.getSeriesList(
                 KomgaSeriesSearch(condition = condition),
                 KomgaPageRequest(
@@ -337,12 +412,20 @@ class SearchViewModel(
 
     private suspend fun loadAuthorBooksPage(pageNumber: Int) {
         val authorName = selectedAuthor ?: return
+        val roleConditions = authorRoleConditions(authorName)
+        if (roleConditions.isEmpty()) return
         appNotifications.runCatchingToNotifications {
             val libId = selectedLibraryId
-            val condition = allOfBooks {
-                author { isEqualTo(KomgaSearchCondition.AuthorMatch(authorName, null)) }
-                libId?.let { library { isEqualTo(it) } }
-            }.toBookCondition()
+            val condition = KomgaSearchCondition.AllOfBook(
+                buildList<KomgaSearchCondition.BookCondition> {
+                    add(KomgaSearchCondition.AnyOfBook(roleConditions))
+                    // Only when there is one — an AllOf with an empty AllOf
+                    // inside is not a condition worth sending.
+                    if (libId != null) {
+                        add(allOfBooks { library { isEqualTo(libId) } }.toBookCondition())
+                    }
+                }
+            )
             val page = bookApi.getBookList(
                 KomgaBookSearch(condition = condition),
                 KomgaPageRequest(
