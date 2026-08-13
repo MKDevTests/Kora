@@ -27,6 +27,7 @@ import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -135,6 +136,15 @@ fun ImmersiveDetailScaffold(
     topBarContent: @Composable () -> Unit,
     fabContent: @Composable () -> Unit,
     heroTextContent: (@Composable (expandFraction: Float) -> Unit)? = null,
+    /**
+     * Anchored to the SCREEN, not to the card — which is the whole point of it
+     * being a slot here rather than something the caller puts in [cardContent].
+     * The card is a full screen tall and is offset DOWN by up to 65% of the
+     * screen while collapsed, so anything centered inside it sits below the
+     * fold exactly when the cover is on show, and any touch target it carries
+     * is unreachable over the cover.
+     */
+    overlayContent: @Composable BoxScope.() -> Unit = {},
     thumbnailWidth: Dp = 110.dp,
     cardContent: @Composable ColumnScope.(
         expandFraction: Float,
@@ -573,6 +583,13 @@ fun ImmersiveDetailScaffold(
             // Layer 3: Top bar
             Box(modifier = Modifier.fillMaxWidth().then(uiEnterExitModifier).statusBarsPadding()) {
                 topBarContent()
+            }
+
+            // Layer 3.5: caller-supplied screen-anchored overlay. Same enter/exit
+            // treatment as the top bar so it travels with the UI rather than with
+            // the card during a shared transition.
+            Box(modifier = Modifier.fillMaxSize().then(uiEnterExitModifier)) {
+                overlayContent()
             }
         }
 

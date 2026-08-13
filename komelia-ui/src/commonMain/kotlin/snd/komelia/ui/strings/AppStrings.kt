@@ -776,6 +776,11 @@ class UiStrings(private val values: Map<String, String>) {
     val reading: String get() = at("reading")
     val readingMode: String get() = at("readingMode")
     val readingMode2: String get() = at("readingMode2")
+    val ratingAny: String get() = at("ratingAny")
+    val ratingAtLeast1: String get() = at("ratingAtLeast1")
+    val ratingAtLeast3: String get() = at("ratingAtLeast3")
+    val ratingAtLeast4: String get() = at("ratingAtLeast4")
+    val ratingExactly5: String get() = at("ratingExactly5")
     val readingOrder: String get() = at("readingOrder")
     val readingOrderEdition: String get() = at("readingOrderEdition")
     val readingOrderEditions: String get() = at("readingOrderEditions")
@@ -1458,6 +1463,7 @@ data class SeriesFilterStrings(
     val search: String,
     val sort: String,
     val sortRandom: String,
+    val sortRatingDesc: String,
     val sortTitleAsc: String,
     val sortTitleDesc: String,
     val sortDateAddedAsc: String,
@@ -1504,6 +1510,7 @@ data class SeriesFilterStrings(
             LibrarySeriesTabState.SeriesSort.UPDATED_DESC -> sortUpdatedDesc
             LibrarySeriesTabState.SeriesSort.UPDATED_ASC -> sortUpdatedAsc
             LibrarySeriesTabState.SeriesSort.RANDOM -> sortRandom
+            LibrarySeriesTabState.SeriesSort.RATING_DESC -> sortRatingDesc
 //            FOLDER_NAME_ASC -> sortFolderNameAsc
 //            FOLDER_NAME_DESC -> sortFolderNameDesc
 //            BOOKS_COUNT_ASC -> sortBooksCountAsc

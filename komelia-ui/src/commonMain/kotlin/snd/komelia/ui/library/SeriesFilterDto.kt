@@ -33,6 +33,8 @@ data class SeriesFilterDto(
     val complete: SeriesFilterState.Completion = SeriesFilterState.Completion.ANY,
     val oneshot: SeriesFilterState.Format = SeriesFilterState.Format.ANY,
     val letterFilter: String? = null,
+    /** Defaulted, so filters persisted before the rating filter existed still decode. */
+    val minStars: Int? = null,
 ) {
     fun toDomain(): SeriesFilter = SeriesFilter(
         isChanged = true,
@@ -54,6 +56,7 @@ data class SeriesFilterDto(
         complete = complete,
         oneshot = oneshot,
         letterFilter = letterFilter,
+        minStars = minStars,
     )
 
     companion object {
@@ -76,6 +79,7 @@ data class SeriesFilterDto(
             complete = filter.complete,
             oneshot = filter.oneshot,
             letterFilter = filter.letterFilter,
+            minStars = filter.minStars,
         )
     }
 }

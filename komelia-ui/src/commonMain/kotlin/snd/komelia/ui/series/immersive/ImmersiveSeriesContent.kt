@@ -115,7 +115,8 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import snd.komelia.ui.LocalStrings
 
-private enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS, LINKS, SIMILAR }
+// Not private: the floating rail in SeriesTabRail.kt drives the same state.
+internal enum class ImmersiveTab { BOOKS, COLLECTIONS, TAGS, LINKS, SIMILAR }
 
 @Composable
 fun ImmersiveSeriesContent(
@@ -267,6 +268,22 @@ fun ImmersiveSeriesContent(
         onExpandChange = onExpandChange,
         publisherLogo = publisherLogo,
         thumbnailWidth = gridMinWidth,
+        overlayContent = {
+            SeriesTabRail(
+                currentTab = immersiveTab,
+                onTabChange = { tab ->
+                    onImmersiveTabChange(tab)
+                    // Picking a tab over the cover is a request to go read it:
+                    // leaving the card collapsed would change the tab under a
+                    // screen that shows none of it.
+                    if (!initiallyExpanded) onExpandChange(true)
+                },
+                showCollectionsTab = collectionsState.collections.isNotEmpty(),
+                scrollState = scrollState,
+                accentColor = accentColor,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        },
         heroTextContent = { expandFraction ->
             snd.komelia.ui.common.immersive.ImmersiveHeroText(
                 seriesTitle = title,

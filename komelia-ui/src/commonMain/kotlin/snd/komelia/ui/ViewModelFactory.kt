@@ -167,6 +167,7 @@ class ViewModelFactory(
             libraryId = libraryId,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
+            seriesRatingsRepository = appRepositories.seriesRatingsRepository,
             baseTagFilter = genreTag,
         )
     }

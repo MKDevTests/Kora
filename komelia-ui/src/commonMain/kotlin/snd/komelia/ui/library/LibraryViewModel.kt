@@ -134,6 +134,7 @@ class LibraryViewModel(
         libraryId = libraryId,
         taskEmitter = taskEmitter,
         librarySeriesFiltersRepository = librarySeriesFiltersRepository,
+        seriesRatingsRepository = seriesRatingsRepository,
     )
     val collectionsTabState = LibraryCollectionsTabState(
         collectionApi = collectionApi,

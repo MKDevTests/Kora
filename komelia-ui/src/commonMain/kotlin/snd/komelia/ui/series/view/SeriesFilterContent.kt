@@ -216,6 +216,28 @@ fun SeriesFilterContent(
                 modifier = Modifier.width(width),
             )
 
+            // Your own rating. Unlike every other entry here it is not sent to
+            // the server — it is a local, per-user value — so setting it makes
+            // the library list come from the local table instead of a query.
+            // Labels come from the map-based `ui` catalogue, not SeriesFilterStrings:
+            // that one takes its entries as constructor arguments, and it is already
+            // close enough to Dalvik's 255-argument ceiling to not feed it more.
+            val uiStrings = LocalStrings.current.ui
+            val ratingOptions = listOf(
+                LabeledEntry(null as Int?, uiStrings.ratingAny),
+                LabeledEntry(1 as Int?, uiStrings.ratingAtLeast1),
+                LabeledEntry(3 as Int?, uiStrings.ratingAtLeast3),
+                LabeledEntry(4 as Int?, uiStrings.ratingAtLeast4),
+                LabeledEntry(5 as Int?, uiStrings.ratingExactly5),
+            )
+            FilterDropdownChoice(
+                selectedOption = ratingOptions.first { it.value == currentFilter.minStars },
+                options = ratingOptions,
+                onOptionChange = { filterState.onMinStarsChange(it.value) },
+                label = uiStrings.yourRating,
+                modifier = Modifier.width(width),
+            )
+
             Row(
                 modifier = Modifier.width(width),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
