@@ -219,7 +219,7 @@ class PagedReaderState(
         // Both of these mean "the book being read changed", so they key on the
         // book's id rather than firing on every emission of the state object
         // that carries it. The neighbouring books are now filled in shortly
-        // AFTER the swap (see ReaderState.prefetchNeighbours); that second
+        // AFTER the swap (see ReaderState.prefetchNextBook); that second
         // emission used to re-run onNewBookLoaded a second or two into the new
         // book, which re-seeked to wherever the recomputed spread landed and
         // then pushed that page as read progress.
@@ -375,7 +375,7 @@ class PagedReaderState(
                 // took, and it stayed on the Keep-reading shelf.
                 stateScope.launch {
                     readerState.markCurrentBookCompleted()
-                    refreshTransitionNeighbours()
+                    refreshTransitionNextBook()
                 }
             }
 
@@ -420,7 +420,6 @@ class PagedReaderState(
                     currentBook = bookState.currentBook,
                     previousBook = bookState.previousBook
                 )
-                stateScope.launch { refreshTransitionNeighbours() }
             }
 
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
@@ -440,31 +439,21 @@ class PagedReaderState(
     }
 
     /**
-     * Re-reads the neighbouring books into the transition page once the reader's
+     * Re-reads the next book into the end-of-book page once the reader's
      * background lookup has landed.
      *
-     * The transition page is a snapshot, and the neighbour it names is fetched
-     * off the critical path when a book is opened (see
-     * ReaderState.prefetchNeighbours). Reaching the end of a very short book, or
-     * jumping straight to it, can beat that lookup — and the page would say the
-     * series ends here. Costs nothing when the lookup is already done, which is
-     * the normal case.
+     * That page is a snapshot, and the next book is fetched off the critical
+     * path after a forward move (see ReaderState.prefetchNextBook). Reaching the
+     * end of a very short volume, or jumping straight to it, can beat the
+     * lookup — and the page would say the series ends here. Costs nothing when
+     * the lookup is already done, which is the normal case.
      */
-    private suspend fun refreshTransitionNeighbours() {
-        readerState.awaitNeighbours()
+    private suspend fun refreshTransitionNextBook() {
+        readerState.awaitNextBook()
         val bookState = readerState.booksState.value ?: return
-        when (val page = transitionPage.value) {
-            is BookEnd ->
-                if (page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
-                    transitionPage.value = page.copy(nextBook = bookState.nextBook)
-                }
-
-            is BookStart ->
-                if (page.currentBook.id == bookState.currentBook.id && page.previousBook == null) {
-                    transitionPage.value = page.copy(previousBook = bookState.previousBook)
-                }
-
-            null -> {}
+        val page = transitionPage.value
+        if (page is BookEnd && page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
+            transitionPage.value = page.copy(nextBook = bookState.nextBook)
         }
     }
 

@@ -194,7 +194,7 @@ class PanelsReaderState(
             .filterNotNull()
             // On a CHANGE OF BOOK, not on every emission of the state that holds
             // it. The neighbouring books are filled in after the swap now (see
-            // ReaderState.prefetchNeighbours), and that second emission would
+            // ReaderState.prefetchNextBook), and that second emission would
             // otherwise re-run this and re-seek the book being read.
             .distinctUntilChangedBy { it.currentBook.id }
             .onEach { newBook -> onNewBookLoaded(newBook) }
@@ -376,7 +376,7 @@ class PanelsReaderState(
                 // last volume has no "next book" step to carry the mark.
                 stateScope.launch {
                     readerState.markCurrentBookCompleted()
-                    refreshTransitionNeighbours()
+                    refreshTransitionNextBook()
                 }
             }
 
@@ -440,7 +440,6 @@ class PanelsReaderState(
                     currentBook = bookState.currentBook,
                     previousBook = bookState.previousBook
                 )
-                stateScope.launch { refreshTransitionNeighbours() }
             }
 
             currentTransitionPage is BookStart && currentTransitionPage.previousBook != null -> {
@@ -457,23 +456,13 @@ class PanelsReaderState(
         }
     }
 
-    /** Paged reader's [snd.komelia.ui.reader.image.paged.PagedReaderState] twin —
-     *  see the note there. */
-    private suspend fun refreshTransitionNeighbours() {
-        readerState.awaitNeighbours()
+    /** Twin of the paged reader's refreshTransitionNextBook — see the note there. */
+    private suspend fun refreshTransitionNextBook() {
+        readerState.awaitNextBook()
         val bookState = readerState.booksState.value ?: return
-        when (val page = transitionPage.value) {
-            is BookEnd ->
-                if (page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
-                    transitionPage.value = page.copy(nextBook = bookState.nextBook)
-                }
-
-            is BookStart ->
-                if (page.currentBook.id == bookState.currentBook.id && page.previousBook == null) {
-                    transitionPage.value = page.copy(previousBook = bookState.previousBook)
-                }
-
-            null -> {}
+        val page = transitionPage.value
+        if (page is BookEnd && page.currentBook.id == bookState.currentBook.id && page.nextBook == null) {
+            transitionPage.value = page.copy(nextBook = bookState.nextBook)
         }
     }
 
