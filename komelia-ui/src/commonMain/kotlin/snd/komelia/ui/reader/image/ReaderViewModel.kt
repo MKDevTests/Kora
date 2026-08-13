@@ -54,6 +54,7 @@ import snd.komelia.ui.settings.imagereader.onnxruntime.OnnxRuntimeSettingsState
 import snd.komelia.ui.strings.AppStrings
 import snd.komelia.updates.OnnxModelDownloader
 import snd.komga.client.book.KomgaBookId
+import snd.komga.client.series.KomgaSeries
 
 private val cleanupScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 private val logger = KotlinLogging.logger { }
@@ -214,13 +215,17 @@ class ReaderViewModel(
             }.launchIn(screenModelScope)
     }
 
-    suspend fun initialize(bookId: KomgaBookId, seedBook: KomeliaBook? = null) {
+    suspend fun initialize(
+        bookId: KomgaBookId,
+        seedBook: KomeliaBook? = null,
+        seedSeries: KomgaSeries? = null,
+    ) {
         val currentState = readerState.state.value
         if (currentState is LoadState.Success || currentState == LoadState.Loading) return
 
         onnxRuntimeSettingsState?.initialize()
         ncnnSettingsState.initialize()
-        readerState.initialize(bookId, seedBook)
+        readerState.initialize(bookId, seedBook, seedSeries)
         screenScaleState.areaSize.takeWhile { it == IntSize.Zero }.collect()
 
         readerState.readerType.onEach {

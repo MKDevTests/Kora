@@ -248,7 +248,24 @@ class ReaderState(
     val pendingAnnotationNote = MutableStateFlow<String?>(null)
     val lastHighlightColor = MutableStateFlow(0xFFFFEB3B.toInt())
 
-    suspend fun initialize(bookId: KomgaBookId, seedBook: KomeliaBook? = null) {
+    /**
+     * @param seedBook the full book the calling screen already holds, so the
+     *   sibling lookups can start without waiting on our own `getOne`. The fresh
+     *   `getOne` is STILL awaited: it decides which page we open on, and a stale
+     *   grid must never make that call.
+     * @param seedSeries the book's series, when the caller has it. Measured at
+     *   **2608 ms of a 2664 ms open** — `getOneSeries` was the whole critical
+     *   path, everything else finished inside it. Unlike the book, nothing about
+     *   the series decides progress: it picks the reader type (webtoon
+     *   detection), the reading direction and the per-series overrides. A seed a
+     *   few minutes old is as good as a fresh fetch for all three, so this one
+     *   is used as-is rather than re-fetched.
+     */
+    suspend fun initialize(
+        bookId: KomgaBookId,
+        seedBook: KomeliaBook? = null,
+        seedSeries: KomgaSeries? = null,
+    ) {
         komgaEvents.events.onEach { event ->
             if (event is KomgaEvent.ReadProgressChanged && event.bookId == (booksState.value?.currentBook?.id ?: bookId)) {
                 runCatching { initialSync() }
@@ -314,10 +331,15 @@ class ReaderState(
                     }
                     val seriesDeferred = async {
                         val seriesId = (seedBook ?: freshBookDeferred.await()).seriesId
-                        if (seriesId.value.startsWith("local")) null
-                        else runCatching {
-                            PerfTrace.measure("reader.open getOneSeries") { seriesApi.getOneSeries(seriesId) }
-                        }.getOrNull()
+                        when {
+                            // Seeded and still the right series: no call at all.
+                            // This is the whole point — see the seedSeries doc.
+                            seedSeries != null && seedSeries.id == seriesId -> seedSeries
+                            seriesId.value.startsWith("local") -> null
+                            else -> runCatching {
+                                PerfTrace.measure("reader.open getOneSeries") { seriesApi.getOneSeries(seriesId) }
+                            }.getOrNull()
+                        }
                     }
 
                     val newBook = freshBookDeferred.await()

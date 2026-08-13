@@ -51,6 +51,7 @@ import snd.komelia.ui.platform.canIntegrateWithSystemBar
 import snd.komelia.ui.reader.image.ReaderViewModel
 import snd.komelia.ui.reader.image.common.ReaderContent
 import snd.komga.client.book.KomgaBookId
+import snd.komga.client.series.KomgaSeries
 import snd.komga.client.book.MediaProfile.DIVINA
 import snd.komga.client.book.MediaProfile.EPUB
 import snd.komga.client.book.MediaProfile.PDF
@@ -62,6 +63,9 @@ fun readerScreen(
     markReadProgress: Boolean,
     bookSiblingsContext: BookSiblingsContext? = null,
     onExit: ((KomeliaBook) -> Unit)? = null,
+    /** The book's series, when the caller is a screen that already has it. Saves
+     *  the single call the whole open used to wait on — see [ImageReaderScreen]. */
+    series: KomgaSeries? = null,
 ): Screen {
     val context = bookSiblingsContext ?: BookSiblingsContext.Series()
     val mediaProfile = book.media.mediaProfile
@@ -73,6 +77,7 @@ fun readerScreen(
                 bookSiblingsContext = context,
                 onExit = onExit,
                 book = book,
+                series = series,
             )
         }
         mediaProfile == EPUB -> EpubScreen(
@@ -97,6 +102,12 @@ class ImageReaderScreen(
     // waiting on its own getOne. Transient — lost on process-death restore,
     // which is fine: the restore path falls back to the id-only flow.
     @Transient private val book: KomeliaBook? = null,
+    // Second seed, same idea, bigger payoff: getOneSeries was measured at 2608ms
+    // of a 2664ms open — it WAS the critical path, the sibling lookups all
+    // finished inside it. It only decides the reader type, the reading direction
+    // and the per-series overrides, so a caller's copy is as good as a fetch.
+    // Transient like the book: the restore path falls back to fetching.
+    @Transient private val series: KomgaSeries? = null,
 ) : Screen {
 
     @Composable
@@ -130,7 +141,11 @@ class ImageReaderScreen(
             // Only seed when the saved id still matches the book we were opened
             // with — after a process-death restore mid-series the user may be on
             // a different volume than the one this screen was created for.
-            vm.initialize(bookId, book?.takeIf { it.id.value == currentBookId })
+            val seedBook = book?.takeIf { it.id.value == currentBookId }
+            // The series seed rides with the book seed: after a restore onto a
+            // DIFFERENT volume the series may not be this book's any more, and
+            // initialize checks the id anyway before using it.
+            vm.initialize(bookId, seedBook, series?.takeIf { seedBook != null })
             val book = vm.readerState.booksState.value?.currentBook
             if (book != null && book.media.mediaProfile != DIVINA && book.media.mediaProfile != PDF) {
                 navigator.replace(
