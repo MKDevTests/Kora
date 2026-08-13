@@ -476,6 +476,16 @@ class LibrarySeriesTabState(
     var isRefreshing by mutableStateOf(false)
         private set
 
+    /**
+     * True once the server has answered for the grid — or failed to.
+     *
+     * Deliberately NOT the same thing as `state is Success`: the cached first
+     * page publishes Success within milliseconds, long before the request
+     * behind it returns. Anything that wants to stay out of the grid's way
+     * (see LibraryViewModel's counts refresh) has to wait for THIS.
+     */
+    val firstPageSettled = MutableStateFlow(false)
+
     private suspend fun loadSeriesPage(page: Int) {
         // Only for a REPLACEMENT: on a first load the grid is empty and the
         // spinner in delayLoadState already says so.
@@ -485,6 +495,7 @@ class LibrarySeriesTabState(
             loadSeriesPageInner(page)
         } finally {
             if (replacing) isRefreshing = false
+            firstPageSettled.value = true
         }
     }
 
