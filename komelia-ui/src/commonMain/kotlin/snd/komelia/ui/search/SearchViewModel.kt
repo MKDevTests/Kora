@@ -330,6 +330,9 @@ class SearchViewModel(
         }
         appNotifications.runCatchingToNotifications {
             val search = query.ifBlank { null }
+            // The library chip scopes the series and book tabs; it scopes this
+            // one too. /authors filters server-side, so it costs nothing.
+            val libraryIds = listOfNotNull(selectedLibraryId)
             val limit = Semaphore(2)
             authorNames = coroutineScope {
                 roles.map { role ->
@@ -338,6 +341,7 @@ class SearchViewModel(
                             referentialApi.getAuthors(
                                 search = search,
                                 role = role,
+                                libraryIds = libraryIds,
                                 pageRequest = KomgaPageRequest(unpaged = true),
                             ).content.map { it.name }
                         }
