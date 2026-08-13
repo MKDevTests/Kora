@@ -427,13 +427,14 @@ fun ExpandableBookFiltersRow(filterState: BooksFilterState) {
             }
         }
 
-        if (filterState.authorsOptions.isNotEmpty() || filterState.tagOptions.isNotEmpty()) {
-            IconButton(onClick = { showFilters = !showFilters }, modifier = Modifier.cursorForHand()) {
-                Icon(
-                    imageVector = if (showFilters) Icons.Default.ChevronLeft else Icons.Default.ChevronRight,
-                    contentDescription = null,
-                )
-            }
+        // Unconditional: the options are only fetched once this is tapped, so
+        // gating the button on them would be a door locked from the inside.
+        LaunchedEffect(showFilters) { if (showFilters) filterState.initialize() }
+        IconButton(onClick = { showFilters = !showFilters }, modifier = Modifier.cursorForHand()) {
+            Icon(
+                imageVector = if (showFilters) Icons.Default.ChevronLeft else Icons.Default.ChevronRight,
+                contentDescription = null,
+            )
         }
     }
 }
@@ -443,6 +444,10 @@ fun BookFilterDialog(
     filterState: BooksFilterState,
     onDismiss: () -> Unit,
 ) {
+    // The dropdowns are fetched here rather than when the series opens, so a
+    // closed panel costs nothing. Both are gated on their options below, so an
+    // empty panel simply fills in a moment later.
+    LaunchedEffect(Unit) { filterState.initialize() }
     val currentFilter = filterState.state.collectAsState().value
     AppDialog(
         modifier = Modifier.fillMaxWidth(.8f),
