@@ -320,23 +320,24 @@ class ReaderState(
                         val base = seedBook ?: freshBookDeferred.await()
                         PerfTrace.measure("reader.open currentPages", { it.size }) { loadBookPages(base) }
                     }
-                    // Traced because they were the one part of the wave that was
-                    // not: a run showing CRITICAL at 6200ms with every labelled
-                    // call at ~3.2s means the three seconds nobody could see were
-                    // spent here. Both branches are TWO serial calls — find the
-                    // sibling, then load its pages — so they can be twice the
-                    // wall of anything else in the wave.
+                    // The PREVIOUS book stays in the wave: measured at 443ms,
+                    // 961ms and 2506ms over three opens, always inside the
+                    // window of something else. Two serial calls, but cheap ones
+                    // — getBookSiblingPrevious either answers or 404s.
+                    //
+                    // The NEXT book is gone from it entirely, and that is the
+                    // whole point of this wave now. Measured over the same three
+                    // opens at 2788ms, 11940ms and 14354ms — the critical path
+                    // every single time, by an order of magnitude. It is the only
+                    // lookup that can miss: on the last volume of a series
+                    // getBookSiblingNext 404s and getNextSeriesFirstBook then
+                    // walks the series list AND every book page of the series
+                    // that follows. Nobody needs that answer to read page one, so
+                    // it now runs after the paint — see prefetchNextBook.
                     val prevDeferred = async {
                         PerfTrace.measure("reader.open prev") {
                             val pb = getPreviousBook(bookId)
                             pb to (if (pb != null) loadBookPages(pb) else emptyList())
-                        }
-                    }
-                    val nextDeferred = async {
-                        PerfTrace.measure("reader.open next") {
-                            val base = seedBook ?: freshBookDeferred.await()
-                            val nb = getNextBook(base)
-                            nb to (if (nb != null) loadBookPages(nb) else emptyList())
                         }
                     }
                     val seriesDeferred = async {
@@ -355,7 +356,6 @@ class ReaderState(
                     val newBook = freshBookDeferred.await()
                     val bookPages = pagesDeferred.await()
                     val (prevBook, prevBookPages) = prevDeferred.await()
-                    val (nextBook, nextBookPages) = nextDeferred.await()
                     val prefetchedSeries = seriesDeferred.await()
 
                     // Set readProgressPage BEFORE booksState to avoid race condition
@@ -369,12 +369,12 @@ class ReaderState(
                         currentBookPages = bookPages,
                         previousBook = prevBook,
                         previousBookPages = prevBookPages,
-                        nextBook = nextBook,
-                        nextBookPages = nextBookPages,
+                        nextBook = null,
+                        nextBookPages = emptyList(),
                     )
-                    preloadFirstPage(nextBook)
                     preloadFirstPage(prevBook)
                     currentBookId.value = bookId
+                    prefetchNextBook()
                     updateCurrentSeriesAndReaderType(newBook, prefetchedSeries)
                     state.value = LoadState.Success(Unit)
                 }
@@ -652,17 +652,23 @@ class ReaderState(
     }
 
     /**
-     * Fills in the `nextBook` that [loadNextBook] deliberately left empty.
+     * Fills in the `nextBook` that [initialize] and [loadNextBook] deliberately
+     * leave empty.
      *
      * Off the critical path on purpose. The reader has everything it needs to
      * paint the volume the user asked for; making them wait on a lookahead they
-     * will not reach for another twenty minutes is what made changing volume
-     * feel slow — expensively so at the end of a series, where finding the next
-     * book means walking the series list and then the book pages of the series
-     * that follows.
+     * will not reach for another twenty minutes is what made both opening a book
+     * and changing volume feel slow.
      *
-     * Forward only. The backward move keeps its synchronous fetch: it is rare,
-     * it was never slow, and it is the one that has to restore a page position.
+     * How slow was measured, not guessed. Three consecutive opens: 2788ms,
+     * 11940ms and 14354ms — the critical path every time, ten times anything
+     * else in the wave. It is the one lookup that can MISS: on the last volume
+     * of a series `getBookSiblingNext` 404s, and [getNextSeriesFirstBook] then
+     * walks the series list and every book page of the series that follows.
+     *
+     * Forward only. The backward move keeps its synchronous fetch: it measured
+     * 443-2506ms, never the wall, and it is the one that has to restore a page
+     * position.
      *
      * This publishes a SECOND booksState emission for the same book, which is
      * why the readers key their "book changed" work on the current book's id.
@@ -673,8 +679,12 @@ class ReaderState(
         val anchor = booksState.value?.currentBook ?: return
         nextBookPrefetch?.cancel()
         nextBookPrefetch = stateScope.launch {
-            val next = getNextBook(anchor)
-            val pages = if (next != null) loadBookPages(next) else emptyList()
+            // Still measured, just no longer waited on: this is the number that
+            // used to BE the open time, and it is worth knowing when it drifts.
+            val (next, pages) = PerfTrace.measure("reader.nextBook background") {
+                val nb = getNextBook(anchor)
+                nb to (if (nb != null) loadBookPages(nb) else emptyList())
+            }
 
             // Only if the reader is still on the book we started from: a fast
             // second page-turn has already moved on, and its own prefetch owns
