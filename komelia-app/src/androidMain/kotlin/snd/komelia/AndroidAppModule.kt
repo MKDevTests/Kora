@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.files.Path
 import okhttp3.Cache
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import io.github.snd_r.komelia.infra.ncnn.NcnnSharedLibraries
 import snd.komelia.backup.BackupService
@@ -124,6 +125,13 @@ class AndroidAppModule(
 
     private val okHttpLogger = KotlinLogging.logger("http.logging")
     private val okHttpClientWithoutCache: OkHttpClient = OkHttpClient.Builder()
+        // OkHttp's default is five requests per host, and every cover shares
+        // this client with every API call. With covers now capped at four in
+        // flight (see AppModule.coilFetcherContext), eight leaves the screen's
+        // own requests four free slots at all times instead of queueing behind
+        // a page of thumbnails — measured as 20-58s waits, up to socket
+        // timeouts, on a server that was idle.
+        .dispatcher(Dispatcher().apply { maxRequestsPerHost = 8 })
         .connectTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(0, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS)
@@ -454,6 +462,15 @@ class AndroidAppModule(
      * through the library. The percentage also follows whatever device the app
      * lands on, which a fixed number cannot.
      */
+    /**
+     * Four at a time. Enough to keep a grid filling visibly, few enough that
+     * the libvips decodes leave the CPU — and the shared Dispatchers.IO pool,
+     * which the database also uses — to the screen the user is looking at.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun coilFetcherContext(): kotlin.coroutines.CoroutineContext =
+        Dispatchers.IO.limitedParallelism(4)
+
     override fun createCoilMemoryCache(): MemoryCache {
         return MemoryCache.Builder()
             .maxSizePercent(context)
