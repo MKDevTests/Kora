@@ -60,7 +60,8 @@ import snd.komga.client.series.KomgaSeries
 import snd.komelia.ui.LocalStrings
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.layout.ContentScale
-import snd.komelia.ui.common.images.SeriesThumbnail
+import snd.komelia.image.coil.SeriesDefaultThumbnailRequest
+import snd.komelia.ui.common.images.ThumbnailImage
 
 /** Display order + labels for related-series sections (from this series' view). */
 private val relationDisplayOrder = listOf(
@@ -314,10 +315,18 @@ private fun SearchResultRow(series: KomgaSeries, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SeriesThumbnail(
-            seriesId = series.id,
-            modifier = Modifier.width(40.dp).height(60.dp),
+        // Not SeriesThumbnail: it registers a shared element keyed on the
+        // series id, and this row lives in an AlertDialog — its own window,
+        // its own layout hierarchy. When a result happened to be a series
+        // whose cover was also on screen behind the dialog, the two claimants
+        // sat in different windows and Compose crashed measuring the distance
+        // between them ("layouts are not part of the same hierarchy").
+        // A dialog has no business in a shared-element transition anyway.
+        ThumbnailImage(
+            data = remember(series.id) { SeriesDefaultThumbnailRequest(series.id) },
+            cacheKey = series.id.value,
             contentScale = ContentScale.Crop,
+            modifier = Modifier.width(40.dp).height(60.dp),
         )
         Column(Modifier.weight(1f)) {
             Text(
