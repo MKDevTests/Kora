@@ -268,6 +268,22 @@ fun ImmersiveSeriesContent(
         onExpandChange = onExpandChange,
         publisherLogo = publisherLogo,
         thumbnailWidth = gridMinWidth,
+        overlayContent = {
+            SeriesTabRail(
+                currentTab = immersiveTab,
+                onTabChange = { tab ->
+                    onImmersiveTabChange(tab)
+                    // Picking a tab over the cover is a request to go read it:
+                    // leaving the card collapsed would change the tab under a
+                    // screen that shows none of it.
+                    if (!initiallyExpanded) onExpandChange(true)
+                },
+                showCollectionsTab = collectionsState.collections.isNotEmpty(),
+                scrollState = scrollState,
+                accentColor = accentColor,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        },
         heroTextContent = { expandFraction ->
             snd.komelia.ui.common.immersive.ImmersiveHeroText(
                 seriesTitle = title,
@@ -373,11 +389,6 @@ fun ImmersiveSeriesContent(
             val navBarBottom = with(LocalDensity.current) {
                 WindowInsets.navigationBars.getBottom(this).toDp()
             }
-            // The rail is a sibling of the grid, not an item in it. That is the
-            // whole reason it can exist without restructuring the screen: every
-            // tab's content is emitted into this one grid, so anything that
-            // needed its own scrolling would have had to break that apart.
-            Box(modifier = Modifier.fillMaxWidth()) {
             LazyVerticalGrid(
                 state = scrollState,
                 columns = GridCells.Adaptive(gridMinWidth),
@@ -586,16 +597,6 @@ fun ImmersiveSeriesContent(
                         onSeriesClick = onSeriesClick,
                     )
                 }
-            }
-
-                SeriesTabRail(
-                    currentTab = immersiveTab,
-                    onTabChange = onImmersiveTabChange,
-                    showCollectionsTab = collectionsState.collections.isNotEmpty(),
-                    scrollState = scrollState,
-                    accentColor = accentColor,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
             }
         }
     )

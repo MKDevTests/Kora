@@ -55,6 +55,9 @@ private const val RAIL_DWELL_MS = 4_000L
  */
 private const val RAIL_SCROLL_GUARD_MS = 80L
 
+/** Share of the screen height the rail (and its recall strip) may occupy. */
+private const val RAIL_HEIGHT_FRACTION = 0.6f
+
 /**
  * A second way into the series tabs, floating on the right edge.
  *
@@ -117,7 +120,11 @@ internal fun SeriesTabRail(
         visible = false
     }
 
-    Box(modifier = modifier.fillMaxHeight(), contentAlignment = Alignment.CenterEnd) {
+    // Deliberately NOT full height: the invisible recall strip below is a real
+    // touch target, and at full height it would sit on top of the top bar's
+    // right-hand buttons and of the bottom bar. The middle band is still a
+    // very large target and keeps both ends clear.
+    Box(modifier = modifier.fillMaxHeight(RAIL_HEIGHT_FRACTION), contentAlignment = Alignment.CenterEnd) {
         // Once the rail is gone the only thing left is this invisible strip:
         // touching the right edge brings it back without having to scroll.
         if (!visible) {
