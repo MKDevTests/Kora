@@ -69,11 +69,18 @@ echo "==> Building KoraDebug APK"
 # those files open — a plain rm -rf fails halfway with "Permission denied" and
 # leaves the corrupt directory behind. So: stop the daemon, purge, retry once.
 # Doing it on failure rather than up front keeps normal builds fast.
-BUILD_LOG="$(mktemp)"
-trap 'rm -f "$BUILD_LOG"' EXIT
+#
+# The log is kept rather than binned: when a build takes forty minutes, the
+# only way to know whether recovery fired, whether the cache was cold or
+# whether one module simply recompiled is to read it afterwards.
+BUILD_LOG="build/last-build.log"
+mkdir -p build
+: > "$BUILD_LOG"
+BUILD_STARTED=$SECONDS
+RECOVERY_RAN=0
 
 run_assemble() {
-    "$GRADLEW" :komelia-app:assembleDebug 2>&1 | tee "$BUILD_LOG"
+    "$GRADLEW" :komelia-app:assembleDebug "$@" 2>&1 | tee -a "$BUILD_LOG"
     return "${PIPESTATUS[0]}"
 }
 
@@ -94,10 +101,12 @@ stale_dex_modules() {
 if [[ $BUILD_STATUS -ne 0 ]] && grep -q "is defined multiple times" "$BUILD_LOG"; then
     echo ""
     echo "==> RECOVERY 1/2: stale dex transforms. Stopping the daemon, purging .transforms, retrying."
+    RECOVERY_RAN=1
     "$GRADLEW" --stop >/dev/null 2>&1 || true
     find . -type d -name ".transforms" -path "*/build/*" -prune -exec rm -rf {} + 2>/dev/null || true
     set +e
-    run_assemble
+    # Without this the build cache hands back the very output just purged.
+    run_assemble --no-build-cache
     BUILD_STATUS=$?
     set -e
 fi
@@ -112,16 +121,24 @@ if [[ $BUILD_STATUS -ne 0 ]] && grep -q "is defined multiple times" "$BUILD_LOG"
     if [[ -n "$MODULES" ]]; then
         echo ""
         echo "==> RECOVERY 2/2: still stale. Removing the build dir of:"
+        RECOVERY_RAN=1
         echo "$MODULES" | sed 's/^/      /'
         "$GRADLEW" --stop >/dev/null 2>&1 || true
         while read -r module; do
             [[ -n "$module" && -d "$module/build" ]] && rm -rf "$module/build"
         done <<< "$MODULES"
         set +e
-        run_assemble
+        run_assemble --no-build-cache
         BUILD_STATUS=$?
         set -e
     fi
+fi
+
+BUILD_ELAPSED=$(( SECONDS - BUILD_STARTED ))
+echo ""
+echo "==> Gradle took $(( BUILD_ELAPSED / 60 ))m $(( BUILD_ELAPSED % 60 ))s. Full log: $BUILD_LOG"
+if [[ $RECOVERY_RAN -eq 1 ]]; then
+    echo "    A stale-dex recovery ran, which is most of that time."
 fi
 
 [[ $BUILD_STATUS -ne 0 ]] && exit "$BUILD_STATUS"
