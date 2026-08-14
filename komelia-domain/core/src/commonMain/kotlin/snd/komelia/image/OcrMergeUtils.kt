@@ -8,7 +8,21 @@ enum class ReadingDirection {
     LTR, RTL
 }
 
-fun mergeOcrBoxes(boxes: List<OcrElementBox>, direction: ReadingDirection): List<OcrElementBox> {
+/**
+ * Groups the boxes a detector returns into bubbles, and puts them in reading
+ * order.
+ *
+ * [vertical] is for Japanese lettering, which runs in columns read right to
+ * left. Ordering those by their top edge first — the rule for lines of Latin
+ * text — decides between two side-by-side columns on the pixel or two by which
+ * their tops differ, which shuffles a bubble into nonsense: 「おいおい何で知ら
+ * ないんだよ！？」 came out as 「だよ！？おいおい何で知らないん」.
+ */
+fun mergeOcrBoxes(
+    boxes: List<OcrElementBox>,
+    direction: ReadingDirection,
+    vertical: Boolean = false,
+): List<OcrElementBox> {
     if (boxes.isEmpty()) return boxes
 
     var currentSegments = boxes.groupBy { it.blockRect }
@@ -68,11 +82,19 @@ fun mergeOcrBoxes(boxes: List<OcrElementBox>, direction: ReadingDirection): List
             .sortedWith { a, b ->
                 val rectA = a.first
                 val rectB = b.first
-                
+
+                if (vertical) {
+                    // Columns first, rightmost one first; only then top to
+                    // bottom, for a column the detector split in two.
+                    val columnComparison = rectB.right.compareTo(rectA.right)
+                    if (columnComparison != 0) return@sortedWith columnComparison
+                    return@sortedWith rectA.top.compareTo(rectB.top)
+                }
+
                 // 1. Vertical order (higher is first)
                 val verticalComparison = rectA.top.compareTo(rectB.top)
                 if (verticalComparison != 0) return@sortedWith verticalComparison
-                
+
                 // 2. Horizontal order based on direction
                 if (direction == ReadingDirection.RTL) {
                     rectB.right.compareTo(rectA.right) // Larger right is first

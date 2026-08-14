@@ -1037,6 +1037,8 @@ class ReaderState(
                             // OcrScriptFilter. Plain OCR keeps every script, so
                             // reading a Japanese page with text selection still works.
                             val translation = translationSettings.value
+                            val japanese = translation.enabled &&
+                                    translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
                             val rawBoxes = if (translation.enabled) {
                                 if (translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) {
                                     snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
@@ -1051,7 +1053,7 @@ class ReaderState(
                                 snd.komelia.perf.PerfTrace.measure(
                                     "reader.ocr.merge",
                                     count = { merged -> merged.distinctBy { it.blockIndex }.size }
-                                ) { mergeOcrBoxes(rawBoxes, readingDirection.value) }
+                                ) { mergeOcrBoxes(rawBoxes, readingDirection.value, vertical = japanese) }
                             } else rawBoxes
 
                             ScanResult(boxes, translateBlocks(boxes))
@@ -1154,9 +1156,10 @@ class ReaderState(
                         .restoreNames(blocks.getValue(blockIndex), text)
                 }
                 // Sound effects translate to themselves. Painting a panel over
-                // one hides the drawing to display the same word.
+                // one hides the drawing to display the same word — and a blank
+                // result (「はっ」 came back empty) paints an empty one.
                 .filter { (blockIndex, text) ->
-                    !snd.komelia.image.TranslationTextUtils
+                    text.isNotBlank() && !snd.komelia.image.TranslationTextUtils
                         .isUnchanged(blocks.getValue(blockIndex), text)
                 }
 
