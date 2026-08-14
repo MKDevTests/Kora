@@ -103,6 +103,13 @@ private val logger = KotlinLogging.logger {}
 private val translationLogger = KotlinLogging.logger("KoraTranslate")
 
 /**
+ * Pages whose OCR and translation are kept. Twenty covers backtracking within
+ * a chapter, which is what the cache is for; re-reading a page from much
+ * further back is rare enough to pay for again.
+ */
+private const val SCAN_CACHE_SIZE = 20
+
+/**
  * Minimum height/width ratio for a page to count as "webtoon-tall".
  *
  * Was 4.0, which missed real webtoons: "The Hole is Open" ships 720x2752 tiles
@@ -933,6 +940,7 @@ class ReaderState(
 
     fun onOcrSettingsChange(newSettings: OcrSettings) {
         ocrSettings.value = newSettings
+        clearScanCache()
         stateScope.launch { readerSettingsRepository.putOcrSettings(newSettings) }
     }
 
@@ -945,8 +953,57 @@ class ReaderState(
      */
     private val ocrMutex = Mutex()
 
+    private class ScanResult(
+        val boxes: List<OcrElementBox>,
+        val translations: Map<Int, String>,
+    )
+
+    /**
+     * Pages already scanned, so turning back to one is instant.
+     *
+     * Recognition measured 2.2-4.7 s per page (mean 3.9 s over a chapter) and
+     * the result cannot change: same image, same engine, same target language.
+     * Without this, going back one page paid the full cost again.
+     *
+     * Bounded, and ordered by insertion so the oldest entry goes first — a
+     * long book would otherwise keep every page's boxes alive for a reader
+     * session. Only touched from [stateScope], which runs on the main thread;
+     * recognition itself is the part that hops to [Dispatchers.Default].
+     */
+    private val scanCache = LinkedHashMap<PageId, ScanResult>()
+
+    private fun cacheScan(pageId: PageId, result: ScanResult) {
+        scanCache.remove(pageId)
+        scanCache[pageId] = result
+        while (scanCache.size > SCAN_CACHE_SIZE) {
+            scanCache.remove(scanCache.keys.first())
+        }
+    }
+
+    /**
+     * Dropped whenever the engine or the languages change: the cached boxes and
+     * translations were produced by the old settings.
+     */
+    private fun clearScanCache() {
+        scanCache.clear()
+    }
+
     fun scanCurrentPageForText(image: ReaderImage) {
         ocrJob?.cancel()
+        val cached = scanCache[image.pageId]
+        if (cached != null) {
+            cacheScan(image.pageId, cached) // touched: keep it from ageing out
+            translationLogger.info {
+                "scan cache hit ${image.pageId} " +
+                        "(${cached.boxes.size} boxes, ${cached.translations.size} translated)"
+            }
+            ocrPageId.value = image.pageId
+            ocrResults.value = cached.boxes
+            translatedBlocks.value = cached.translations
+            isOcrLoading.value = false
+            isTranslating.value = false
+            return
+        }
         ocrJob = stateScope.launch {
             val pageId = image.pageId
             ocrPageId.value = pageId
@@ -995,6 +1052,12 @@ class ReaderState(
                 } else rawBoxes
                 ocrResults.value = boxes
                 translatePage(boxes, pageId)
+                // Cached after translation so the entry holds both halves. A
+                // page whose scan outlived it is not cached: translatedBlocks
+                // then belongs to whatever page is on screen now.
+                if (ocrPageId.value == pageId) {
+                    cacheScan(pageId, ScanResult(boxes, translatedBlocks.value))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1104,6 +1167,7 @@ class ReaderState(
     fun onTranslationSettingsChange(newSettings: snd.komelia.settings.model.TranslationSettings) {
         translationSettings.value = newSettings
         translatedBlocks.value = emptyMap()
+        clearScanCache()
         stateScope.launch { readerSettingsRepository.putTranslationSettings(newSettings) }
         if (newSettings.enabled) ensureTranslationModels(newSettings)
     }
