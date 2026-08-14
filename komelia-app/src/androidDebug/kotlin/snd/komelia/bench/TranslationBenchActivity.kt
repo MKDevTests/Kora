@@ -8,8 +8,13 @@ import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import snd.komelia.image.defaultTranslationEngine
+import kotlinx.coroutines.flow.collect
+import snd.komelia.image.BergamotModelDownloader
+import snd.komelia.image.BergamotTranslationEngine
+import snd.komelia.image.MlKitTranslationEngine
+import snd.komelia.image.TranslationEngine
 import snd.komelia.settings.model.TranslationLanguage
+import snd.komelia.updates.UpdateClient
 import java.io.File
 
 /**
@@ -27,6 +32,17 @@ import java.io.File
  * One sentence per line in, one translation per line out, same order, blank
  * lines preserved. A line that fails comes back unchanged, which is what the
  * reader does, so the output always lines up with the input.
+ *
+ * The engine is chosen here rather than left to the app's own rule, because
+ * comparing the two is the whole point:
+ *
+ *     -e engine mlkit       ML Kit, whatever else is installed
+ *     -e engine bergamot    Bergamot, fails loudly if its pair is missing
+ *     -e download true      fetch the Bergamot pair first (36MB), then run
+ *
+ * Timing is per line and printed with the result. It is the only number that
+ * decides whether Bergamot replaces ML Kit: 8ms a bubble was measured on x86
+ * with ruy, and says nothing about this device.
  */
 class TranslationBenchActivity : Activity() {
 
@@ -59,13 +75,21 @@ class TranslationBenchActivity : Activity() {
         Log.i(TAG, "translating ${sentences.size} lines ${source.code}->${target.code}")
         status.text = "translating ${sentences.size} lines ${source.code}->${target.code}…"
 
+        val engineName = intent.getStringExtra("engine") ?: "mlkit"
+        val download = intent.getStringExtra("download").toBoolean()
+
         CoroutineScope(Dispatchers.Default).launch {
-            val service = defaultTranslationEngine()
+            if (download) {
+                val fetched = downloadBergamot(source, target)
+                if (!fetched) return@launch
+            }
+            val service = engine(engineName)
             try {
                 if (!service.isReady(source, target)) {
                     report(
-                        "${source.code}->${target.code} models are not on the device; " +
-                            "download them from the reader's translation settings first",
+                        "$engineName has no ${source.code}->${target.code} model on this device" +
+                            if (engineName == "bergamot") "; re-run with -e download true"
+                            else "; download it from the reader's translation settings first",
                         error = true,
                     )
                     return@launch
@@ -76,7 +100,7 @@ class TranslationBenchActivity : Activity() {
 
                 output.writeText(translated.joinToString("\n"))
                 val each = if (sentences.isEmpty()) 0 else elapsed / sentences.size
-                report("done in ${elapsed}ms (${each}ms each) -> ${output.absolutePath}")
+                report("$engineName: ${elapsed}ms (${each}ms each) -> ${output.absolutePath}")
             } catch (e: Throwable) {
                 Log.e(TAG, "bench failed", e)
                 report("bench failed: $e", error = true)
@@ -94,6 +118,44 @@ class TranslationBenchActivity : Activity() {
     private fun report(message: String, error: Boolean = false) {
         if (error) Log.e(TAG, message) else Log.i(TAG, message)
         runOnUiThread { status.text = message }
+    }
+
+    /**
+     * Built here rather than taken from the app module, which would hand back
+     * whichever engine the app prefers -- exactly the choice this bench exists
+     * to make by hand.
+     */
+    private fun engine(name: String): TranslationEngine = when (name) {
+        "bergamot" -> BergamotTranslationEngine(this, bergamotModelRoot())
+        else -> MlKitTranslationEngine()
+    }
+
+    /** Same directory AndroidAppModule uses, so a fetch here serves the reader too. */
+    private fun bergamotModelRoot() = filesDir.resolve("bergamot_models")
+
+    /** 36MB over the network, with the byte count reported as it goes. */
+    private suspend fun downloadBergamot(
+        source: TranslationLanguage,
+        target: TranslationLanguage,
+    ): Boolean {
+        val ktor = io.ktor.client.HttpClient()
+        return try {
+            BergamotModelDownloader(
+                ktor = ktor,
+                updateClient = UpdateClient(ktor, ktor),
+                modelRoot = bergamotModelRoot(),
+            ).download(source, target).collect { progress ->
+                val percent = if (progress.total > 0) progress.completed * 100 / progress.total else 0
+                report("downloading ${progress.description ?: ""} $percent%")
+            }
+            true
+        } catch (e: Throwable) {
+            Log.e(TAG, "model download failed", e)
+            report("model download failed: $e", error = true)
+            false
+        } finally {
+            ktor.close()
+        }
     }
 
     private fun language(code: String?, fallback: TranslationLanguage) =
