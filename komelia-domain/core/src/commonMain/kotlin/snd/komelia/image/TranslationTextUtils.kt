@@ -24,6 +24,38 @@ object TranslationTextUtils {
     /** Word split across two lines: "BUSI- NESS" — the space comes from the line join. */
     private val lineBreakHyphen = Regex("""(\p{L})-\s+(\p{L}+)""")
 
+    /** Ends a spoken line. A sound effect drawn on the artwork has none of these. */
+    private val sentenceEnd = setOf('.', '!', '?', '…', ':', ',', '"', '\'', '-')
+
+    /**
+     * A sound effect painted onto the artwork rather than words in a bubble.
+     *
+     * Translating them produced nonsense — 'Ping' came back as 'Table de Ping',
+     * 'Whack' as 'Couper', 'Seizure' as 'Saisie' — and each one had an opaque
+     * panel painted over the drawing to say so. English sound effects read fine
+     * in French, so the drawing is left alone.
+     *
+     * The test is bare lettering: one word, or the same word twice ('Twitch
+     * twitch', 'Rattle rattle'), with nothing that ends a spoken line. Checked
+     * against a full volume, that keeps every one-word line of real dialogue —
+     * 'Correct.', 'Ever.', 'Quite.', 'Wait.', 'Huh?!' all carry punctuation —
+     * and two-word fragments of a sentence spread over several bubbles, such as
+     * 'Romantic match' or 'So happy', are left translated because their words
+     * differ.
+     */
+    fun isSoundEffect(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return false
+        if (trimmed.last() in sentenceEnd) return false
+
+        val words = trimmed.split(' ').filter { it.isNotBlank() }
+        return when (words.size) {
+            1 -> true
+            2 -> words[0].equals(words[1], ignoreCase = true)
+            else -> false
+        }
+    }
+
     /**
      * Rejoins words the lettering broke across lines.
      *

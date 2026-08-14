@@ -1144,7 +1144,11 @@ class ReaderState(
             // ("はい"), where three would already be a sentence.
             .filterValues { text ->
                 val letters = text.count { it.isLetter() }
-                if (japanese) letters >= 2 else letters >= 2 && text.length >= 3
+                val longEnough = if (japanese) letters >= 2 else letters >= 2 && text.length >= 3
+                // Sound effects are drawn onto the artwork, so a panel over one
+                // hides the drawing to say 'Table de Ping'. Latin only; Japanese
+                // sound effects are a different problem and it is on hold.
+                longEnough && (japanese || !snd.komelia.image.TranslationTextUtils.isSoundEffect(text))
             }
         if (blocks.isEmpty()) return emptyMap()
 
