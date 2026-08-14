@@ -97,7 +97,22 @@ fun mergeOcrBoxes(
         currentSegments = nextSegments
     }
 
-    return currentSegments.flatMap { segment ->
+    // Bubbles that still ended up in one segment are split back apart here.
+    //
+    // A threshold on how full the block is cannot do this — measured on real
+    // pages, a correct bubble runs 47% to 61% full and the three-bubble block
+    // that read as gibberish was 40%, so any cut-off costs more than it saves.
+    // What does separate them is structure: the lines of one bubble all overlap
+    // each other horizontally, and three bubbles side by side fall into three
+    // groups that never touch.
+    //
+    // Not for vertical Japanese, where the columns of a single bubble are
+    // exactly the disjoint groups this looks for.
+    val finalSegments =
+        if (vertical) currentSegments
+        else currentSegments.flatMap { splitIntoColumns(it) }
+
+    return finalSegments.flatMap { segment ->
         val unifiedBlockIndex = segment.elements.firstOrNull()?.blockIndex ?: 0
         
         // Group elements by their original segments to maintain internal order
@@ -159,6 +174,54 @@ private data class Segment(
     val rect: Rect,
     val elements: MutableList<OcrElementBox>
 )
+
+/**
+ * Splits a segment into groups of lines that overlap each other horizontally.
+ *
+ * One bubble is one group, whatever its shape, because its lines are stacked
+ * over each other. Several bubbles that the merge chained together are several
+ * groups, and come back out as separate blocks with their own panels — which is
+ * also what stops the reading order interleaving them.
+ */
+private fun splitIntoColumns(segment: Segment): List<Segment> {
+    val lines = segment.elements.groupBy { it.blockRect }
+    if (lines.size < 2) return listOf(segment)
+
+    // Transitive: A overlaps B and B overlaps C puts all three together, even
+    // when A and C do not touch. A bubble with one short centred line still
+    // comes out whole.
+    val groups = mutableListOf<MutableList<Rect>>()
+    for (rect in lines.keys.sortedBy { it.left }) {
+        // Every group this line reaches, not just the first: a wide line can
+        // bridge two groups that do not touch each other, and they are then one
+        // bubble. Taking only the first would leave the far side split off.
+        val hits = groups.filter { group ->
+            group.any { it.left < rect.right && rect.left < it.right }
+        }
+        if (hits.isEmpty()) {
+            groups.add(mutableListOf(rect))
+        } else {
+            val target = hits.first()
+            target.add(rect)
+            hits.drop(1).forEach { other ->
+                target.addAll(other)
+                groups.remove(other)
+            }
+        }
+    }
+    if (groups.size < 2) return listOf(segment)
+
+    return groups.map { group ->
+        val elements = group.flatMap { lines.getValue(it) }
+        val rect = Rect(
+            left = group.minOf { it.left },
+            top = group.minOf { it.top },
+            right = group.maxOf { it.right },
+            bottom = group.maxOf { it.bottom },
+        )
+        Segment(rect, elements.toMutableList())
+    }
+}
 
 /** Share of [rect] covered by the boxes of [elements], overlaps counted twice. */
 private fun fillRatio(elements: List<OcrElementBox>, rect: Rect): Float {
