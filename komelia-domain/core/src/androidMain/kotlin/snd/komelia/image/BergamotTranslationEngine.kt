@@ -44,6 +44,20 @@ class BergamotTranslationEngine(
     }
 
     /**
+     * Whether this engine can actually translate the pair right now — files on
+     * disk, a native library for this ABI, and a model that loads.
+     *
+     * [isReady] only answers the first of those, because it is what the reader
+     * gates the feature on and it must not load 30MB of weights to answer.
+     * This one does load them, so it belongs to whoever is choosing between
+     * engines, and the cost is paid once per pair.
+     */
+    suspend fun canTranslate(
+        source: TranslationLanguage,
+        target: TranslationLanguage,
+    ): Boolean = mutex.withLock { modelFor(source, target) != null }
+
+    /**
      * Nothing to do here. The files are fetched by [BergamotModelDownloader],
      * which reports progress and can be cancelled; pulling 36MB from inside a
      * call the reader makes on a page turn would be invisible until it wasn't.

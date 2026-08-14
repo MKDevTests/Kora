@@ -324,6 +324,9 @@ class DesktopAppModule(
 
     override fun createRapidOcrModelDownloader(updateClient: UpdateClient): RapidOcrModelDownloader? = null
 
+    override fun createTranslationEngine(updateClient: UpdateClient): snd.komelia.image.TranslationEngine =
+        snd.komelia.image.NoopTranslationEngine
+
     override fun createOnnxRuntime(): OnnxRuntime? {
         if (!OnnxRuntimeSharedLibraries.isAvailable) {
             logger.warn { "OnnxRuntime is not available" }

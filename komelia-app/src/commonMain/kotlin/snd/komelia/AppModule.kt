@@ -400,7 +400,7 @@ abstract class AppModule(
             ),
             readerImageFactory = readerImageFactory,
             ocrService = snd.komelia.image.OcrService(),
-            translationService = snd.komelia.image.defaultTranslationEngine(),
+            translationService = createTranslationEngine(updateClient),
             windowState = createWindowState(),
             colorCorrectionStep = colorCorrectionStep,
             blankPageDetector = blankPageDetector,
@@ -648,6 +648,14 @@ abstract class AppModule(
     protected abstract fun createOnnxModelDownloader(updateClient: UpdateClient): OnnxModelDownloader?
     protected abstract fun createWhisperModelDownloader(updateClient: UpdateClient): WhisperModelDownloader?
     protected abstract fun createRapidOcrModelDownloader(updateClient: UpdateClient): RapidOcrModelDownloader?
+
+    /**
+     * The translation engine this platform ships with. Abstract rather than the
+     * expect fun it started as, because the Android one needs a Context and a
+     * directory to keep downloaded models in, and only the platform module has
+     * either.
+     */
+    protected abstract fun createTranslationEngine(updateClient: UpdateClient): snd.komelia.image.TranslationEngine
     protected abstract fun createOnnxRuntime(): OnnxRuntime?
     protected abstract suspend fun createUpscaler(
         onnxRuntime: OnnxRuntime,

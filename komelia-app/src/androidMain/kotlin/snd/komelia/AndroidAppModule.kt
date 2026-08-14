@@ -409,6 +409,33 @@ class AndroidAppModule(
             dataDir = context.filesDir.toPath()
         )
 
+    /**
+     * Bergamot when its pair has been downloaded, ML Kit otherwise. See
+     * [snd.komelia.image.PreferredTranslationEngine] for why there is no
+     * setting to choose between them.
+     */
+    override fun createTranslationEngine(updateClient: UpdateClient): snd.komelia.image.TranslationEngine =
+        snd.komelia.image.PreferredTranslationEngine(
+            bergamot = snd.komelia.image.BergamotTranslationEngine(
+                context = context,
+                modelRoot = bergamotModelRoot(),
+            ),
+            mlKit = snd.komelia.image.MlKitTranslationEngine(),
+        )
+
+    /**
+     * Alongside the OCR models rather than in the cache: 36MB the user chose to
+     * download, which the system must not reclaim behind their back.
+     */
+    private fun bergamotModelRoot() = context.filesDir.resolve("bergamot_models")
+
+    fun createBergamotModelDownloader(updateClient: UpdateClient) =
+        snd.komelia.image.BergamotModelDownloader(
+            ktor = createKtorClient(),
+            updateClient = updateClient,
+            modelRoot = bergamotModelRoot(),
+        )
+
     override fun createOnnxRuntime(): OnnxRuntime? {
         if (!OnnxRuntimeSharedLibraries.isAvailable) {
             logger.warn { "OnnxRuntime is not available" }
