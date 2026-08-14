@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -222,6 +223,24 @@ class ReaderState(
     /** Translated text per OCR block index, for the page in [ocrPageId]. */
     val translatedBlocks = MutableStateFlow<Map<Int, String>>(emptyMap())
     val isTranslating = MutableStateFlow(false)
+
+    /**
+     * Boxes and translations of every page scanned recently, keyed by page.
+     *
+     * The paged reader shows one page at a time, so [ocrPageId] naming the one
+     * page that carries an overlay is exactly right there. The continuous
+     * reader has several pages on screen at once and scans only the one the
+     * reader is on: keyed off [ocrPageId] alone, a page's overlay vanished the
+     * moment the scroll moved on, while the page itself was still in view.
+     *
+     * Reading from here instead keeps every scanned page dressed for as long as
+     * it stays on screen, and costs nothing — the results were already being
+     * kept for the same reason turning back a page is instant.
+     */
+    val scannedPages: StateFlow<Map<PageId, PageScan>> get() = scanCache
+
+    /** Public face of a cached scan, so the cache type can stay private. */
+    class PageScan(val boxes: List<OcrElementBox>, val translations: Map<Int, String>)
 
     /**
      * Glossary terms belonging to the series on screen, for the editor in the
@@ -970,11 +989,6 @@ class ReaderState(
      */
     private val ocrMutex = Mutex()
 
-    private class ScanResult(
-        val boxes: List<OcrElementBox>,
-        val translations: Map<Int, String>,
-    )
-
     /**
      * Pages already scanned, so turning back to one is instant.
      *
@@ -991,9 +1005,9 @@ class ReaderState(
      * thread. Replacing an immutable map wholesale keeps that safe; the worst
      * a lost race can do is drop one entry, costing a rescan.
      */
-    private val scanCache = MutableStateFlow<Map<PageId, ScanResult>>(emptyMap())
+    private val scanCache = MutableStateFlow<Map<PageId, PageScan>>(emptyMap())
 
-    private fun cacheScan(pageId: PageId, result: ScanResult) {
+    private fun cacheScan(pageId: PageId, result: PageScan) {
         val next = LinkedHashMap(scanCache.value)
         next.remove(pageId) // re-inserted at the end: touched entries age last
         next[pageId] = result
@@ -1101,7 +1115,7 @@ class ReaderState(
                                 }
                             } else rawBoxes
 
-                            ScanResult(boxes, translateBlocks(boxes))
+                            PageScan(boxes, translateBlocks(boxes))
                         }
                     }
                 }

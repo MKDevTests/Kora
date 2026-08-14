@@ -186,6 +186,21 @@ class ContinuousReaderState(
     private var bubblePrefetchJob: Job? = null
     private val imageDisplayFlow: MutableSharedFlow<ReaderImage> = MutableSharedFlow()
 
+    /**
+     * The page OCR and translation work on, which the paged reader gets for free
+     * from its current spread and this one has to name for itself.
+     *
+     * Several pages are on screen at once here, and only one can be scanned: a
+     * scan costs about four seconds. This is the one the scroll handler last
+     * called the current page — the one the reader is actually on.
+     *
+     * Written from two places because either can come first. The scroll can
+     * name a page whose image has not been decoded yet, and a page can finish
+     * decoding after it has already been named.
+     */
+    val currentPageImage = MutableStateFlow<ReaderImage?>(null)
+    private var currentPageId: PageId? = null
+
     suspend fun initialize() {
 
         readingDirection.value = when {
@@ -351,6 +366,8 @@ class ContinuousReaderState(
 
     suspend fun onCurrentPageChange(page: PageMetadata) {
         val booksState = readerState.booksState.value ?: return
+        currentPageId = page.toPageId()
+        currentPageImage.value = imagesInUse[page.toPageId()]
         when (page.bookId) {
             booksState.nextBook?.id -> {
                 if (stopAtEnd && !endOfBookAcked.value) {
@@ -1066,6 +1083,7 @@ class ContinuousReaderState(
         stateScope.launch {
             imagesInUse[page.toPageId()] = image
             if (page.size == null) updatePageSize(page, image)
+            if (page.toPageId() == currentPageId) currentPageImage.value = image
             updateVisibleImages()
             imageDisplayFlow.emit(image)
         }
@@ -1073,6 +1091,7 @@ class ContinuousReaderState(
 
     fun onPageDispose(page: PageMetadata) {
         val cacheKey = page.toPageId()
+        if (cacheKey == currentPageId) currentPageImage.value = null
         val image = imagesInUse.remove(cacheKey)
         if (image != null && imageCache.get(cacheKey) == null) {
             image.close()

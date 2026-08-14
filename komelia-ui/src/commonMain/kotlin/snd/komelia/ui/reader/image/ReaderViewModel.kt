@@ -211,7 +211,7 @@ class ReaderViewModel(
                     readerState.readerType.flatMapLatest { readerType ->
                         when (readerType) {
                             PAGED -> pagedReaderState.currentSpread.map { it.pages.firstOrNull()?.imageResult?.image }
-                            CONTINUOUS -> flowOf(null) // TODO
+                            CONTINUOUS -> continuousReaderState.currentPageImage
                             PANELS -> panelsReaderState?.currentPage?.map { it?.imageResult?.image } ?: flowOf(null)
                         }
                     }.debounce(200)
