@@ -99,11 +99,8 @@ import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.PageDisplayLayout
-import snd.komelia.settings.model.OcrEngine
-import snd.komelia.settings.model.OcrLanguage
 import snd.komelia.settings.model.OcrSettings
 import snd.komelia.settings.model.PanelsFullPageDisplayMode
-import snd.komelia.settings.model.RapidOcrModel
 
 import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.settings.model.ReaderType
@@ -1505,7 +1502,6 @@ private fun OcrModeSettings(
     translationSettings: snd.komelia.settings.model.TranslationSettings,
     onTranslationSettingsChange: (snd.komelia.settings.model.TranslationSettings) -> Unit,
 ) {
-    val platform = LocalPlatform.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SwitchWithLabel(
             checked = ocrSettings.enabled,
@@ -1517,59 +1513,11 @@ private fun OcrModeSettings(
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
 
-        if (platform == MOBILE) {
-            Column {
-                Text(LocalStrings.current.ui.ocrEngine)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OcrEngine.entries.forEach { engine ->
-                        InputChip(
-                            selected = ocrSettings.engine == engine,
-                            onClick = { onOcrSettingsChange(ocrSettings.copy(engine = engine)) },
-                            colors = accentInputChipColors(),
-                            label = { Text(engine.name.replace("_", " ")) }
-                        )
-                    }
-                }
-            }
-        }
-
-        AnimatedVisibility(ocrSettings.engine == OcrEngine.ML_KIT) {
-            Column {
-                Text(LocalStrings.current.ui.textDetectionLanguage)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OcrLanguage.entries.forEach { language ->
-                        InputChip(
-                            selected = ocrSettings.selectedLanguage == language,
-                            onClick = { onOcrSettingsChange(ocrSettings.copy(selectedLanguage = language)) },
-                            colors = accentInputChipColors(),
-                            label = { Text(language.name) }
-                        )
-                    }
-                }
-            }
-        }
-
-        AnimatedVisibility(ocrSettings.engine == OcrEngine.RAPID_OCR) {
-            Column {
-                Text(LocalStrings.current.ui.rapidocrModel)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    RapidOcrModel.entries.forEach { model ->
-                        InputChip(
-                            selected = ocrSettings.rapidOcrModel == model,
-                            onClick = { onOcrSettingsChange(ocrSettings.copy(rapidOcrModel = model)) },
-                            colors = accentInputChipColors(),
-                            label = { Text(model.name.replace("_", " ")) }
-                        )
-                    }
-                }
-            }
-        }
+        // No engine, model or detection-language picker any more. There is one
+        // engine worth using (RapidOCR with PP-OCRv6 small, which reads pages
+        // ML Kit could not and covers every script the old v4 models split
+        // between them), and the detection language now follows the translation
+        // source rather than being a separate thing to keep in step.
 
         // Which language the page is written in, for translation. The OCR
         // language follows it (see ReaderState.onTranslationSettingsChange):

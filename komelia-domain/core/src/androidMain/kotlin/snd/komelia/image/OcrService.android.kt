@@ -274,6 +274,17 @@ actual class OcrService {
 
     private fun recognizeWithRapidOcr(engine: RapidOCR, bitmap: android.graphics.Bitmap): List<OcrElementBox> {
         val result = engine.run(bitmap, rapidOcrParams)
+
+        // Detection runs on the whole page, recognition on small crops. Which of
+        // the two dominates decides whether a lighter detector (PP-OCRv6 tiny,
+        // 0.43M parameters against small's) would buy anything: swapping it in
+        // is one path change, but only worth the recall it costs if detection is
+        // actually a large share of the 3.9 s a page takes.
+        ocrLogger.info {
+            "rapidocr split det=${result.detTime} cls=${result.clsTime} " +
+                    "rec=${result.recTime} total=${result.elapseTime} (library units)"
+        }
+
         val boxes = mutableListOf<OcrElementBox>()
 
         result.recRes.forEachIndexed { index, recResult ->

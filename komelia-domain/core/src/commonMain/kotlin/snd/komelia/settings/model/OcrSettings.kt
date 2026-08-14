@@ -6,9 +6,9 @@ import kotlinx.serialization.Serializable
 data class OcrSettings(
     val enabled: Boolean = false,
     val selectedLanguage: OcrLanguage = OcrLanguage.LATIN,
-    val engine: OcrEngine = OcrEngine.ML_KIT,
+    val engine: OcrEngine = OcrEngine.RAPID_OCR,
     val mergeBoxes: Boolean = true,
-    val rapidOcrModel: RapidOcrModel = RapidOcrModel.ENGLISH_CHINESE,
+    val rapidOcrModel: RapidOcrModel = RapidOcrModel.PP_OCR_V6_SMALL,
 )
 
 @Serializable
@@ -20,6 +20,12 @@ enum class OcrLanguage {
     KOREAN
 }
 
+/**
+ * ML Kit is no longer offered in the UI: on comic pages it misses whole
+ * bubbles, which is a detection weakness no setting fixes. The value stays so
+ * that settings persisted before that decision still deserialise, and the
+ * implementation stays as the only engine that needs no model download.
+ */
 @Serializable
 enum class OcrEngine {
     ML_KIT,
@@ -35,6 +41,10 @@ enum class RapidOcrModel {
      * see RAPID_OCR_MODELS_DEFAULT_URL.
      */
     PP_OCR_V6_SMALL,
+
+    // v4 models, kept only so that a setting persisted before v6 arrived still
+    // deserialises. They are not offered in the UI: v6 reads the same pages
+    // better and covers every language they split between them.
     ENGLISH_CHINESE,
     ENGLISH_ONLY,
     LATIN_MULTILINGUAL,
