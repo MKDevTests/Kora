@@ -13,7 +13,6 @@ import io.github.hzkitty.RapidOCR
 import io.github.hzkitty.entity.OcrConfig
 import io.github.hzkitty.entity.ParamConfig
 import kotlinx.coroutines.tasks.await
-import org.opencv.core.Point as OcvPoint
 import snd.komelia.image.AndroidBitmap.toBitmap
 import androidx.compose.ui.geometry.Rect
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -37,8 +36,15 @@ actual class OcrService {
     private val koreanRecognizer by lazy { TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build()) }
 
     private val rapidOcrEngines = mutableMapOf<RapidOcrModel, RapidOCR>()
+    /**
+     * Per-character boxes were only there to guess word boundaries from the
+     * gaps between letters. The recogniser turned out to emit spaces itself
+     * (rapidocr4j appends " " to the character list), and guessing on top of
+     * that split words in two — 'BUSY.' alone on its line came out 'BU SY'.
+     * Computing them is pure cost now.
+     */
     private val rapidOcrParams by lazy {
-        ParamConfig().apply { setReturnWordBox(true) }
+        ParamConfig().apply { setReturnWordBox(false) }
     }
 
     actual suspend fun recognizeText(image: ReaderImage, settings: OcrSettings): List<OcrElementBox> {
@@ -271,28 +277,9 @@ actual class OcrService {
                 bottom = yCoords.max().toFloat()
             )
 
-            // The recogniser emits spaces on its own: rapidocr4j's CTCLabelDecode
-            // appends " " to the character list, on top of the dictionary. Running
-            // the gap heuristic over a line that already has spaces adds a second
-            // set of them inside words ('JEW EL-KUN', 'BU SY', 'HER E'), which
-            // then translate as separate words ('Juif El-Kun'). It also leaves the
-            // double spaces visible in the logs ('SOCIAL  MEDIA').
-            //
-            // So the heuristic is now a fallback: it only runs on a line where the
-            // model produced no space at all.
-            val charBoxes = recResult.wordBoxResult?.sortedWordBoxList
-            val text = if (charBoxes != null &&
-                charBoxes.size == recResult.text.length &&
-                !recResult.text.contains(' ')
-            ) {
-                insertSpacesByGap(recResult.text, charBoxes)
-            } else {
-                recResult.text
-            }
-
             boxes.add(
                 OcrElementBox(
-                    text = text,
+                    text = recResult.text,
                     imageRect = rect,
                     blockRect = rect,
                     blockIndex = index,
@@ -302,45 +289,6 @@ actual class OcrService {
             )
         }
         return boxes
-    }
-
-    /**
-     * Recovers the word boundaries PaddleOCR's CTC decoder drops, by looking at
-     * the gaps between character boxes.
-     *
-     * The threshold is derived from the line itself rather than fixed: a flat
-     * "half a character width" split words in comic lettering, which is spaced
-     * out by design — that is where 'H AVE' and 'MAM A-SAN' came from. Comparing
-     * each gap with the median gap of its own line makes the rule independent of
-     * the font's tracking.
-     */
-    private fun insertSpacesByGap(text: String, charBoxes: List<Array<OcvPoint>>): String {
-        if (text.length < 2) return text
-
-        val gaps = (0 until text.length - 1).map { i ->
-            charBoxes[i + 1].minOf { it.x } - charBoxes[i].maxOf { it.x }
-        }
-        val median = gaps.sorted().let {
-            if (it.size % 2 == 0) (it[it.size / 2 - 1] + it[it.size / 2]) / 2 else it[it.size / 2]
-        }
-        // A real space is several times the normal inter-letter gap. The floor
-        // keeps a line whose letters touch (median at or below zero) from
-        // treating every gap as a space.
-        val threshold = maxOf(median * 2.5, medianCharWidth(charBoxes) * 0.6)
-
-        val sb = StringBuilder()
-        for (i in text.indices) {
-            sb.append(text[i])
-            if (i < text.length - 1 && gaps[i] > threshold) sb.append(' ')
-        }
-        return sb.toString()
-    }
-
-    private fun medianCharWidth(charBoxes: List<Array<OcvPoint>>): Double {
-        val widths = charBoxes.map { box -> box.maxOf { it.x } - box.minOf { it.x } }.sorted()
-        if (widths.isEmpty()) return 0.0
-        return if (widths.size % 2 == 0) (widths[widths.size / 2 - 1] + widths[widths.size / 2]) / 2
-        else widths[widths.size / 2]
     }
 
     companion object {
