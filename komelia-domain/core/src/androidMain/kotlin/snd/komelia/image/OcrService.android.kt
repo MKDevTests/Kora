@@ -196,11 +196,47 @@ actual class OcrService {
                     blockIndex = index,
                     lineIndex = 0,
                     elementIndex = 0,
-                    confidence = recResult.confidence
+                    confidence = recResult.confidence,
+                    backgroundColor = sampleBackground(bitmap, rect),
                 )
             )
         }
         return boxes
+    }
+
+    /**
+     * Median colour of a ring of points just outside [rect]: the inside of the
+     * bubble for dialogue, the artwork for a sound effect painted over it.
+     *
+     * The median rather than the mean, because a mean of white bubble and black
+     * outline is grey, which matches neither. Roughly a thousand pixel reads for
+     * a whole page, against the several seconds recognition itself costs.
+     */
+    private fun sampleBackground(bitmap: Bitmap, rect: Rect): Int {
+        val pad = (minOf(rect.width, rect.height) * 0.4f).coerceIn(3f, 24f)
+        val samples = mutableListOf<Int>()
+
+        fun sample(x: Float, y: Float) {
+            val px = x.toInt()
+            val py = y.toInt()
+            if (px < 0 || py < 0 || px >= bitmap.width || py >= bitmap.height) return
+            samples.add(bitmap.getPixel(px, py))
+        }
+
+        val steps = 8
+        for (i in 0..steps) {
+            val x = rect.left + rect.width * (i / steps.toFloat())
+            sample(x, rect.top - pad)
+            sample(x, rect.bottom + pad)
+        }
+        for (i in 0..4) {
+            val y = rect.top + rect.height * (i / 4f)
+            sample(rect.left - pad, y)
+            sample(rect.right + pad, y)
+        }
+
+        if (samples.isEmpty()) return 0
+        return samples.sortedBy { luminanceOf(it) }[samples.size / 2]
     }
 
     companion object {

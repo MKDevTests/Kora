@@ -1193,10 +1193,20 @@ class ReaderState(
                 // screen whether the OCR misread it or the translator mangled
                 // it; this number is what tells the two apart without guessing.
                 val worst = blockBoxes.minOf { it.confidence }
+                // Share of the painted panel its own lettering covers, and how
+                // many detected lines went into it. A block that reads as two
+                // bubbles interleaved is low fill and many lines; a real bubble
+                // is high fill. Logged rather than guessed at, so the merge
+                // threshold can be set from real pages instead of intuition.
+                val blockArea = rect.width * rect.height
+                val fill = if (blockArea <= 0f) 1f
+                else blockBoxes.sumOf { (it.imageRect.width * it.imageRect.height).toDouble() }
+                    .toFloat() / blockArea
                 translationLogger.info {
                     "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
                             "${rect.width.toInt()}x${rect.height.toInt()}] " +
                             "conf=${(worst * 100).toInt()}% " +
+                            "fill=${(fill * 100).toInt()}% lines=${blockBoxes.size} " +
                             "src='${blocks.getValue(blockIndex)}' -> '$shown'"
                 }
             }

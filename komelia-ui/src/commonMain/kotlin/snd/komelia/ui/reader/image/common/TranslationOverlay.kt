@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -18,11 +19,18 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toIntSize
 import snd.komelia.image.OcrElementBox
+import snd.komelia.image.luminanceOf
 
-/** Opaque panel painted over each bubble, so the original text never shows through. */
-private val backgroundColor = Color(0xFF101010)
-private val borderColor = Color(0x33FFFFFF)
-private val textColor = Color.White
+/**
+ * Fallback for a block whose background was never sampled — only the desktop
+ * OCR path, which does not read pixels back.
+ */
+private val fallbackBackground = Color(0xFF101010)
+private val darkText = Color(0xFF0A0A0A)
+private val lightText = Color.White
+
+/** Above this sampled brightness the panel is light, so the text goes dark. */
+private const val DARK_TEXT_THRESHOLD = 0.5f
 
 /** Breathing room inside a bubble, as a fraction of its short side. */
 private const val PADDING_RATIO = 0.06f
@@ -51,9 +59,19 @@ fun TranslationOverlay(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         ocrResults
-            .distinctBy { it.blockIndex }
-            .forEach { box ->
-                val text = translations[box.blockIndex]?.takeIf { it.isNotBlank() } ?: return@forEach
+            .groupBy { it.blockIndex }
+            .forEach { (blockIndex, elements) ->
+                val box = elements.first()
+                val text = translations[blockIndex]?.takeIf { it.isNotBlank() } ?: return@forEach
+                // Sampled per detected line, so a block that straddles a bubble
+                // edge still gets the colour most of its lettering sits on.
+                val sampled = elements.map { it.backgroundColor }.filter { it != 0 }
+                val panelColor = if (sampled.isEmpty()) fallbackBackground
+                else Color(sampled.sortedBy { luminanceOf(it) }[sampled.size / 2])
+                val panelIsLight = luminanceOf(panelColor.toArgb()) > DARK_TEXT_THRESHOLD
+                val textColor = if (panelIsLight) darkText else lightText
+                val borderColor = textColor.copy(alpha = 0.2f)
+
                 val textRect = imageToScreenRect(box.blockRect, intrinsicImageSize, size.toIntSize())
                 if (textRect.width <= 1f || textRect.height <= 1f) return@forEach
                 // The box hugs the glyphs the OCR found, so the original letters
@@ -68,7 +86,7 @@ fun TranslationOverlay(
                 )
 
                 drawRect(
-                    color = backgroundColor,
+                    color = panelColor,
                     topLeft = screenRect.topLeft,
                     size = screenRect.size,
                 )
@@ -83,7 +101,7 @@ fun TranslationOverlay(
                 val innerWidth = (screenRect.width - padding * 2).coerceAtLeast(1f)
                 val innerHeight = (screenRect.height - padding * 2).coerceAtLeast(1f)
 
-                val layout = fitText(measurer, text, innerWidth, innerHeight)
+                val layout = fitText(measurer, text, innerWidth, innerHeight, textColor)
                 // Centred vertically; the text is usually shorter than the bubble
                 // it replaces, and a top-aligned line looks like a rendering bug.
                 val textTop = screenRect.top + padding +
@@ -106,16 +124,17 @@ private fun fitText(
     text: String,
     maxWidth: Float,
     maxHeight: Float,
+    color: Color,
 ): TextLayoutResult {
     val constraints = Constraints(maxWidth = maxWidth.toInt().coerceAtLeast(1))
     var fontSize = MAX_FONT_SP
-    var layout = measure(measurer, text, fontSize, constraints)
+    var layout = measure(measurer, text, fontSize, constraints, color)
     // Eight steps take 22sp down to the 7sp floor; past that the text is
     // unreadable anyway and clipping is the honest outcome.
     repeat(8) {
         if (layout.size.height <= maxHeight || fontSize <= MIN_FONT_SP) return layout
         fontSize = (fontSize * 0.85f).coerceAtLeast(MIN_FONT_SP)
-        layout = measure(measurer, text, fontSize, constraints)
+        layout = measure(measurer, text, fontSize, constraints, color)
     }
     return layout
 }
@@ -125,10 +144,11 @@ private fun measure(
     text: String,
     fontSize: Float,
     constraints: Constraints,
+    color: Color,
 ): TextLayoutResult = measurer.measure(
     text = AnnotatedString(text),
     style = TextStyle(
-        color = textColor,
+        color = color,
         fontSize = fontSize.sp,
         textAlign = TextAlign.Center,
     ),
