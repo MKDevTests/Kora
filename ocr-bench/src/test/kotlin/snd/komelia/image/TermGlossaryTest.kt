@@ -64,7 +64,7 @@ class TermGlossaryTest {
         val protectedText = glossary.protect("Back to Wayne Manor.")
 
         // One placeholder, not two: "Wayne" must not have eaten half of it.
-        assertEquals(1, protectedText.text.count { it == '⟦' })
+        assertEquals(1, TermGlossary.PLACEHOLDER.findAll(protectedText.text).count())
         assertEquals(
             "Retour au Manoir Wayne.",
             protectedText.restore("Retour au ${TermGlossary.placeholder(0)}."),
@@ -107,7 +107,47 @@ class TermGlossaryTest {
         val restored = protectedText.restore("$token, dis-moi. $token")
 
         assertEquals("Strife, dis-moi.", restored)
-        assertFalse(restored.contains('⟦'))
+        assertFalse(TermGlossary.PLACEHOLDER.containsMatchIn(restored))
+    }
+
+    @Test
+    fun `a placeholder the engine upper-cased is still restored`() {
+        // Measured: ML Kit returns XQZ0 for Xqz0 on 83% of the lines it keeps.
+        // Case-sensitive matching would have read every one of those as a loss.
+        val glossary = TermGlossary(mapOf("Strife" to "Strife"))
+
+        val protectedText = glossary.protect("I am strife.")
+
+        assertEquals(
+            "JE SUIS Strife.",
+            protectedText.restore("JE SUIS ${TermGlossary.placeholder(0).uppercase()}."),
+        )
+    }
+
+    @Test
+    fun `an index the engine invented never reaches the page`() {
+        val glossary = TermGlossary(mapOf("Strife" to "Strife"))
+
+        val protectedText = glossary.protect("I am strife.")
+
+        // Xqz7 was never issued: one term means index 0 only.
+        assertEquals(
+            "Je suis Strife.",
+            protectedText.restore("Je suis ${TermGlossary.placeholder(0)} Xqz7."),
+        )
+    }
+
+    @Test
+    fun `a two-digit index is not eaten by a one-digit one`() {
+        val terms = (0..11).associate { "name$it" to "Name$it" }
+        val glossary = TermGlossary(terms)
+
+        val protectedText = glossary.protect((0..11).joinToString(" ") { "name$it" })
+        val restored = protectedText.restore(protectedText.text)
+
+        // Every term back, in its own place: Xqz1 must not have matched the
+        // front of Xqz11.
+        assertEquals((0..11).joinToString(" ") { "Name$it" }, restored)
     }
 
     @Test

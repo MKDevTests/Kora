@@ -124,33 +124,52 @@ def score(plan_path: Path, translated_path: Path) -> None:
         raise SystemExit(f"{len(plan)} lines sent, {len(got)} came back — they will not line up")
 
     stats: dict[str, dict[str, int]] = {}
-    examples: dict[str, str] = {}
+    examples: dict[str, list[str]] = {}
     for entry, result in zip(plan, got):
-        row = stats.setdefault(entry["candidate"], {"lines": 0, "terms": 0, "intact": 0, "dup": 0})
+        row = stats.setdefault(
+            entry["candidate"],
+            {"lines": 0, "terms": 0, "intact": 0, "loose": 0, "dup": 0},
+        )
         row["lines"] += 1
+        lower = result.lower()
         for token in entry["placeholders"]:
             row["terms"] += 1
             count = result.count(token)
+            # Case-insensitively too, and it matters. ML Kit upper-cases a
+            # word-like placeholder (Xqz0 -> XQZ0) and capitalises a name it
+            # recognises (vash -> Vash), which the strict count reads as a loss
+            # although the term plainly survived. Counting only the strict form
+            # made the baseline look far worse than it is; the two columns keep
+            # that honest without deciding for the code, whose restore step is
+            # case-sensitive today.
+            loose = lower.count(token.lower())
             if count == 1:
                 row["intact"] += 1
-            elif count > 1:
+            if loose == 1:
+                row["loose"] += 1
+            elif loose > 1:
                 # Worse than losing it: restoring would then put the term in a
                 # place the sentence never had it.
                 row["dup"] += 1
-            elif entry["candidate"] not in examples:
-                examples[entry["candidate"]] = f"{entry['sent']}\n      -> {result}"
+            else:
+                examples.setdefault(entry["candidate"], []).append(
+                    f"{entry['sent']}\n      -> {result}"
+                )
 
-    print(f"{'candidate':<18} {'intact':>8} {'lost':>7} {'dup':>5}")
+    print(f"{'candidate':<18} {'exact':>8} {'any case':>9} {'lost':>7} {'dup':>5}")
     for name in CANDIDATES:
         row = stats.get(name)
         if not row:
             continue
-        lost = row["terms"] - row["intact"] - row["dup"]
-        pct = 100.0 * row["intact"] / row["terms"] if row["terms"] else 0.0
-        print(f"{name:<18} {pct:7.1f}% {lost:7d} {row['dup']:5d}")
+        lost = row["terms"] - row["loose"] - row["dup"]
+        exact = 100.0 * row["intact"] / row["terms"] if row["terms"] else 0.0
+        loose = 100.0 * row["loose"] / row["terms"] if row["terms"] else 0.0
+        print(f"{name:<18} {exact:7.1f}% {loose:8.1f}% {lost:7d} {row['dup']:5d}")
     print()
-    for name, example in examples.items():
-        print(f"  {name} first miss:\n      {example}")
+    for name, misses in examples.items():
+        print(f"  {name}, {len(misses)} miss(es), first two:")
+        for miss in misses[:2]:
+            print(f"      {miss}")
 
 
 def main() -> None:

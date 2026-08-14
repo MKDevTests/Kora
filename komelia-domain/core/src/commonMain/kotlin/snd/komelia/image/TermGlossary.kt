@@ -24,9 +24,10 @@ package snd.komelia.image
  * Putting the capital back and hoping was tried first, and measured not to be
  * enough. The tablet sent "My name is Meryl Strife, and I represent the
  * bernardelli insurance society" and got back "Mon nom de Meryl Conflife": the
- * capital travelled, the name did not. Over 200 real bubbles through Bergamot,
- * a name left in place survives 75.7% of the time — and comes back duplicated
- * in six of them, which would put it somewhere the sentence never had it.
+ * capital travelled, the name did not. Over 200 real bubbles run through both
+ * engines, a name left in the sentence comes back intact 91% of the time on
+ * Bergamot and 88% on ML Kit, and comes back duplicated in twelve of them —
+ * which puts it somewhere the sentence never had it. A placeholder loses two.
  */
 class TermGlossary(terms: Map<String, String>) {
 
@@ -76,25 +77,38 @@ class TermGlossary(terms: Map<String, String>) {
         val EMPTY = TermGlossary(emptyMap())
 
         /**
-         * Mathematical white square brackets, U+27E6/U+27E7.
+         * An unpronounceable pseudo-name. Chosen by measurement, not by taste.
          *
-         * Chosen by measurement, not by taste: 200 real bubbles containing a
-         * name, seven candidate shapes, every one of them through Bergamot.
-         * This one came back whole 200 times out of 200. `Xqz0` lost one,
-         * `@0@` two, `#0#` five, a longer invented name eleven, and leaving the
-         * name itself in place lost forty-six. Nothing in the training data
-         * looks like these glyphs, which is exactly why they survive.
+         * 200 real bubbles containing a name, seven candidate shapes, all 1400
+         * lines through both engines — Bergamot on the bench and ML Kit on the
+         * tablet, because shipping a shape that only one of them respects would
+         * be no protection at all. Terms surviving, out of 428:
+         *
+         *     Xqz0     99.5% / 99.5%      2 lost,  0 duplicated
+         *     ⟦0⟧     100.0% / 97.2%      4 lost,  2 duplicated
+         *     «0»      94.9% / 98.1%     15 lost
+         *     #0#, @0@                        ML Kit spaces them out: "# 0 #"
+         *     the name itself 91.1% / 87.9%  33 lost, 12 duplicated
+         *
+         * The bracket forms look better until you read what a miss costs: ML
+         * Kit drops the brackets and keeps the digit ("I had come to ⟦0⟧" ->
+         * "j'étais venue à 0"), leaving an orphan number on the page that
+         * cannot be cleaned up without risking a real one. A mangled Xqz0
+         * leaves a word-shaped residue instead, and most misses are not misses
+         * at all — ML Kit upper-cases it to XQZ0, which is why restoring is
+         * case-insensitive below.
          */
-        internal fun placeholder(index: Int): String = "\u27E6$index\u27E7"
+        internal fun placeholder(index: Int): String = "Xqz$index"
 
         /**
-         * Matches a placeholder of any index, for cleaning up after an engine
-         * that mangled one.
+         * Matches a placeholder and captures its index.
+         *
+         * One pass over the whole string rather than one search per term, which
+         * also settles two things for free: Xqz1 can never match the front of
+         * Xqz11, and an index the engine invented is caught rather than
+         * restored.
          */
-        private val PLACEHOLDER = Regex("\\s*\u27E6\\d+\u27E7\\s*")
-
-        internal fun stripPlaceholders(text: String): String =
-            PLACEHOLDER.replace(text, " ").trim()
+        internal val PLACEHOLDER = Regex("Xqz(\\d+)", RegexOption.IGNORE_CASE)
     }
 }
 
@@ -121,17 +135,32 @@ class ProtectedText internal constructor(
      */
     fun restore(translated: String): String {
         if (terms.isEmpty()) return translated
-        var result = translated
-        terms.forEachIndexed { index, term ->
-            val token = TermGlossary.placeholder(index)
-            val at = result.indexOf(token)
-            if (at >= 0) {
-                result = result.substring(0, at) + term + result.substring(at + token.length)
+        val used = mutableSetOf<Int>()
+        var dropped = false
+        val result = TermGlossary.PLACEHOLDER.replace(translated) { match ->
+            val index = match.groupValues[1].toIntOrNull()
+            if (index != null && index in terms.indices && used.add(index)) terms[index]
+            else {
+                // A second copy of one already placed, or an index never
+                // issued. Dropped rather than restored: a name missing is a
+                // missing vocative, a name in the wrong place changes what the
+                // sentence says.
+                dropped = true
+                ""
             }
         }
-        // Anything still shaped like a placeholder is a duplicate the engine
-        // invented, or one whose index we never issued. Either way it must not
-        // reach the page.
-        return TermGlossary.stripPlaceholders(result)
+        // Only when something was removed. An untouched sentence must come out
+        // of here byte for byte, or every bubble pays for a case that measured
+        // zero occurrences on either engine.
+        return if (!dropped) result
+        else SPACE_BEFORE_PUNCTUATION.replace(COLLAPSE_SPACES.replace(result, " "), "$1").trim()
+    }
+
+    private companion object {
+        /** A removed placeholder can leave a double gap where it sat. */
+        val COLLAPSE_SPACES = Regex("\\s{2,}")
+
+        /** …or a gap in front of the punctuation that followed it. */
+        val SPACE_BEFORE_PUNCTUATION = Regex("\\s+([,.;:!?])")
     }
 }
