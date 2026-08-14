@@ -1034,6 +1034,9 @@ class ReaderState(
                     // Lettering breaks words across lines; joined as-is they
                     // translate into invented words ("BUSI- NESS" -> "de bus").
                     .let { snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it) }
+                    // Bubbles are drawn in full caps, which translation models
+                    // handle badly ("IT'S CONCERNING" -> "en ce qui concerne").
+                    .let { snd.komelia.image.TranslationTextUtils.toSentenceCase(it) }
             }
             // Single letters and bare digits are artwork the OCR mistook for
             // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them

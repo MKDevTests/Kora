@@ -65,13 +65,56 @@ object TranslationTextUtils {
         }
     }
 
-    /** "MAMA-SAN" reads badly inside a French sentence; "Mama-san" does not. */
+    /**
+     * "MAMA-SAN" reads badly inside a French sentence; "Mama-san" does not.
+     * The honorific stays lowercase — it is a suffix, not a second name.
+     */
     private fun titleCase(name: String): String = name
         .split("-")
-        .joinToString("-") { part ->
-            if (part.isEmpty()) part
-            else part[0].uppercase() + part.substring(1).lowercase()
+        .mapIndexed { index, part ->
+            when {
+                part.isEmpty() -> part
+                index == 0 -> part[0].uppercase() + part.substring(1).lowercase()
+                else -> part.lowercase()
+            }
         }
+        .joinToString("-")
+
+    /** Standalone "i" after lowercasing — the English pronoun, and "i'm", "i've". */
+    private val lonePronounI = Regex("""\bi\b""")
+
+    /**
+     * Turns comic lettering into normally cased text before translating it.
+     *
+     * Bubbles are drawn in full caps. Translation models are trained on cased
+     * text, so an all-caps sentence is out of distribution and comes back
+     * mangled ("IT'S CONCERNING" -> "c'est en ce qui concerne"). Text that
+     * already has lowercase letters is left alone — it is either a caption
+     * drawn that way or a shop sign, and is already in distribution.
+     */
+    fun toSentenceCase(text: String): String {
+        val letters = text.filter { it.isLetter() }
+        if (letters.isEmpty() || letters.any { it.isLowerCase() }) return text
+
+        val sb = StringBuilder(text.length)
+        var capitalizeNext = true
+        for (c in text.lowercase()) {
+            when {
+                capitalizeNext && c.isLetter() -> {
+                    sb.append(c.uppercaseChar())
+                    capitalizeNext = false
+                }
+
+                c == '.' || c == '!' || c == '?' -> {
+                    sb.append(c)
+                    capitalizeNext = true
+                }
+
+                else -> sb.append(c)
+            }
+        }
+        return lonePronounI.replace(sb.toString(), "I")
+    }
 
     /**
      * True when translating produced nothing new. Sound effects come back

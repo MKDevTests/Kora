@@ -271,8 +271,20 @@ actual class OcrService {
                 bottom = yCoords.max().toFloat()
             )
 
+            // The recogniser emits spaces on its own: rapidocr4j's CTCLabelDecode
+            // appends " " to the character list, on top of the dictionary. Running
+            // the gap heuristic over a line that already has spaces adds a second
+            // set of them inside words ('JEW EL-KUN', 'BU SY', 'HER E'), which
+            // then translate as separate words ('Juif El-Kun'). It also leaves the
+            // double spaces visible in the logs ('SOCIAL  MEDIA').
+            //
+            // So the heuristic is now a fallback: it only runs on a line where the
+            // model produced no space at all.
             val charBoxes = recResult.wordBoxResult?.sortedWordBoxList
-            val text = if (charBoxes != null && charBoxes.size == recResult.text.length) {
+            val text = if (charBoxes != null &&
+                charBoxes.size == recResult.text.length &&
+                !recResult.text.contains(' ')
+            ) {
                 insertSpacesByGap(recResult.text, charBoxes)
             } else {
                 recResult.text
