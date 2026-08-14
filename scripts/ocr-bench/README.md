@@ -18,7 +18,12 @@ fusion, plus la couleur échantillonnée autour de chaque ligne.
 
 Utilise les mêmes fichiers ONNX PP-OCRv6 que l'app télécharge (attendus dans
 `~/Downloads/rapidocr-v6-pack/`) et les mêmes réglages : `text_score` 0.6,
-classifieur d'orientation désactivé, détecteur `small` ou `tiny` selon `--fast`.
+classifieur d'orientation désactivé, détecteur `small` par défaut.
+
+**`--fast` (détecteur tiny) ne sert qu'aux mangas simples.** `small` est la
+référence. Sur un comic, tiny perd précisément ce qui compte — le lettrage
+artistique posé sur le dessin — et ne doit pas être mesuré comme un candidat au
+remplacement.
 La reconnaissance est le portage Python de la bibliothèque utilisée côté Android,
 pas une réécriture.
 
