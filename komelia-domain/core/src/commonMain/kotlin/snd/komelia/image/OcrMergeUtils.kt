@@ -113,12 +113,18 @@ fun mergeOcrBoxes(
         if (vertical) currentSegments
         else currentSegments
             .flatMap { splitIntoColumns(it) }
-            .flatMap { undoIfWideAndSparse(it, pageWidth) }
             .flatMap { peelOversizedLines(it) }
             // Again, because a sound effect drawn across the page is wide enough
             // to be the only thing two bubbles had in common: taking it out
             // leaves them as two groups that no longer touch.
             .flatMap { splitIntoColumns(it) }
+            // Last of the four, because each of the steps above takes something
+            // out of a block, and what is left can be wide and mostly empty when
+            // the whole of it was not. A volume title across the top of a page,
+            // with a line of blurb and two stray runs of katakana under it,
+            // fills 111% of the block all four share; peel the title off and the
+            // three that remain fill 30% of a rect nearly half the page wide.
+            .flatMap { undoIfWideAndSparse(it, pageWidth) }
 
     return finalSegments.flatMap { segment ->
         val unifiedBlockIndex = segment.elements.firstOrNull()?.blockIndex ?: 0

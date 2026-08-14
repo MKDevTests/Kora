@@ -130,6 +130,29 @@ class OcrMergeUtilsTest {
     }
 
     @Test
+    fun `what is left after peeling a title off is judged again`() {
+        // Gunslinger Girl 02 page 005. The volume title is tall enough that the
+        // block all four lines share fills 111% of it, so the wide-and-sparse
+        // rule rightly leaves it alone. Peel the title and the three that remain
+        // fill 30% of a rect 46% of the page wide — which is only visible if
+        // that rule runs after the peel, not before it.
+        val boxes = listOf(
+            line("GUNSLINGERGIRL.", 136, 166, 1423, 369, 0),
+            line("The girl has a mechanical body.", 285, 190, 1034, 220, 1),
+            line("ガンスリンガ", 314, 339, 679, 375, 2),
+            line("ガ一ル", 818, 338, 987, 378, 3),
+        )
+
+        val merged = mergeOcrBoxes(boxes, ReadingDirection.LTR, pageWidth = 1600)
+
+        assertEquals(
+            4,
+            merged.map { it.blockIndex }.distinct().size,
+            "lines scattered over the artwork were left under one panel",
+        )
+    }
+
+    @Test
     fun `a merged block never grows past the lines it contains`() {
         // The panel is painted over blockRect, so this is the giant black
         // rectangle across the drawing, expressed as a test.
