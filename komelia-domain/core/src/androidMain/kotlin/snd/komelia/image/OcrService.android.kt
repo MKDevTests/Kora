@@ -160,7 +160,76 @@ actual class OcrService {
         }
     }
 
+    /**
+     * Recognises a page, cutting a webtoon strip into bands first.
+     *
+     * A comic page is about 1600x2264 and goes in whole. A webtoon page in this
+     * library is 720x8295 — eleven and a half times taller than it is wide. The
+     * detector normalises an image by its long side, so the whole strip in one
+     * call means the 720px width is squeezed to well under a hundred pixels and
+     * the lettering stops existing; asking it to keep the long side instead
+     * builds a detection map of tens of megapixels. Measured on the tablet, the
+     * strip produced a scan that never came back and eventually took the app
+     * with it.
+     *
+     * Bands are cut to roughly the aspect ratio of an ordinary page, so each one
+     * is an input the detector is built for.
+     */
     private fun recognizeWithRapidOcr(engine: RapidOCR, bitmap: android.graphics.Bitmap): List<OcrElementBox> {
+        val bandHeight = (bitmap.width * MAX_SCAN_ASPECT).toInt()
+        if (bitmap.height <= bandHeight) return recognizeWhole(engine, bitmap)
+
+        val boxes = mutableListOf<OcrElementBox>()
+        var top = 0
+        var blockIndex = 0
+        while (top < bitmap.height) {
+            val height = minOf(bandHeight, bitmap.height - top)
+            // Overlap, because a band edge lands wherever it lands and a line of
+            // lettering cut in half is recognised as neither half. Anything that
+            // straddles the seam is therefore seen whole by one of the two bands,
+            // and the duplicate is dropped below.
+            val band = android.graphics.Bitmap.createBitmap(bitmap, 0, top, bitmap.width, height)
+            val offset = top.toFloat()
+            recognizeWhole(engine, band).forEach { box ->
+                boxes.add(
+                    box.copy(
+                        imageRect = box.imageRect.translate(offset),
+                        blockRect = box.blockRect.translate(offset),
+                        blockIndex = blockIndex++,
+                    )
+                )
+            }
+            if (band != bitmap) band.recycle()
+            if (height < bandHeight) break
+            top += bandHeight - BAND_OVERLAP
+        }
+        return dropSeamDuplicates(boxes)
+    }
+
+    private fun Rect.translate(dy: Float) = Rect(left, top + dy, right, bottom + dy)
+
+    /**
+     * Removes the second reading of a line that two overlapping bands both saw.
+     *
+     * Same text within a line's height of the same place is the same line: the
+     * two bands measure it from different origins, so the boxes agree to a few
+     * pixels rather than exactly.
+     */
+    private fun dropSeamDuplicates(boxes: List<OcrElementBox>): List<OcrElementBox> {
+        val kept = mutableListOf<OcrElementBox>()
+        for (box in boxes) {
+            val tolerance = (box.imageRect.bottom - box.imageRect.top).coerceAtLeast(8f)
+            val duplicate = kept.any { other ->
+                other.text == box.text &&
+                        kotlin.math.abs(other.imageRect.top - box.imageRect.top) < tolerance &&
+                        kotlin.math.abs(other.imageRect.left - box.imageRect.left) < tolerance
+            }
+            if (!duplicate) kept.add(box)
+        }
+        return kept
+    }
+
+    private fun recognizeWhole(engine: RapidOCR, bitmap: android.graphics.Bitmap): List<OcrElementBox> {
         val result = engine.run(bitmap, rapidOcrParams)
 
         // Detection runs on the whole page, recognition on small crops. Which of
@@ -244,5 +313,23 @@ actual class OcrService {
 
         /** Text crops handed to the recogniser per call. */
         private const val REC_BATCH = 8
+
+        /**
+         * Tallest a page may be, in widths, before it is scanned in bands.
+         *
+         * An ordinary comic page in this library runs about 1.4 widths tall and
+         * a tall one 1.6. Three leaves every real page untouched — the banding
+         * is for webtoon strips, which are eleven and a half.
+         */
+        private const val MAX_SCAN_ASPECT = 3f
+
+        /**
+         * How much of the previous band each new one repeats.
+         *
+         * Has to comfortably exceed one line of lettering, since the point is
+         * that a line cut by a seam is whole in the other band. Webtoon
+         * lettering measured at 30-45px on a 720px-wide strip.
+         */
+        private const val BAND_OVERLAP = 160
     }
 }
