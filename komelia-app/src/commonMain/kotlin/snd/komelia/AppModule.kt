@@ -400,7 +400,7 @@ abstract class AppModule(
             ),
             readerImageFactory = readerImageFactory,
             ocrService = snd.komelia.image.OcrService(),
-            translationService = snd.komelia.image.TranslationService(),
+            translationService = snd.komelia.image.defaultTranslationEngine(),
             windowState = createWindowState(),
             colorCorrectionStep = colorCorrectionStep,
             blankPageDetector = blankPageDetector,

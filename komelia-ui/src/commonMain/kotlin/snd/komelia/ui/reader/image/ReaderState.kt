@@ -141,7 +141,7 @@ class ReaderState(
     val pageChangeFlow: SharedFlow<Unit>,
     private val imageLoader: BookImageLoader,
     private val ocrService: OcrService,
-    private val translationService: snd.komelia.image.TranslationService,
+    private val translationService: snd.komelia.image.TranslationEngine,
     private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
     /**
      * Whether the ONNX panel detector is loaded and usable. When false, webtoon

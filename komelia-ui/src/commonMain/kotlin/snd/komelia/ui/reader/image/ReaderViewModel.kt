@@ -86,7 +86,7 @@ class ReaderViewModel(
     private val upscaler: KomeliaUpscaler?,
     private val onnxModelDownloader: OnnxModelDownloader?,
     private val ocrService: snd.komelia.image.OcrService,
-    private val translationService: snd.komelia.image.TranslationService,
+    private val translationService: snd.komelia.image.TranslationEngine,
     private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
     val colorCorrectionIsActive: Flow<Boolean>,
     onBookChange: () -> Unit = {},

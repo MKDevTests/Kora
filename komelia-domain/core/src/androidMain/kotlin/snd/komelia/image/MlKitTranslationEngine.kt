@@ -15,7 +15,8 @@ import snd.komelia.settings.model.TranslationLanguage
 
 private val logger = KotlinLogging.logger { }
 
-actual class TranslationService {
+/** Google's on-device translator. Downloads its own models. */
+class MlKitTranslationEngine : TranslationEngine {
     private val mutex = Mutex()
     private var loaded: LoadedPair? = null
 
@@ -25,7 +26,7 @@ actual class TranslationService {
         val translator: Translator,
     )
 
-    actual suspend fun isReady(source: TranslationLanguage, target: TranslationLanguage): Boolean {
+    override suspend fun isReady(source: TranslationLanguage, target: TranslationLanguage): Boolean {
         val manager = RemoteModelManager.getInstance()
         return requiredLanguages(source, target).all { language ->
             val tag = TranslateLanguage.fromLanguageTag(language.code) ?: return false
@@ -33,7 +34,7 @@ actual class TranslationService {
         }
     }
 
-    actual suspend fun downloadModels(
+    override suspend fun downloadModels(
         source: TranslationLanguage,
         target: TranslationLanguage,
         requireWifi: Boolean,
@@ -47,7 +48,7 @@ actual class TranslationService {
             .await()
     }
 
-    actual suspend fun translate(
+    override suspend fun translate(
         texts: List<String>,
         source: TranslationLanguage,
         target: TranslationLanguage,
@@ -62,7 +63,7 @@ actual class TranslationService {
         }
     }
 
-    actual fun release() {
+    override fun release() {
         loaded?.translator?.close()
         loaded = null
     }
@@ -105,3 +106,5 @@ actual class TranslationService {
         else pair + TranslationLanguage.ENGLISH
     }
 }
+
+actual fun defaultTranslationEngine(): TranslationEngine = MlKitTranslationEngine()

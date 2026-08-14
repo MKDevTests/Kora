@@ -8,7 +8,7 @@ import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import snd.komelia.image.TranslationService
+import snd.komelia.image.defaultTranslationEngine
 import snd.komelia.settings.model.TranslationLanguage
 import java.io.File
 
@@ -60,7 +60,7 @@ class TranslationBenchActivity : Activity() {
         status.text = "translating ${sentences.size} lines ${source.code}->${target.code}…"
 
         CoroutineScope(Dispatchers.Default).launch {
-            val service = TranslationService()
+            val service = defaultTranslationEngine()
             try {
                 if (!service.isReady(source, target)) {
                     report(
