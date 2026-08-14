@@ -26,6 +26,9 @@ private val textColor = Color.White
 
 /** Breathing room inside a bubble, as a fraction of its short side. */
 private const val PADDING_RATIO = 0.06f
+
+/** How far the panel is grown past the detected text, per side. */
+private const val PANEL_GROWTH_RATIO = 0.12f
 private const val MAX_FONT_SP = 22f
 private const val MIN_FONT_SP = 7f
 
@@ -51,8 +54,18 @@ fun TranslationOverlay(
             .distinctBy { it.blockIndex }
             .forEach { box ->
                 val text = translations[box.blockIndex]?.takeIf { it.isNotBlank() } ?: return@forEach
-                val screenRect = imageToScreenRect(box.blockRect, intrinsicImageSize, size.toIntSize())
-                if (screenRect.width <= 1f || screenRect.height <= 1f) return@forEach
+                val textRect = imageToScreenRect(box.blockRect, intrinsicImageSize, size.toIntSize())
+                if (textRect.width <= 1f || textRect.height <= 1f) return@forEach
+                // The box hugs the glyphs the OCR found, so the original letters
+                // peek out around the panel — worse when a line was missed
+                // entirely. Grown outwards, clamped to the page.
+                val grow = minOf(textRect.width, textRect.height) * PANEL_GROWTH_RATIO
+                val screenRect = androidx.compose.ui.geometry.Rect(
+                    left = (textRect.left - grow).coerceAtLeast(0f),
+                    top = (textRect.top - grow).coerceAtLeast(0f),
+                    right = (textRect.right + grow).coerceAtMost(size.width),
+                    bottom = (textRect.bottom + grow).coerceAtMost(size.height),
+                )
 
                 drawRect(
                     color = backgroundColor,

@@ -94,7 +94,15 @@ data class ImageReaderSettings(
             "https://github.com/Snd-R/komelia-onnxruntime/releases/download/model/rf-detr-med.onnx.zip"
         const val PANEL_DETECTION_DEFAULT_GITHUB_URL =
             "https://github.com/eserero/Sipurra/releases/download/model/rf-detr-med.onnx.zip"
+        /**
+         * The v6 bundle: everything the upstream one has, plus the PP-OCRv6
+         * small detector, recogniser and its 18708-entry dictionary. Existing
+         * installs keep whatever URL they already stored — they have to point
+         * here and download again to get PP-OCRv6.
+         */
         const val RAPID_OCR_MODELS_DEFAULT_URL =
+            "https://github.com/MKDevTests/Kora/releases/download/model-v6/RapidOcrModels-v6.zip"
+        const val RAPID_OCR_MODELS_UPSTREAM_URL =
             "https://github.com/eserero/Sipurra/releases/download/model/RapidOcrModels.zip"
     }
 }

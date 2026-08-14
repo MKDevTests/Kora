@@ -142,20 +142,44 @@ actual class OcrService {
             return null
         }
 
-        val detModel = modelsDir.resolve("ch_PP-OCRv4_det_infer.onnx")
+        val isV6 = model == RapidOcrModel.PP_OCR_V6_SMALL
+        // v6 ships its own detector, and its recogniser is trained against an
+        // 18708-entry dictionary — pairing it with the v4 detector or letting it
+        // fall back to the v4 keys produces confident nonsense, not an error.
+        val detModel = modelsDir.resolve(
+            if (isV6) "PP-OCRv6_small_det_infer.onnx" else "ch_PP-OCRv4_det_infer.onnx"
+        )
         val clsModel = modelsDir.resolve("ch_ppocr_mobile_v2.0_cls_infer.onnx")
         val recModel = modelsDir.resolve(model.recModelName())
+        val keysFile = modelsDir.resolve("ppocrv6_keys.txt")
 
         if (!detModel.exists() || !clsModel.exists() || !recModel.exists()) {
             logger.warn { "Some RapidOCR models are missing: det=${detModel.exists()}, cls=${clsModel.exists()}, rec=${recModel.exists()}" }
             return null
         }
+        if (isV6 && !keysFile.exists()) {
+            logger.warn { "PP-OCRv6 selected but ppocrv6_keys.txt is missing — download the v6 model bundle" }
+            return null
+        }
 
+        // Half the cores, same rule as cover loading: the reader still has a page
+        // to draw while this runs. Left at the default until now, which is one
+        // reason a scan took 4-5 seconds.
+        val threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
         val config = OcrConfig().apply {
             det.modelPath = detModel.absolutePathString()
+            det.intraOpNumThreads = threads
             cls.modelPath = clsModel.absolutePathString()
+            cls.intraOpNumThreads = threads
             rec.modelPath = recModel.absolutePathString()
+            rec.intraOpNumThreads = threads
+            if (isV6) rec.recKeysPath = keysFile.absolutePathString()
+            // Drops the hallucinated reads over artwork and vertical Japanese
+            // that made whole panels unusable ('HP L f n 7J iQ 75#+').
+            global.textScore = 0.6f
+            global.intraOpNumThreads = threads
         }
+        logger.info { "RapidOCR engine for $model, $threads threads, keys=${if (isV6) "v6" else "built-in"}" }
 
         return try {
             val engine = RapidOCR.create(context, config)
@@ -168,6 +192,7 @@ actual class OcrService {
     }
 
     private fun RapidOcrModel.recModelName() = when (this) {
+        RapidOcrModel.PP_OCR_V6_SMALL -> "PP-OCRv6_small_rec_infer.onnx"
         RapidOcrModel.ENGLISH_CHINESE -> "ch_PP-OCRv4_rec_infer.onnx"
         RapidOcrModel.ENGLISH_ONLY -> "en_PP-OCRv4_rec_infer.onnx"
         RapidOcrModel.LATIN_MULTILINGUAL -> "latin_PP-OCRv3_rec_infer.onnx"
@@ -260,20 +285,43 @@ actual class OcrService {
         return boxes
     }
 
-    // Inserts spaces between characters whose bounding boxes have a gap larger than
-    // half the preceding character's width — recovers word boundaries lost by PaddleOCR's CTC decoder.
+    /**
+     * Recovers the word boundaries PaddleOCR's CTC decoder drops, by looking at
+     * the gaps between character boxes.
+     *
+     * The threshold is derived from the line itself rather than fixed: a flat
+     * "half a character width" split words in comic lettering, which is spaced
+     * out by design — that is where 'H AVE' and 'MAM A-SAN' came from. Comparing
+     * each gap with the median gap of its own line makes the rule independent of
+     * the font's tracking.
+     */
     private fun insertSpacesByGap(text: String, charBoxes: List<Array<OcvPoint>>): String {
+        if (text.length < 2) return text
+
+        val gaps = (0 until text.length - 1).map { i ->
+            charBoxes[i + 1].minOf { it.x } - charBoxes[i].maxOf { it.x }
+        }
+        val median = gaps.sorted().let {
+            if (it.size % 2 == 0) (it[it.size / 2 - 1] + it[it.size / 2]) / 2 else it[it.size / 2]
+        }
+        // A real space is several times the normal inter-letter gap. The floor
+        // keeps a line whose letters touch (median at or below zero) from
+        // treating every gap as a space.
+        val threshold = maxOf(median * 2.5, medianCharWidth(charBoxes) * 0.6)
+
         val sb = StringBuilder()
         for (i in text.indices) {
             sb.append(text[i])
-            if (i < text.length - 1) {
-                val right = charBoxes[i].maxOf { it.x }
-                val charWidth = right - charBoxes[i].minOf { it.x }
-                val nextLeft = charBoxes[i + 1].minOf { it.x }
-                if (nextLeft - right > charWidth * 0.5) sb.append(' ')
-            }
+            if (i < text.length - 1 && gaps[i] > threshold) sb.append(' ')
         }
         return sb.toString()
+    }
+
+    private fun medianCharWidth(charBoxes: List<Array<OcvPoint>>): Double {
+        val widths = charBoxes.map { box -> box.maxOf { it.x } - box.minOf { it.x } }.sorted()
+        if (widths.isEmpty()) return 0.0
+        return if (widths.size % 2 == 0) (widths[widths.size / 2 - 1] + widths[widths.size / 2]) / 2
+        else widths[widths.size / 2]
     }
 
     companion object {
