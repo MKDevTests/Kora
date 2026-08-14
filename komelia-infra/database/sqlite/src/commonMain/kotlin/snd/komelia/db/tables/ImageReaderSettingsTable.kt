@@ -59,6 +59,9 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val ocrEngine = text("ocr_engine").default("ML_KIT")
     val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("ENGLISH_CHINESE")
     val ocrMergeBoxes = bool("ocr_merge_boxes").default(true)
+    val translationEnabled = bool("translation_enabled").default(false)
+    val translationSource = text("translation_source").default("ENGLISH")
+    val translationTarget = text("translation_target").default("FRENCH")
 
     val pagedSplitDoublePages = bool("paged_split_double_pages").default(false)
     val pagedReaderAutoDirection = bool("paged_reader_auto_direction").default(true)

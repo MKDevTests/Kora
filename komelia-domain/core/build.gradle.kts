@@ -66,6 +66,7 @@ kotlin {
             api(libs.androidx.datastore)
             implementation(libs.androidx.appcompat)
             implementation(libs.mlkit.text.recognition)
+            implementation(libs.mlkit.translate)
             implementation(libs.mlkit.text.recognition.chinese)
             implementation(libs.mlkit.text.recognition.devanagari)
             implementation(libs.mlkit.text.recognition.japanese)

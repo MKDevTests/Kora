@@ -58,6 +58,13 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                             rapidOcrModel = RapidOcrModel.valueOf(it[ImageReaderSettingsTable.ocrRapidOcrModel]),
                             mergeBoxes = it[ImageReaderSettingsTable.ocrMergeBoxes],
                         ),
+                        translationSettings = snd.komelia.settings.model.TranslationSettings(
+                            enabled = it[ImageReaderSettingsTable.translationEnabled],
+                            source = snd.komelia.settings.model.TranslationLanguage
+                                .valueOf(it[ImageReaderSettingsTable.translationSource]),
+                            target = snd.komelia.settings.model.TranslationLanguage
+                                .valueOf(it[ImageReaderSettingsTable.translationTarget]),
+                        ),
                         pagedScaleType = LayoutScaleType.valueOf(it[ImageReaderSettingsTable.pagedScaleType]),
                         pagedReadingDirection = PagedReadingDirection.valueOf(it[ImageReaderSettingsTable.pagedReadingDirection]),
                         pagedPageLayout = PageDisplayLayout.valueOf(it[ImageReaderSettingsTable.pagedPageLayout]),
@@ -126,6 +133,10 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[ocrEngine] = settings.ocrSettings.engine.name
                 it[ocrRapidOcrModel] = settings.ocrSettings.rapidOcrModel.name
                 it[ocrMergeBoxes] = settings.ocrSettings.mergeBoxes
+
+                it[translationEnabled] = settings.translationSettings.enabled
+                it[translationSource] = settings.translationSettings.source.name
+                it[translationTarget] = settings.translationSettings.target.name
 
                 it[pagedScaleType] = settings.pagedScaleType.name
                 it[pagedReadingDirection] = settings.pagedReadingDirection.name

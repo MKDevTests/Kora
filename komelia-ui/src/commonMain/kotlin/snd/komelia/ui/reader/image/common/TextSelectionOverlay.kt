@@ -176,7 +176,7 @@ private fun screenToImage(
     return Offset(screenPoint.x / scaleX, screenPoint.y / scaleY)
 }
 
-private fun imageToScreenRect(
+internal fun imageToScreenRect(
     imageRect: Rect,
     imageSize: IntSize,
     screenSize: IntSize

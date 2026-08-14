@@ -31,6 +31,7 @@ import snd.komelia.ui.LocalStrings
 fun ReaderImageContent(
     imageResult: ReaderImageResult?,
     ocrResults: List<OcrElementBox> = emptyList(),
+    translations: Map<Int, String> = emptyMap(),
     onSelectionChanged: (List<OcrElementBox>) -> Unit = {},
     onAddNote: (text: String, x: Float, y: Float) -> Unit = { _, _, _ -> },
 ) {
@@ -38,6 +39,7 @@ fun ReaderImageContent(
         is ReaderImageResult.Success -> ImageContent(
             image = imageResult.image,
             ocrResults = ocrResults,
+            translations = translations,
             onSelectionChanged = onSelectionChanged,
             onAddNote = onAddNote
         )
@@ -63,6 +65,7 @@ fun ReaderImageContent(
 private fun ImageContent(
     image: ReaderImage,
     ocrResults: List<OcrElementBox>,
+    translations: Map<Int, String>,
     onSelectionChanged: (List<OcrElementBox>) -> Unit,
     onAddNote: (text: String, x: Float, y: Float) -> Unit,
 ) {
@@ -118,13 +121,26 @@ private fun ImageContent(
             if (ocrResults.isNotEmpty()) {
                 val originalSize = image.originalSize.collectAsState().value
                 if (originalSize != null) {
-                    TextSelectionOverlay(
-                        modifier = Modifier.matchParentSize(),
-                        ocrResults = ocrResults,
-                        intrinsicImageSize = originalSize,
-                        onSelectionChanged = onSelectionChanged,
-                        onAddNote = onAddNote,
-                    )
+                    // Translation replaces the selection overlay rather than
+                    // stacking on it: the blue word boxes would be drawn under
+                    // opaque panels, and tapping one would select text nobody
+                    // can see.
+                    if (translations.isNotEmpty()) {
+                        TranslationOverlay(
+                            modifier = Modifier.matchParentSize(),
+                            ocrResults = ocrResults,
+                            translations = translations,
+                            intrinsicImageSize = originalSize,
+                        )
+                    } else {
+                        TextSelectionOverlay(
+                            modifier = Modifier.matchParentSize(),
+                            ocrResults = ocrResults,
+                            intrinsicImageSize = originalSize,
+                            onSelectionChanged = onSelectionChanged,
+                            onAddNote = onAddNote,
+                        )
+                    }
                 }
             }
         }

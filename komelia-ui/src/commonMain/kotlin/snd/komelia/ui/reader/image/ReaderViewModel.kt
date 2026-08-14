@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -85,6 +86,7 @@ class ReaderViewModel(
     private val upscaler: KomeliaUpscaler?,
     private val onnxModelDownloader: OnnxModelDownloader?,
     private val ocrService: snd.komelia.image.OcrService,
+    private val translationService: snd.komelia.image.TranslationService,
     val colorCorrectionIsActive: Flow<Boolean>,
     onBookChange: () -> Unit = {},
     private val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
@@ -136,6 +138,7 @@ class ReaderViewModel(
         komgaEvents = komgaEvents,
         pageChangeFlow = pageChangeFlow,
         ocrService = ocrService,
+        translationService = translationService,
         panelsAvailable = { panelDetector != null && panelDetector.isAvailable.value },
     )
 
@@ -194,9 +197,13 @@ class ReaderViewModel(
         }.onEach { readerState.readingDirection.value = it }
             .launchIn(screenModelScope)
 
-        readerState.ocrSettings
-            .flatMapLatest { ocrSettings ->
-                if (ocrSettings.enabled) {
+        // Page translation needs the same scan OCR does, so either switch arms it.
+        combine(readerState.ocrSettings, readerState.translationSettings) { ocr, translation ->
+            ocr.enabled || translation.enabled
+        }
+            .distinctUntilChanged()
+            .flatMapLatest { scanEnabled ->
+                if (scanEnabled) {
                     readerState.readerType.flatMapLatest { readerType ->
                         when (readerType) {
                             PAGED -> pagedReaderState.currentSpread.map { it.pages.firstOrNull()?.imageResult?.image }
@@ -207,6 +214,7 @@ class ReaderViewModel(
                 } else {
                     readerState.ocrResults.value = emptyList()
                     readerState.ocrPageId.value = null
+                    readerState.translatedBlocks.value = emptyMap()
                     flowOf(null)
                 }
             }
@@ -255,6 +263,9 @@ class ReaderViewModel(
     override fun onDispose() {
         stopAllReaderModeStates()
         readerState.onDispose()
+        // A loaded translation pair holds its models in memory; nothing outside
+        // the reader uses them.
+        translationService.release()
         panelDetector?.closeCurrentSession()
         upscaler?.closeCurrentSession()
     }

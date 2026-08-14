@@ -132,6 +132,7 @@ class ReaderState(
     val pageChangeFlow: SharedFlow<Unit>,
     private val imageLoader: BookImageLoader,
     private val ocrService: OcrService,
+    private val translationService: snd.komelia.image.TranslationService,
     /**
      * Whether the ONNX panel detector is loaded and usable. When false, webtoon
      * routing falls back to CONTINUOUS instead of PANELS (PANELS needs the
@@ -206,6 +207,11 @@ class ReaderState(
     val ocrPageId = MutableStateFlow<PageId?>(null)
     val isOcrLoading = MutableStateFlow(false)
     private var ocrJob: Job? = null
+
+    val translationSettings = MutableStateFlow(snd.komelia.settings.model.TranslationSettings())
+    /** Translated text per OCR block index, for the page in [ocrPageId]. */
+    val translatedBlocks = MutableStateFlow<Map<Int, String>>(emptyMap())
+    val isTranslating = MutableStateFlow(false)
     val readingDirection = MutableStateFlow(ReadingDirection.LTR)
 
     val tapNavigationMode = MutableStateFlow(ReaderTapNavigationMode.LEFT_RIGHT)
@@ -238,9 +244,14 @@ class ReaderState(
             ocrJob = null
             ocrResults.value = emptyList()
             ocrPageId.value = null
+            translatedBlocks.value = emptyMap()
         }.launchIn(stateScope)
         stateScope.launch {
             readerSettingsRepository.getOcrSettings().collect { ocrSettings.value = it }
+        }
+        stateScope.launch {
+            readerSettingsRepository.getTranslationSettings()
+                .collect { translationSettings.value = it }
         }
     }
 
@@ -962,12 +973,14 @@ class ReaderState(
                 // this measurement pass: mergeOcrBoxes is O(n^2) over the boxes and we
                 // want to know what it actually costs there before moving it. Counted
                 // in blocks, not words — one block is one translation call.
-                ocrResults.value = if (settings.mergeBoxes) {
+                val boxes = if (settings.mergeBoxes) {
                     snd.komelia.perf.PerfTrace.measure(
                         "reader.ocr.merge",
-                        count = { boxes -> boxes.distinctBy { it.blockIndex }.size }
+                        count = { merged -> merged.distinctBy { it.blockIndex }.size }
                     ) { mergeOcrBoxes(rawBoxes, readingDirection.value) }
                 } else rawBoxes
+                ocrResults.value = boxes
+                translatePage(boxes, pageId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -983,6 +996,93 @@ class ReaderState(
         }
     }
 
+
+    /**
+     * Translates the OCR blocks of the page that was just scanned, when page
+     * translation is on. Runs inside the OCR job so it is cancelled by the same
+     * page turn, and publishes nothing if the page moved on meanwhile.
+     *
+     * Blocks are translated as whole sentences, never word by word: [ocrResults]
+     * holds one entry per word, and a bubble only makes sense reassembled.
+     */
+    private suspend fun translatePage(boxes: List<OcrElementBox>, pageId: PageId) {
+        val settings = translationSettings.value
+        if (!settings.enabled || boxes.isEmpty()) return
+        if (settings.source == settings.target) return
+
+        val blocks = boxes
+            .groupBy { it.blockIndex }
+            .mapValues { (_, elements) ->
+                elements
+                    .sortedWith(compareBy({ it.lineIndex }, { it.elementIndex }))
+                    .joinToString(" ") { it.text }
+                    .trim()
+            }
+            .filterValues { it.isNotBlank() }
+        if (blocks.isEmpty()) return
+
+        isTranslating.value = true
+        try {
+            val indices = blocks.keys.toList()
+            val translated = withContext(Dispatchers.Default) {
+                snd.komelia.perf.PerfTrace.measure(
+                    "reader.translate",
+                    count = { it.size }
+                ) {
+                    translationService.translate(
+                        texts = indices.map { blocks.getValue(it) },
+                        source = settings.source,
+                        target = settings.target,
+                    )
+                }
+            }
+            if (ocrPageId.value != pageId) return
+            translatedBlocks.value = indices.zip(translated).toMap()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            appNotifications.add(AppNotification.Error("Translation failed: ${e.message}"))
+        } finally {
+            if (ocrPageId.value == pageId) isTranslating.value = false
+        }
+    }
+
+    fun onTranslationSettingsChange(newSettings: snd.komelia.settings.model.TranslationSettings) {
+        translationSettings.value = newSettings
+        translatedBlocks.value = emptyMap()
+        stateScope.launch { readerSettingsRepository.putTranslationSettings(newSettings) }
+        if (newSettings.enabled) ensureTranslationModels(newSettings)
+    }
+
+    /**
+     * Fetches the language models the first time a pair is used. Without this
+     * every translate call fails until the user finds a settings screen to
+     * download from, which reads as "translation is broken".
+     *
+     * Not restricted to Wi-Fi: the download only happens when the user turns the
+     * feature on, and a switch that silently does nothing off Wi-Fi is worse
+     * than one that says how big the download is.
+     */
+    private fun ensureTranslationModels(settings: snd.komelia.settings.model.TranslationSettings) {
+        stateScope.launch {
+            if (translationService.isReady(settings.source, settings.target)) return@launch
+            appNotifications.add(AppNotification.Normal("Downloading translation model (~30MB per language)"))
+            try {
+                snd.komelia.perf.PerfTrace.measure("reader.translate.download") {
+                    translationService.downloadModels(
+                        source = settings.source,
+                        target = settings.target,
+                        requireWifi = false,
+                    )
+                }
+                appNotifications.add(AppNotification.Success("Translation model ready"))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                appNotifications.add(AppNotification.Error("Model download failed: ${e.message}"))
+            }
+        }
+    }
 
     fun onColorCorrectionDisable() {
         stateScope.launch {

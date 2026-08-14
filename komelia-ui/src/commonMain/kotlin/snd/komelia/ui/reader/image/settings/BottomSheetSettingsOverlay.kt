@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.ViewStream
@@ -344,6 +345,9 @@ fun BottomSheetSettingsOverlay(
                     ocrSettings = commonReaderState.ocrSettings.collectAsState().value,
                     onOcrSettingsChange = commonReaderState::onOcrSettingsChange,
                     isOcrLoading = commonReaderState.isOcrLoading.collectAsState().value,
+                    translationSettings = commonReaderState.translationSettings.collectAsState().value,
+                    onTranslationSettingsChange = commonReaderState::onTranslationSettingsChange,
+                    isTranslating = commonReaderState.isTranslating.collectAsState().value,
                     onSettingsClick = { showSettingsDialog = true },
                     onNotesClick = onNotesClick,
                     onScanTextClick = {
@@ -1152,6 +1156,9 @@ fun ImageReaderControlsCardNewUI(
     ocrSettings: OcrSettings,
     onOcrSettingsChange: (OcrSettings) -> Unit,
     isOcrLoading: Boolean,
+    translationSettings: snd.komelia.settings.model.TranslationSettings,
+    onTranslationSettingsChange: (snd.komelia.settings.model.TranslationSettings) -> Unit,
+    isTranslating: Boolean,
     onSettingsClick: () -> Unit,
     onNotesClick: () -> Unit = {},
     onScanTextClick: () -> Unit = {},
@@ -1318,6 +1325,25 @@ fun ImageReaderControlsCardNewUI(
                                     onClick = { onOcrSettingsChange(ocrSettings.copy(enabled = !ocrSettings.enabled)) },
                                     icon = Icons.Rounded.TextFields,
                                     contentDescription = LocalStrings.current.ui.scanText,
+                                )
+                            }
+
+                            // Page translation. Stays on across page turns: this
+                            // is a reading mode, not a one-shot action.
+                            if (isTranslating) {
+                                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(Modifier.size(24.dp))
+                                }
+                            } else {
+                                ReaderModeIconButton(
+                                    selected = translationSettings.enabled,
+                                    onClick = {
+                                        onTranslationSettingsChange(
+                                            translationSettings.copy(enabled = !translationSettings.enabled)
+                                        )
+                                    },
+                                    icon = Icons.Default.Translate,
+                                    contentDescription = LocalStrings.current.ui.translate,
                                 )
                             }
                         }

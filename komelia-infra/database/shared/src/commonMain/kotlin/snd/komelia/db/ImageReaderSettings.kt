@@ -24,6 +24,8 @@ data class ImageReaderSettings(
     val stretchToFit: Boolean = true,
     val ncnnUpscalerSettings: NcnnUpscalerSettings = NcnnUpscalerSettings(),
     val ocrSettings: OcrSettings = OcrSettings(),
+    val translationSettings: snd.komelia.settings.model.TranslationSettings =
+        snd.komelia.settings.model.TranslationSettings(),
     val pagedScaleType: LayoutScaleType = LayoutScaleType.SCREEN,
     val pagedReadingDirection: PagedReadingDirection = PagedReadingDirection.LEFT_TO_RIGHT,
     val pagedPageLayout: PageDisplayLayout = PageDisplayLayout.SINGLE_PAGE,

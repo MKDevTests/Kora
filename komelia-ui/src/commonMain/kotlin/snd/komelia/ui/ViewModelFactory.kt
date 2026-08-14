@@ -370,6 +370,7 @@ class ViewModelFactory(
             upscaler = dependencies.upscaler,
             onnxModelDownloader = dependencies.onnxModelDownloader,
             ocrService = dependencies.ocrService,
+            translationService = dependencies.translationService,
             colorCorrectionIsActive = dependencies.colorCorrectionStep.isActive,
             bookSiblingsContext = bookSiblingsContext,
             markReadProgress = markReadProgress,
