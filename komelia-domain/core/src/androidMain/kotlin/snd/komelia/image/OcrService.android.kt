@@ -26,6 +26,9 @@ import kotlin.io.path.exists
 
 private val logger = KotlinLogging.logger { }
 
+/** Shares the reader-translation logger so one grep covers the whole path. */
+private val ocrLogger = KotlinLogging.logger("KoraTranslate")
+
 actual class OcrService {
     private val latinRecognizer by lazy { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
     private val chineseRecognizer by lazy { TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build()) }
@@ -48,6 +51,15 @@ actual class OcrService {
                 else -> komeliaImage.toBitmap()
             }
         } ?: return emptyList()
+
+        // The blocks OCR returns are in the coordinate space of THIS bitmap, while
+        // the overlay maps them through getOriginalImageSize(). If the two differ,
+        // recognition is running on a downscaled page — which is also the first
+        // thing to check when whole lines of text come back missing.
+        ocrLogger.info {
+            val declared = image.getOriginalImageSize().getOrNull()
+            "ocr input ${bitmap.width}x${bitmap.height}, overlay space ${declared?.width}x${declared?.height}"
+        }
 
         return when (settings.engine) {
             OcrEngine.ML_KIT -> recognizeWithMlKit(bitmap, settings.selectedLanguage)
