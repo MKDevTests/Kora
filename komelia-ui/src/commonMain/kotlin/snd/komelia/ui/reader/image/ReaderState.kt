@@ -1235,13 +1235,6 @@ class ReaderState(
                         if (japanese) it
                         else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
                             .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
-                            // Sentence-casing has just stripped the capital off
-                            // every proper noun that was not first in its bubble,
-                            // and a lowercase name is a common noun to the
-                            // translator: MERYL STRIFE came back "Meryl discorde".
-                            // The glossary puts its spelling back before the text
-                            // ever reaches the engine.
-                            .let { text -> glossary.restoreTerms(text) }
                     }
             }
             // Single letters and bare digits are artwork the OCR mistook for
@@ -1261,6 +1254,12 @@ class ReaderState(
             }
         if (blocks.isEmpty()) return emptyMap()
 
+        // Glossary terms leave as placeholders and come back as themselves.
+        // Capitalising them and hoping was tried first and measured on the
+        // tablet not to work: "Meryl Strife" went out spelled right and came
+        // back "Meryl Conflife".
+        val protectedBlocks = blocks.mapValues { (_, text) -> glossary.protect(text) }
+
         isTranslating.value = true
         try {
             val indices = blocks.keys.toList()
@@ -1270,7 +1269,7 @@ class ReaderState(
                     count = { it.size }
                 ) {
                     translationService.translate(
-                        texts = indices.map { blocks.getValue(it) },
+                        texts = indices.map { protectedBlocks.getValue(it).text },
                         source = settings.source,
                         target = settings.target,
                     )
@@ -1278,16 +1277,14 @@ class ReaderState(
             }
             val published = indices.zip(translated)
                 .associate { (blockIndex, text) ->
+                    // Terms first: everything downstream compares against the
+                    // original sentence, and a placeholder matches nothing in
+                    // it.
+                    val restored = protectedBlocks.getValue(blockIndex).restore(text)
                     // Honorifics survive translation, the name in front of them
                     // does not: "MAMA-SAN" came back as "Maman-san".
-                    // The engine had the term spelled right and may still have
-                    // rendered it its own way, or differently from one bubble
-                    // to the next. This is where the settled wording wins: it
-                    // runs on the output, so it is the last word.
-                    blockIndex to glossary.applyTo(
-                        snd.komelia.image.TranslationTextUtils
-                            .restoreNames(blocks.getValue(blockIndex), text)
-                    )
+                    blockIndex to snd.komelia.image.TranslationTextUtils
+                        .restoreNames(blocks.getValue(blockIndex), restored)
                 }
                 // Sound effects translate to themselves. Painting a panel over
                 // one hides the drawing to display the same word — and a blank
@@ -1326,7 +1323,15 @@ class ReaderState(
                             "${rect.width.toInt()}x${rect.height.toInt()}] " +
                             "conf=${(worst * 100).toInt()}% " +
                             "fill=${(fill * 100).toInt()}% lines=${blockBoxes.size} " +
-                            "src='${blocks.getValue(blockIndex)}' -> '$shown'"
+                            "src='${blocks.getValue(blockIndex)}' " +
+                            // Only when a term was actually held back, so the
+                            // ordinary line stays readable. This is what tells a
+                            // glossary that did nothing apart from an engine
+                            // that dropped the placeholder.
+                            (protectedBlocks.getValue(blockIndex)
+                                .takeIf { it.isProtected }
+                                ?.let { "sent='${it.text}' " } ?: "") +
+                            "-> '$shown'"
                 }
             }
             return published
