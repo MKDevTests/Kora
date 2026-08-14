@@ -194,12 +194,13 @@ class ContinuousReaderState(
      * scan costs about four seconds. This is the one the scroll handler last
      * called the current page — the one the reader is actually on.
      *
-     * Written from two places because either can come first. The scroll can
-     * name a page whose image has not been decoded yet, and a page can finish
-     * decoding after it has already been named.
+     * Taken from the layout in [updateVisibleImages] rather than from
+     * [onCurrentPageChange]. That one only fires on a transition — the first or
+     * last visible page changing — so a reader who opens a webtoon and does not
+     * scroll never produces one, and nothing was ever scanned. This runs on
+     * every scroll tick and on every page decode, including the first.
      */
     val currentPageImage = MutableStateFlow<ReaderImage?>(null)
-    private var currentPageId: PageId? = null
 
     suspend fun initialize() {
 
@@ -366,8 +367,6 @@ class ContinuousReaderState(
 
     suspend fun onCurrentPageChange(page: PageMetadata) {
         val booksState = readerState.booksState.value ?: return
-        currentPageId = page.toPageId()
-        currentPageImage.value = imagesInUse[page.toPageId()]
         when (page.bookId) {
             booksState.nextBook?.id -> {
                 if (stopAtEnd && !endOfBookAcked.value) {
@@ -799,6 +798,21 @@ class ContinuousReaderState(
         val visiblePages = visibleItems.filter { it.key is PageMetadata }.map { it.key as PageMetadata }
         val visibleImages = visiblePages.associateWith { page -> imagesInUse[page.toPageId()] }
 
+        // The page the reader is on: the one covering most of the viewport, not
+        // the first or the last of the visible ones. On a webtoon a single page
+        // is often taller than the screen and the one below it shows a sliver,
+        // and scanning that sliver instead would be four seconds spent on a page
+        // nobody is reading.
+        val viewportStart = lazyListState.layoutInfo.viewportStartOffset
+        val viewportEnd = lazyListState.layoutInfo.viewportEndOffset
+        currentPageImage.value = visibleItems
+            .filter { it.key is PageMetadata }
+            .maxByOrNull { item ->
+                (item.offset + item.size).coerceAtMost(viewportEnd) -
+                        item.offset.coerceAtLeast(viewportStart)
+            }
+            ?.let { imagesInUse[(it.key as PageMetadata).toPageId()] }
+
         val scale = screenScaleState.transformation.value.scale
         val firstItemOffset = lazyListState.firstVisibleItemScrollOffset
 
@@ -1083,7 +1097,6 @@ class ContinuousReaderState(
         stateScope.launch {
             imagesInUse[page.toPageId()] = image
             if (page.size == null) updatePageSize(page, image)
-            if (page.toPageId() == currentPageId) currentPageImage.value = image
             updateVisibleImages()
             imageDisplayFlow.emit(image)
         }
@@ -1091,7 +1104,6 @@ class ContinuousReaderState(
 
     fun onPageDispose(page: PageMetadata) {
         val cacheKey = page.toPageId()
-        if (cacheKey == currentPageId) currentPageImage.value = null
         val image = imagesInUse.remove(cacheKey)
         if (image != null && imageCache.get(cacheKey) == null) {
             image.close()
