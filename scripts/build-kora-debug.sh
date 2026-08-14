@@ -82,15 +82,46 @@ run_assemble
 BUILD_STATUS=$?
 set -e
 
+# Modules whose build dir holds a stale dex, taken from the error text itself:
+#   ERROR: /path/to/<module>/build/.transforms/<hash>/... is defined multiple times
+# Printed one per line, repo-relative.
+stale_dex_modules() {
+    grep -o "[^ ]*/build/\.transforms/" "$BUILD_LOG" \
+        | sed "s#^$REPO_ROOT/##; s#/build/\.transforms/\$##" \
+        | sort -u
+}
+
 if [[ $BUILD_STATUS -ne 0 ]] && grep -q "is defined multiple times" "$BUILD_LOG"; then
     echo ""
-    echo "==> Stale dex transforms detected. Stopping the daemon, purging and retrying once."
+    echo "==> RECOVERY 1/2: stale dex transforms. Stopping the daemon, purging .transforms, retrying."
     "$GRADLEW" --stop >/dev/null 2>&1 || true
     find . -type d -name ".transforms" -path "*/build/*" -prune -exec rm -rf {} + 2>/dev/null || true
     set +e
     run_assemble
     BUILD_STATUS=$?
     set -e
+fi
+
+# Purging .transforms is not always enough: the per-class dex can also be stale
+# in the module's own build dir, and the transform is then rebuilt from it.
+# Removing the build dir of just the modules named in the error is the reliable
+# fix, and costs one module recompile rather than a full clean. jniLibs live in
+# src/androidMain/jniLibs and are untouched by this.
+if [[ $BUILD_STATUS -ne 0 ]] && grep -q "is defined multiple times" "$BUILD_LOG"; then
+    MODULES="$(stale_dex_modules)"
+    if [[ -n "$MODULES" ]]; then
+        echo ""
+        echo "==> RECOVERY 2/2: still stale. Removing the build dir of:"
+        echo "$MODULES" | sed 's/^/      /'
+        "$GRADLEW" --stop >/dev/null 2>&1 || true
+        while read -r module; do
+            [[ -n "$module" && -d "$module/build" ]] && rm -rf "$module/build"
+        done <<< "$MODULES"
+        set +e
+        run_assemble
+        BUILD_STATUS=$?
+        set -e
+    fi
 fi
 
 [[ $BUILD_STATUS -ne 0 ]] && exit "$BUILD_STATUS"
