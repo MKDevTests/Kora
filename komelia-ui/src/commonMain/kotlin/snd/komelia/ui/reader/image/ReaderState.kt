@@ -99,6 +99,9 @@ typealias SpreadIndex = Int
 
 private val logger = KotlinLogging.logger {}
 
+/** Own logger so a page's translation blocks can be grepped on their own. */
+private val translationLogger = KotlinLogging.logger("KoraTranslate")
+
 /**
  * Minimum height/width ratio for a page to count as "webtoon-tall".
  *
@@ -1038,6 +1041,20 @@ class ReaderState(
             }
             if (ocrPageId.value != pageId) return
             translatedBlocks.value = indices.zip(translated).toMap()
+
+            // Diagnostic dump: which blocks exist, where they are and what came
+            // back. Bubbles that look untranslated on screen are either a block
+            // the OCR split, a rect smaller than the bubble, or a translation
+            // that came back unchanged — and only this tells the three apart.
+            //     adb logcat | Select-String "KoraTranslate"
+            indices.forEachIndexed { i, blockIndex ->
+                val rect = boxes.first { it.blockIndex == blockIndex }.blockRect
+                translationLogger.info {
+                    "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
+                            "${rect.width.toInt()}x${rect.height.toInt()}] " +
+                            "src='${blocks.getValue(blockIndex)}' -> '${translated[i]}'"
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
