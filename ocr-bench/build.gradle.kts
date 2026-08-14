@@ -26,13 +26,14 @@ kotlin {
     sourceSets {
         main {
             kotlin.srcDir("../komelia-domain/core/src/commonMain/kotlin")
-            // Nothing else from that tree: these three have no dependency beyond
+            // Nothing else from that tree: these have no dependency beyond
             // compose's Rect and the standard library, while their neighbours
             // pull in the whole app.
             kotlin.include(
                 "snd/komelia/image/OcrElementBox.kt",
                 "snd/komelia/image/OcrMergeUtils.kt",
                 "snd/komelia/image/TranslationTextUtils.kt",
+                "snd/komelia/image/TermGlossary.kt",
             )
         }
     }
