@@ -209,9 +209,7 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
         // Every group this line reaches, not just the first: a wide line can
         // bridge two groups that do not touch each other, and they are then one
         // bubble. Taking only the first would leave the far side split off.
-        val hits = groups.filter { group ->
-            group.any { it.left < rect.right && rect.left < it.right }
-        }
+        val hits = groups.filter { group -> group.any { sharesColumn(it, rect) } }
         if (hits.isEmpty()) {
             groups.add(mutableListOf(rect))
         } else {
@@ -235,6 +233,42 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
         )
         Segment(rect, elements.toMutableList())
     }
+}
+
+/**
+ * How much of the narrower of two lines has to sit under the wider one before
+ * they count as belonging to the same stack.
+ *
+ * Swept over a 203-page volume: 0.20 splits 36 blocks, 0.30 splits 51, 0.35 and
+ * 0.40 both split 58, 0.50 splits 66. No cliff anywhere, so the exact value is
+ * not load-bearing.
+ */
+private const val MIN_COLUMN_OVERLAP = 0.35f
+
+/**
+ * Whether two lines are stacked over each other rather than merely touching.
+ *
+ * Sharing a single column of pixels used to be enough, and that is how drawn
+ * lettering next to a bubble gets read as a word of the sentence. On page 17 of
+ * 100 Girlfriends, QUIVER is lettered twice down the right of a bubble to show
+ * the character shaking. Its box laps over the widest line of dialogue by 18
+ * pixels out of its own 172, which was enough to count as the same stack, and
+ * sorting by top edge then dropped it into the middle of the sentence:
+ *
+ *     I'M THE WORST! I'VE ALREADY HURT MY PRECIOUS QUIVER SOULMATE!
+ *     GET YOUR ACT QUIVER TOGETHER, DANG IT!!
+ *
+ * No translator recovers that, and quiver in French becomes the thing you keep
+ * arrows in. Lettering that illustrates a gesture is not part of the dialogue
+ * and must never reach the translator.
+ *
+ * Four pixels of overlap out of 135 was also enough to join 'SORRY.' to
+ * 'NOTHING, REALLY.' — two separate bubbles, translated as one sentence.
+ */
+private fun sharesColumn(a: Rect, b: Rect): Boolean {
+    val overlap = min(a.right, b.right) - max(a.left, b.left)
+    if (overlap <= 0f) return false
+    return overlap >= min(a.width, b.width) * MIN_COLUMN_OVERLAP
 }
 
 /** Below this share of the page width, a block is small enough to trust. */

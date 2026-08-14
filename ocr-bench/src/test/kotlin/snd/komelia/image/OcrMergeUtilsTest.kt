@@ -153,6 +153,45 @@ class OcrMergeUtilsTest {
     }
 
     @Test
+    fun `lettering drawn beside a bubble never lands inside the sentence`() {
+        // 100 Girlfriends 01 page 017. QUIVER is lettered twice down the right
+        // of the bubble to show the character shaking. Both boxes lap over the
+        // dialogue by a tenth to a quarter of their own width, which was enough
+        // to count as the same stack, and sorting by top edge then dropped them
+        // into the middle of the sentence.
+        val boxes = listOf(
+            line("I'M THE", 481, 2386, 652, 2445, 0),
+            line("WORST!", 482, 2429, 649, 2480, 1),
+            line("I'VE", 519, 2467, 615, 2513, 2),
+            line("ALREADY", 474, 2501, 660, 2552, 3),
+            line("HURT MY", 471, 2535, 661, 2590, 4),
+            line("PRECIOUS", 461, 2572, 672, 2624, 5),
+            line("SOULMATE!", 453, 2611, 679, 2663, 6),
+            line("QUIVER", 661, 2610, 833, 2719, 7),
+            line("GET", 352, 2661, 446, 2715, 8),
+            line("YOUR ACT", 299, 2703, 499, 2751, 9),
+            line("TOGETHER,", 289, 2738, 499, 2789, 10),
+            line("QUIVER", 631, 2714, 813, 2838, 11),
+            line("DANG IT!!", 298, 2774, 495, 2825, 12),
+        )
+
+        val blocks = blocksOf(boxes)
+
+        assertTrue(
+            blocks.none { "QUIVER" in it && "SOULMATE" in it },
+            "the gesture lettering is still inside the dialogue: $blocks",
+        )
+        assertTrue(
+            blocks.any { it == "I'M THE WORST! I'VE ALREADY HURT MY PRECIOUS SOULMATE!" },
+            "the first sentence did not come out clean: $blocks",
+        )
+        assertTrue(
+            blocks.any { it == "GET YOUR ACT TOGETHER, DANG IT!!" },
+            "the second sentence did not come out clean: $blocks",
+        )
+    }
+
+    @Test
     fun `a merged block never grows past the lines it contains`() {
         // The panel is painted over blockRect, so this is the giant black
         // rectangle across the drawing, expressed as a test.
