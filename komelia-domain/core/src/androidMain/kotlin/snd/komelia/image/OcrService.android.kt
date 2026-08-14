@@ -39,11 +39,15 @@ actual class OcrService {
     }
 
     actual suspend fun recognizeText(image: ReaderImage, settings: OcrSettings): List<OcrElementBox> {
-        val komeliaImage = image.getOriginalImage().getOrNull() ?: return emptyList()
-        val bitmap = when (komeliaImage) {
-            is AndroidBitmapBackedImage -> komeliaImage.bitmap
-            else -> komeliaImage.toBitmap()
-        }
+        // Measured apart from recognition itself: a slow scan can be the full-size
+        // decode rather than the OCR engine, and the two need different fixes.
+        val bitmap = snd.komelia.perf.PerfTrace.measure("reader.ocr.bitmap") {
+            val komeliaImage = image.getOriginalImage().getOrNull() ?: return@measure null
+            when (komeliaImage) {
+                is AndroidBitmapBackedImage -> komeliaImage.bitmap
+                else -> komeliaImage.toBitmap()
+            }
+        } ?: return emptyList()
 
         return when (settings.engine) {
             OcrEngine.ML_KIT -> recognizeWithMlKit(bitmap, settings.selectedLanguage)

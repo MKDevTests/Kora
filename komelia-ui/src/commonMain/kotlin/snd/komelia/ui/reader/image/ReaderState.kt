@@ -925,11 +925,25 @@ class ReaderState(
             ocrPageId.value = image.pageId
             isOcrLoading.value = true
             try {
+                // Measured (KoraPerf) even though it is per-page: OCR only runs when
+                // the user has explicitly enabled it, so this is not on the normal
+                // reading path. The engine is part of the label so ML Kit and
+                // RapidOCR can be compared from the same log.
+                val settings = ocrSettings.value
                 val rawBoxes = withContext(Dispatchers.Default) {
-                    ocrService.recognizeText(image, ocrSettings.value)
+                    snd.komelia.perf.PerfTrace.measure(
+                        "reader.ocr.${settings.engine}",
+                        count = { it.size }
+                    ) { ocrService.recognizeText(image, settings) }
                 }
-                ocrResults.value = if (ocrSettings.value.mergeBoxes) {
-                    mergeOcrBoxes(rawBoxes, readingDirection.value)
+                // Deliberately left on the caller's dispatcher (the main thread) for
+                // this measurement pass: mergeOcrBoxes is O(n^2) over the boxes and we
+                // want to know what it actually costs there before moving it.
+                ocrResults.value = if (settings.mergeBoxes) {
+                    snd.komelia.perf.PerfTrace.measure(
+                        "reader.ocr.merge",
+                        count = { it.size }
+                    ) { mergeOcrBoxes(rawBoxes, readingDirection.value) }
                 } else rawBoxes
             } catch (e: CancellationException) {
                 throw e
