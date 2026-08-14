@@ -21,35 +21,27 @@ enum class OcrLanguage {
 }
 
 /**
- * ML Kit is no longer offered in the UI: on comic pages it misses whole
- * bubbles, which is a detection weakness no setting fixes. The value stays so
- * that settings persisted before that decision still deserialise, and the
- * implementation stays as the only engine that needs no model download.
+ * One engine. ML Kit was removed: on comic pages it missed whole bubbles, a
+ * detection weakness no setting fixed, and PP-OCRv6 reads the same pages.
+ *
+ * A row still holding "ML_KIT" is read back as [RAPID_OCR] — see the enum
+ * lookup in ExposedImageReaderSettingsRepository, which falls back rather than
+ * throwing on a name that no longer exists.
  */
 @Serializable
 enum class OcrEngine {
-    ML_KIT,
     RAPID_OCR
 }
 
 @Serializable
 enum class RapidOcrModel {
     /**
-     * PP-OCRv6 small, two generations ahead of the v4 models below: it detects
-     * the bubbles the others miss, and covers 50 languages (English, Japanese
-     * and the Latin scripts) with a single recogniser. Needs the v6 bundle —
-     * see RAPID_OCR_MODELS_DEFAULT_URL.
+     * PP-OCRv6 small, two generations ahead of the v4 models it replaced: it
+     * detects the bubbles they missed, and covers 50 languages (English,
+     * Japanese and the Latin scripts) with a single recogniser instead of one
+     * model per script. Needs the v6 bundle — see RAPID_OCR_MODELS_DEFAULT_URL.
+     *
+     * A row still naming one of the old v4 models is read back as this one.
      */
-    PP_OCR_V6_SMALL,
-
-    // v4 models, kept only so that a setting persisted before v6 arrived still
-    // deserialises. They are not offered in the UI: v6 reads the same pages
-    // better and covers every language they split between them.
-    ENGLISH_CHINESE,
-    ENGLISH_ONLY,
-    LATIN_MULTILINGUAL,
-    JAPANESE,
-    KOREAN,
-    ARABIC,
-    HEBREW
+    PP_OCR_V6_SMALL
 }

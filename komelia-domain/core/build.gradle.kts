@@ -65,12 +65,7 @@ kotlin {
         androidMain.dependencies {
             api(libs.androidx.datastore)
             implementation(libs.androidx.appcompat)
-            implementation(libs.mlkit.text.recognition)
             implementation(libs.mlkit.translate)
-            implementation(libs.mlkit.text.recognition.chinese)
-            implementation(libs.mlkit.text.recognition.devanagari)
-            implementation(libs.mlkit.text.recognition.japanese)
-            implementation(libs.mlkit.text.recognition.korean)
             implementation(libs.rapidocr.android)
             // Explicit: BubbleInvertStep uses the ai.onnxruntime JAVA API for the
             // speech-bubble detector. It arrives transitively via rapidocr, but a

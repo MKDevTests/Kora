@@ -56,8 +56,11 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
 
     val ocrEnabled = bool("ocr_enabled").default(false)
     val ocrLanguage = text("ocr_language").default("LATIN")
-    val ocrEngine = text("ocr_engine").default("ML_KIT")
-    val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("ENGLISH_CHINESE")
+    // Defaults for rows created from now on. Existing rows keep whatever they
+    // hold — they are read through enumOrDefault, which maps a name that no
+    // longer exists onto the current one.
+    val ocrEngine = text("ocr_engine").default("RAPID_OCR")
+    val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("PP_OCR_V6_SMALL")
     val ocrMergeBoxes = bool("ocr_merge_boxes").default(true)
     val translationEnabled = bool("translation_enabled").default(false)
     val translationSource = text("translation_source").default("ENGLISH")

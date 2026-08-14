@@ -53,9 +53,20 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         ),
                         ocrSettings = OcrSettings(
                             enabled = it[ImageReaderSettingsTable.ocrEnabled],
-                            selectedLanguage = OcrLanguage.valueOf(it[ImageReaderSettingsTable.ocrLanguage]),
-                            engine = OcrEngine.valueOf(it[ImageReaderSettingsTable.ocrEngine]),
-                            rapidOcrModel = RapidOcrModel.valueOf(it[ImageReaderSettingsTable.ocrRapidOcrModel]),
+                            // Names that no longer exist fall back instead of
+                            // throwing: engines and models have been dropped
+                            // (ML Kit, the v4 model family) and valueOf on a
+                            // stale row would take the whole reader down.
+                            selectedLanguage = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrLanguage], OcrLanguage.LATIN
+                            ),
+                            engine = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrEngine], OcrEngine.RAPID_OCR
+                            ),
+                            rapidOcrModel = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrRapidOcrModel],
+                                RapidOcrModel.PP_OCR_V6_SMALL
+                            ),
                             mergeBoxes = it[ImageReaderSettingsTable.ocrMergeBoxes],
                         ),
                         translationSettings = snd.komelia.settings.model.TranslationSettings(
@@ -180,3 +191,14 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
         }
     }
 }
+
+/**
+ * Reads an enum stored by name, falling back when the name is gone.
+ *
+ * Settings rows outlive the enums that wrote them: dropping ML Kit and the v4
+ * RapidOCR models left names in the database with nothing to map to, and
+ * `valueOf` would throw there — failing the whole settings load, not just one
+ * field.
+ */
+private inline fun <reified T : Enum<T>> enumOrDefault(name: String, default: T): T =
+    enumValues<T>().firstOrNull { it.name == name } ?: default

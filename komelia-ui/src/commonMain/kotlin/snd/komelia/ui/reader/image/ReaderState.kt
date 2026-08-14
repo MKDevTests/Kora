@@ -59,10 +59,8 @@ import snd.komelia.image.mergeOcrBoxes
 import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImage.PageId
 import snd.komelia.image.ReduceKernel
-import snd.komelia.settings.model.OcrEngine
 import snd.komelia.settings.model.OcrLanguage
 import snd.komelia.settings.model.OcrSettings
-import snd.komelia.settings.model.RapidOcrModel
 import snd.komelia.image.UpsamplingMode
 import snd.komelia.image.availableReduceKernels
 import snd.komelia.image.availableUpsamplingModes
@@ -257,16 +255,7 @@ class ReaderState(
             translatedBlocks.value = emptyMap()
         }.launchIn(stateScope)
         stateScope.launch {
-            // Normalised on the way in rather than migrated in the database: the
-            // engine and model pickers are gone from the UI, so a setting saved
-            // back when they existed would strand the reader on an engine it can
-            // no longer leave.
-            readerSettingsRepository.getOcrSettings().collect {
-                ocrSettings.value = it.copy(
-                    engine = OcrEngine.RAPID_OCR,
-                    rapidOcrModel = RapidOcrModel.PP_OCR_V6_SMALL,
-                )
-            }
+            readerSettingsRepository.getOcrSettings().collect { ocrSettings.value = it }
         }
         stateScope.launch {
             readerSettingsRepository.getTranslationSettings()
