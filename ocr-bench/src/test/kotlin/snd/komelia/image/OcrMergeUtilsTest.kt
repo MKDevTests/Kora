@@ -192,6 +192,76 @@ class OcrMergeUtilsTest {
     }
 
     @Test
+    fun `a wide caption does not bridge the two bubbles beside it`() {
+        // Trigun 01 page 51, every box as the detector returned them. One block
+        // of 542x946 filling 53%, painted as an opaque panel over a quarter of
+        // the page, holding three bubbles.
+        //
+        // The caption is lettered at 86-94px and the two bubbles at 34-41px.
+        // The bubbles do not overlap each other on x at all — 1258-1431 against
+        // 889-1016 — so the column pass would separate them on its own. It is
+        // the caption, spanning 894-1427, that overlaps both and joins them.
+        val boxes = listOf(
+            line("MERYL STRIFE,", 894, 923, 1424, 1009, 0),
+            line("AND I REPRESENT", 905, 997, 1427, 1091, 1),
+            line("THE BERNARDELLI", 903, 1080, 1423, 1169, 2),
+            line("INSURANCE", 957, 1159, 1374, 1249, 3),
+            line("SOCIETY.", 1000, 1241, 1311, 1329, 4),
+            line("FREAKIN'", 1264, 1375, 1422, 1413, 5),
+            line("IDIOT!", 1288, 1408, 1395, 1443, 6),
+            line("THAT MIGHT", 1258, 1439, 1431, 1473, 7),
+            line("HAVE GOT", 1267, 1469, 1422, 1506, 8),
+            line("HIM, BUT", 1277, 1502, 1415, 1536, 9),
+            line("IT'D BLOW", 1259, 1531, 1419, 1567, 10),
+            line("HIM TO", 1290, 1563, 1400, 1598, 11),
+            line("BITS!", 1293, 1591, 1394, 1630, 12),
+            line("DO YOU", 892, 1615, 1012, 1653, 13),
+            line("THINK", 906, 1647, 997, 1683, 14),
+            line("WE'D", 911, 1678, 993, 1713, 15),
+            line("GET ANY", 889, 1710, 1016, 1744, 16),
+            line("MONEY", 899, 1741, 1006, 1775, 17),
+            line("FOR A", 902, 1768, 1005, 1809, 18),
+            line("PILE OF", 893, 1803, 1012, 1838, 19),
+            line("MEAT?", 900, 1832, 1005, 1869, 20),
+        )
+
+        val blocks = blocksOf(boxes)
+
+        assertTrue(
+            blocks.any { it == "MERYL STRIFE, AND I REPRESENT THE BERNARDELLI INSURANCE SOCIETY." },
+            "the caption did not come out whole: $blocks",
+        )
+        assertTrue(
+            blocks.any { it == "FREAKIN' IDIOT! THAT MIGHT HAVE GOT HIM, BUT IT'D BLOW HIM TO BITS!" },
+            "the right-hand bubble did not come out whole: $blocks",
+        )
+        assertTrue(
+            blocks.any { it == "DO YOU THINK WE'D GET ANY MONEY FOR A PILE OF MEAT?" },
+            "the left-hand bubble did not come out whole: $blocks",
+        )
+    }
+
+    @Test
+    fun `lines of one bubble are not split by ordinary size variation`() {
+        // The same bubble's own line heights, which vary by up to 1.1x between
+        // a line of capitals and one with a descender. Measured over 5756
+        // healthy blocks: 95% stay within 1.3x and 99% within 1.6x, which is
+        // where the split threshold sits.
+        val boxes = listOf(
+            line("MERYL STRIFE,", 894, 923, 1424, 1009, 0),
+            line("AND I REPRESENT", 905, 997, 1427, 1091, 1),
+            line("THE BERNARDELLI", 903, 1080, 1423, 1169, 2),
+            line("INSURANCE", 957, 1159, 1374, 1249, 3),
+            line("SOCIETY.", 1000, 1241, 1311, 1329, 4),
+        )
+
+        assertEquals(
+            listOf("MERYL STRIFE, AND I REPRESENT THE BERNARDELLI INSURANCE SOCIETY."),
+            blocksOf(boxes),
+        )
+    }
+
+    @Test
     fun `a merged block never grows past the lines it contains`() {
         // The panel is painted over blockRect, so this is the giant black
         // rectangle across the drawing, expressed as a test.

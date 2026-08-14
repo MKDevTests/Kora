@@ -114,11 +114,17 @@ fun mergeOcrBoxes(
         else currentSegments
             .flatMap { splitIntoColumns(it) }
             .flatMap { peelOversizedLines(it) }
+            // A caption in large lettering can be wide enough to overlap two
+            // small bubbles either side of it, and a line that bridges two
+            // groups joins them — right for a bubble with one long line, wrong
+            // here. Separating the sizes gives the column pass below two groups
+            // it can actually tell apart.
+            .flatMap { splitByLineSize(it) }
             // Again, because a sound effect drawn across the page is wide enough
             // to be the only thing two bubbles had in common: taking it out
             // leaves them as two groups that no longer touch.
             .flatMap { splitIntoColumns(it) }
-            // Last of the four, because each of the steps above takes something
+            // Last of the five, because each of the steps above takes something
             // out of a block, and what is left can be wide and mostly empty when
             // the whole of it was not. A volume title across the top of a page,
             // with a line of blurb and two stray runs of katakana under it,
@@ -346,6 +352,68 @@ private fun peelOversizedLines(segment: Segment): List<Segment> {
         elements = kept.flatMap { lines.getValue(it) }.toMutableList(),
     )
     return oversized.map { Segment(it, lines.getValue(it).toMutableList()) } + keptSegment
+}
+
+/**
+ * How much taller one line has to be than the next shorter one before they
+ * count as two different pieces of lettering rather than one.
+ */
+private const val SIZE_BREAK_RATIO = 1.6f
+
+/**
+ * Splits a block into groups of lines set at the same size.
+ *
+ * Page 51 of Trigun 01 is the case this was written for. One block, 542x946,
+ * filling 53%, painted as an opaque panel over a quarter of the page, holding
+ * three separate bubbles:
+ *
+ *     MERYL STRIFE, ... SOCIETY.   x  894-1427   line height 86-94
+ *     FREAKIN' ... BITS!           x 1258-1431   line height 34-39
+ *     DO YOU ... MEAT?             x  889-1016   line height 34-41
+ *
+ * The last two sit side by side and [splitIntoColumns] would have separated
+ * them on its own — but the first is wide enough to overlap both, and a line
+ * that bridges two groups joins them, deliberately, because that is how a
+ * bubble with one long line stays whole. Nothing on the x axis can tell the two
+ * situations apart.
+ *
+ * Nor can anything on the y axis: the lines of all three overlap vertically,
+ * every interval between them is negative, and there is exactly one positive
+ * gap in the whole block. Bubbles drawn touching leave no gap to find.
+ *
+ * What does separate them is that a bubble is lettered at one size. Splitting
+ * on the biggest jump in line height leaves the caption whole and hands the two
+ * small bubbles back to the column pass, which then does see them apart.
+ *
+ * Unlike [peelOversizedLines] this keeps each group together, because a group
+ * here is a bubble rather than a sound effect: peeling these five lines apart
+ * would translate one caption as five fragments.
+ */
+private fun splitByLineSize(segment: Segment): List<Segment> {
+    val lines = segment.elements.groupBy { it.blockRect }
+    if (lines.size < 2) return listOf(segment)
+
+    val bySize = lines.keys.sortedBy { it.height }
+    // The first jump big enough to be a change of lettering, taken from the
+    // smallest up. One cut, not many: a block holding three sizes is rare, and
+    // whatever is left over comes back through here on the next pass anyway.
+    val breakAt = (1 until bySize.size).firstOrNull { index ->
+        val below = bySize[index - 1].height
+        below > 0f && bySize[index].height >= below * SIZE_BREAK_RATIO
+    } ?: return listOf(segment)
+
+    return listOf(bySize.subList(0, breakAt), bySize.subList(breakAt, bySize.size))
+        .map { group ->
+            Segment(
+                rect = Rect(
+                    left = group.minOf { it.left },
+                    top = group.minOf { it.top },
+                    right = group.maxOf { it.right },
+                    bottom = group.maxOf { it.bottom },
+                ),
+                elements = group.flatMap { lines.getValue(it) }.toMutableList(),
+            )
+        }
 }
 
 /** Share of [rect] covered by the boxes of [elements], overlaps counted twice. */

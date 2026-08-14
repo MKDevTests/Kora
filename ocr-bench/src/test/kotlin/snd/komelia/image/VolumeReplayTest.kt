@@ -44,12 +44,26 @@ class VolumeReplayTest {
 
     @Test
     fun `replay the captured volume`() {
-        val dir = System.getenv("KORA_BENCH_DIR")?.let(::File)
-        if (dir == null || !dir.isDirectory) {
+        // Several directories, comma-separated, are replayed in one run. Not a
+        // convenience: sweeping a threshold means replaying every volume for
+        // every value, and paying Gradle's start-up once per volume turns a
+        // four-value sweep into half an hour of waiting rather than two minutes
+        // of measuring.
+        val dirs = System.getenv("KORA_BENCH_DIR")
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.map(::File)
+            ?.filter { it.isDirectory }
+            .orEmpty()
+        if (dirs.isEmpty()) {
             println("KORA_BENCH_DIR not set — skipping the volume replay")
             return
         }
+        dirs.forEach { replay(it) }
+    }
 
+    private fun replay(dir: File) {
         val pages = dir.listFiles { f -> f.name.endsWith(".boxes.json") }
             ?.sortedBy { it.name }
             ?: emptyList()
