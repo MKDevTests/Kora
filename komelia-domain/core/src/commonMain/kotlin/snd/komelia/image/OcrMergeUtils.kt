@@ -211,27 +211,12 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
     // when A and C do not touch. A bubble with one short centred line still
     // comes out whole.
     val groups = mutableListOf<MutableList<Rect>>()
-    // Narrowest first, so the columns exist before anything wide is offered to
-    // them. This ordering is what makes the cap below mean anything: without a
-    // cap the accumulation is a union-find and the order cannot matter, and
-    // sorted by left edge — as it was — the wide line arrives before the groups
-    // it would bridge exist, so it never reaches more than one and the cap
-    // never fires. Measured over the eight replayed volumes: sorting by width
-    // with no cap gives exactly the old numbers, and capping under the old sort
-    // gave exactly the old numbers too. Only the two together move anything.
-    for (rect in lines.keys.sortedBy { it.width }) {
+    for (rect in lines.keys.sortedBy { it.left }) {
         // Every group this line reaches, not just the first: a wide line can
         // bridge two groups that do not touch each other, and they are then one
         // bubble. Taking only the first would leave the far side split off.
         val hits = groups.filter { group -> group.any { sharesColumn(it, rect) } }
-        if (hits.isEmpty() || hits.size > MAX_BRIDGED_GROUPS) {
-            // Past the limit the line is not part of any of them, it is lying
-            // across all of them. Page 16 of Servant x Service volume 4: three
-            // columns of dialogue at 91-251, 271-347 and 389-490, none of them
-            // touching each other, and one caption spanning 130-456 that joins
-            // all three into a block filling 51% of a quarter of the page.
-            // Unlike the Trigun case the lettering is all one size, so nothing
-            // separates them except how many groups the line reaches.
+        if (hits.isEmpty()) {
             groups.add(mutableListOf(rect))
         } else {
             val target = hits.first()
@@ -265,22 +250,6 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
  * not load-bearing.
  */
 private const val MIN_COLUMN_OVERLAP = 0.35f
-
-/**
- * How many separate groups one line may join before it counts as lying across
- * them rather than belonging to them.
- *
- * Two is the bubble with one long line, which is why bridging exists at all: a
- * short centred line and a wide one under it are one bubble and have to stay
- * whole. Three is a caption over columns that have nothing else in common.
- *
- * One is tempting and wrong. Over the eight volumes it looks far better on the
- * fault counts — the big sparse blocks drop from 15 to 2 and the many-lined
- * ones from 83 to 14 — but it adds 901 blocks, and 836 of those are single
- * lines. That is not unwelding bubbles, it is stranding their lines. Two adds
- * 56 blocks of which 38 hold three lines or more.
- */
-private const val MAX_BRIDGED_GROUPS = 2
 
 /**
  * Whether two lines are stacked over each other rather than merely touching.
