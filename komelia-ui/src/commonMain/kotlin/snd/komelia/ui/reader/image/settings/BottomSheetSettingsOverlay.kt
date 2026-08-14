@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -67,10 +68,13 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -547,6 +551,7 @@ fun BottomSheetSettingsOverlay(
                                 translationSettings = commonReaderState.translationSettings
                                     .collectAsState().value,
                                 onTranslationSettingsChange = commonReaderState::onTranslationSettingsChange,
+                                commonReaderState = commonReaderState,
                             )
                         }
                     }
@@ -1501,6 +1506,7 @@ private fun OcrModeSettings(
     onOcrSettingsChange: (OcrSettings) -> Unit,
     translationSettings: snd.komelia.settings.model.TranslationSettings,
     onTranslationSettingsChange: (snd.komelia.settings.model.TranslationSettings) -> Unit,
+    commonReaderState: ReaderState,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SwitchWithLabel(
@@ -1578,6 +1584,84 @@ private fun OcrModeSettings(
             },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
+
+        HorizontalDivider()
+        SeriesGlossarySettings(commonReaderState)
+    }
+}
+
+/**
+ * Per-series terms the translator must not decide for itself.
+ *
+ * Lives in the reader rather than in a settings screen because this is where a
+ * wrong term is seen: the bubble that says "Meryl discorde" is on screen while
+ * the sheet is open.
+ */
+@Composable
+private fun SeriesGlossarySettings(
+    commonReaderState: ReaderState,
+) {
+    val terms = commonReaderState.glossaryTerms.collectAsState().value
+    // Loaded when the tab is first shown rather than with the book: most
+    // reading sessions never open this.
+    LaunchedEffect(Unit) { commonReaderState.refreshGlossaryTerms() }
+
+    var source by remember { mutableStateOf("") }
+    var target by remember { mutableStateOf("") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Glossary for this series")
+        Text(
+            "A term the translator keeps getting wrong. Leave the translation " +
+                    "empty to keep the word as it is, which is what a name needs.",
+            style = MaterialTheme.typography.labelMedium,
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = source,
+                onValueChange = { source = it },
+                label = { Text("Term") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = target,
+                onValueChange = { target = it },
+                label = { Text("Translation") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        TextButton(
+            enabled = source.isNotBlank(),
+            onClick = {
+                commonReaderState.addGlossaryTerm(source, target)
+                source = ""
+                target = ""
+            },
+        ) { Text("Add term") }
+
+        terms.forEach { term ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    // A name-only entry has nothing to show on the right, and an
+                    // arrow to itself reads as a mistake.
+                    if (term.isNameOnly) term.source else "${term.source}  →  ${term.target}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { commonReaderState.removeGlossaryTerm(term.source) }) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Remove ${term.source}")
+                }
+            }
+        }
     }
 }
 

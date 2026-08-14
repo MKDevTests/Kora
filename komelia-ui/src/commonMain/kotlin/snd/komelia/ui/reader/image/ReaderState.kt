@@ -142,6 +142,7 @@ class ReaderState(
     private val imageLoader: BookImageLoader,
     private val ocrService: OcrService,
     private val translationService: snd.komelia.image.TranslationService,
+    private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
     /**
      * Whether the ONNX panel detector is loaded and usable. When false, webtoon
      * routing falls back to CONTINUOUS instead of PANELS (PANELS needs the
@@ -220,6 +221,14 @@ class ReaderState(
     /** Translated text per OCR block index, for the page in [ocrPageId]. */
     val translatedBlocks = MutableStateFlow<Map<Int, String>>(emptyMap())
     val isTranslating = MutableStateFlow(false)
+
+    /**
+     * Glossary terms belonging to the series on screen, for the editor in the
+     * reader settings. Global terms are deliberately not listed: this is the
+     * place where a bad translation is noticed, and what is noticed there is
+     * always about this series.
+     */
+    val glossaryTerms = MutableStateFlow<List<snd.komelia.translation.GlossaryTerm>>(emptyList())
     val readingDirection = MutableStateFlow(ReadingDirection.LTR)
 
     val tapNavigationMode = MutableStateFlow(ReaderTapNavigationMode.LEFT_RIGHT)
@@ -1111,6 +1120,83 @@ class ReaderState(
     }
 
 
+    /** Reloads [glossaryTerms] for the series on screen. */
+    fun refreshGlossaryTerms() {
+        stateScope.launch {
+            val seriesId = booksState.value?.currentBook?.seriesId
+            glossaryTerms.value = try {
+                translationGlossaryRepository.list(seriesId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.warn(e) { "could not list the translation glossary" }
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Adds or replaces a term for the series on screen. A blank [target] means
+     * "leave this word alone", which is what a name needs.
+     *
+     * Does not re-scan the current page: the scan cache still holds the old
+     * translation, and re-running OCR to repaint one bubble costs seconds. The
+     * term applies from the next page on.
+     */
+    fun addGlossaryTerm(source: String, target: String) {
+        if (source.isBlank()) return
+        stateScope.launch {
+            val seriesId = booksState.value?.currentBook?.seriesId
+            try {
+                translationGlossaryRepository.put(seriesId, source, target)
+                glossaryTerms.value = translationGlossaryRepository.list(seriesId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                appNotifications.add(AppNotification.Error("Could not save the term: ${e.message}"))
+            }
+        }
+    }
+
+    fun removeGlossaryTerm(source: String) {
+        stateScope.launch {
+            val seriesId = booksState.value?.currentBook?.seriesId
+            try {
+                translationGlossaryRepository.delete(seriesId, source)
+                glossaryTerms.value = translationGlossaryRepository.list(seriesId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                appNotifications.add(AppNotification.Error("Could not remove the term: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * The terms in force for the book on screen: the global ones, overridden by
+     * the ones its own series defines.
+     *
+     * Read from [booksState] rather than from [series], because a read list
+     * walks across series and [series] follows the book — but only once it has
+     * loaded, and a scan can start before that.
+     */
+    private suspend fun glossaryForCurrentSeries(): snd.komelia.image.TermGlossary {
+        val seriesId = booksState.value?.currentBook?.seriesId
+        val terms = try {
+            translationGlossaryRepository.termsFor(seriesId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A glossary that cannot be read is not worth losing the page's
+            // translation over: without it the text is merely as good as it was
+            // before the feature existed.
+            logger.warn(e) { "could not read the translation glossary" }
+            emptyMap()
+        }
+        return if (terms.isEmpty()) snd.komelia.image.TermGlossary.EMPTY
+        else snd.komelia.image.TermGlossary(terms)
+    }
+
     /**
      * Translates the OCR blocks of a page that was just scanned, when page
      * translation is on. Returns what should be painted rather than publishing
@@ -1126,6 +1212,12 @@ class ReaderState(
         if (settings.source == settings.target) return emptyMap()
 
         val japanese = settings.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
+
+        // Read on every scan rather than held per book: the query is a handful
+        // of rows on a primary key, next to nothing beside the OCR that just
+        // ran, and it means a term added from the glossary screen applies to
+        // the very next page instead of after leaving the reader.
+        val glossary = glossaryForCurrentSeries()
         val blocks = boxes
             .groupBy { it.blockIndex }
             .mapValues { (_, elements) ->
@@ -1143,6 +1235,13 @@ class ReaderState(
                         if (japanese) it
                         else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
                             .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
+                            // Sentence-casing has just stripped the capital off
+                            // every proper noun that was not first in its bubble,
+                            // and a lowercase name is a common noun to the
+                            // translator: MERYL STRIFE came back "Meryl discorde".
+                            // The glossary puts its spelling back before the text
+                            // ever reaches the engine.
+                            .let { text -> glossary.restoreTerms(text) }
                     }
             }
             // Single letters and bare digits are artwork the OCR mistook for
@@ -1181,8 +1280,14 @@ class ReaderState(
                 .associate { (blockIndex, text) ->
                     // Honorifics survive translation, the name in front of them
                     // does not: "MAMA-SAN" came back as "Maman-san".
-                    blockIndex to snd.komelia.image.TranslationTextUtils
-                        .restoreNames(blocks.getValue(blockIndex), text)
+                    // The engine had the term spelled right and may still have
+                    // rendered it its own way, or differently from one bubble
+                    // to the next. This is where the settled wording wins: it
+                    // runs on the output, so it is the last word.
+                    blockIndex to glossary.applyTo(
+                        snd.komelia.image.TranslationTextUtils
+                            .restoreNames(blocks.getValue(blockIndex), text)
+                    )
                 }
                 // Sound effects translate to themselves. Painting a panel over
                 // one hides the drawing to display the same word — and a blank
