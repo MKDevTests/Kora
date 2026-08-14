@@ -3,6 +3,8 @@ package snd.komelia.bench
 import android.app.Activity
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
+import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,8 +30,19 @@ import java.io.File
  */
 class TranslationBenchActivity : Activity() {
 
+    private lateinit var status: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Shown rather than hidden: an invisible activity is killed halfway
+        // through, and there is no other signal that the run is still going.
+        status = TextView(this).apply {
+            gravity = Gravity.CENTER
+            textSize = 18f
+            text = "starting…"
+        }
+        setContentView(status)
 
         val directory = getExternalFilesDir(null)
         val input = File(directory, intent.getStringExtra("in") ?: "bench-in.txt")
@@ -38,20 +51,23 @@ class TranslationBenchActivity : Activity() {
         val target = language(intent.getStringExtra("target"), TranslationLanguage.FRENCH)
 
         if (!input.isFile) {
-            Log.e(TAG, "no corpus at ${input.absolutePath}")
-            finish()
+            report("no corpus at ${input.absolutePath}", error = true)
             return
         }
 
         val sentences = input.readLines()
         Log.i(TAG, "translating ${sentences.size} lines ${source.code}->${target.code}")
+        status.text = "translating ${sentences.size} lines ${source.code}->${target.code}…"
 
         CoroutineScope(Dispatchers.Default).launch {
             val service = TranslationService()
             try {
                 if (!service.isReady(source, target)) {
-                    Log.e(TAG, "${source.code}->${target.code} models are not on the device; " +
-                        "download them from the reader's translation settings first")
+                    report(
+                        "${source.code}->${target.code} models are not on the device; " +
+                            "download them from the reader's translation settings first",
+                        error = true,
+                    )
                     return@launch
                 }
                 val started = System.currentTimeMillis()
@@ -60,14 +76,24 @@ class TranslationBenchActivity : Activity() {
 
                 output.writeText(translated.joinToString("\n"))
                 val each = if (sentences.isEmpty()) 0 else elapsed / sentences.size
-                Log.i(TAG, "done in ${elapsed}ms (${each}ms each) -> ${output.absolutePath}")
+                report("done in ${elapsed}ms (${each}ms each) -> ${output.absolutePath}")
             } catch (e: Throwable) {
                 Log.e(TAG, "bench failed", e)
+                report("bench failed: $e", error = true)
             } finally {
                 service.release()
-                finish()
             }
         }
+    }
+
+    /**
+     * Left on screen rather than finishing: the tablet then says what happened
+     * without anyone having to catch it in logcat, and a run that ended badly
+     * cannot be mistaken for one that never started.
+     */
+    private fun report(message: String, error: Boolean = false) {
+        if (error) Log.e(TAG, message) else Log.i(TAG, message)
+        runOnUiThread { status.text = message }
     }
 
     private fun language(code: String?, fallback: TranslationLanguage) =
