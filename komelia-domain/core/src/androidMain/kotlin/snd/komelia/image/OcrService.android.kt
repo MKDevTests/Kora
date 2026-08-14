@@ -56,9 +56,10 @@ actual class OcrService {
         // the overlay maps them through getOriginalImageSize(). If the two differ,
         // recognition is running on a downscaled page — which is also the first
         // thing to check when whole lines of text come back missing.
+        val declaredSize = image.getOriginalImageSize().getOrNull()
         ocrLogger.info {
-            val declared = image.getOriginalImageSize().getOrNull()
-            "ocr input ${bitmap.width}x${bitmap.height}, overlay space ${declared?.width}x${declared?.height}"
+            "ocr input ${bitmap.width}x${bitmap.height}, " +
+                    "overlay space ${declaredSize?.width}x${declaredSize?.height}"
         }
 
         return when (settings.engine) {
