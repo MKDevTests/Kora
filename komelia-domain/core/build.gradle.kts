@@ -66,6 +66,16 @@ kotlin {
             api(libs.androidx.datastore)
             implementation(libs.androidx.appcompat)
             implementation(libs.mlkit.translate)
+            // Bergamot/Marian behind a JNI wrapper, built by
+            // scripts/translatekit/build-aar.sh and vendored in
+            // third_party/translatekit, resolved through the flatDir repository
+            // in settings.gradle.kts. Not in the version catalog: a flatDir
+            // artifact has no group, and the catalog rejects an alias without
+            // one. arm64-v8a only — TranslateKit.init degrades gracefully on
+            // any other ABI rather than crashing.
+            // String notation, because the named-argument overload does not
+            // exist inside a KMP source-set dependencies block.
+            implementation(":translate-kit-android@aar")
             implementation(libs.rapidocr.android)
             // Explicit: BubbleInvertStep uses the ai.onnxruntime JAVA API for the
             // speech-bubble detector. It arrives transitively via rapidocr, but a
