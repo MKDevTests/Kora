@@ -88,6 +88,7 @@ class ReaderViewModel(
     private val ocrService: snd.komelia.image.OcrService,
     private val translationService: snd.komelia.image.TranslationEngine,
     private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
+    private val translationModelDownloader: snd.komelia.image.TranslationModelDownloader?,
     val colorCorrectionIsActive: Flow<Boolean>,
     onBookChange: () -> Unit = {},
     private val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
@@ -141,6 +142,7 @@ class ReaderViewModel(
         ocrService = ocrService,
         translationService = translationService,
         translationGlossaryRepository = translationGlossaryRepository,
+        translationModelDownloader = translationModelDownloader,
         panelsAvailable = { panelDetector != null && panelDetector.isAvailable.value },
     )
 

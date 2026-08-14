@@ -76,6 +76,8 @@ data class DependencyContainer(
     val readerImageFactory: ReaderImageFactory,
     val ocrService: snd.komelia.image.OcrService,
     val translationService: snd.komelia.image.TranslationEngine,
+    /** Null on platforms whose engine fetches its own models, or has none. */
+    val translationModelDownloader: snd.komelia.image.TranslationModelDownloader?,
 
     val windowState: AppWindowState,
     val colorCorrectionStep: ColorCorrectionStep,

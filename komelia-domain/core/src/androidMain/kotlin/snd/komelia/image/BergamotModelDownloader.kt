@@ -40,10 +40,17 @@ class BergamotModelDownloader(
     private val ktor: HttpClient,
     private val updateClient: UpdateClient,
     private val modelRoot: File,
-) {
+) : TranslationModelDownloader {
 
-    fun isDownloaded(source: TranslationLanguage, target: TranslationLanguage): Boolean =
+    override fun supports(source: TranslationLanguage, target: TranslationLanguage): Boolean =
+        BergamotPair.of(source, target) != null
+
+    override fun isDownloaded(source: TranslationLanguage, target: TranslationLanguage): Boolean =
         BergamotPair.of(source, target)?.isComplete(modelRoot) == true
+
+    override fun delete(source: TranslationLanguage, target: TranslationLanguage) {
+        BergamotPair.of(source, target)?.dirIn(modelRoot)?.deleteRecursively()
+    }
 
     /**
      * Downloads the pair, replacing whatever was there.
@@ -53,7 +60,7 @@ class BergamotModelDownloader(
      * worse than none: the engine would fail to load it on every page instead
      * of falling back cleanly.
      */
-    fun download(source: TranslationLanguage, target: TranslationLanguage): Flow<UpdateProgress> {
+    override fun download(source: TranslationLanguage, target: TranslationLanguage): Flow<UpdateProgress> {
         return flow {
             val pair = BergamotPair.of(source, target)
             requireNotNull(pair) { "no Bergamot model for ${source.code}-${target.code}" }

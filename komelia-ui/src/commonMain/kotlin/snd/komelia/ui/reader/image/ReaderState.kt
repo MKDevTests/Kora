@@ -143,6 +143,7 @@ class ReaderState(
     private val ocrService: OcrService,
     private val translationService: snd.komelia.image.TranslationEngine,
     private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
+    private val translationModelDownloader: snd.komelia.image.TranslationModelDownloader?,
     /**
      * Whether the ONNX panel detector is loaded and usable. When false, webtoon
      * routing falls back to CONTINUOUS instead of PANELS (PANELS needs the
@@ -229,6 +230,16 @@ class ReaderState(
      * always about this series.
      */
     val glossaryTerms = MutableStateFlow<List<snd.komelia.translation.GlossaryTerm>>(emptyList())
+
+    /**
+     * State of the better engine's model for the pair being translated.
+     *
+     * Bergamot reads a French that ML Kit does not — measured over several
+     * chapters — but its model is a 36MB download the user has to ask for. Null
+     * where no such model exists for the pair, which is when there is nothing
+     * to offer.
+     */
+    val translationModelState = MutableStateFlow<TranslationModelState?>(null)
     val readingDirection = MutableStateFlow(ReadingDirection.LTR)
 
     val tapNavigationMode = MutableStateFlow(ReaderTapNavigationMode.LEFT_RIGHT)
@@ -1120,6 +1131,58 @@ class ReaderState(
     }
 
 
+    /** Looks at what is on disk for the current pair. */
+    fun refreshTranslationModel() {
+        val downloader = translationModelDownloader
+        val settings = translationSettings.value
+        if (downloader == null || !downloader.supports(settings.source, settings.target)) {
+            translationModelState.value = null
+            return
+        }
+        translationModelState.value =
+            if (downloader.isDownloaded(settings.source, settings.target)) TranslationModelState.Ready
+            else TranslationModelState.Missing
+    }
+
+    /**
+     * Fetches the better engine's model. Reports bytes as they arrive, because
+     * 36MB over a phone connection is long enough that a silent button reads as
+     * a broken one.
+     */
+    fun downloadTranslationModel() {
+        val downloader = translationModelDownloader ?: return
+        val settings = translationSettings.value
+        stateScope.launch {
+            try {
+                downloader.download(settings.source, settings.target).collect { progress ->
+                    translationModelState.value = TranslationModelState.Downloading(
+                        completed = progress.completed,
+                        total = progress.total,
+                        what = progress.description.orEmpty(),
+                    )
+                }
+                translationModelState.value = TranslationModelState.Ready
+                // The scan cache holds pages translated by the other engine.
+                clearScanCache()
+            } catch (e: CancellationException) {
+                refreshTranslationModel()
+                throw e
+            } catch (e: Exception) {
+                logger.warn(e) { "translation model download failed" }
+                appNotifications.add(AppNotification.Error("Model download failed: ${e.message}"))
+                refreshTranslationModel()
+            }
+        }
+    }
+
+    fun deleteTranslationModel() {
+        val downloader = translationModelDownloader ?: return
+        val settings = translationSettings.value
+        downloader.delete(settings.source, settings.target)
+        clearScanCache()
+        refreshTranslationModel()
+    }
+
     /** Reloads [glossaryTerms] for the series on screen. */
     fun refreshGlossaryTerms() {
         stateScope.launch {
@@ -1780,6 +1843,21 @@ data class PageMetadata(
 }
 
 enum class PageHalf { LEFT, RIGHT }
+
+/**
+ * Whether the better translation engine can be used for the pair on screen.
+ *
+ * Absent from the UI entirely when null — no model exists for that pair, so
+ * there is nothing to offer and nothing to explain.
+ */
+sealed interface TranslationModelState {
+    data object Missing : TranslationModelState
+    data class Downloading(val completed: Long, val total: Long, val what: String) : TranslationModelState {
+        val percent: Int get() = if (total > 0) (completed * 100 / total).toInt() else 0
+    }
+
+    data object Ready : TranslationModelState
+}
 
 data class BookState(
     val currentBook: KomeliaBook,

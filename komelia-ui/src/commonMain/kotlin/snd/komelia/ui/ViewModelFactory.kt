@@ -372,6 +372,7 @@ class ViewModelFactory(
             ocrService = dependencies.ocrService,
             translationService = dependencies.translationService,
             translationGlossaryRepository = appRepositories.translationGlossaryRepository,
+            translationModelDownloader = dependencies.translationModelDownloader,
             colorCorrectionIsActive = dependencies.colorCorrectionStep.isActive,
             bookSiblingsContext = bookSiblingsContext,
             markReadProgress = markReadProgress,

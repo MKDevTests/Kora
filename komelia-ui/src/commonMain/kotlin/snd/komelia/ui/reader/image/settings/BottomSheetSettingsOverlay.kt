@@ -1586,7 +1586,66 @@ private fun OcrModeSettings(
         )
 
         HorizontalDivider()
+        TranslationModelSettings(commonReaderState)
+
+        HorizontalDivider()
         SeriesGlossarySettings(commonReaderState)
+    }
+}
+
+/**
+ * Offers the better translation engine's model for the pair being read.
+ *
+ * Bergamot reads a French ML Kit does not — "Nous vous demandons de cesser
+ * toute poursuite" against "Nous demandons que vous avez cessé toute la
+ * poursuite" — but it costs a 36MB download, and it is 106ms a bubble against
+ * ML Kit's 60ms on this hardware. On a page whose OCR takes 3.9s that is 10%,
+ * which is why it is offered rather than argued about.
+ *
+ * Nothing is shown when there is no model for the pair: the engine then cannot
+ * be used at all, and a disabled button would only raise a question with no
+ * answer.
+ */
+@Composable
+private fun TranslationModelSettings(
+    commonReaderState: ReaderState,
+) {
+    val state = commonReaderState.translationModelState.collectAsState().value
+    LaunchedEffect(Unit) { commonReaderState.refreshTranslationModel() }
+    if (state == null) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Better translation")
+        when (state) {
+            is snd.komelia.ui.reader.image.TranslationModelState.Missing -> {
+                Text(
+                    "A 36 MB model that reads far better French than the built-in " +
+                            "translator, at about ten percent more time per page.",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = { commonReaderState.downloadTranslationModel() }) {
+                    Text("Download model")
+                }
+            }
+
+            is snd.komelia.ui.reader.image.TranslationModelState.Downloading -> {
+                Text(
+                    "${state.what} — ${state.percent}%",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+
+            is snd.komelia.ui.reader.image.TranslationModelState.Ready -> {
+                Text(
+                    "In use. Pages already read keep the translation they were " +
+                            "given; turn the page to see the difference.",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = { commonReaderState.deleteTranslationModel() }) {
+                    Text("Remove model")
+                }
+            }
+        }
     }
 }
 

@@ -401,6 +401,7 @@ abstract class AppModule(
             readerImageFactory = readerImageFactory,
             ocrService = snd.komelia.image.OcrService(),
             translationService = createTranslationEngine(updateClient),
+            translationModelDownloader = createTranslationModelDownloader(updateClient),
             windowState = createWindowState(),
             colorCorrectionStep = colorCorrectionStep,
             blankPageDetector = blankPageDetector,
@@ -656,6 +657,9 @@ abstract class AppModule(
      * either.
      */
     protected abstract fun createTranslationEngine(updateClient: UpdateClient): snd.komelia.image.TranslationEngine
+
+    /** Null where no engine needs one — ML Kit fetches its own models. */
+    protected abstract fun createTranslationModelDownloader(updateClient: UpdateClient): snd.komelia.image.TranslationModelDownloader?
     protected abstract fun createOnnxRuntime(): OnnxRuntime?
     protected abstract suspend fun createUpscaler(
         onnxRuntime: OnnxRuntime,

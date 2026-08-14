@@ -429,7 +429,7 @@ class AndroidAppModule(
      */
     private fun bergamotModelRoot() = context.filesDir.resolve("bergamot_models")
 
-    fun createBergamotModelDownloader(updateClient: UpdateClient) =
+    override fun createTranslationModelDownloader(updateClient: UpdateClient) =
         snd.komelia.image.BergamotModelDownloader(
             ktor = createKtorClient(),
             updateClient = updateClient,
