@@ -16,6 +16,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -919,10 +922,20 @@ class ReaderState(
         stateScope.launch { readerSettingsRepository.putOcrSettings(newSettings) }
     }
 
+    /**
+     * One page scanned at a time. Cancelling [ocrJob] does not stop a scan that
+     * has already started: recognition is a blocking native call with no
+     * suspension point, so cancellation only lands once it returns. Without this
+     * lock every page turn started another one — six concurrent RapidOCR
+     * inferences were measured, ending in an OutOfMemoryError.
+     */
+    private val ocrMutex = Mutex()
+
     fun scanCurrentPageForText(image: ReaderImage) {
         ocrJob?.cancel()
         ocrJob = stateScope.launch {
-            ocrPageId.value = image.pageId
+            val pageId = image.pageId
+            ocrPageId.value = pageId
             isOcrLoading.value = true
             try {
                 // Measured (KoraPerf) even though it is per-page: OCR only runs when
@@ -931,26 +944,41 @@ class ReaderState(
                 // RapidOCR can be compared from the same log.
                 val settings = ocrSettings.value
                 val rawBoxes = withContext(Dispatchers.Default) {
-                    snd.komelia.perf.PerfTrace.measure(
-                        "reader.ocr.${settings.engine}",
-                        count = { it.size }
-                    ) { ocrService.recognizeText(image, settings) }
+                    ocrMutex.withLock {
+                        // Queued behind an in-flight scan; the page may have moved on
+                        // while waiting, in which case this one is already pointless.
+                        ensureActive()
+                        snd.komelia.perf.PerfTrace.measure(
+                            "reader.ocr.${settings.engine}",
+                            count = { it.size }
+                        ) { ocrService.recognizeText(image, settings) }
+                    }
                 }
+                // A scan that outlived its page must not publish: its boxes would be
+                // drawn over a different image, which is the "blue boxes land in the
+                // wrong place for a few seconds" symptom.
+                if (ocrPageId.value != pageId) return@launch
                 // Deliberately left on the caller's dispatcher (the main thread) for
                 // this measurement pass: mergeOcrBoxes is O(n^2) over the boxes and we
-                // want to know what it actually costs there before moving it.
+                // want to know what it actually costs there before moving it. Counted
+                // in blocks, not words — one block is one translation call.
                 ocrResults.value = if (settings.mergeBoxes) {
                     snd.komelia.perf.PerfTrace.measure(
                         "reader.ocr.merge",
-                        count = { it.size }
+                        count = { boxes -> boxes.distinctBy { it.blockIndex }.size }
                     ) { mergeOcrBoxes(rawBoxes, readingDirection.value) }
                 } else rawBoxes
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 appNotifications.add(AppNotification.Error("OCR failed: ${e.message}"))
+            } catch (e: OutOfMemoryError) {
+                // Normally not something to catch, but the allocation that fails is
+                // the engine's own tensors and bitmap, all released by unwinding
+                // here. The alternative is measured: the process dies.
+                appNotifications.add(AppNotification.Error("OCR ran out of memory on this page"))
             } finally {
-                isOcrLoading.value = false
+                if (ocrPageId.value == pageId) isOcrLoading.value = false
             }
         }
     }
