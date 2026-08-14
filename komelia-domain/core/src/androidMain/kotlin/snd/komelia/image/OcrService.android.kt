@@ -59,11 +59,45 @@ actual class OcrService {
         val declaredSize = image.getOriginalImageSize().getOrNull()
         ocrLogger.info {
             "ocr input ${bitmap.width}x${bitmap.height}, " +
-                    "overlay space ${declaredSize?.width}x${declaredSize?.height}"
+                    "overlay space ${declaredSize?.width}x${declaredSize?.height}, " +
+                    "mlkit upscale x${mlKitUpscaleFactor(bitmap.width)}"
         }
 
         return when (settings.engine) {
-            OcrEngine.ML_KIT -> recognizeWithMlKit(bitmap, settings.selectedLanguage)
+            OcrEngine.ML_KIT -> {
+                // ML Kit misses whole bubbles on comic pages: measured on a
+                // 1400px-wide page whose capitals are 13-25px tall, it returned
+                // 'SOME' for "SOMETHING THE MATTER?" and nothing at all for a
+                // neighbouring bubble, while picking 8x7px fragments out of the
+                // artwork. Both are what an engine does when the glyphs are near
+                // its lower size bound, so it gets a bigger page to read.
+                val scale = mlKitUpscaleFactor(bitmap.width)
+                if (scale <= 1f) recognizeWithMlKit(bitmap, settings.selectedLanguage)
+                else {
+                    // createScaledBitmap has to read pixels, which a HARDWARE
+                    // bitmap does not allow — same copy RapidOCR already needs.
+                    val readable = if (bitmap.config == Bitmap.Config.HARDWARE) {
+                        bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                    } else bitmap
+                    val enlarged = Bitmap.createScaledBitmap(
+                        readable,
+                        (readable.width * scale).toInt(),
+                        (readable.height * scale).toInt(),
+                        true,
+                    )
+                    if (readable !== bitmap) readable.recycle()
+                    try {
+                        // Boxes come back in the enlarged space; the overlay works
+                        // in the page's own, so they are scaled back down here.
+                        recognizeWithMlKit(enlarged, settings.selectedLanguage)
+                            .map { it.scaledBy(1f / scale) }
+                    } finally {
+                        // Only the copy: the source bitmap belongs to the reader image.
+                        enlarged.recycle()
+                    }
+                }
+            }
+
             OcrEngine.RAPID_OCR -> {
                 val softwareBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
                     bitmap.copy(Bitmap.Config.ARGB_8888, false)
@@ -75,6 +109,28 @@ actual class OcrService {
             }
         }
     }
+
+    /**
+     * How much to enlarge a page before handing it to ML Kit. Targets
+     * [ML_KIT_TARGET_WIDTH] and never goes past 2x — beyond that the memory and
+     * the time cost more than the extra glyphs are worth.
+     */
+    private fun mlKitUpscaleFactor(width: Int): Float {
+        if (width <= 0 || width >= ML_KIT_TARGET_WIDTH) return 1f
+        return (ML_KIT_TARGET_WIDTH.toFloat() / width).coerceAtMost(2f)
+    }
+
+    private fun OcrElementBox.scaledBy(factor: Float) = copy(
+        imageRect = imageRect.scaledBy(factor),
+        blockRect = blockRect.scaledBy(factor),
+    )
+
+    private fun Rect.scaledBy(factor: Float) = Rect(
+        left = left * factor,
+        top = top * factor,
+        right = right * factor,
+        bottom = bottom * factor,
+    )
 
     private fun getRapidOcrEngine(model: RapidOcrModel): RapidOCR? {
         val existing = rapidOcrEngines[model]
@@ -222,5 +278,8 @@ actual class OcrService {
 
     companion object {
         lateinit var context: Context
+
+        /** Width ML Kit is fed, when the page is smaller. */
+        private const val ML_KIT_TARGET_WIDTH = 2800
     }
 }

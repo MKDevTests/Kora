@@ -1021,7 +1021,11 @@ class ReaderState(
                     .joinToString(" ") { it.text }
                     .trim()
             }
-            .filterValues { it.isNotBlank() }
+            // Single letters and bare digits are artwork the OCR mistook for
+            // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them
+            // is meaningless, and painting an opaque panel over them puts black
+            // squares on the drawing.
+            .filterValues { text -> text.count { it.isLetter() } >= 2 }
         if (blocks.isEmpty()) return
 
         isTranslating.value = true
