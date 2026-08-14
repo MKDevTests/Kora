@@ -61,6 +61,7 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     // longer exists onto the current one.
     val ocrEngine = text("ocr_engine").default("RAPID_OCR")
     val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("PP_OCR_V6_SMALL")
+    val ocrSpeedMode = text("ocr_speed_mode").default("NORMAL")
     val ocrMergeBoxes = bool("ocr_merge_boxes").default(true)
     val translationEnabled = bool("translation_enabled").default(false)
     val translationSource = text("translation_source").default("ENGLISH")

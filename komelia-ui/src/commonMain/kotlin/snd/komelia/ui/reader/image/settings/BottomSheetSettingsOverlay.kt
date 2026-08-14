@@ -1519,6 +1519,33 @@ private fun OcrModeSettings(
         // between them), and the detection language now follows the translation
         // source rather than being a separate thing to keep in step.
 
+        // Which detector runs. Only the detector: recognition stays PP-OCRv6
+        // small in both modes. Fast is worth offering because detection runs on
+        // the whole page — 1.7-1.9 s of a 3.3-4.4 s scan, measured — but the
+        // tiny detector gives up 5.2 points of recall on artistic text, which
+        // on a comic page is exactly the sound effects and the lettering over
+        // artwork. Hence a manual choice rather than a default.
+        Column {
+            Text("OCR detection")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                snd.komelia.settings.model.OcrSpeedMode.entries.forEach { mode ->
+                    InputChip(
+                        selected = ocrSettings.speedMode == mode,
+                        onClick = { onOcrSettingsChange(ocrSettings.copy(speedMode = mode)) },
+                        colors = accentInputChipColors(),
+                        label = {
+                            Text(
+                                when (mode) {
+                                    snd.komelia.settings.model.OcrSpeedMode.NORMAL -> "Normal (small)"
+                                    snd.komelia.settings.model.OcrSpeedMode.FAST -> "Fast (tiny)"
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
         // Which language the page is written in, for translation. The OCR
         // language follows it (see ReaderState.onTranslationSettingsChange):
         // reading Latin on a Japanese page finds nothing and looks like a

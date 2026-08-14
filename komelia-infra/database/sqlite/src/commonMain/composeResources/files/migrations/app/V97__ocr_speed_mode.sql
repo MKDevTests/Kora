@@ -1,0 +1,1 @@
+ALTER TABLE ImageReaderSettings ADD COLUMN ocr_speed_mode TEXT NOT NULL DEFAULT 'NORMAL';

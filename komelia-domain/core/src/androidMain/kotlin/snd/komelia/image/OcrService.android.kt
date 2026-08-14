@@ -9,6 +9,7 @@ import snd.komelia.image.AndroidBitmap.toBitmap
 import androidx.compose.ui.geometry.Rect
 import io.github.oshai.kotlinlogging.KotlinLogging
 import snd.komelia.settings.model.OcrLanguage
+import snd.komelia.settings.model.OcrSpeedMode
 import snd.komelia.settings.model.OcrSettings
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
@@ -20,9 +21,9 @@ private val ocrLogger = KotlinLogging.logger("KoraTranslate")
 
 actual class OcrService {
 
-    /** Keyed by orientation classification: it is baked into the engine's
-     *  config, so Japanese and Latin need their own instance. */
-    private val rapidOcrEngines = mutableMapOf<Boolean, RapidOCR>()
+    /** Keyed by orientation classification and speed mode: both are baked into
+     *  the engine's config, so each combination needs its own instance. */
+    private val rapidOcrEngines = mutableMapOf<Pair<Boolean, OcrSpeedMode>, RapidOCR>()
     /**
      * Per-character boxes were only there to guess word boundaries from the
      * gaps between letters. The recogniser turned out to emit spaces itself
@@ -64,7 +65,7 @@ actual class OcrService {
         // the time — that is exactly what the orientation classifier is for.
         // Latin pages are upright and do not pay for it.
         val vertical = settings.selectedLanguage == OcrLanguage.JAPANESE
-        val engine = getRapidOcrEngine(vertical) ?: return emptyList()
+        val engine = getRapidOcrEngine(vertical, settings.speedMode) ?: return emptyList()
         return recognizeWithRapidOcr(engine, softwareBitmap)
     }
 
@@ -80,8 +81,8 @@ actual class OcrService {
         bottom = bottom * factor,
     )
 
-    private fun getRapidOcrEngine(useCls: Boolean): RapidOCR? {
-        val existing = rapidOcrEngines[useCls]
+    private fun getRapidOcrEngine(useCls: Boolean, speedMode: OcrSpeedMode): RapidOCR? {
+        val existing = rapidOcrEngines[useCls to speedMode]
         if (existing != null) return existing
 
         val modelsDir = context.filesDir.resolve("rapidocr_models").toPath()
@@ -93,7 +94,16 @@ actual class OcrService {
         // v6 throughout: its recogniser is trained against an 18708-entry
         // dictionary, so pairing it with a v4 detector or v4 keys produces
         // confident nonsense rather than an error.
-        val detModel = modelsDir.resolve("PP-OCRv6_small_det_infer.onnx")
+        //
+        // Fast mode only swaps the detector, and only if the tiny model is in
+        // the downloaded bundle — an older bundle must not silently produce no
+        // OCR at all.
+        val tinyDet = modelsDir.resolve("PP-OCRv6_tiny_det_infer.onnx")
+        val fast = speedMode == OcrSpeedMode.FAST && tinyDet.exists()
+        if (speedMode == OcrSpeedMode.FAST && !fast) {
+            logger.warn { "Fast OCR asked for but PP-OCRv6_tiny_det_infer.onnx is missing — using the small detector" }
+        }
+        val detModel = if (fast) tinyDet else modelsDir.resolve("PP-OCRv6_small_det_infer.onnx")
         val clsModel = modelsDir.resolve("ch_ppocr_mobile_v2.0_cls_infer.onnx")
         val recModel = modelsDir.resolve("PP-OCRv6_small_rec_infer.onnx")
         val keysFile = modelsDir.resolve("ppocrv6_keys.txt")
@@ -131,11 +141,14 @@ actual class OcrService {
             global.textScore = 0.6f
             global.intraOpNumThreads = threads
         }
-        logger.info { "RapidOCR PP-OCRv6 small engine, $threads threads, cls=$useCls" }
+        logger.info {
+            "RapidOCR PP-OCRv6 engine, det=${if (fast) "tiny" else "small"}, " +
+                    "$threads threads, cls=$useCls"
+        }
 
         return try {
             val engine = RapidOCR.create(context, config)
-            rapidOcrEngines[useCls] = engine
+            rapidOcrEngines[useCls to speedMode] = engine
             engine
         } catch (e: Exception) {
             logger.error(e) { "Failed to create the RapidOCR engine" }
@@ -178,7 +191,8 @@ actual class OcrService {
                     blockRect = rect,
                     blockIndex = index,
                     lineIndex = 0,
-                    elementIndex = 0
+                    elementIndex = 0,
+                    confidence = recResult.confidence
                 )
             )
         }

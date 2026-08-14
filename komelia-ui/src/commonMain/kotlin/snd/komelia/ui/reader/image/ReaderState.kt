@@ -1169,13 +1169,19 @@ class ReaderState(
             // that came back unchanged — and only this tells the three apart.
             //     adb logcat | Select-String "KoraTranslate"
             indices.forEach { blockIndex ->
-                val rect = boxes.first { it.blockIndex == blockIndex }.blockRect
+                val blockBoxes = boxes.filter { it.blockIndex == blockIndex }
+                val rect = blockBoxes.first().blockRect
                 // Shows what is actually painted, so a block dropped as a sound
                 // effect is visible as "(dropped)" rather than silently absent.
                 val shown = published[blockIndex] ?: "(dropped)"
+                // Lowest confidence in the block. A bad line reads the same on
+                // screen whether the OCR misread it or the translator mangled
+                // it; this number is what tells the two apart without guessing.
+                val worst = blockBoxes.minOf { it.confidence }
                 translationLogger.info {
                     "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
                             "${rect.width.toInt()}x${rect.height.toInt()}] " +
+                            "conf=${(worst * 100).toInt()}% " +
                             "src='${blocks.getValue(blockIndex)}' -> '$shown'"
                 }
             }
