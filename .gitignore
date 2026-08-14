@@ -31,6 +31,11 @@ New UI/
 # Pre-existing vendored third-party repos
 third_party/secret-service/
 
+# translate-kit build tree: half a gigabyte of upstream git history, rebuilt by
+# scripts/translatekit/fetch-and-patch.sh. Only the AAR it produces is committed
+# (third_party/translatekit/), which is what the app actually needs.
+third_party/translatekit-src/
+
 # Prebuilt native libraries
 **/androidMain/jniLibs/**/*.so
 .worktrees
