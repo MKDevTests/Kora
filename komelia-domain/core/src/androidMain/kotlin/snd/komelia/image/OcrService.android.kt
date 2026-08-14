@@ -141,7 +141,11 @@ actual class OcrService {
             global.textScore = 0.6f
             global.intraOpNumThreads = threads
         }
-        logger.info {
+        // On the reader-translation logger, not the general one: which detector
+        // ran and whether the orientation classifier is on are the two things a
+        // page of odd results is read against, and they have to be in the same
+        // grep as the blocks themselves.
+        ocrLogger.info {
             "RapidOCR PP-OCRv6 engine, det=${if (fast) "tiny" else "small"}, " +
                     "$threads threads, cls=$useCls"
         }

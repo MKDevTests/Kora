@@ -44,7 +44,9 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val ortUpscalerTileSize = integer("onnx_runtime_tile_size")
     val ortUpscalerUserModelPath = text("onnx_runtime_model_path").nullable()
     val panelDetectionUrl = text("panel_detection_url").default("https://github.com/eserero/Sipurra/releases/download/model/rf-detr-med.onnx.zip")
-    val rapidOcrModelsUrl = text("rapid_ocr_models_url").default("https://github.com/eserero/Sipurra/releases/download/model/RapidOcrModels.zip")
+    // Kept in step with ImageReaderSettings.RAPID_OCR_MODELS_DEFAULT_URL: this is
+    // what a fresh install gets, V98 is what an existing one gets.
+    val rapidOcrModelsUrl = text("rapid_ocr_models_url").default("https://github.com/MKDevTests/Kora/releases/download/model-v6.1/RapidOcrModels-v6.1.zip")
 
     val panelsFullPageDisplayMode = text("panels_full_page_display_mode").default("BOTH")
     val pagedReaderTapToZoom = bool("paged_reader_tap_to_zoom").default(true)

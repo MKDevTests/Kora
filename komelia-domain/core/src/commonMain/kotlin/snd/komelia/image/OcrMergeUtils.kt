@@ -25,6 +25,14 @@ fun mergeOcrBoxes(
 ): List<OcrElementBox> {
     if (boxes.isEmpty()) return boxes
 
+    // Measured once, over the detected lines of the whole page, and never
+    // again. It used to be recomputed from the two candidates on every pass,
+    // which meant a segment that had swallowed one tall sound effect raised
+    // its own tolerance and kept swallowing: on a 2025x2885 page one block
+    // ended up 1758x1126, and the overlay paints an opaque panel over the
+    // block rect — that is the giant black square over the artwork.
+    val lineSize = calculateMedianShortSide(boxes)
+
     var currentSegments = boxes.groupBy { it.blockRect }
         .map { (rect, elements) -> Segment(rect, elements.toMutableList()) }
         .toMutableList()
@@ -46,11 +54,22 @@ fun mergeOcrBoxes(
                 val horizontalGap = max(0f, max(segmentA.rect.left, segmentB.rect.left) - min(segmentA.rect.right, segmentB.rect.right))
                 val verticalGap = max(0f, max(segmentA.rect.top, segmentB.rect.top) - min(segmentA.rect.bottom, segmentB.rect.bottom))
 
-                val shouldMerge = if (horizontalGap == 0f && verticalGap == 0f) {
-                    true
-                } else {
-                    val medianShortSide = calculateMedianShortSide(segmentA.elements + segmentB.elements)
-                    horizontalGap <= medianShortSide && verticalGap <= medianShortSide
+                // A bubble is a stack of lines: consecutive lines overlap on x
+                // and are a line apart on y. Allowing the same slack on both
+                // axes glued neighbouring bubbles together, and the block was
+                // then read top-to-bottom across both of them at once — which
+                // is how 'First I am year, in... Class my it name is I'm hmph!'
+                // came out of three separate bubbles. Sideways is only for a
+                // line the detector cut in two, so it gets much less room.
+                val xOverlap = horizontalGap == 0f
+                val yOverlap = verticalGap == 0f
+                val shouldMerge = when {
+                    xOverlap && yOverlap -> true
+                    xOverlap -> verticalGap <= lineSize * STACKED_GAP_RATIO
+                    yOverlap -> horizontalGap <= lineSize * INLINE_GAP_RATIO
+                    // Diagonal neighbours are two different bubbles, or a
+                    // bubble and a sound effect drawn over the artwork.
+                    else -> false
                 }
 
                 if (shouldMerge) {
@@ -60,7 +79,15 @@ fun mergeOcrBoxes(
                         right = max(segmentA.rect.right, segmentB.rect.right),
                         bottom = max(segmentA.rect.bottom, segmentB.rect.bottom)
                     )
-                    segmentA = Segment(newRect, (segmentA.elements + segmentB.elements).toMutableList())
+                    val elements = segmentA.elements + segmentB.elements
+                    // Backstop for the chains the rules above still allow. Real
+                    // lettering fills most of the box that contains it; a rect
+                    // that is mostly empty is a panel of artwork with a few
+                    // words scattered over it, and painting it opaque hides the
+                    // drawing.
+                    if (fillRatio(elements, newRect) < MIN_FILL_RATIO) continue
+
+                    segmentA = Segment(newRect, elements.toMutableList())
                     mergedIndices.add(j)
                     hasMerged = true
                 }
@@ -119,10 +146,27 @@ fun mergeOcrBoxes(
     }
 }
 
+/** Vertical room between two stacked lines of the same bubble, in line heights. */
+private const val STACKED_GAP_RATIO = 1.0f
+
+/** Horizontal room between two halves of one line the detector split. */
+private const val INLINE_GAP_RATIO = 0.6f
+
+/** How much of a merged block its own lettering has to cover. */
+private const val MIN_FILL_RATIO = 0.30f
+
 private data class Segment(
     val rect: Rect,
     val elements: MutableList<OcrElementBox>
 )
+
+/** Share of [rect] covered by the boxes of [elements], overlaps counted twice. */
+private fun fillRatio(elements: List<OcrElementBox>, rect: Rect): Float {
+    val area = rect.width * rect.height
+    if (area <= 0f) return 1f
+    val covered = elements.sumOf { (it.imageRect.width * it.imageRect.height).toDouble() }
+    return (covered / area).toFloat()
+}
 
 private fun calculateMedianShortSide(elements: List<OcrElementBox>): Float {
     if (elements.isEmpty()) return 0f

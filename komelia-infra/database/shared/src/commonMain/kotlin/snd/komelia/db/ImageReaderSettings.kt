@@ -95,12 +95,19 @@ data class ImageReaderSettings(
         const val PANEL_DETECTION_DEFAULT_GITHUB_URL =
             "https://github.com/eserero/Sipurra/releases/download/model/rf-detr-med.onnx.zip"
         /**
-         * The v6 bundle: everything the upstream one has, plus the PP-OCRv6
-         * small detector, recogniser and its 18708-entry dictionary. Existing
-         * installs keep whatever URL they already stored — they have to point
-         * here and download again to get PP-OCRv6.
+         * Only what the reader actually loads: the PP-OCRv6 small detector and
+         * recogniser, the PP-OCRv6 tiny detector behind the Fast switch, the
+         * orientation classifier and the 18708-entry dictionary. 27 MB against
+         * the 105 MB of the first v6 bundle, which still carried the whole v4
+         * family nothing reads any more.
+         *
+         * Nobody is expected to type this. Installs still holding one of the
+         * older URLs below are moved onto it by V98, so the field is already
+         * right when the download screen opens.
          */
         const val RAPID_OCR_MODELS_DEFAULT_URL =
+            "https://github.com/MKDevTests/Kora/releases/download/model-v6.1/RapidOcrModels-v6.1.zip"
+        const val RAPID_OCR_MODELS_V6_URL =
             "https://github.com/MKDevTests/Kora/releases/download/model-v6/RapidOcrModels-v6.zip"
         const val RAPID_OCR_MODELS_UPSTREAM_URL =
             "https://github.com/eserero/Sipurra/releases/download/model/RapidOcrModels.zip"

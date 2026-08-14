@@ -88,7 +88,7 @@ fun RapidOcrSettingsContent(
         DownloadDialog(
             onDownloadRequest = downloadFlow,
             onDismiss = { showDownloadDialog = false },
-            headerText = "Downloading RapidOCR models (~60 MB)",
+            headerText = "Downloading RapidOCR models (~27 MB)",
         )
     }
 }

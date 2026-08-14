@@ -1019,7 +1019,22 @@ class ReaderState(
                 // the user has explicitly enabled it, so this is not on the normal
                 // reading path. The engine is part of the label so ML Kit and
                 // RapidOCR can be compared from the same log.
-                val settings = ocrSettings.value
+                val storedSettings = ocrSettings.value
+                // The OCR language and the translation source are two persisted
+                // fields, and the first only followed the second when the picker
+                // was actually touched — so an install left on Japanese kept
+                // scanning English pages with the orientation classifier on. That
+                // classifier is trained on Chinese text and flips short Latin
+                // crops end over end: "I'M" came back as "W,I", "OH!" as "iHO",
+                // "DON'T" as ",noa". When translating, the source language is the
+                // only one that can be right, so it wins.
+                val translationSetting = translationSettings.value
+                val settings = if (translationSetting.enabled) {
+                    val language =
+                        if (translationSetting.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) OcrLanguage.JAPANESE
+                        else OcrLanguage.LATIN
+                    storedSettings.copy(selectedLanguage = language)
+                } else storedSettings
                 val result = withContext(Dispatchers.Default) {
                     ocrMutex.withLock {
                         // Queued behind an in-flight scan. Two things can have
@@ -1036,7 +1051,7 @@ class ReaderState(
                             // Only when translating, and before the merge: see
                             // OcrScriptFilter. Plain OCR keeps every script, so
                             // reading a Japanese page with text selection still works.
-                            val translation = translationSettings.value
+                            val translation = translationSetting
                             val japanese = translation.enabled &&
                                     translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
                             val rawBoxes = if (translation.enabled) {
