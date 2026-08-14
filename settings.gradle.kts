@@ -51,6 +51,10 @@ include(":third_party:compose-sonner:sonner")
 include(":third_party:indexeddb:core")
 include(":third_party:indexeddb:external")
 
+// Off-device bench for the page-translation geometry. Compiles the shipped
+// merge/text sources directly; see ocr-bench/build.gradle.kts.
+include(":ocr-bench")
+
 includeBuild("third_party/secret-service") {
     dependencySubstitution { substitute(module("de.swiesend:secret-service")) }
 }
