@@ -1,9 +1,9 @@
 package snd.komelia.image
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.client.statement.bodyAsText
 import io.ktor.utils.io.counted
 import io.ktor.utils.io.readRemaining
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.io.readByteArray
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import snd.komelia.settings.model.TranslationLanguage
 import snd.komelia.updates.UpdateClient
 import snd.komelia.updates.UpdateProgress
@@ -117,7 +118,11 @@ class BergamotModelDownloader(
 
     /** The three attachments of one pair, newest published version. */
     private suspend fun recordsFor(pair: BergamotPair): PairRecords {
-        val all: RecordsResponse = ktor.get(RECORDS_URL).body()
+        // Parsed here rather than through body(), which needs the caller's
+        // client to carry a ContentNegotiation plugin. The bench builds a bare
+        // HttpClient and got a NoTransformationFoundException on a 200 —
+        // a downloader should not depend on how its client was configured.
+        val all = json.decodeFromString<RecordsResponse>(ktor.get(RECORDS_URL).bodyAsText())
         val mine = all.data.filter {
             it.fromLang == pair.source.code && it.toLang == pair.target.code
         }
@@ -169,6 +174,9 @@ class BergamotModelDownloader(
     )
 
     private companion object {
+        /** Remote Settings records carry far more fields than the four used here. */
+        val json = Json { ignoreUnknownKeys = true }
+
         const val RECORDS_URL =
             "https://firefox.settings.services.mozilla.com/v1/buckets/main/" +
                     "collections/translations-models/records"
