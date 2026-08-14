@@ -173,7 +173,14 @@ actual class OcrService {
             cls.intraOpNumThreads = threads
             rec.modelPath = recModel.absolutePathString()
             rec.intraOpNumThreads = threads
+            // Recognition runs once per detected box — 42 to 56 on a comic page.
+            // Batching them is the difference between 50 model calls and 7.
+            rec.recBatchNum = REC_BATCH
             if (isV6) rec.recKeysPath = keysFile.absolutePathString()
+            // Orientation classification decides whether a crop is upside down.
+            // Scanned comic pages are the right way up, and it costs one model
+            // call per box.
+            global.useCls = false
             // Drops the hallucinated reads over artwork and vertical Japanese
             // that made whole panels unusable ('HP L f n 7J iQ 75#+').
             global.textScore = 0.6f
@@ -329,5 +336,8 @@ actual class OcrService {
 
         /** Width ML Kit is fed, when the page is smaller. */
         private const val ML_KIT_TARGET_WIDTH = 2800
+
+        /** Text crops handed to the recogniser per call. */
+        private const val REC_BATCH = 8
     }
 }

@@ -1031,6 +1031,9 @@ class ReaderState(
                     .sortedWith(compareBy({ it.lineIndex }, { it.elementIndex }))
                     .joinToString(" ") { it.text }
                     .trim()
+                    // Lettering breaks words across lines; joined as-is they
+                    // translate into invented words ("BUSI- NESS" -> "de bus").
+                    .let { snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it) }
             }
             // Single letters and bare digits are artwork the OCR mistook for
             // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them
@@ -1055,19 +1058,35 @@ class ReaderState(
                 }
             }
             if (ocrPageId.value != pageId) return
-            translatedBlocks.value = indices.zip(translated).toMap()
+            translatedBlocks.value = indices.zip(translated)
+                .associate { (blockIndex, text) ->
+                    // Honorifics survive translation, the name in front of them
+                    // does not: "MAMA-SAN" came back as "Maman-san".
+                    blockIndex to snd.komelia.image.TranslationTextUtils
+                        .restoreNames(blocks.getValue(blockIndex), text)
+                }
+                // Sound effects translate to themselves. Painting a panel over
+                // one hides the drawing to display the same word.
+                .filter { (blockIndex, text) ->
+                    !snd.komelia.image.TranslationTextUtils
+                        .isUnchanged(blocks.getValue(blockIndex), text)
+                }
 
             // Diagnostic dump: which blocks exist, where they are and what came
             // back. Bubbles that look untranslated on screen are either a block
             // the OCR split, a rect smaller than the bubble, or a translation
             // that came back unchanged — and only this tells the three apart.
             //     adb logcat | Select-String "KoraTranslate"
-            indices.forEachIndexed { i, blockIndex ->
+            val published = translatedBlocks.value
+            indices.forEach { blockIndex ->
                 val rect = boxes.first { it.blockIndex == blockIndex }.blockRect
+                // Shows what is actually painted, so a block dropped as a sound
+                // effect is visible as "(dropped)" rather than silently absent.
+                val shown = published[blockIndex] ?: "(dropped)"
                 translationLogger.info {
                     "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
                             "${rect.width.toInt()}x${rect.height.toInt()}] " +
-                            "src='${blocks.getValue(blockIndex)}' -> '${translated[i]}'"
+                            "src='${blocks.getValue(blockIndex)}' -> '$shown'"
                 }
             }
         } catch (e: CancellationException) {
