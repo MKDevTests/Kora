@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only additions. Nothing here reaches a release build.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Started by adb for the translation bench; no launcher entry, so it
+             never shows up as a second icon on the tablet. -->
+        <activity
+                android:name="snd.komelia.bench.TranslationBenchActivity"
+                android:exported="true"
+                android:excludeFromRecents="true"
+                android:noHistory="true"
+                android:theme="@android:style/Theme.NoDisplay"/>
+    </application>
+
+</manifest>
