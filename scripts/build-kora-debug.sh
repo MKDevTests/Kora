@@ -58,7 +58,42 @@ fi
 ensure_jni_libs
 
 echo "==> Building KoraDebug APK"
-"$GRADLEW" :komelia-app:assembleDebug
+
+# AGP's dexing transforms sometimes keep a stale per-class dex: the old
+# ReaderState.dex still holds ReaderState$1 while the new build ships it
+# separately, and mergeLibDex aborts with "Type ... is defined multiple times".
+# It fires on classes with inner classes, so any edit to ReaderState or
+# AndroidReaderImage tends to trigger it.
+#
+# The fix is to delete build/.transforms, but only the daemon knows it holds
+# those files open — a plain rm -rf fails halfway with "Permission denied" and
+# leaves the corrupt directory behind. So: stop the daemon, purge, retry once.
+# Doing it on failure rather than up front keeps normal builds fast.
+BUILD_LOG="$(mktemp)"
+trap 'rm -f "$BUILD_LOG"' EXIT
+
+run_assemble() {
+    "$GRADLEW" :komelia-app:assembleDebug 2>&1 | tee "$BUILD_LOG"
+    return "${PIPESTATUS[0]}"
+}
+
+set +e
+run_assemble
+BUILD_STATUS=$?
+set -e
+
+if [[ $BUILD_STATUS -ne 0 ]] && grep -q "is defined multiple times" "$BUILD_LOG"; then
+    echo ""
+    echo "==> Stale dex transforms detected. Stopping the daemon, purging and retrying once."
+    "$GRADLEW" --stop >/dev/null 2>&1 || true
+    find . -type d -name ".transforms" -path "*/build/*" -prune -exec rm -rf {} + 2>/dev/null || true
+    set +e
+    run_assemble
+    BUILD_STATUS=$?
+    set -e
+fi
+
+[[ $BUILD_STATUS -ne 0 ]] && exit "$BUILD_STATUS"
 
 APK="komelia-app/build/outputs/apk/debug/kora-app-debug.apk"
 [[ ! -f "$APK" ]] && APK="komelia-app/build/outputs/apk/debug/sipurra-app-debug.apk" # legacy fallback
