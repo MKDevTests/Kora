@@ -957,7 +957,7 @@ class ReaderState(
                 // reading path. The engine is part of the label so ML Kit and
                 // RapidOCR can be compared from the same log.
                 val settings = ocrSettings.value
-                val rawBoxes = withContext(Dispatchers.Default) {
+                val scanned = withContext(Dispatchers.Default) {
                     ocrMutex.withLock {
                         // Queued behind an in-flight scan; the page may have moved on
                         // while waiting, in which case this one is already pointless.
@@ -972,6 +972,17 @@ class ReaderState(
                 // drawn over a different image, which is the "blue boxes land in the
                 // wrong place for a few seconds" symptom.
                 if (ocrPageId.value != pageId) return@launch
+                // Only when translating, and before the merge: see OcrScriptFilter.
+                // Plain OCR keeps every script, so reading a Japanese page with
+                // text selection still works.
+                val rawBoxes = if (translationSettings.value.enabled) {
+                    if (translationSettings.value.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) {
+                        snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
+                    } else {
+                        snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
+                    }
+                } else scanned
+
                 // Deliberately left on the caller's dispatcher (the main thread) for
                 // this measurement pass: mergeOcrBoxes is O(n^2) over the boxes and we
                 // want to know what it actually costs there before moving it. Counted
@@ -1025,7 +1036,7 @@ class ReaderState(
             // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them
             // is meaningless, and painting an opaque panel over them puts black
             // squares on the drawing.
-            .filterValues { text -> text.count { it.isLetter() } >= 2 }
+            .filterValues { text -> text.count { it.isLetter() } >= 2 && text.length >= 3 }
         if (blocks.isEmpty()) return
 
         isTranslating.value = true
