@@ -15,6 +15,10 @@
  */
 plugins {
     alias(libs.plugins.kotlinJvm)
+    // @Serializable in the volume replay needs the compiler plugin, not just the
+    // runtime: without it the capture parses at runtime into "Serializer for
+    // class 'PageJson' is not found".
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {

@@ -22,6 +22,7 @@ fun mergeOcrBoxes(
     boxes: List<OcrElementBox>,
     direction: ReadingDirection,
     vertical: Boolean = false,
+    pageWidth: Int = 0,
 ): List<OcrElementBox> {
     if (boxes.isEmpty()) return boxes
 
@@ -110,7 +111,9 @@ fun mergeOcrBoxes(
     // exactly the disjoint groups this looks for.
     val finalSegments =
         if (vertical) currentSegments
-        else currentSegments.flatMap { splitIntoColumns(it) }
+        else currentSegments
+            .flatMap { splitIntoColumns(it) }
+            .flatMap { undoIfWideAndSparse(it, pageWidth) }
 
     return finalSegments.flatMap { segment ->
         val unifiedBlockIndex = segment.elements.firstOrNull()?.blockIndex ?: 0
@@ -221,6 +224,37 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
         )
         Segment(rect, elements.toMutableList())
     }
+}
+
+/** Below this share of the page width, a block is small enough to trust. */
+private const val WIDE_BLOCK_RATIO = 0.40f
+
+/** Fill a wide block has to reach to be believed. */
+private const val WIDE_BLOCK_MIN_FILL = 0.70f
+
+/**
+ * Takes apart a block that ended up spanning much of the page while its own
+ * lettering covers little of it.
+ *
+ * Measured over 2019 blocks of a real volume: the twelve wide blocks that are
+ * genuinely one piece of text — covers, the contents page, a full-width shout
+ * like "SHE'S IN A REALM FAR BEYOND MY REACH!!" — all fill 73% or more, and the
+ * eight that are several bubbles or a chain of sound effects welded together
+ * all fill 67% or less. Narrow blocks are left alone at any fill: a normal
+ * bubble runs 47% to 61% and splitting those would break far more than this
+ * fixes.
+ *
+ * Undone all the way back to single lines rather than to something in between:
+ * 'SKITTER SKITTER SITTER SKITTER' becomes four one-word blocks, which the
+ * sound-effect rule then leaves on the artwork, and that is the outcome wanted.
+ */
+private fun undoIfWideAndSparse(segment: Segment, pageWidth: Int): List<Segment> {
+    if (pageWidth <= 0 || segment.elements.size < 2) return listOf(segment)
+    if (segment.rect.width < pageWidth * WIDE_BLOCK_RATIO) return listOf(segment)
+    if (fillRatio(segment.elements, segment.rect) >= WIDE_BLOCK_MIN_FILL) return listOf(segment)
+
+    return segment.elements.groupBy { it.blockRect }
+        .map { (rect, elements) -> Segment(rect, elements.toMutableList()) }
 }
 
 /** Share of [rect] covered by the boxes of [elements], overlaps counted twice. */

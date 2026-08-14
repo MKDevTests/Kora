@@ -1068,7 +1068,17 @@ class ReaderState(
                                 snd.komelia.perf.PerfTrace.measure(
                                     "reader.ocr.merge",
                                     count = { merged -> merged.distinctBy { it.blockIndex }.size }
-                                ) { mergeOcrBoxes(rawBoxes, readingDirection.value, vertical = japanese) }
+                                ) {
+                                    // The page width is what tells a full-width
+                                    // shout apart from several bubbles welded
+                                    // together; without it that check is off.
+                                    mergeOcrBoxes(
+                                        boxes = rawBoxes,
+                                        direction = readingDirection.value,
+                                        vertical = japanese,
+                                        pageWidth = image.getOriginalImageSize().getOrNull()?.width ?: 0,
+                                    )
+                                }
                             } else rawBoxes
 
                             ScanResult(boxes, translateBlocks(boxes))

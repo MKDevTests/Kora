@@ -78,7 +78,7 @@ class VolumeReplayTest {
                 )
             }
 
-            val merged = mergeOcrBoxes(boxes, ReadingDirection.LTR)
+            val merged = mergeOcrBoxes(boxes, ReadingDirection.LTR, pageWidth = page.width)
             val shortName = page.page.substringAfterLast(" - ").substringBefore(" [")
             report.appendLine("== $shortName  ${page.width}x${page.height}  ${boxes.size} lines")
 
@@ -95,12 +95,19 @@ class VolumeReplayTest {
                     widestWhere = "$shortName block $index"
                 }
 
+                // Tallest line over the median one. Dialogue is set at one size,
+                // so a block whose lines differ wildly in height is lettering
+                // welded to a bubble — the defect Batman turned up, which fill
+                // alone does not see because big letters cover a lot of area.
+                val heights = lines.map { it.imageRect.height }.sorted()
+                val ratio = heights.last() / heights[heights.size / 2]
+
                 val effect = if (TranslationTextUtils.isSoundEffect(text)) " SFX" else ""
                 report.appendLine(
-                    "   block %-3d [%4d,%4d %4dx%4d] w=%2d%% fill=%3d%% lines=%-2d%s  %s".format(
+                    "   block %-3d [%4d,%4d %4dx%4d] w=%2d%% fill=%3d%% lines=%-2d h=%.1fx%s  %s".format(
                         index, rect.left.toInt(), rect.top.toInt(),
                         rect.width.toInt(), rect.height.toInt(),
-                        (widthShare * 100).toInt(), fill, lines.size, effect, text,
+                        (widthShare * 100).toInt(), fill, lines.size, ratio, effect, text,
                     )
                 )
 
