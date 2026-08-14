@@ -90,6 +90,46 @@ class OcrMergeUtilsTest {
     }
 
     @Test
+    fun `a sound effect touching a bubble is peeled back off it`() {
+        // Batman Arkham City page 062: SKRREEE is drawn across the panel and its
+        // box stops two pixels above the bubble under it, so the two merge. The
+        // block then fills 80% of its rect — big letters cover a lot — and the
+        // sparse rule cannot see anything wrong with it.
+        val boxes = listOf(
+            line("SKRREEE", 611, 1740, 1562, 2112, 0),
+            line("QUAND", 837, 2114, 930, 2145, 1),
+            line("ON TE RAMÈ-", 799, 2140, 976, 2173, 2),
+            line("NERA AVEC LES", 784, 2166, 990, 2202, 3),
+            line("ARMES.", 834, 2194, 939, 2230, 4),
+        )
+
+        val blocks = blocksOf(boxes)
+
+        assertEquals(2, blocks.size, "the sound effect stayed welded to the bubble: $blocks")
+        assertTrue("SKRREEE" in blocks, "the sound effect was not left on its own: $blocks")
+        assertTrue(
+            "QUAND ON TE RAMÈ- NERA AVEC LES ARMES." in blocks,
+            "the bubble came apart with it: $blocks",
+        )
+    }
+
+    @Test
+    fun `a bubble with one emphasised line is left whole`() {
+        // Lettering one line larger for emphasis is normal inside a bubble, and
+        // peeling it would translate the sentence in two pieces.
+        val boxes = listOf(
+            line("I DONT KNOW", 145, 128, 386, 165, 0),
+            line("IF YOURE A GOD,", 144, 169, 444, 213, 1),
+            line("BUT YOURE A", 146, 216, 389, 253, 2),
+            line("MONSTER!", 146, 259, 337, 320, 3),
+        )
+
+        val blocks = blocksOf(boxes)
+
+        assertEquals(1, blocks.size, "an emphasised last line broke the bubble apart: $blocks")
+    }
+
+    @Test
     fun `a merged block never grows past the lines it contains`() {
         // The panel is painted over blockRect, so this is the giant black
         // rectangle across the drawing, expressed as a test.

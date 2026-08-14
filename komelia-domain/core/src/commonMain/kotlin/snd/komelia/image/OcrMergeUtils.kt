@@ -114,6 +114,11 @@ fun mergeOcrBoxes(
         else currentSegments
             .flatMap { splitIntoColumns(it) }
             .flatMap { undoIfWideAndSparse(it, pageWidth) }
+            .flatMap { peelOversizedLines(it) }
+            // Again, because a sound effect drawn across the page is wide enough
+            // to be the only thing two bubbles had in common: taking it out
+            // leaves them as two groups that no longer touch.
+            .flatMap { splitIntoColumns(it) }
 
     return finalSegments.flatMap { segment ->
         val unifiedBlockIndex = segment.elements.firstOrNull()?.blockIndex ?: 0
@@ -255,6 +260,52 @@ private fun undoIfWideAndSparse(segment: Segment, pageWidth: Int): List<Segment>
 
     return segment.elements.groupBy { it.blockRect }
         .map { (rect, elements) -> Segment(rect, elements.toMutableList()) }
+}
+
+/** How much taller than its neighbours a line has to be to be drawn lettering. */
+private const val OVERSIZED_LINE_RATIO = 4.0f
+
+/**
+ * Pulls a sound effect back off the bubble it was welded to.
+ *
+ * [undoIfWideAndSparse] cannot see this one: 'eRRRRAATT eRRRAATTT' drawn across
+ * a panel next to a caption fills 71% of its block, because letters that big
+ * cover a lot of ground. What gives it away is that dialogue in a bubble is all
+ * set at one size, so a line towering over its neighbours was not lettered with
+ * them.
+ *
+ * Measured over 2841 multi-line blocks of four volumes: 96% of them have their
+ * tallest line within 1.5x of the median of the others, and only 34 reach 4x.
+ * Of those 34 nearly every one is a sound effect stuck to a caption — FWOOSH,
+ * KLANG, THWACK, WHOOOM, BLOF BLOP — and the rest are title pages, where taking
+ * the logo off the credits is right anyway.
+ *
+ * Only the oversized lines leave. Undoing the whole block the way the sparse
+ * rule does would chop the dialogue into one block per line and translate it a
+ * fragment at a time.
+ */
+private fun peelOversizedLines(segment: Segment): List<Segment> {
+    val lines = segment.elements.groupBy { it.blockRect }
+    if (lines.size < 2) return listOf(segment)
+
+    val rects = lines.keys.toList()
+    val oversized = rects.filterIndexed { index, rect ->
+        val others = rects.filterIndexed { i, _ -> i != index }.map { it.height }.sorted()
+        rect.height >= others[others.size / 2] * OVERSIZED_LINE_RATIO
+    }
+    if (oversized.isEmpty() || oversized.size == rects.size) return listOf(segment)
+
+    val kept = rects.toSet() - oversized.toSet()
+    val keptSegment = Segment(
+        rect = Rect(
+            left = kept.minOf { it.left },
+            top = kept.minOf { it.top },
+            right = kept.maxOf { it.right },
+            bottom = kept.maxOf { it.bottom },
+        ),
+        elements = kept.flatMap { lines.getValue(it) }.toMutableList(),
+    )
+    return oversized.map { Segment(it, lines.getValue(it).toMutableList()) } + keptSegment
 }
 
 /** Share of [rect] covered by the boxes of [elements], overlaps counted twice. */

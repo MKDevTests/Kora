@@ -95,12 +95,18 @@ class VolumeReplayTest {
                     widestWhere = "$shortName block $index"
                 }
 
-                // Tallest line over the median one. Dialogue is set at one size,
-                // so a block whose lines differ wildly in height is lettering
-                // welded to a bubble — the defect Batman turned up, which fill
-                // alone does not see because big letters cover a lot of area.
+                // Tallest line over the median of all the others. Dialogue is
+                // set at one size, so a block whose tallest line towers over the
+                // rest is lettering welded to a bubble — the defect Batman
+                // turned up, which fill alone does not see because big letters
+                // cover a lot of area.
+                //
+                // Against the median of the whole block this reads 1.0x for
+                // every two-line block, the tallest line being its own upper
+                // median; and one giant line among ten drags nothing.
                 val heights = lines.map { it.imageRect.height }.sorted()
-                val ratio = heights.last() / heights[heights.size / 2]
+                val others = heights.dropLast(1)
+                val ratio = if (others.isEmpty()) 1f else heights.last() / others[others.size / 2]
 
                 val effect = if (TranslationTextUtils.isSoundEffect(text)) " SFX" else ""
                 report.appendLine(
