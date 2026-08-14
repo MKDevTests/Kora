@@ -56,6 +56,12 @@ class VolumeReplayTest {
         assertTrue(pages.isNotEmpty(), "no .boxes.json in $dir")
 
         val report = StringBuilder()
+        // Exactly the strings the reader hands the translator: line breaks
+        // rejoined, sentence-cased, sound effects dropped. Written from here
+        // rather than reconstructed from the report, so the translation bench
+        // cannot drift from what ships the way a Python copy of these rules
+        // would.
+        val sentences = StringBuilder()
         var blockCount = 0
         var widest = 0f
         var widestWhere = ""
@@ -109,6 +115,12 @@ class VolumeReplayTest {
                 val ratio = if (others.isEmpty()) 1f else heights.last() / others[others.size / 2]
 
                 val effect = if (TranslationTextUtils.isSoundEffect(text)) " SFX" else ""
+                if (effect.isEmpty()) {
+                    val ready = TranslationTextUtils.toSentenceCase(
+                        TranslationTextUtils.rejoinLineBreaks(text)
+                    )
+                    sentences.appendLine(ready)
+                }
                 report.appendLine(
                     "   block %-3d [%4d,%4d %4dx%4d] w=%2d%% fill=%3d%% lines=%-2d h=%.1fx%s  %s".format(
                         index, rect.left.toInt(), rect.top.toInt(),
@@ -133,6 +145,7 @@ class VolumeReplayTest {
 
         val out = File(dir, "report.txt")
         out.writeText(report.toString())
+        File(dir, "sentences.txt").writeText(sentences.toString())
         println("${pages.size} pages, $blockCount blocks -> ${out.absolutePath}")
         println("widest block: ${(widest * 100).toInt()}% of the page, at $widestWhere")
     }

@@ -3,12 +3,14 @@
 
     python scripts/ocr-bench/make_corpus.py <report-dir>... --out corpus.json
 
-Reads the report.txt written by VolumeReplayTest, so what comes out is exactly
-what the reader would hand to the translator on those pages — not hand-picked
-sentences, and not text invented for the occasion.
+Reads the sentences.txt written by VolumeReplayTest, which holds exactly the
+strings the reader hands the translator on those pages: sound effects already
+dropped, line breaks already rejoined, already sentence-cased, all by the real
+Kotlin. Rebuilding any of that here in Python is how a bench starts lying — the
+first run of this bench fed raw ALL-CAPS to the model and made it look far worse
+than it is.
 
-Sound effects are dropped: the reader does not translate them. Everything else
-is kept, deduplicated, and split into two piles:
+Sentences are deduplicated and split into two piles:
 
   plain  — ordinary dialogue, for measuring the everyday case
   idiom  — contractions, slang markers, interjections, all-caps emphasis, the
@@ -25,11 +27,6 @@ import random
 import re
 from pathlib import Path
 
-BLOCK = re.compile(
-    r"^\s+block\s+\d+\s+\[[^\]]*\]\s+w=\s*\d+%\s+fill=\s*\d+%\s+"
-    r"lines=(\d+)\s+h=[\d.]+x(\s+SFX)?\s+(.*)$"
-)
-
 # Lines that lean on register rather than vocabulary. Deliberately narrow: these
 # are markers of informal speech, not an attempt to detect idioms, which is what
 # the bench is meant to find out.
@@ -41,16 +38,11 @@ INFORMAL = re.compile(
 )
 
 
-def sentences(report: Path):
-    for raw in report.read_text(encoding="utf-8", errors="replace").splitlines():
-        m = BLOCK.match(raw)
-        if not m or m.group(2):  # sound effects are never translated
-            continue
-        text = m.group(3).strip()
-        # A word split across two lines is rejoined by the reader before it
-        # translates; do the same so the corpus is not full of 'CHEER- FUL'.
-        text = re.sub(r"(\w)- (\w)", r"\1\2", text)
-        yield text
+def sentences(path: Path):
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        text = raw.strip()
+        if text:
+            yield text
 
 
 def is_worth_translating(text: str) -> bool:
@@ -63,7 +55,7 @@ def is_worth_translating(text: str) -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("reports", type=Path, nargs="+", help="directories holding report.txt")
+    parser.add_argument("reports", type=Path, nargs="+", help="directories holding sentences.txt")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--size", type=int, default=200, help="sentences per pile")
     parser.add_argument("--seed", type=int, default=17)
@@ -71,11 +63,11 @@ def main() -> None:
 
     seen: dict[str, str] = {}
     for directory in args.reports:
-        report = directory / "report.txt"
-        if not report.exists():
-            print(f"skipping {directory}: no report.txt")
+        source = directory / "sentences.txt"
+        if not source.exists():
+            print(f"skipping {directory}: no sentences.txt")
             continue
-        for text in sentences(report):
+        for text in sentences(source):
             if is_worth_translating(text):
                 seen.setdefault(text, directory.name)
 
