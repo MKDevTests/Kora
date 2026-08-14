@@ -16,7 +16,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -216,7 +215,6 @@ class ReaderState(
     val ocrResults = MutableStateFlow<List<OcrElementBox>>(emptyList())
     val ocrPageId = MutableStateFlow<PageId?>(null)
     val isOcrLoading = MutableStateFlow(false)
-    private var ocrJob: Job? = null
 
     val translationSettings = MutableStateFlow(snd.komelia.settings.model.TranslationSettings())
     /** Translated text per OCR block index, for the page in [ocrPageId]. */
@@ -250,8 +248,8 @@ class ReaderState(
         }
 
         pageChangeFlow.onEach {
-            ocrJob?.cancel()
-            ocrJob = null
+            // The in-flight scan is left alone: it finishes and is cached. Only
+            // what is on screen is cleared here.
             ocrResults.value = emptyList()
             ocrPageId.value = null
             translatedBlocks.value = emptyMap()
@@ -945,10 +943,9 @@ class ReaderState(
     }
 
     /**
-     * One page scanned at a time. Cancelling [ocrJob] does not stop a scan that
-     * has already started: recognition is a blocking native call with no
-     * suspension point, so cancellation only lands once it returns. Without this
-     * lock every page turn started another one — six concurrent RapidOCR
+     * One page scanned at a time. Recognition is a blocking native call with no
+     * suspension point, so nothing else can stop one that has started. Without
+     * this lock every page turn began another — six concurrent RapidOCR
      * inferences were measured, ending in an OutOfMemoryError.
      */
     private val ocrMutex = Mutex()
@@ -967,17 +964,21 @@ class ReaderState(
      *
      * Bounded, and ordered by insertion so the oldest entry goes first — a
      * long book would otherwise keep every page's boxes alive for a reader
-     * session. Only touched from [stateScope], which runs on the main thread;
-     * recognition itself is the part that hops to [Dispatchers.Default].
+     * session.
+     *
+     * Held in a flow rather than a plain map because a queued scan reads it
+     * from [Dispatchers.Default] while page turns write it from the state
+     * thread. Replacing an immutable map wholesale keeps that safe; the worst
+     * a lost race can do is drop one entry, costing a rescan.
      */
-    private val scanCache = LinkedHashMap<PageId, ScanResult>()
+    private val scanCache = MutableStateFlow<Map<PageId, ScanResult>>(emptyMap())
 
     private fun cacheScan(pageId: PageId, result: ScanResult) {
-        scanCache.remove(pageId)
-        scanCache[pageId] = result
-        while (scanCache.size > SCAN_CACHE_SIZE) {
-            scanCache.remove(scanCache.keys.first())
-        }
+        val next = LinkedHashMap(scanCache.value)
+        next.remove(pageId) // re-inserted at the end: touched entries age last
+        next[pageId] = result
+        while (next.size > SCAN_CACHE_SIZE) next.remove(next.keys.first())
+        scanCache.value = next
     }
 
     /**
@@ -985,27 +986,32 @@ class ReaderState(
      * translations were produced by the old settings.
      */
     private fun clearScanCache() {
-        scanCache.clear()
+        scanCache.value = emptyMap()
     }
 
     fun scanCurrentPageForText(image: ReaderImage) {
-        ocrJob?.cancel()
-        val cached = scanCache[image.pageId]
+        val pageId = image.pageId
+        val cached = scanCache.value[pageId]
         if (cached != null) {
-            cacheScan(image.pageId, cached) // touched: keep it from ageing out
+            cacheScan(pageId, cached) // touched: keep it from ageing out
             translationLogger.info {
-                "scan cache hit ${image.pageId} " +
+                "scan cache hit $pageId " +
                         "(${cached.boxes.size} boxes, ${cached.translations.size} translated)"
             }
-            ocrPageId.value = image.pageId
+            ocrPageId.value = pageId
             ocrResults.value = cached.boxes
             translatedBlocks.value = cached.translations
             isOcrLoading.value = false
             isTranslating.value = false
             return
         }
-        ocrJob = stateScope.launch {
-            val pageId = image.pageId
+        // Deliberately NOT cancelled on a page turn. Recognition is a blocking
+        // native call that cancellation cannot interrupt, so cancelling it only
+        // threw away a result that had already cost its 4 seconds and was still
+        // valid for its own page — which is why turning back to a page rescanned
+        // it from scratch. A scan nobody wants any more skips itself when it
+        // reaches the front of the queue, before doing any work.
+        stateScope.launch {
             ocrPageId.value = pageId
             isOcrLoading.value = true
             try {
@@ -1014,49 +1020,53 @@ class ReaderState(
                 // reading path. The engine is part of the label so ML Kit and
                 // RapidOCR can be compared from the same log.
                 val settings = ocrSettings.value
-                val scanned = withContext(Dispatchers.Default) {
+                val result = withContext(Dispatchers.Default) {
                     ocrMutex.withLock {
-                        // Queued behind an in-flight scan; the page may have moved on
-                        // while waiting, in which case this one is already pointless.
-                        ensureActive()
-                        snd.komelia.perf.PerfTrace.measure(
-                            "reader.ocr.${settings.engine}",
-                            count = { it.size }
-                        ) { ocrService.recognizeText(image, settings) }
+                        // Queued behind an in-flight scan. Two things can have
+                        // happened while waiting: the reader moved on, and this
+                        // page is nobody's business any more; or the page came
+                        // back and was scanned by another job, whose result is
+                        // now in the cache.
+                        scanCache.value[pageId] ?: if (ocrPageId.value != pageId) null else {
+                            val scanned = snd.komelia.perf.PerfTrace.measure(
+                                "reader.ocr.${settings.engine}",
+                                count = { it.size }
+                            ) { ocrService.recognizeText(image, settings) }
+
+                            // Only when translating, and before the merge: see
+                            // OcrScriptFilter. Plain OCR keeps every script, so
+                            // reading a Japanese page with text selection still works.
+                            val translation = translationSettings.value
+                            val rawBoxes = if (translation.enabled) {
+                                if (translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) {
+                                    snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
+                                } else {
+                                    snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
+                                }
+                            } else scanned
+
+                            // Counted in blocks, not words — one block is one
+                            // translation call.
+                            val boxes = if (settings.mergeBoxes) {
+                                snd.komelia.perf.PerfTrace.measure(
+                                    "reader.ocr.merge",
+                                    count = { merged -> merged.distinctBy { it.blockIndex }.size }
+                                ) { mergeOcrBoxes(rawBoxes, readingDirection.value) }
+                            } else rawBoxes
+
+                            ScanResult(boxes, translateBlocks(boxes))
+                        }
                     }
                 }
+                if (result == null) return@launch
+                cacheScan(pageId, result)
                 // A scan that outlived its page must not publish: its boxes would be
                 // drawn over a different image, which is the "blue boxes land in the
-                // wrong place for a few seconds" symptom.
-                if (ocrPageId.value != pageId) return@launch
-                // Only when translating, and before the merge: see OcrScriptFilter.
-                // Plain OCR keeps every script, so reading a Japanese page with
-                // text selection still works.
-                val rawBoxes = if (translationSettings.value.enabled) {
-                    if (translationSettings.value.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) {
-                        snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
-                    } else {
-                        snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
-                    }
-                } else scanned
-
-                // Deliberately left on the caller's dispatcher (the main thread) for
-                // this measurement pass: mergeOcrBoxes is O(n^2) over the boxes and we
-                // want to know what it actually costs there before moving it. Counted
-                // in blocks, not words — one block is one translation call.
-                val boxes = if (settings.mergeBoxes) {
-                    snd.komelia.perf.PerfTrace.measure(
-                        "reader.ocr.merge",
-                        count = { merged -> merged.distinctBy { it.blockIndex }.size }
-                    ) { mergeOcrBoxes(rawBoxes, readingDirection.value) }
-                } else rawBoxes
-                ocrResults.value = boxes
-                translatePage(boxes, pageId)
-                // Cached after translation so the entry holds both halves. A
-                // page whose scan outlived it is not cached: translatedBlocks
-                // then belongs to whatever page is on screen now.
+                // wrong place for a few seconds" symptom. It is still cached above —
+                // that is the whole point.
                 if (ocrPageId.value == pageId) {
-                    cacheScan(pageId, ScanResult(boxes, translatedBlocks.value))
+                    ocrResults.value = result.boxes
+                    translatedBlocks.value = result.translations
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1075,38 +1085,51 @@ class ReaderState(
 
 
     /**
-     * Translates the OCR blocks of the page that was just scanned, when page
-     * translation is on. Runs inside the OCR job so it is cancelled by the same
-     * page turn, and publishes nothing if the page moved on meanwhile.
+     * Translates the OCR blocks of a page that was just scanned, when page
+     * translation is on. Returns what should be painted rather than publishing
+     * it: the caller decides, because a scan is also worth caching for a page
+     * the reader has already left.
      *
      * Blocks are translated as whole sentences, never word by word: [ocrResults]
      * holds one entry per word, and a bubble only makes sense reassembled.
      */
-    private suspend fun translatePage(boxes: List<OcrElementBox>, pageId: PageId) {
+    private suspend fun translateBlocks(boxes: List<OcrElementBox>): Map<Int, String> {
         val settings = translationSettings.value
-        if (!settings.enabled || boxes.isEmpty()) return
-        if (settings.source == settings.target) return
+        if (!settings.enabled || boxes.isEmpty()) return emptyMap()
+        if (settings.source == settings.target) return emptyMap()
 
+        val japanese = settings.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
         val blocks = boxes
             .groupBy { it.blockIndex }
             .mapValues { (_, elements) ->
                 elements
                     .sortedWith(compareBy({ it.lineIndex }, { it.elementIndex }))
-                    .joinToString(" ") { it.text }
+                    // Japanese does not separate words with spaces, and inserting
+                    // them between the columns of a bubble splits words that the
+                    // detector happened to cut in two.
+                    .joinToString(if (japanese) "" else " ") { it.text }
                     .trim()
-                    // Lettering breaks words across lines; joined as-is they
-                    // translate into invented words ("BUSI- NESS" -> "de bus").
-                    .let { snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it) }
-                    // Bubbles are drawn in full caps, which translation models
-                    // handle badly ("IT'S CONCERNING" -> "en ce qui concerne").
-                    .let { snd.komelia.image.TranslationTextUtils.toSentenceCase(it) }
+                    // Both cleanups are about Latin lettering: a word the
+                    // letterer broke across two lines, and the full caps comics
+                    // are drawn in. Neither exists in Japanese.
+                    .let {
+                        if (japanese) it
+                        else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
+                            .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
+                    }
             }
             // Single letters and bare digits are artwork the OCR mistook for
             // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them
             // is meaningless, and painting an opaque panel over them puts black
             // squares on the drawing.
-            .filterValues { text -> text.count { it.isLetter() } >= 2 && text.length >= 3 }
-        if (blocks.isEmpty()) return
+            //
+            // Japanese needs a lower bar: a whole bubble can be two characters
+            // ("はい"), where three would already be a sentence.
+            .filterValues { text ->
+                val letters = text.count { it.isLetter() }
+                if (japanese) letters >= 2 else letters >= 2 && text.length >= 3
+            }
+        if (blocks.isEmpty()) return emptyMap()
 
         isTranslating.value = true
         try {
@@ -1123,8 +1146,7 @@ class ReaderState(
                     )
                 }
             }
-            if (ocrPageId.value != pageId) return
-            translatedBlocks.value = indices.zip(translated)
+            val published = indices.zip(translated)
                 .associate { (blockIndex, text) ->
                     // Honorifics survive translation, the name in front of them
                     // does not: "MAMA-SAN" came back as "Maman-san".
@@ -1143,7 +1165,6 @@ class ReaderState(
             // the OCR split, a rect smaller than the bubble, or a translation
             // that came back unchanged — and only this tells the three apart.
             //     adb logcat | Select-String "KoraTranslate"
-            val published = translatedBlocks.value
             indices.forEach { blockIndex ->
                 val rect = boxes.first { it.blockIndex == blockIndex }.blockRect
                 // Shows what is actually painted, so a block dropped as a sound
@@ -1155,12 +1176,14 @@ class ReaderState(
                             "src='${blocks.getValue(blockIndex)}' -> '$shown'"
                 }
             }
+            return published
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             appNotifications.add(AppNotification.Error("Translation failed: ${e.message}"))
+            return emptyMap()
         } finally {
-            if (ocrPageId.value == pageId) isTranslating.value = false
+            isTranslating.value = false
         }
     }
 
@@ -1168,6 +1191,16 @@ class ReaderState(
         translationSettings.value = newSettings
         translatedBlocks.value = emptyMap()
         clearScanCache()
+        // The OCR has to be looking for the script we are about to translate.
+        // Leaving them out of step is a silent failure: the engine reads Latin
+        // on a Japanese page, finds nothing, and translation looks broken.
+        val ocrLanguage = when (newSettings.source) {
+            snd.komelia.settings.model.TranslationLanguage.JAPANESE -> OcrLanguage.JAPANESE
+            else -> OcrLanguage.LATIN
+        }
+        if (ocrSettings.value.selectedLanguage != ocrLanguage) {
+            onOcrSettingsChange(ocrSettings.value.copy(selectedLanguage = ocrLanguage))
+        }
         stateScope.launch { readerSettingsRepository.putTranslationSettings(newSettings) }
         if (newSettings.enabled) ensureTranslationModels(newSettings)
     }

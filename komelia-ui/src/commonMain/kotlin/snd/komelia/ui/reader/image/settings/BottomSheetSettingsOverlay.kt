@@ -546,7 +546,10 @@ fun BottomSheetSettingsOverlay(
 
                             3 -> OcrModeSettings(
                                 ocrSettings = ocrSettings,
-                                onOcrSettingsChange = commonReaderState::onOcrSettingsChange
+                                onOcrSettingsChange = commonReaderState::onOcrSettingsChange,
+                                translationSettings = commonReaderState.translationSettings
+                                    .collectAsState().value,
+                                onTranslationSettingsChange = commonReaderState::onTranslationSettingsChange,
                             )
                         }
                     }
@@ -1499,6 +1502,8 @@ private fun SamplingModeSettings(
 private fun OcrModeSettings(
     ocrSettings: OcrSettings,
     onOcrSettingsChange: (OcrSettings) -> Unit,
+    translationSettings: snd.komelia.settings.model.TranslationSettings,
+    onTranslationSettingsChange: (snd.komelia.settings.model.TranslationSettings) -> Unit,
 ) {
     val platform = LocalPlatform.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1562,6 +1567,29 @@ private fun OcrModeSettings(
                             label = { Text(model.name.replace("_", " ")) }
                         )
                     }
+                }
+            }
+        }
+
+        // Which language the page is written in, for translation. The OCR
+        // language follows it (see ReaderState.onTranslationSettingsChange):
+        // reading Latin on a Japanese page finds nothing and looks like a
+        // broken translation rather than a mismatched setting.
+        Column {
+            Text("Translate from")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(
+                    snd.komelia.settings.model.TranslationLanguage.ENGLISH,
+                    snd.komelia.settings.model.TranslationLanguage.JAPANESE,
+                ).forEach { language ->
+                    InputChip(
+                        selected = translationSettings.source == language,
+                        onClick = {
+                            onTranslationSettingsChange(translationSettings.copy(source = language))
+                        },
+                        colors = accentInputChipColors(),
+                        label = { Text(language.name) }
+                    )
                 }
             }
         }

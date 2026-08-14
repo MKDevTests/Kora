@@ -35,7 +35,9 @@ actual class OcrService {
     private val japaneseRecognizer by lazy { TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build()) }
     private val koreanRecognizer by lazy { TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build()) }
 
-    private val rapidOcrEngines = mutableMapOf<RapidOcrModel, RapidOCR>()
+    /** Keyed by model *and* orientation classification: the two are baked into
+     *  the engine's config, so Japanese and Latin need their own instance. */
+    private val rapidOcrEngines = mutableMapOf<Pair<RapidOcrModel, Boolean>, RapidOCR>()
     /**
      * Per-character boxes were only there to guess word boundaries from the
      * gaps between letters. The recogniser turned out to emit spaces itself
@@ -109,7 +111,13 @@ actual class OcrService {
                     bitmap.copy(Bitmap.Config.ARGB_8888, false)
                 } else bitmap
 
-                val engine = getRapidOcrEngine(settings.rapidOcrModel)
+                // Japanese comic lettering runs in vertical columns. The library
+                // rotates a tall crop before recognising it, which leaves it
+                // upside down half the time — that is exactly what the
+                // orientation classifier is for. Latin pages are upright and
+                // do not pay for it.
+                val vertical = settings.selectedLanguage == OcrLanguage.JAPANESE
+                val engine = getRapidOcrEngine(settings.rapidOcrModel, vertical)
                 if (engine == null) emptyList()
                 else recognizeWithRapidOcr(engine, softwareBitmap)
             }
@@ -138,8 +146,9 @@ actual class OcrService {
         bottom = bottom * factor,
     )
 
-    private fun getRapidOcrEngine(model: RapidOcrModel): RapidOCR? {
-        val existing = rapidOcrEngines[model]
+    private fun getRapidOcrEngine(model: RapidOcrModel, useCls: Boolean): RapidOCR? {
+        val key = model to useCls
+        val existing = rapidOcrEngines[key]
         if (existing != null) return existing
 
         val modelsDir = context.filesDir.resolve("rapidocr_models").toPath()
@@ -184,19 +193,22 @@ actual class OcrService {
             rec.recBatchNum = REC_BATCH
             if (isV6) rec.recKeysPath = keysFile.absolutePathString()
             // Orientation classification decides whether a crop is upside down.
-            // Scanned comic pages are the right way up, and it costs one model
-            // call per box.
-            global.useCls = false
+            // A scanned Latin page is the right way up and does not need it, at
+            // one model call per box; a rotated vertical Japanese column does.
+            global.useCls = useCls
             // Drops the hallucinated reads over artwork and vertical Japanese
             // that made whole panels unusable ('HP L f n 7J iQ 75#+').
             global.textScore = 0.6f
             global.intraOpNumThreads = threads
         }
-        logger.info { "RapidOCR engine for $model, $threads threads, keys=${if (isV6) "v6" else "built-in"}" }
+        logger.info {
+            "RapidOCR engine for $model, $threads threads, " +
+                    "keys=${if (isV6) "v6" else "built-in"}, cls=$useCls"
+        }
 
         return try {
             val engine = RapidOCR.create(context, config)
-            rapidOcrEngines[model] = engine
+            rapidOcrEngines[key] = engine
             engine
         } catch (e: Exception) {
             logger.error(e) { "Failed to create RapidOCR engine for model $model" }
