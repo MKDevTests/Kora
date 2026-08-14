@@ -24,10 +24,29 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import time
 from pathlib import Path
 
 MODEL = "Helsinki-NLP/opus-mt-en-fr"
+
+# Ends a sentence and is followed by the start of another. Kept deliberately
+# narrow so 'Mr. Smith' and '...' do not get cut.
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[\"'“]?[A-Z])")
+
+
+def split_sentences(text: str) -> list[str]:
+    """
+    What a real integration does before handing text to the model, and what ML
+    Kit does inside itself.
+
+    Without it a Marian model given three sentences at once answers with one:
+    'Damn it! It's a breach of contract! I'm gonna sue!' comes back as 'C'est
+    une rupture de contrat !'. Comparing an engine that splits against one that
+    does not measures the splitting, not the engines.
+    """
+    parts = [p.strip() for p in SENTENCE_END.split(text)]
+    return [p for p in parts if p] or [text]
 
 
 def main() -> None:
@@ -36,6 +55,8 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--batch", type=int, default=16)
+    parser.add_argument("--whole-blocks", action="store_true",
+                        help="feed each block in one piece instead of sentence by sentence")
     parser.add_argument(
         "--allow-download",
         action="store_true",
@@ -53,15 +74,31 @@ def main() -> None:
     corpus = json.loads(args.corpus.read_text(encoding="utf-8"))
     started = time.perf_counter()
     count = 0
-    for name, pile in corpus.items():
-        for start in range(0, len(pile), args.batch):
-            chunk = pile[start : start + args.batch]
-            batch = tokenizer([e["text"] for e in chunk], return_tensors="pt", padding=True)
+
+    def translate(texts: list[str]) -> list[str]:
+        out: list[str] = []
+        for start in range(0, len(texts), args.batch):
+            chunk = texts[start : start + args.batch]
+            batch = tokenizer(chunk, return_tensors="pt", padding=True)
             generated = model.generate(**batch, max_new_tokens=128, num_beams=4)
-            for entry, tokens in zip(chunk, generated):
-                entry["translation"] = tokenizer.decode(tokens, skip_special_tokens=True)
-            count += len(chunk)
-        print(f"  {name}: {len(pile)} done")
+            out += [tokenizer.decode(t, skip_special_tokens=True) for t in generated]
+        return out
+
+    for name, pile in corpus.items():
+        # Every sentence of every block goes through in one flat list, so the
+        # batching still works and the pieces are put back per block afterwards.
+        pieces: list[str] = []
+        spans: list[tuple[int, int]] = []
+        for entry in pile:
+            parts = [entry["text"]] if args.whole_blocks else split_sentences(entry["text"])
+            spans.append((len(pieces), len(pieces) + len(parts)))
+            pieces += parts
+
+        translated = translate(pieces)
+        for entry, (start, end) in zip(pile, spans):
+            entry["translation"] = " ".join(translated[start:end])
+        count += len(pile)
+        print(f"  {name}: {len(pile)} blocks, {len(pieces)} sentences")
 
     elapsed = time.perf_counter() - started
     args.out.write_text(json.dumps(corpus, ensure_ascii=False, indent=1), encoding="utf-8")

@@ -32,11 +32,16 @@ TEXT_SCORE = 0.6
 WIDTH_HEIGHT_RATIO = 8
 
 
-def build_engine(fast: bool):
+def build_engine(fast: bool, rec_size: str = "small"):
     from rapidocr_onnxruntime import RapidOCR
 
     det = MODELS / ("PP-OCRv6_tiny_det_infer.onnx" if fast else "PP-OCRv6_small_det_infer.onnx")
-    rec = MODELS / "PP-OCRv6_small_rec_infer.onnx"
+    # small is what ships. medium is the next size up and shares the same
+    # character dictionary, so it drops straight in — worth measuring because
+    # the recogniser reads 'u' as 'li' often enough to wreck a bubble on its
+    # own: soulmate came out solilmate, without came out witholt, and no
+    # translator recovers from that.
+    rec = MODELS / f"PP-OCRv6_{rec_size}_rec_infer.onnx"
     cls = MODELS / "ch_ppocr_mobile_v2.0_cls_infer.onnx"
     keys = MODELS / "ppocrv6_keys.txt"
 
@@ -158,13 +163,15 @@ def main() -> None:
     parser.add_argument("source", type=Path, help="cbz/zip, a directory of pages, or one image")
     parser.add_argument("--out", type=Path, default=Path("scripts/ocr-bench/out"))
     parser.add_argument("--fast", action="store_true", help="tiny detector, as the Fast switch does")
+    parser.add_argument("--rec", choices=("small", "medium"), default="small",
+                        help="recogniser size; small is what ships")
     parser.add_argument("--limit", type=int, default=0, help="stop after N pages")
     args = parser.parse_args()
 
     if not args.source.exists():
         sys.exit(f"No such file or directory: {args.source}")
 
-    engine = build_engine(args.fast)
+    engine = build_engine(args.fast, args.rec)
     args.out.mkdir(parents=True, exist_ok=True)
 
     count = 0
@@ -176,6 +183,7 @@ def main() -> None:
             "width": width,
             "height": height,
             "detector": "tiny" if args.fast else "small",
+            "recogniser": args.rec,
             "boxes": boxes,
         }
         (args.out / f"{name}.boxes.json").write_text(
