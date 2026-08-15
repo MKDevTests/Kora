@@ -1088,58 +1088,15 @@ class ReaderState(
                 // instant in each of them and slow to the reader, and that gap
                 // is exactly what the document calls TimeToReady. Subtracting
                 // the stages from this is how much was spent waiting.
-                val result = snd.komelia.perf.PerfTrace.measure("reader.page.total") {
-                  withContext(Dispatchers.Default) {
-                    ocrMutex.withLock {
-                        // Queued behind an in-flight scan. Two things can have
-                        // happened while waiting: the reader moved on, and this
-                        // page is nobody's business any more; or the page came
-                        // back and was scanned by another job, whose result is
-                        // now in the cache.
-                        scanCache.value[pageId] ?: if (ocrPageId.value != pageId) null else {
-                            val scanned = snd.komelia.perf.PerfTrace.measure(
-                                "reader.ocr.${settings.engine}",
-                                count = { it.size }
-                            ) { ocrService.recognizeText(image, settings) }
-
-                            // Only when translating, and before the merge: see
-                            // OcrScriptFilter. Plain OCR keeps every script, so
-                            // reading a Japanese page with text selection still works.
-                            val translation = translationSetting
-                            val japanese = translation.enabled &&
-                                    translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
-                            val rawBoxes = if (translation.enabled) {
-                                if (translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) {
-                                    snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
-                                } else {
-                                    snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
-                                }
-                            } else scanned
-
-                            // Counted in blocks, not words — one block is one
-                            // translation call.
-                            val boxes = if (settings.mergeBoxes) {
-                                snd.komelia.perf.PerfTrace.measure(
-                                    "reader.ocr.merge",
-                                    count = { merged -> merged.distinctBy { it.blockIndex }.size }
-                                ) {
-                                    // The page width is what tells a full-width
-                                    // shout apart from several bubbles welded
-                                    // together; without it that check is off.
-                                    mergeOcrBoxes(
-                                        boxes = rawBoxes,
-                                        direction = readingDirection.value,
-                                        vertical = japanese,
-                                        pageWidth = image.getOriginalImageSize().getOrNull()?.width ?: 0,
-                                    )
-                                }
-                            } else rawBoxes
-
-                            PageScan(boxes, translateBlocks(boxes))
-                        }
-                    }
-                  }
-                }
+                val result = performScan(
+                    image = image,
+                    pageId = pageId,
+                    settings = settings,
+                    translationSetting = translationSetting,
+                    label = "reader.page.total",
+                    foreground = true,
+                    stillWanted = { ocrPageId.value == pageId },
+                )
                 if (result == null) return@launch
                 cacheScan(pageId, result)
                 // A scan that outlived its page must not publish: its boxes would be
@@ -1165,6 +1122,152 @@ class ReaderState(
         }
     }
 
+
+    /**
+     * The scan itself, shared by the page on screen and the one being prepared
+     * behind it.
+     *
+     * [stillWanted] is checked once the lock is held rather than before queuing:
+     * a scan can sit behind another for seconds, and by the time it starts the
+     * reader may have moved somewhere else entirely. [label] separates the two
+     * callers in the timings, because a prefetch costs the same milliseconds and
+     * none of the waiting — averaging them together would hide exactly the thing
+     * the prefetch exists to change.
+     */
+    private suspend fun performScan(
+        image: ReaderImage,
+        pageId: PageId,
+        settings: OcrSettings,
+        translationSetting: snd.komelia.settings.model.TranslationSettings,
+        label: String,
+        foreground: Boolean,
+        stillWanted: () -> Boolean,
+    ): PageScan? = snd.komelia.perf.PerfTrace.measure(label) {
+        withContext(Dispatchers.Default) {
+            ocrMutex.withLock {
+                // Queued behind an in-flight scan. Two things can have
+                // happened while waiting: the reader moved on, and this
+                // page is nobody's business any more; or the page came
+                // back and was scanned by another job, whose result is
+                // now in the cache.
+                scanCache.value[pageId] ?: if (!stillWanted()) null else {
+                    val scanned = snd.komelia.perf.PerfTrace.measure(
+                        "reader.ocr.${settings.engine}",
+                        count = { it.size }
+                    ) { ocrService.recognizeText(image, settings) }
+
+                    // Only when translating, and before the merge: see
+                    // OcrScriptFilter. Plain OCR keeps every script, so
+                    // reading a Japanese page with text selection still works.
+                    val japanese = translationSetting.enabled &&
+                            translationSetting.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
+                    val rawBoxes = if (translationSetting.enabled) {
+                        if (japanese) snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
+                        else snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
+                    } else scanned
+
+                    // Counted in blocks, not words — one block is one
+                    // translation call.
+                    val boxes = if (settings.mergeBoxes) {
+                        snd.komelia.perf.PerfTrace.measure(
+                            "reader.ocr.merge",
+                            count = { merged -> merged.distinctBy { it.blockIndex }.size }
+                        ) {
+                            // The page width is what tells a full-width
+                            // shout apart from several bubbles welded
+                            // together; without it that check is off.
+                            mergeOcrBoxes(
+                                boxes = rawBoxes,
+                                direction = readingDirection.value,
+                                vertical = japanese,
+                                pageWidth = image.getOriginalImageSize().getOrNull()?.width ?: 0,
+                            )
+                        }
+                    } else rawBoxes
+
+                    PageScan(boxes, translateBlocks(boxes, foreground))
+                }
+            }
+        }
+    }
+
+    /**
+     * The page being prepared ahead of the reader, if any.
+     *
+     * Separate from [ocrPageId] on purpose: that one says what the overlay is
+     * drawn against, and a prefetch must never claim it.
+     */
+    private val prefetchPageId = MutableStateFlow<PageId?>(null)
+    private var prefetchJob: Job? = null
+
+    /**
+     * Scans the page after this one while the reader is still on this one.
+     *
+     * This is the only lever left against the four seconds a page costs. The
+     * work itself is irreducible — recognition is 93% of it, and the input size,
+     * the thread counts and the runtime options were each measured and each gave
+     * single digits at best. What can be changed is *when* it happens: a reader
+     * spends longer looking at a page than the scan takes, and that time is
+     * otherwise spent idle.
+     *
+     * Deliberately one page, not two. Beyond N+1 the reader is guessing about a
+     * page the user may never reach, and it pays for the guess in battery and
+     * heat on a device that has neither to spare.
+     *
+     * Takes the same lock as the page on screen, so the two never run at once:
+     * OCR and translation are both CPU, and overlapping them on a tablet buys a
+     * few seconds of throughput and then loses them to throttling. A page turn
+     * that lands on the page being prefetched costs nothing extra — the
+     * foreground scan queues on the lock and finds the result already cached,
+     * which is what the cache check inside the lock is for.
+     */
+    fun prefetchNextPageForText(image: ReaderImage) {
+        val pageId = image.pageId
+        if (pageId == ocrPageId.value) return
+        if (scanCache.value.containsKey(pageId)) return
+        if (prefetchPageId.value == pageId && prefetchJob?.isActive == true) return
+        // Only when it is for somewhere else. Cancelling a prefetch of the page
+        // the reader is about to turn to would throw away the very work that
+        // makes the turn instant.
+        prefetchJob?.cancel()
+        prefetchPageId.value = pageId
+        prefetchJob = stateScope.launch {
+            val storedSettings = ocrSettings.value
+            val translationSetting = translationSettings.value
+            val settings = if (translationSetting.enabled) {
+                val language =
+                    if (translationSetting.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) OcrLanguage.JAPANESE
+                    else OcrLanguage.LATIN
+                storedSettings.copy(selectedLanguage = language)
+            } else storedSettings
+            try {
+                val result = performScan(
+                    image = image,
+                    pageId = pageId,
+                    settings = settings,
+                    translationSetting = translationSetting,
+                    label = "reader.page.prefetch",
+                    // Nothing on screen belongs to this page, so none of the
+                    // reader's progress indicators may move for it.
+                    foreground = false,
+                    stillWanted = { prefetchPageId.value == pageId },
+                ) ?: return@launch
+                cacheScan(pageId, result)
+                translationLogger.info {
+                    "prefetched $pageId (${result.boxes.size} boxes, " +
+                            "${result.translations.size} translated)"
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Silent by design: nobody asked for this page yet. If it is
+                // reached, the foreground scan will run and report properly.
+                logger.debug(e) { "prefetch of $pageId failed" }
+            } catch (e: OutOfMemoryError) {
+                logger.warn { "prefetch of $pageId ran out of memory" }
+            }
+        }
+    }
 
     /** Looks at what is on disk for the current pair. */
     fun refreshTranslationModel() {
@@ -1367,7 +1470,15 @@ class ReaderState(
         }
     }
 
-    private suspend fun translateBlocks(boxes: List<OcrElementBox>): Map<Int, String> {
+    /**
+     * @param foreground false when this page is being prepared behind the one on
+     *   screen. The spinner belongs to the page the reader is looking at, and a
+     *   prefetch that lit it up would have it turning while nothing is waiting.
+     */
+    private suspend fun translateBlocks(
+        boxes: List<OcrElementBox>,
+        foreground: Boolean,
+    ): Map<Int, String> {
         val settings = translationSettings.value
         if (!settings.enabled || boxes.isEmpty()) return emptyMap()
         if (settings.source == settings.target) return emptyMap()
@@ -1430,7 +1541,7 @@ class ReaderState(
             }
         if (blocks.isEmpty()) return emptyMap()
 
-        isTranslating.value = true
+        if (foreground) isTranslating.value = true
         try {
             // Block indices are already in reading order, so consecutive here
             // means consecutive on the page — which is what lets the balloons of
@@ -1557,7 +1668,7 @@ class ReaderState(
             appNotifications.add(AppNotification.Error("Translation failed: ${e.message}"))
             return emptyMap()
         } finally {
-            isTranslating.value = false
+            if (foreground) isTranslating.value = false
         }
     }
 
