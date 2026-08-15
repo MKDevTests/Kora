@@ -136,3 +136,60 @@ class PhraseBookTest {
         ).forEach { assertEquals(null, PhraseBook.lookup(it), it) }
     }
 }
+
+/**
+ * Guards the one failure in this feature that is completely silent.
+ *
+ * The shipped table is keyed by a Python normalise() in
+ * scripts/phrasebook/build_table.py, and looked up through the Kotlin one in
+ * PhraseBook. If the two ever disagree, nothing throws and no build breaks --
+ * the keys simply stop matching and two thousand expressions quietly do
+ * nothing, which looks exactly like the table not being worth much.
+ */
+/**
+ * Guards the one failure in this feature that is completely silent.
+ *
+ * The shipped table is keyed by a Python normalise() in
+ * scripts/phrasebook/build_table.py, and looked up through the Kotlin one in
+ * PhraseBook. If the two ever disagree, nothing throws and no build breaks --
+ * the keys simply stop matching and two thousand expressions quietly do
+ * nothing, which looks exactly like the table not being worth much.
+ */
+class PhraseBookTableTest {
+
+    private val table = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/phrasebook/en-fr.json"
+    )
+
+    private fun shipped(): Map<String, String> = kotlinx.serialization.json.Json
+        .decodeFromString(table.readText(Charsets.UTF_8))
+
+    @Test
+    fun `the shipped table is where the reader looks for it`() {
+        assertTrue(table.exists(), "missing ${table.absolutePath}")
+    }
+
+    @Test
+    fun `every shipped key survives the Kotlin normaliser unchanged`() {
+        val keys = shipped().keys
+        assertTrue(keys.size > 1000, "only ${keys.size} keys parsed -- the table looks wrong")
+        val drifted = keys.filter { PhraseBook.normalise(it) != it }
+        assertTrue(
+            drifted.isEmpty(),
+            "${drifted.size} keys the Kotlin normaliser rewrites, so they can never " +
+                    "be matched at runtime: ${drifted.take(5)}"
+        )
+    }
+
+    @Test
+    fun `the shipped table answers a lookup once loaded`() {
+        PhraseBook.load(shipped())
+        assertEquals("Pourquoi pas ?", PhraseBook.lookup("Why not?"))
+    }
+
+    @Test
+    fun `the curated table still wins over the shipped one`() {
+        PhraseBook.load(mapOf("something the matter" to "PAS CELUI-CI"))
+        assertEquals("Un problème ?", PhraseBook.lookup("Something the matter?"))
+    }
+}

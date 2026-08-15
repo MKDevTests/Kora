@@ -1283,6 +1283,34 @@ class ReaderState(
      * Blocks are translated as whole sentences, never word by word: [ocrResults]
      * holds one entry per word, and a bubble only makes sense reassembled.
      */
+    /**
+     * Reads the shipped expression table into [snd.komelia.image.PhraseBook].
+     *
+     * Two thousand entries live in a resource rather than in the source because
+     * a `mapOf` literal that size does not survive the 255-argument limit. Read
+     * on the first translation rather than at startup: the reader opens far more
+     * often than translation is switched on, and 83KB of JSON is not worth
+     * parsing for someone who never turns it on.
+     *
+     * A failure here is not fatal. The curated table is compiled in and keeps
+     * working on its own, so the reader loses the general expressions and
+     * nothing else.
+     */
+    @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+    private suspend fun loadPhraseBook() {
+        if (snd.komelia.image.PhraseBook.isLoaded) return
+        runCatching {
+            val bytes = io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
+                .readBytes("files/phrasebook/en-fr.json")
+            val table = kotlinx.serialization.json.Json
+                .decodeFromString<Map<String, String>>(bytes.decodeToString())
+            snd.komelia.image.PhraseBook.load(table)
+            translationLogger.info { "phrase book loaded, ${table.size} expressions" }
+        }.onFailure {
+            logger.warn(it) { "could not read the phrase book — the curated table still applies" }
+        }
+    }
+
     private suspend fun translateBlocks(boxes: List<OcrElementBox>): Map<Int, String> {
         val settings = translationSettings.value
         if (!settings.enabled || boxes.isEmpty()) return emptyMap()
@@ -1354,6 +1382,7 @@ class ReaderState(
             // tablet not to work: "Meryl Strife" went out spelled right and came
             // back "Meryl Conflife". Applied to the joined sentence, so a term
             // split across two balloons is still one term.
+            loadPhraseBook()
             val joined = groupSources.map { snd.komelia.image.BubbleAssembler.join(it) }
             val protectedGroups = joined.map { glossary.protect(it) }
             // Idioms the engine reliably mangles are answered before it sees

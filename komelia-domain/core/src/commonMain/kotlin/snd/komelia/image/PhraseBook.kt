@@ -24,8 +24,40 @@ package snd.komelia.image
  */
 object PhraseBook {
 
-    /** The French for [text], or null to let the engine do its job. */
-    fun lookup(text: String): String? = ENTRIES[normalise(text)]
+    /**
+     * The bulk table, installed once from the shipped resource.
+     *
+     * Kept out of the source and read from a file because there are two
+     * thousand of them: a `mapOf` literal that size does not survive the
+     * 255-argument limit, which has already cost builds on the string
+     * catalogue. Empty until [load] runs, and the curated table below works on
+     * its own until then -- a reader who opens a page before the file is read
+     * gets slightly worse translations, not a crash.
+     */
+    private var bulk: Map<String, String> = emptyMap()
+
+    /**
+     * Installs the shipped table. Idempotent, and the first call wins: this is
+     * reference data that does not change while the app is running.
+     */
+    fun load(entries: Map<String, String>) {
+        if (bulk.isEmpty()) bulk = entries
+    }
+
+    /** Whether [load] has run, so a caller can avoid re-reading the file. */
+    val isLoaded: Boolean get() = bulk.isNotEmpty()
+
+    /**
+     * The French for [text], or null to let the engine do its job.
+     *
+     * The curated table wins. Its entries were each written against a page
+     * where the engine was seen failing, and one of them disagreeing with the
+     * general list means the general list is wrong for comics.
+     */
+    fun lookup(text: String): String? {
+        val key = normalise(text)
+        return ENTRIES[key] ?: bulk[key]
+    }
 
     /**
      * Strips everything that does not change which phrase this is.
@@ -34,7 +66,7 @@ object PhraseBook {
      * and "Something the matter?!" are the same line — and the OCR pipeline has
      * already lowercased the text by this point, but not always.
      */
-    private fun normalise(text: String): String = text
+    internal fun normalise(text: String): String = text
         .lowercase()
         .replace(TYPOGRAPHIC_APOSTROPHE, '\'')
         .filter { it.isLetterOrDigit() || it == '\'' || it.isWhitespace() }

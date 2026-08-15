@@ -23,7 +23,7 @@ import argparse
 import json
 from pathlib import Path
 
-DEFAULT_OUT = Path("komelia-domain/core/src/commonMain/composeResources/files/phrasebook/en-fr.json")
+DEFAULT_OUT = Path("komelia-ui/src/commonMain/composeResources/files/phrasebook/en-fr.json")
 
 
 def normalise(text: str) -> str:
