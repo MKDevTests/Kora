@@ -53,9 +53,15 @@ def main() -> int:
     parser.add_argument("log", type=Path)
     args = parser.parse_args()
 
+    # PowerShell's `>` writes UTF-16, so a logcat captured the obvious way is
+    # unreadable as UTF-8 and every line silently fails to match -- which looks
+    # exactly like an app that logged nothing. Detected rather than demanded.
+    raw = args.log.read_bytes()
+    encoding = "utf-16" if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else "utf-8"
+
     samples: dict[str, list[int]] = defaultdict(list)
     counts: dict[str, list[int]] = defaultdict(list)
-    for line in args.log.read_text(encoding="utf-8", errors="replace").splitlines():
+    for line in raw.decode(encoding, errors="replace").splitlines():
         match = SAMPLE.search(line)
         if not match:
             continue
@@ -81,7 +87,12 @@ def main() -> int:
 
     total = samples.get("reader.page.total")
     if total:
-        stages = [l for l in labels if l not in ("reader.page.total",)]
+        # Only the page pipeline. The same logger carries Komga's server calls
+        # -- getOne, getOneSeries, prev, background -- and the first version of
+        # this summed those too, which produced a page whose stages cost four
+        # times the page and a negative remainder.
+        stages = [l for l in labels
+                  if l.startswith("reader.") and l != "reader.page.total"]
         # Per-page, not median-of-medians: the stages of one page add up, the
         # medians of different pages do not.
         inner = sum(statistics.median(samples[l]) for l in stages if samples[l])
