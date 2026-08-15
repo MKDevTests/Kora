@@ -1,0 +1,100 @@
+package snd.komelia.image
+
+import java.io.File
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+/**
+ * Checks the dialect table that actually ships.
+ *
+ * Every case below is a line from the 50-page reading log, and every failure
+ * guarded against is one the naive substring version really produced.
+ */
+class JapaneseKansaiNormaliserTest {
+
+    private val shipped = File(
+        "../komelia-ui/src/commonMain/composeResources/files/japanese/kansai.json"
+    )
+
+    private fun loadShipped() {
+        assertTrue(shipped.isFile, "the shipped kansai table is missing at ${shipped.absolutePath}")
+        JapaneseKansaiNormaliser.resetForTest()
+        JapaneseKansaiNormaliser.load(shipped.readText())
+    }
+
+    @Test
+    fun `puts the negation back`() {
+        loadShipped()
+        // Returned "peut être trouvé" — the opposite of the line — until ~へん
+        // existed as a generic rule rather than verb by verb.
+        assertEquals(
+            "こんな名器今時熱海でも見つからないぞ",
+            JapaneseKansaiNormaliser.apply("こんな名器今時熱海でも見つからへんど"),
+        )
+        assertEquals(
+            "高津のアニキもビビってしばらく手ェ出してきいないだろ！",
+            JapaneseKansaiNormaliser.apply("高津のアニキもビビってしばらく手ェ出してきいへんやろ！"),
+        )
+    }
+
+    @Test
+    fun `a short key never fires inside a longer one`() {
+        loadShipped()
+        // やな→だな inside やない and やなくて produced "da nai" and "da nakute",
+        // which the engine read as an affirmation.
+        assertEquals("オホッええ反応するじゃないか♡", JapaneseKansaiNormaliser.apply("オホッええ反応するやないかい♡"))
+        assertTrue(
+            JapaneseKansaiNormaliser.apply("サオやなくて玉がデカイんちゃうか！").startsWith("サオじゃなくて"),
+            "やな fired inside やなくて again",
+        )
+    }
+
+    @Test
+    fun `chau is only the verb at the head of a balloon or after n`() {
+        loadShipped()
+        // 見えちゃう and 落ちちゃう are the contraction of ~てしまう. Rewritten to
+        // 違う the line came back "Voyez-vous cela différemment ?".
+        assertEquals(
+            "これじゃ見えちゃうか…じゃあズボンの中……だと落ちちゃうか",
+            JapaneseKansaiNormaliser.apply("これじゃ見えちゃうか…じゃあズボンの中……だと落ちちゃうか"),
+        )
+        // ちゃうで is its own entry, so it carries the standard particle too.
+        assertEquals("違うよ", JapaneseKansaiNormaliser.apply("ちゃうで"))
+        assertEquals("違うか", JapaneseKansaiNormaliser.apply("ちゃうか"))
+    }
+
+    @Test
+    fun `han is san after a name and nothing inside a word`() {
+        loadShipped()
+        assertEquals("二丁さん！", JapaneseKansaiNormaliser.apply("二丁はん！"))
+        // ごはん is not a person.
+        assertEquals("ごはん食べる", JapaneseKansaiNormaliser.apply("ごはん食べる"))
+    }
+
+    @Test
+    fun `a katakana key must cover its whole run`() {
+        JapaneseKansaiNormaliser.resetForTest()
+        JapaneseKansaiNormaliser.loadForTest(listOf("ワシ" to "俺", "ワシャ" to "俺は"))
+        assertEquals("俺は行く", JapaneseKansaiNormaliser.apply("ワシャ行く"))
+        assertEquals("俺の番だ", JapaneseKansaiNormaliser.apply("ワシの番だ"))
+        // ワシントン is a place, not a first-person pronoun.
+        assertEquals("ワシントンに行く", JapaneseKansaiNormaliser.apply("ワシントンに行く"))
+    }
+
+    @Test
+    fun `never puts anything but Japanese into the sentence`() {
+        loadShipped()
+        val latin = Regex("[A-Za-z\\u00C0-\\u017F]")
+        val samples = listOf(
+            "ワシャ“コンビニ”とパイプあるから何でも知ってるんヤド！",
+            "なんでニ丁がワレみたいな三下の名前知っとんねん",
+            "ポコチン見せんかい！",
+            "どうゆう事やコラッ!？",
+        )
+        for (text in samples) {
+            val out = JapaneseKansaiNormaliser.apply(text)
+            assertTrue(!latin.containsMatchIn(out), "latin text injected into Japanese: $out")
+        }
+    }
+}

@@ -1490,6 +1490,26 @@ class ReaderState(
         }
     }
 
+    /**
+     * Reads the Kansai dialect table, once. Same contract as
+     * [loadKatakanaGlossary]: without it the page still translates, it just
+     * keeps answering the villains' lines with the opposite of what they said.
+     */
+    @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+    private suspend fun loadKansaiTable() {
+        if (snd.komelia.image.JapaneseKansaiNormaliser.isLoaded) return
+        runCatching {
+            val bytes = io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
+                .readBytes("files/japanese/kansai.json")
+            snd.komelia.image.JapaneseKansaiNormaliser.load(bytes.decodeToString())
+            translationLogger.info {
+                "kansai table loaded, ${snd.komelia.image.JapaneseKansaiNormaliser.size} rewrites"
+            }
+        }.onFailure {
+            logger.warn(it) { "could not read the kansai table — dialect goes to the engine as-is" }
+        }
+    }
+
     /** The Japanese phrase book, same contract as [loadPhraseBook]. */
     @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
     private suspend fun loadJapanesePhraseBook() {
@@ -1545,7 +1565,12 @@ class ReaderState(
                     // letterer broke across two lines, and the full caps comics
                     // are drawn in. Neither exists in Japanese.
                     .let {
-                        if (japanese) it
+                        // The Japanese repair is homoglyphs rather than
+                        // spelling, so it needs no word list and runs before
+                        // anything else looks at the text: the phrase book, the
+                        // dialect table and the katakana glossary all match on
+                        // what the page says, and ニ丁 is not what it says.
+                        if (japanese) snd.komelia.image.JapaneseOcrRepair.apply(it)
                         else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
                             // After the line breaks are rejoined, so the repair
                             // sees whole words: "PLID- DING" is two fragments
@@ -1597,6 +1622,7 @@ class ReaderState(
             // back "Meryl Conflife". Applied to the joined sentence, so a term
             // split across two balloons is still one term.
             if (japanese) {
+                loadKansaiTable()
                 loadKatakanaGlossary()
                 loadJapanesePhraseBook()
             } else loadPhraseBook()
@@ -1605,10 +1631,16 @@ class ReaderState(
             // katakana, and rewriting it first would leave protect nothing to
             // find. The placeholders are Latin ("Xqz0"), so the katakana rules
             // cannot reach them.
+            // Dialect before the katakana rewrite, which is the order the table
+            // was measured in: ワシャ has to become 俺は while it is still a
+            // katakana run, and ヤド has to become んだ before anything else
+            // claims those two characters.
             val protectedGroups = joined.map { glossary.protect(it) }
                 .map { protectedText ->
                     if (!japanese) protectedText
-                    else protectedText.mapText { snd.komelia.image.JapaneseKatakanaGlossary.apply(it) }
+                    else protectedText
+                        .mapText { snd.komelia.image.JapaneseKansaiNormaliser.apply(it) }
+                        .mapText { snd.komelia.image.JapaneseKatakanaGlossary.apply(it) }
                 }
             // Idioms the engine reliably mangles are answered before it sees
             // them: "Something the matter?" came back "Quelque chose la
