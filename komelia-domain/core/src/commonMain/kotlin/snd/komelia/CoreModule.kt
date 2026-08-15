@@ -66,4 +66,6 @@ data class AppRepositories(
     val seriesLinksCacheRepository: snd.komelia.library.SeriesLinksCacheRepository,
     /** Remembered first page of a series' books. */
     val seriesBooksCacheRepository: snd.komelia.library.SeriesBooksCacheRepository,
+    /** Terms the page translator is not allowed to decide for itself. */
+    val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
 )

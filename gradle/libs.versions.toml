@@ -2,7 +2,10 @@
 app-version = "1.5.7"
 agp = "8.13.2"
 android-compileSdk = "36"
-android-minSdk = "26"
+# 28, not 26, since v1.4.7: translate-kit's Bergamot engine uses glob() and
+# iconv(), which Android bionic only provides from API 28. Android 8.0 and 8.1
+# are dropped, which the tablet and every device we test on are well past.
+android-minSdk = "28"
 android-targetSdk = "36"
 
 androidx-activityCompose = "1.13.0"
@@ -46,7 +49,6 @@ junrar = "7.4.1"
 logback = "1.5.32"
 logback-android = "3.0.0"
 markdown = "0.7.3"
-mlkit-text-recognition = "16.0.1"
 rapidocr = "1.0.0"
 okhttp = "5.3.2"
 protobuf-plugin = "0.9.4"
@@ -127,11 +129,10 @@ logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback"
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logback-android = { module = "com.github.tony19:logback-android", version.ref = "logback-android" }
 markdown = { module = "org.jetbrains:markdown", version.ref = "markdown" }
-mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text-recognition" }
-mlkit-text-recognition-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "mlkit-text-recognition" }
-mlkit-text-recognition-devanagari = { module = "com.google.mlkit:text-recognition-devanagari", version.ref = "mlkit-text-recognition" }
-mlkit-text-recognition-japanese = { module = "com.google.mlkit:text-recognition-japanese", version.ref = "mlkit-text-recognition" }
-mlkit-text-recognition-korean = { module = "com.google.mlkit:text-recognition-korean", version.ref = "mlkit-text-recognition" }
+mlkit-translate = { module = "com.google.mlkit:translate", version = "17.0.3" }
+# translate-kit is deliberately not here: a flatDir artifact has no group and no
+# version, and the catalog rejects an alias without a group. It is declared in
+# komelia-domain/core/build.gradle.kts instead.
 rapidocr-android = { module = "io.github.hzkitty:rapidocr4j-android", version.ref = "rapidocr" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }

@@ -186,6 +186,22 @@ class ContinuousReaderState(
     private var bubblePrefetchJob: Job? = null
     private val imageDisplayFlow: MutableSharedFlow<ReaderImage> = MutableSharedFlow()
 
+    /**
+     * The page OCR and translation work on, which the paged reader gets for free
+     * from its current spread and this one has to name for itself.
+     *
+     * Several pages are on screen at once here, and only one can be scanned: a
+     * scan costs about four seconds. This is the one the scroll handler last
+     * called the current page — the one the reader is actually on.
+     *
+     * Taken from the layout in [updateVisibleImages] rather than from
+     * [onCurrentPageChange]. That one only fires on a transition — the first or
+     * last visible page changing — so a reader who opens a webtoon and does not
+     * scroll never produces one, and nothing was ever scanned. This runs on
+     * every scroll tick and on every page decode, including the first.
+     */
+    val currentPageImage = MutableStateFlow<ReaderImage?>(null)
+
     suspend fun initialize() {
 
         readingDirection.value = when {
@@ -781,6 +797,21 @@ class ContinuousReaderState(
 
         val visiblePages = visibleItems.filter { it.key is PageMetadata }.map { it.key as PageMetadata }
         val visibleImages = visiblePages.associateWith { page -> imagesInUse[page.toPageId()] }
+
+        // The page the reader is on: the one covering most of the viewport, not
+        // the first or the last of the visible ones. On a webtoon a single page
+        // is often taller than the screen and the one below it shows a sliver,
+        // and scanning that sliver instead would be four seconds spent on a page
+        // nobody is reading.
+        val viewportStart = lazyListState.layoutInfo.viewportStartOffset
+        val viewportEnd = lazyListState.layoutInfo.viewportEndOffset
+        currentPageImage.value = visibleItems
+            .filter { it.key is PageMetadata }
+            .maxByOrNull { item ->
+                (item.offset + item.size).coerceAtMost(viewportEnd) -
+                        item.offset.coerceAtLeast(viewportStart)
+            }
+            ?.let { imagesInUse[(it.key as PageMetadata).toPageId()] }
 
         val scale = screenScaleState.transformation.value.scale
         val firstItemOffset = lazyListState.firstVisibleItemScrollOffset

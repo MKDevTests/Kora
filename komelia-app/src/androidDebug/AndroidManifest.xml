@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only additions. Nothing here reaches a release build.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Started by adb for the translation bench; no launcher entry, so it
+             never shows up as a second icon on the tablet.
+
+             Deliberately a normal visible activity. Theme.NoDisplay requires
+             finish() before onResume returns, which an activity doing async
+             work cannot do — it died with "did not call finish() prior to
+             onResume() completing" and took the run with it. Staying visible
+             also keeps the process in the foreground for the whole run, so it
+             is not reclaimed halfway through four hundred translations. -->
+        <activity
+                android:name="snd.komelia.bench.TranslationBenchActivity"
+                android:exported="true"
+                android:excludeFromRecents="true"
+                android:label="Kora translation bench"/>
+    </application>
+
+</manifest>

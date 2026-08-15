@@ -15,6 +15,16 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
+        // translate-kit, built from source by scripts/translatekit/build-aar.sh
+        // and committed. Upstream publishes only to GitHub Packages, which needs
+        // an auth token to read; the licence is Apache-2.0, so we build it.
+        //
+        // flatDir rather than files(): AGP only treats a dependency as an AAR
+        // when it arrives through a repository, and a library module cannot
+        // hand a files() AAR on to the application that consumes it. flatDir
+        // carries no metadata, which is fine here — the AAR has no transitive
+        // dependencies of its own, only a bundled .so.
+        flatDir { dirs("$rootDir/third_party/translatekit") }
     }
 }
 
@@ -50,6 +60,10 @@ include(":third_party:ChipTextField:chiptextfield-m3")
 include(":third_party:compose-sonner:sonner")
 include(":third_party:indexeddb:core")
 include(":third_party:indexeddb:external")
+
+// Off-device bench for the page-translation geometry. Compiles the shipped
+// merge/text sources directly; see ocr-bench/build.gradle.kts.
+include(":ocr-bench")
 
 includeBuild("third_party/secret-service") {
     dependencySubstitution { substitute(module("de.swiesend:secret-service")) }

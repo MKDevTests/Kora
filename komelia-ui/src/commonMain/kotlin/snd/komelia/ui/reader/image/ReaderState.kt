@@ -16,9 +16,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -96,6 +99,16 @@ typealias SpreadIndex = Int
 
 private val logger = KotlinLogging.logger {}
 
+/** Own logger so a page's translation blocks can be grepped on their own. */
+private val translationLogger = KotlinLogging.logger("KoraTranslate")
+
+/**
+ * Pages whose OCR and translation are kept. Twenty covers backtracking within
+ * a chapter, which is what the cache is for; re-reading a page from much
+ * further back is rare enough to pay for again.
+ */
+private const val SCAN_CACHE_SIZE = 20
+
 /**
  * Minimum height/width ratio for a page to count as "webtoon-tall".
  *
@@ -129,6 +142,9 @@ class ReaderState(
     val pageChangeFlow: SharedFlow<Unit>,
     private val imageLoader: BookImageLoader,
     private val ocrService: OcrService,
+    private val translationService: snd.komelia.image.TranslationEngine,
+    private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
+    private val translationModelDownloader: snd.komelia.image.TranslationModelDownloader?,
     /**
      * Whether the ONNX panel detector is loaded and usable. When false, webtoon
      * routing falls back to CONTINUOUS instead of PANELS (PANELS needs the
@@ -202,7 +218,47 @@ class ReaderState(
     val ocrResults = MutableStateFlow<List<OcrElementBox>>(emptyList())
     val ocrPageId = MutableStateFlow<PageId?>(null)
     val isOcrLoading = MutableStateFlow(false)
-    private var ocrJob: Job? = null
+
+    val translationSettings = MutableStateFlow(snd.komelia.settings.model.TranslationSettings())
+    /** Translated text per OCR block index, for the page in [ocrPageId]. */
+    val translatedBlocks = MutableStateFlow<Map<Int, String>>(emptyMap())
+    val isTranslating = MutableStateFlow(false)
+
+    /**
+     * Boxes and translations of every page scanned recently, keyed by page.
+     *
+     * The paged reader shows one page at a time, so [ocrPageId] naming the one
+     * page that carries an overlay is exactly right there. The continuous
+     * reader has several pages on screen at once and scans only the one the
+     * reader is on: keyed off [ocrPageId] alone, a page's overlay vanished the
+     * moment the scroll moved on, while the page itself was still in view.
+     *
+     * Reading from here instead keeps every scanned page dressed for as long as
+     * it stays on screen, and costs nothing — the results were already being
+     * kept for the same reason turning back a page is instant.
+     */
+    val scannedPages: StateFlow<Map<PageId, PageScan>> get() = scanCache
+
+    /** Public face of a cached scan, so the cache type can stay private. */
+    class PageScan(val boxes: List<OcrElementBox>, val translations: Map<Int, String>)
+
+    /**
+     * Glossary terms belonging to the series on screen, for the editor in the
+     * reader settings. Global terms are deliberately not listed: this is the
+     * place where a bad translation is noticed, and what is noticed there is
+     * always about this series.
+     */
+    val glossaryTerms = MutableStateFlow<List<snd.komelia.translation.GlossaryTerm>>(emptyList())
+
+    /**
+     * State of the better engine's model for the pair being translated.
+     *
+     * Bergamot reads a French that ML Kit does not — measured over several
+     * chapters — but its model is a 36MB download the user has to ask for. Null
+     * where no such model exists for the pair, which is when there is nothing
+     * to offer.
+     */
+    val translationModelState = MutableStateFlow<TranslationModelState?>(null)
     val readingDirection = MutableStateFlow(ReadingDirection.LTR)
 
     val tapNavigationMode = MutableStateFlow(ReaderTapNavigationMode.LEFT_RIGHT)
@@ -231,13 +287,18 @@ class ReaderState(
         }
 
         pageChangeFlow.onEach {
-            ocrJob?.cancel()
-            ocrJob = null
+            // The in-flight scan is left alone: it finishes and is cached. Only
+            // what is on screen is cleared here.
             ocrResults.value = emptyList()
             ocrPageId.value = null
+            translatedBlocks.value = emptyMap()
         }.launchIn(stateScope)
         stateScope.launch {
             readerSettingsRepository.getOcrSettings().collect { ocrSettings.value = it }
+        }
+        stateScope.launch {
+            readerSettingsRepository.getTranslationSettings()
+                .collect { translationSettings.value = it }
         }
     }
 
@@ -916,31 +977,580 @@ class ReaderState(
 
     fun onOcrSettingsChange(newSettings: OcrSettings) {
         ocrSettings.value = newSettings
+        clearScanCache()
         stateScope.launch { readerSettingsRepository.putOcrSettings(newSettings) }
     }
 
+    /**
+     * One page scanned at a time. Recognition is a blocking native call with no
+     * suspension point, so nothing else can stop one that has started. Without
+     * this lock every page turn began another — six concurrent RapidOCR
+     * inferences were measured, ending in an OutOfMemoryError.
+     */
+    private val ocrMutex = Mutex()
+
+    /**
+     * Pages already scanned, so turning back to one is instant.
+     *
+     * Recognition measured 2.2-4.7 s per page (mean 3.9 s over a chapter) and
+     * the result cannot change: same image, same engine, same target language.
+     * Without this, going back one page paid the full cost again.
+     *
+     * Bounded, and ordered by insertion so the oldest entry goes first — a
+     * long book would otherwise keep every page's boxes alive for a reader
+     * session.
+     *
+     * Held in a flow rather than a plain map because a queued scan reads it
+     * from [Dispatchers.Default] while page turns write it from the state
+     * thread. Replacing an immutable map wholesale keeps that safe; the worst
+     * a lost race can do is drop one entry, costing a rescan.
+     */
+    private val scanCache = MutableStateFlow<Map<PageId, PageScan>>(emptyMap())
+
+    private fun cacheScan(pageId: PageId, result: PageScan) {
+        val next = LinkedHashMap(scanCache.value)
+        next.remove(pageId) // re-inserted at the end: touched entries age last
+        next[pageId] = result
+        while (next.size > SCAN_CACHE_SIZE) next.remove(next.keys.first())
+        scanCache.value = next
+    }
+
+    /**
+     * Dropped whenever the engine or the languages change: the cached boxes and
+     * translations were produced by the old settings.
+     */
+    private fun clearScanCache() {
+        scanCache.value = emptyMap()
+    }
+
     fun scanCurrentPageForText(image: ReaderImage) {
-        ocrJob?.cancel()
-        ocrJob = stateScope.launch {
-            ocrPageId.value = image.pageId
+        val pageId = image.pageId
+        val cached = scanCache.value[pageId]
+        if (cached != null) {
+            cacheScan(pageId, cached) // touched: keep it from ageing out
+            translationLogger.info {
+                "scan cache hit $pageId " +
+                        "(${cached.boxes.size} boxes, ${cached.translations.size} translated)"
+            }
+            ocrPageId.value = pageId
+            ocrResults.value = cached.boxes
+            translatedBlocks.value = cached.translations
+            isOcrLoading.value = false
+            isTranslating.value = false
+            return
+        }
+        // Deliberately NOT cancelled on a page turn. Recognition is a blocking
+        // native call that cancellation cannot interrupt, so cancelling it only
+        // threw away a result that had already cost its 4 seconds and was still
+        // valid for its own page — which is why turning back to a page rescanned
+        // it from scratch. A scan nobody wants any more skips itself when it
+        // reaches the front of the queue, before doing any work.
+        stateScope.launch {
+            ocrPageId.value = pageId
             isOcrLoading.value = true
             try {
-                val rawBoxes = withContext(Dispatchers.Default) {
-                    ocrService.recognizeText(image, ocrSettings.value)
+                // Measured (KoraPerf) even though it is per-page: OCR only runs when
+                // the user has explicitly enabled it, so this is not on the normal
+                // reading path. The engine is part of the label so ML Kit and
+                // RapidOCR can be compared from the same log.
+                val storedSettings = ocrSettings.value
+                // The OCR language and the translation source are two persisted
+                // fields, and the first only followed the second when the picker
+                // was actually touched — so an install left on Japanese kept
+                // scanning English pages with the orientation classifier on. That
+                // classifier is trained on Chinese text and flips short Latin
+                // crops end over end: "I'M" came back as "W,I", "OH!" as "iHO",
+                // "DON'T" as ",noa". When translating, the source language is the
+                // only one that can be right, so it wins.
+                val translationSetting = translationSettings.value
+                val settings = if (translationSetting.enabled) {
+                    val language =
+                        if (translationSetting.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) OcrLanguage.JAPANESE
+                        else OcrLanguage.LATIN
+                    storedSettings.copy(selectedLanguage = language)
+                } else storedSettings
+                // The whole thing, queue included. Every stage below is already
+                // timed on its own, but they all start after the mutex is taken:
+                // a page that waited four seconds behind another scan looks
+                // instant in each of them and slow to the reader, and that gap
+                // is exactly what the document calls TimeToReady. Subtracting
+                // the stages from this is how much was spent waiting.
+                val result = snd.komelia.perf.PerfTrace.measure("reader.page.total") {
+                  withContext(Dispatchers.Default) {
+                    ocrMutex.withLock {
+                        // Queued behind an in-flight scan. Two things can have
+                        // happened while waiting: the reader moved on, and this
+                        // page is nobody's business any more; or the page came
+                        // back and was scanned by another job, whose result is
+                        // now in the cache.
+                        scanCache.value[pageId] ?: if (ocrPageId.value != pageId) null else {
+                            val scanned = snd.komelia.perf.PerfTrace.measure(
+                                "reader.ocr.${settings.engine}",
+                                count = { it.size }
+                            ) { ocrService.recognizeText(image, settings) }
+
+                            // Only when translating, and before the merge: see
+                            // OcrScriptFilter. Plain OCR keeps every script, so
+                            // reading a Japanese page with text selection still works.
+                            val translation = translationSetting
+                            val japanese = translation.enabled &&
+                                    translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
+                            val rawBoxes = if (translation.enabled) {
+                                if (translation.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE) {
+                                    snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
+                                } else {
+                                    snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
+                                }
+                            } else scanned
+
+                            // Counted in blocks, not words — one block is one
+                            // translation call.
+                            val boxes = if (settings.mergeBoxes) {
+                                snd.komelia.perf.PerfTrace.measure(
+                                    "reader.ocr.merge",
+                                    count = { merged -> merged.distinctBy { it.blockIndex }.size }
+                                ) {
+                                    // The page width is what tells a full-width
+                                    // shout apart from several bubbles welded
+                                    // together; without it that check is off.
+                                    mergeOcrBoxes(
+                                        boxes = rawBoxes,
+                                        direction = readingDirection.value,
+                                        vertical = japanese,
+                                        pageWidth = image.getOriginalImageSize().getOrNull()?.width ?: 0,
+                                    )
+                                }
+                            } else rawBoxes
+
+                            PageScan(boxes, translateBlocks(boxes))
+                        }
+                    }
+                  }
                 }
-                ocrResults.value = if (ocrSettings.value.mergeBoxes) {
-                    mergeOcrBoxes(rawBoxes, readingDirection.value)
-                } else rawBoxes
+                if (result == null) return@launch
+                cacheScan(pageId, result)
+                // A scan that outlived its page must not publish: its boxes would be
+                // drawn over a different image, which is the "blue boxes land in the
+                // wrong place for a few seconds" symptom. It is still cached above —
+                // that is the whole point.
+                if (ocrPageId.value == pageId) {
+                    ocrResults.value = result.boxes
+                    translatedBlocks.value = result.translations
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 appNotifications.add(AppNotification.Error("OCR failed: ${e.message}"))
+            } catch (e: OutOfMemoryError) {
+                // Normally not something to catch, but the allocation that fails is
+                // the engine's own tensors and bitmap, all released by unwinding
+                // here. The alternative is measured: the process dies.
+                appNotifications.add(AppNotification.Error("OCR ran out of memory on this page"))
             } finally {
-                isOcrLoading.value = false
+                if (ocrPageId.value == pageId) isOcrLoading.value = false
             }
         }
     }
 
+
+    /** Looks at what is on disk for the current pair. */
+    fun refreshTranslationModel() {
+        val downloader = translationModelDownloader
+        val settings = translationSettings.value
+        if (downloader == null || !downloader.supports(settings.source, settings.target)) {
+            translationModelState.value = null
+            return
+        }
+        translationModelState.value =
+            if (downloader.isDownloaded(settings.source, settings.target)) TranslationModelState.Ready
+            else TranslationModelState.Missing
+    }
+
+    /**
+     * Fetches the better engine's model. Reports bytes as they arrive, because
+     * 36MB over a phone connection is long enough that a silent button reads as
+     * a broken one.
+     */
+    fun downloadTranslationModel() {
+        val downloader = translationModelDownloader ?: return
+        val settings = translationSettings.value
+        stateScope.launch {
+            try {
+                downloader.download(settings.source, settings.target).collect { progress ->
+                    translationModelState.value = TranslationModelState.Downloading(
+                        completed = progress.completed,
+                        total = progress.total,
+                        what = progress.description.orEmpty(),
+                    )
+                }
+                translationModelState.value = TranslationModelState.Ready
+                // The scan cache holds pages translated by the other engine.
+                clearScanCache()
+            } catch (e: CancellationException) {
+                refreshTranslationModel()
+                throw e
+            } catch (e: Exception) {
+                logger.warn(e) { "translation model download failed" }
+                appNotifications.add(AppNotification.Error("Model download failed: ${e.message}"))
+                refreshTranslationModel()
+            }
+        }
+    }
+
+    fun deleteTranslationModel() {
+        val downloader = translationModelDownloader ?: return
+        val settings = translationSettings.value
+        downloader.delete(settings.source, settings.target)
+        clearScanCache()
+        refreshTranslationModel()
+    }
+
+    /** Reloads [glossaryTerms] for the series on screen. */
+    fun refreshGlossaryTerms() {
+        stateScope.launch {
+            val seriesId = booksState.value?.currentBook?.seriesId
+            glossaryTerms.value = try {
+                translationGlossaryRepository.list(seriesId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.warn(e) { "could not list the translation glossary" }
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Adds or replaces a term for the series on screen. A blank [target] means
+     * "leave this word alone", which is what a name needs.
+     *
+     * Does not re-scan the current page: the scan cache still holds the old
+     * translation, and re-running OCR to repaint one bubble costs seconds. The
+     * term applies from the next page on.
+     */
+    fun addGlossaryTerm(source: String, target: String) {
+        if (source.isBlank()) return
+        stateScope.launch {
+            val seriesId = booksState.value?.currentBook?.seriesId
+            try {
+                translationGlossaryRepository.put(seriesId, source, target)
+                glossaryTerms.value = translationGlossaryRepository.list(seriesId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                appNotifications.add(AppNotification.Error("Could not save the term: ${e.message}"))
+            }
+        }
+    }
+
+    fun removeGlossaryTerm(source: String) {
+        stateScope.launch {
+            val seriesId = booksState.value?.currentBook?.seriesId
+            try {
+                translationGlossaryRepository.delete(seriesId, source)
+                glossaryTerms.value = translationGlossaryRepository.list(seriesId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                appNotifications.add(AppNotification.Error("Could not remove the term: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * The terms in force for the book on screen: the global ones, overridden by
+     * the ones its own series defines.
+     *
+     * Read from [booksState] rather than from [series], because a read list
+     * walks across series and [series] follows the book — but only once it has
+     * loaded, and a scan can start before that.
+     */
+    private suspend fun glossaryForCurrentSeries(): snd.komelia.image.TermGlossary {
+        val seriesId = booksState.value?.currentBook?.seriesId
+        val terms = try {
+            translationGlossaryRepository.termsFor(seriesId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A glossary that cannot be read is not worth losing the page's
+            // translation over: without it the text is merely as good as it was
+            // before the feature existed.
+            logger.warn(e) { "could not read the translation glossary" }
+            emptyMap()
+        }
+        return if (terms.isEmpty()) snd.komelia.image.TermGlossary.EMPTY
+        else snd.komelia.image.TermGlossary(terms)
+    }
+
+    /**
+     * Translates the OCR blocks of a page that was just scanned, when page
+     * translation is on. Returns what should be painted rather than publishing
+     * it: the caller decides, because a scan is also worth caching for a page
+     * the reader has already left.
+     *
+     * Blocks are translated as whole sentences, never word by word: [ocrResults]
+     * holds one entry per word, and a bubble only makes sense reassembled.
+     */
+    /**
+     * Reads the shipped expression table into [snd.komelia.image.PhraseBook].
+     *
+     * Two thousand entries live in a resource rather than in the source because
+     * a `mapOf` literal that size does not survive the 255-argument limit. Read
+     * on the first translation rather than at startup: the reader opens far more
+     * often than translation is switched on, and 83KB of JSON is not worth
+     * parsing for someone who never turns it on.
+     *
+     * A failure here is not fatal. The curated table is compiled in and keeps
+     * working on its own, so the reader loses the general expressions and
+     * nothing else.
+     */
+    @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+    private suspend fun loadPhraseBook() {
+        if (snd.komelia.image.PhraseBook.isLoaded) return
+        runCatching {
+            val bytes = io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
+                .readBytes("files/phrasebook/en-fr.json")
+            val table = kotlinx.serialization.json.Json
+                .decodeFromString<Map<String, String>>(bytes.decodeToString())
+            snd.komelia.image.PhraseBook.load(table)
+            translationLogger.info { "phrase book loaded, ${table.size} expressions" }
+        }.onFailure {
+            logger.warn(it) { "could not read the phrase book — the curated table still applies" }
+        }
+    }
+
+    private suspend fun translateBlocks(boxes: List<OcrElementBox>): Map<Int, String> {
+        val settings = translationSettings.value
+        if (!settings.enabled || boxes.isEmpty()) return emptyMap()
+        if (settings.source == settings.target) return emptyMap()
+
+        val japanese = settings.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
+
+        // Read on every scan rather than held per book: the query is a handful
+        // of rows on a primary key, next to nothing beside the OCR that just
+        // ran, and it means a term added from the glossary screen applies to
+        // the very next page instead of after leaving the reader.
+        val glossary = glossaryForCurrentSeries()
+        val blocks = boxes
+            .groupBy { it.blockIndex }
+            .mapValues { (_, elements) ->
+                elements
+                    .sortedWith(compareBy({ it.lineIndex }, { it.elementIndex }))
+                    // Japanese does not separate words with spaces, and inserting
+                    // them between the columns of a bubble splits words that the
+                    // detector happened to cut in two.
+                    .joinToString(if (japanese) "" else " ") { it.text }
+                    .trim()
+                    // Both cleanups are about Latin lettering: a word the
+                    // letterer broke across two lines, and the full caps comics
+                    // are drawn in. Neither exists in Japanese.
+                    .let {
+                        if (japanese) it
+                        else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
+                            .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
+                    }
+            }
+            // Single letters and bare digits are artwork the OCR mistook for
+            // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them
+            // is meaningless, and painting an opaque panel over them puts black
+            // squares on the drawing.
+            //
+            // Japanese needs a lower bar: a whole bubble can be two characters
+            // ("はい"), where three would already be a sentence.
+            .filterValues { text ->
+                val letters = text.count { it.isLetter() }
+                val longEnough = if (japanese) letters >= 2 else letters >= 2 && text.length >= 3
+                // Sound effects are drawn onto the artwork, so a panel over one
+                // hides the drawing to say 'Table de Ping'. Latin only; Japanese
+                // sound effects are a different problem and it is on hold.
+                longEnough && (japanese || !snd.komelia.image.TranslationTextUtils.isSoundEffect(text)) &&
+                        // Recognition over artwork returns confident nonsense
+                        // rather than nothing, and translating it paints an
+                        // opaque panel over the drawing it came from.
+                        (japanese || snd.komelia.image.EnglishTextCleaner.isTranslatable(text))
+            }
+        if (blocks.isEmpty()) return emptyMap()
+
+        isTranslating.value = true
+        try {
+            // Block indices are already in reading order, so consecutive here
+            // means consecutive on the page — which is what lets the balloons of
+            // one sentence be recognised as consecutive at all.
+            val indices = blocks.keys.toList()
+            val ordered = indices.map { blocks.getValue(it) }
+            // A sentence lettered across two or three balloons goes to the
+            // translator whole. Measured over Ramen Aka Neko 167: 52 of 142
+            // blocks were two words or shorter, and a translator given two words
+            // of a sentence returns two words of nonsense.
+            val groups = if (japanese) ordered.indices.map { listOf(it) }
+            else snd.komelia.image.BubbleAssembler.group(ordered)
+            val groupSources = groups.map { positions -> positions.map { ordered[it] } }
+            // Glossary terms leave as placeholders and come back as themselves.
+            // Capitalising them and hoping was tried first and measured on the
+            // tablet not to work: "Meryl Strife" went out spelled right and came
+            // back "Meryl Conflife". Applied to the joined sentence, so a term
+            // split across two balloons is still one term.
+            loadPhraseBook()
+            val joined = groupSources.map { snd.komelia.image.BubbleAssembler.join(it) }
+            val protectedGroups = joined.map { glossary.protect(it) }
+            // Idioms the engine reliably mangles are answered before it sees
+            // them: "Something the matter?" came back "Quelque chose la
+            // matière ?". A small model has no idiomatic reading to reach for,
+            // so this is not something tuning or a bigger model fixes.
+            val known = if (japanese) List(joined.size) { null }
+            else joined.map { snd.komelia.image.PhraseBook.lookup(it) }
+            val pending = known.indices.filter { known[it] == null }
+            val engineOutput = if (pending.isEmpty()) emptyList() else {
+                withContext(Dispatchers.Default) {
+                    snd.komelia.perf.PerfTrace.measure(
+                        "reader.translate",
+                        count = { it.size }
+                    ) {
+                        translationService.translate(
+                            texts = pending.map { protectedGroups[it].text },
+                            source = settings.source,
+                            target = settings.target,
+                        )
+                    }
+                }
+            }
+            // Back into group order. The engine was only given the groups the
+            // phrase book had no answer for, so its results line up with
+            // `pending` rather than with every group.
+            val translated = known.toMutableList()
+            pending.forEachIndexed { position, groupIndex ->
+                translated[groupIndex] = engineOutput.getOrNull(position)
+            }
+            val published = buildMap {
+                groups.forEachIndexed { groupIndex, positions ->
+                    val answer = translated[groupIndex] ?: return@forEachIndexed
+                    // Terms first: everything downstream compares against the
+                    // original sentence, and a placeholder matches nothing in
+                    // it. A phrase book answer never went out with placeholders
+                    // in it, so restoring is only for what the engine returned.
+                    val restored = if (known[groupIndex] != null) answer
+                    else protectedGroups[groupIndex].restore(answer)
+                    val pieces = snd.komelia.image.BubbleAssembler
+                        .distribute(restored, groupSources[groupIndex])
+                    positions.forEachIndexed { pieceIndex, position ->
+                        // Honorifics survive translation, the name in front of
+                        // them does not: "MAMA-SAN" came back as "Maman-san".
+                        put(
+                            indices[position],
+                            snd.komelia.image.TranslationTextUtils
+                                .restoreNames(ordered[position], pieces[pieceIndex])
+                        )
+                    }
+                }
+            }
+                // Sound effects translate to themselves. Painting a panel over
+                // one hides the drawing to display the same word — and a blank
+                // result (「はっ」 came back empty) paints an empty one.
+                .filter { (blockIndex, text) ->
+                    text.isNotBlank() && !snd.komelia.image.TranslationTextUtils
+                        .isUnchanged(blocks.getValue(blockIndex), text)
+                }
+
+            // Diagnostic dump: which blocks exist, where they are and what came
+            // back. Bubbles that look untranslated on screen are either a block
+            // the OCR split, a rect smaller than the bubble, or a translation
+            // that came back unchanged — and only this tells the three apart.
+            //     adb logcat | Select-String "KoraTranslate"
+            indices.forEach { blockIndex ->
+                val blockBoxes = boxes.filter { it.blockIndex == blockIndex }
+                val rect = blockBoxes.first().blockRect
+                // Shows what is actually painted, so a block dropped as a sound
+                // effect is visible as "(dropped)" rather than silently absent.
+                val shown = published[blockIndex] ?: "(dropped)"
+                // Lowest confidence in the block. A bad line reads the same on
+                // screen whether the OCR misread it or the translator mangled
+                // it; this number is what tells the two apart without guessing.
+                val worst = blockBoxes.minOf { it.confidence }
+                // Share of the painted panel its own lettering covers, and how
+                // many detected lines went into it. A block that reads as two
+                // bubbles interleaved is low fill and many lines; a real bubble
+                // is high fill. Logged rather than guessed at, so the merge
+                // threshold can be set from real pages instead of intuition.
+                val blockArea = rect.width * rect.height
+                val fill = if (blockArea <= 0f) 1f
+                else blockBoxes.sumOf { (it.imageRect.width * it.imageRect.height).toDouble() }
+                    .toFloat() / blockArea
+                translationLogger.info {
+                    "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
+                            "${rect.width.toInt()}x${rect.height.toInt()}] " +
+                            "conf=${(worst * 100).toInt()}% " +
+                            "fill=${(fill * 100).toInt()}% lines=${blockBoxes.size} " +
+                            "src='${blocks.getValue(blockIndex)}' " +
+                            // Only when the block was not translated on its own,
+                            // so the ordinary line stays readable. This is what
+                            // tells a bad translation apart from a balloon that
+                            // was given the wrong share of a joined sentence.
+                            (groups.firstOrNull { group ->
+                                group.size > 1 && group.any { indices[it] == blockIndex }
+                            }?.let { group ->
+                                "sent='${protectedGroups[groups.indexOf(group)].text}' "
+                            } ?: "") +
+                            "-> '$shown'"
+                }
+            }
+            return published
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            appNotifications.add(AppNotification.Error("Translation failed: ${e.message}"))
+            return emptyMap()
+        } finally {
+            isTranslating.value = false
+        }
+    }
+
+    fun onTranslationSettingsChange(newSettings: snd.komelia.settings.model.TranslationSettings) {
+        translationSettings.value = newSettings
+        translatedBlocks.value = emptyMap()
+        clearScanCache()
+        // The OCR has to be looking for the script we are about to translate.
+        // Leaving them out of step is a silent failure: the engine reads Latin
+        // on a Japanese page, finds nothing, and translation looks broken.
+        val ocrLanguage = when (newSettings.source) {
+            snd.komelia.settings.model.TranslationLanguage.JAPANESE -> OcrLanguage.JAPANESE
+            else -> OcrLanguage.LATIN
+        }
+        if (ocrSettings.value.selectedLanguage != ocrLanguage) {
+            onOcrSettingsChange(ocrSettings.value.copy(selectedLanguage = ocrLanguage))
+        }
+        stateScope.launch { readerSettingsRepository.putTranslationSettings(newSettings) }
+        if (newSettings.enabled) ensureTranslationModels(newSettings)
+    }
+
+    /**
+     * Fetches the language models the first time a pair is used. Without this
+     * every translate call fails until the user finds a settings screen to
+     * download from, which reads as "translation is broken".
+     *
+     * Not restricted to Wi-Fi: the download only happens when the user turns the
+     * feature on, and a switch that silently does nothing off Wi-Fi is worse
+     * than one that says how big the download is.
+     */
+    private fun ensureTranslationModels(settings: snd.komelia.settings.model.TranslationSettings) {
+        stateScope.launch {
+            if (translationService.isReady(settings.source, settings.target)) return@launch
+            appNotifications.add(AppNotification.Normal("Downloading translation model (~30MB per language)"))
+            try {
+                snd.komelia.perf.PerfTrace.measure("reader.translate.download") {
+                    translationService.downloadModels(
+                        source = settings.source,
+                        target = settings.target,
+                        requireWifi = false,
+                    )
+                }
+                appNotifications.add(AppNotification.Success("Translation model ready"))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                appNotifications.add(AppNotification.Error("Model download failed: ${e.message}"))
+            }
+        }
+    }
 
     fun onColorCorrectionDisable() {
         stateScope.launch {
@@ -1329,6 +1939,21 @@ data class PageMetadata(
 }
 
 enum class PageHalf { LEFT, RIGHT }
+
+/**
+ * Whether the better translation engine can be used for the pair on screen.
+ *
+ * Absent from the UI entirely when null — no model exists for that pair, so
+ * there is nothing to offer and nothing to explain.
+ */
+sealed interface TranslationModelState {
+    data object Missing : TranslationModelState
+    data class Downloading(val completed: Long, val total: Long, val what: String) : TranslationModelState {
+        val percent: Int get() = if (total > 0) (completed * 100 / total).toInt() else 0
+    }
+
+    data object Ready : TranslationModelState
+}
 
 data class BookState(
     val currentBook: KomeliaBook,

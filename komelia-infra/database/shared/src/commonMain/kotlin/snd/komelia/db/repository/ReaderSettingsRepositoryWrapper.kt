@@ -47,6 +47,14 @@ class ReaderSettingsRepositoryWrapper(
         wrapper.transform { it.copy(ocrSettings = settings) }
     }
 
+    override fun getTranslationSettings(): Flow<snd.komelia.settings.model.TranslationSettings> {
+        return wrapper.mapState { it.translationSettings }
+    }
+
+    override suspend fun putTranslationSettings(settings: snd.komelia.settings.model.TranslationSettings) {
+        wrapper.transform { it.copy(translationSettings = settings) }
+    }
+
     override fun getStretchToFit(): Flow<Boolean> {
         return wrapper.mapState { it.stretchToFit }
     }

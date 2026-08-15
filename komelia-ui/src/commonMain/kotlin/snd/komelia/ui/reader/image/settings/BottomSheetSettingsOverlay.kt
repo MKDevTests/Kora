@@ -45,10 +45,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.ViewStream
@@ -66,10 +68,13 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,11 +103,8 @@ import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.PageDisplayLayout
-import snd.komelia.settings.model.OcrEngine
-import snd.komelia.settings.model.OcrLanguage
 import snd.komelia.settings.model.OcrSettings
 import snd.komelia.settings.model.PanelsFullPageDisplayMode
-import snd.komelia.settings.model.RapidOcrModel
 
 import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.settings.model.ReaderType
@@ -344,12 +346,15 @@ fun BottomSheetSettingsOverlay(
                     ocrSettings = commonReaderState.ocrSettings.collectAsState().value,
                     onOcrSettingsChange = commonReaderState::onOcrSettingsChange,
                     isOcrLoading = commonReaderState.isOcrLoading.collectAsState().value,
+                    translationSettings = commonReaderState.translationSettings.collectAsState().value,
+                    onTranslationSettingsChange = commonReaderState::onTranslationSettingsChange,
+                    isTranslating = commonReaderState.isTranslating.collectAsState().value,
                     onSettingsClick = { showSettingsDialog = true },
                     onNotesClick = onNotesClick,
                     onScanTextClick = {
                         val currentImage = when (readerType) {
                             PAGED -> pagedReaderState.currentSpread.value.pages.firstOrNull()?.imageResult?.image
-                            CONTINUOUS -> null // TODO
+                            CONTINUOUS -> continuousReaderState.currentPageImage.value
                             PANELS -> panelsReaderState?.currentPage?.value?.imageResult?.image
                         }
                         currentImage?.let { commonReaderState.scanCurrentPageForText(it) }
@@ -542,7 +547,11 @@ fun BottomSheetSettingsOverlay(
 
                             3 -> OcrModeSettings(
                                 ocrSettings = ocrSettings,
-                                onOcrSettingsChange = commonReaderState::onOcrSettingsChange
+                                onOcrSettingsChange = commonReaderState::onOcrSettingsChange,
+                                translationSettings = commonReaderState.translationSettings
+                                    .collectAsState().value,
+                                onTranslationSettingsChange = commonReaderState::onTranslationSettingsChange,
+                                commonReaderState = commonReaderState,
                             )
                         }
                     }
@@ -1152,6 +1161,9 @@ fun ImageReaderControlsCardNewUI(
     ocrSettings: OcrSettings,
     onOcrSettingsChange: (OcrSettings) -> Unit,
     isOcrLoading: Boolean,
+    translationSettings: snd.komelia.settings.model.TranslationSettings,
+    onTranslationSettingsChange: (snd.komelia.settings.model.TranslationSettings) -> Unit,
+    isTranslating: Boolean,
     onSettingsClick: () -> Unit,
     onNotesClick: () -> Unit = {},
     onScanTextClick: () -> Unit = {},
@@ -1320,6 +1332,25 @@ fun ImageReaderControlsCardNewUI(
                                     contentDescription = LocalStrings.current.ui.scanText,
                                 )
                             }
+
+                            // Page translation. Stays on across page turns: this
+                            // is a reading mode, not a one-shot action.
+                            if (isTranslating) {
+                                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(Modifier.size(24.dp))
+                                }
+                            } else {
+                                ReaderModeIconButton(
+                                    selected = translationSettings.enabled,
+                                    onClick = {
+                                        onTranslationSettingsChange(
+                                            translationSettings.copy(enabled = !translationSettings.enabled)
+                                        )
+                                    },
+                                    icon = Icons.Default.Translate,
+                                    contentDescription = LocalStrings.current.ui.translate,
+                                )
+                            }
                         }
 
                         VerticalDivider(
@@ -1473,8 +1504,10 @@ private fun SamplingModeSettings(
 private fun OcrModeSettings(
     ocrSettings: OcrSettings,
     onOcrSettingsChange: (OcrSettings) -> Unit,
+    translationSettings: snd.komelia.settings.model.TranslationSettings,
+    onTranslationSettingsChange: (snd.komelia.settings.model.TranslationSettings) -> Unit,
+    commonReaderState: ReaderState,
 ) {
-    val platform = LocalPlatform.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SwitchWithLabel(
             checked = ocrSettings.enabled,
@@ -1486,56 +1519,58 @@ private fun OcrModeSettings(
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
 
-        if (platform == MOBILE) {
-            Column {
-                Text(LocalStrings.current.ui.ocrEngine)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OcrEngine.entries.forEach { engine ->
-                        InputChip(
-                            selected = ocrSettings.engine == engine,
-                            onClick = { onOcrSettingsChange(ocrSettings.copy(engine = engine)) },
-                            colors = accentInputChipColors(),
-                            label = { Text(engine.name.replace("_", " ")) }
-                        )
-                    }
+        // No engine, model or detection-language picker any more. There is one
+        // engine worth using (RapidOCR with PP-OCRv6 small, which reads pages
+        // ML Kit could not and covers every script the old v4 models split
+        // between them), and the detection language now follows the translation
+        // source rather than being a separate thing to keep in step.
+
+        // Which detector runs. Only the detector: recognition stays PP-OCRv6
+        // small in both modes. Fast is worth offering because detection runs on
+        // the whole page — 1.7-1.9 s of a 3.3-4.4 s scan, measured — but the
+        // tiny detector gives up 5.2 points of recall on artistic text, which
+        // on a comic page is exactly the sound effects and the lettering over
+        // artwork. Hence a manual choice rather than a default.
+        Column {
+            Text("OCR detection")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                snd.komelia.settings.model.OcrSpeedMode.entries.forEach { mode ->
+                    InputChip(
+                        selected = ocrSettings.speedMode == mode,
+                        onClick = { onOcrSettingsChange(ocrSettings.copy(speedMode = mode)) },
+                        colors = accentInputChipColors(),
+                        label = {
+                            Text(
+                                when (mode) {
+                                    snd.komelia.settings.model.OcrSpeedMode.NORMAL -> "Normal (small)"
+                                    snd.komelia.settings.model.OcrSpeedMode.FAST -> "Fast (tiny)"
+                                }
+                            )
+                        }
+                    )
                 }
             }
         }
 
-        AnimatedVisibility(ocrSettings.engine == OcrEngine.ML_KIT) {
-            Column {
-                Text(LocalStrings.current.ui.textDetectionLanguage)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OcrLanguage.entries.forEach { language ->
-                        InputChip(
-                            selected = ocrSettings.selectedLanguage == language,
-                            onClick = { onOcrSettingsChange(ocrSettings.copy(selectedLanguage = language)) },
-                            colors = accentInputChipColors(),
-                            label = { Text(language.name) }
-                        )
-                    }
-                }
-            }
-        }
-
-        AnimatedVisibility(ocrSettings.engine == OcrEngine.RAPID_OCR) {
-            Column {
-                Text(LocalStrings.current.ui.rapidocrModel)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    RapidOcrModel.entries.forEach { model ->
-                        InputChip(
-                            selected = ocrSettings.rapidOcrModel == model,
-                            onClick = { onOcrSettingsChange(ocrSettings.copy(rapidOcrModel = model)) },
-                            colors = accentInputChipColors(),
-                            label = { Text(model.name.replace("_", " ")) }
-                        )
-                    }
+        // Which language the page is written in, for translation. The OCR
+        // language follows it (see ReaderState.onTranslationSettingsChange):
+        // reading Latin on a Japanese page finds nothing and looks like a
+        // broken translation rather than a mismatched setting.
+        Column {
+            Text("Translate from")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(
+                    snd.komelia.settings.model.TranslationLanguage.ENGLISH,
+                    snd.komelia.settings.model.TranslationLanguage.JAPANESE,
+                ).forEach { language ->
+                    InputChip(
+                        selected = translationSettings.source == language,
+                        onClick = {
+                            onTranslationSettingsChange(translationSettings.copy(source = language))
+                        },
+                        colors = accentInputChipColors(),
+                        label = { Text(language.name) }
+                    )
                 }
             }
         }
@@ -1549,6 +1584,143 @@ private fun OcrModeSettings(
             },
             contentPadding = PaddingValues(horizontal = 10.dp)
         )
+
+        HorizontalDivider()
+        TranslationModelSettings(commonReaderState)
+
+        HorizontalDivider()
+        SeriesGlossarySettings(commonReaderState)
+    }
+}
+
+/**
+ * Offers the better translation engine's model for the pair being read.
+ *
+ * Bergamot reads a French ML Kit does not — "Nous vous demandons de cesser
+ * toute poursuite" against "Nous demandons que vous avez cessé toute la
+ * poursuite" — but it costs a 36MB download, and it is 106ms a bubble against
+ * ML Kit's 60ms on this hardware. On a page whose OCR takes 3.9s that is 10%,
+ * which is why it is offered rather than argued about.
+ *
+ * Nothing is shown when there is no model for the pair: the engine then cannot
+ * be used at all, and a disabled button would only raise a question with no
+ * answer.
+ */
+@Composable
+private fun TranslationModelSettings(
+    commonReaderState: ReaderState,
+) {
+    val state = commonReaderState.translationModelState.collectAsState().value
+    LaunchedEffect(Unit) { commonReaderState.refreshTranslationModel() }
+    if (state == null) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Better translation")
+        when (state) {
+            is snd.komelia.ui.reader.image.TranslationModelState.Missing -> {
+                Text(
+                    "A 36 MB model that reads far better French than the built-in " +
+                            "translator, at about ten percent more time per page.",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = { commonReaderState.downloadTranslationModel() }) {
+                    Text("Download model")
+                }
+            }
+
+            is snd.komelia.ui.reader.image.TranslationModelState.Downloading -> {
+                Text(
+                    "${state.what} — ${state.percent}%",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+
+            is snd.komelia.ui.reader.image.TranslationModelState.Ready -> {
+                Text(
+                    "In use. Pages already read keep the translation they were " +
+                            "given; turn the page to see the difference.",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = { commonReaderState.deleteTranslationModel() }) {
+                    Text("Remove model")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Per-series terms the translator must not decide for itself.
+ *
+ * Lives in the reader rather than in a settings screen because this is where a
+ * wrong term is seen: the bubble that says "Meryl discorde" is on screen while
+ * the sheet is open.
+ */
+@Composable
+private fun SeriesGlossarySettings(
+    commonReaderState: ReaderState,
+) {
+    val terms = commonReaderState.glossaryTerms.collectAsState().value
+    // Loaded when the tab is first shown rather than with the book: most
+    // reading sessions never open this.
+    LaunchedEffect(Unit) { commonReaderState.refreshGlossaryTerms() }
+
+    var source by remember { mutableStateOf("") }
+    var target by remember { mutableStateOf("") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Glossary for this series")
+        Text(
+            "A term the translator keeps getting wrong. Leave the translation " +
+                    "empty to keep the word as it is, which is what a name needs.",
+            style = MaterialTheme.typography.labelMedium,
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = source,
+                onValueChange = { source = it },
+                label = { Text("Term") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = target,
+                onValueChange = { target = it },
+                label = { Text("Translation") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        TextButton(
+            enabled = source.isNotBlank(),
+            onClick = {
+                commonReaderState.addGlossaryTerm(source, target)
+                source = ""
+                target = ""
+            },
+        ) { Text("Add term") }
+
+        terms.forEach { term ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    // A name-only entry has nothing to show on the right, and an
+                    // arrow to itself reads as a mistake.
+                    if (term.isNameOnly) term.source else "${term.source}  →  ${term.target}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { commonReaderState.removeGlossaryTerm(term.source) }) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Remove ${term.source}")
+                }
+            }
+        }
     }
 }
 

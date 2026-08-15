@@ -26,6 +26,9 @@ interface ImageReaderSettingsRepository {
     fun getOcrSettings(): Flow<OcrSettings>
     suspend fun putOcrSettings(settings: OcrSettings)
 
+    fun getTranslationSettings(): Flow<snd.komelia.settings.model.TranslationSettings>
+    suspend fun putTranslationSettings(settings: snd.komelia.settings.model.TranslationSettings)
+
     fun getStretchToFit(): Flow<Boolean>
     suspend fun putStretchToFit(stretch: Boolean)
 

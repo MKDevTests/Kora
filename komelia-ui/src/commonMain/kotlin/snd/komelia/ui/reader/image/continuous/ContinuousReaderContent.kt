@@ -397,6 +397,8 @@ private fun ContinuousReaderImage(
 ) {
     val ocrResults by state.readerState.ocrResults.collectAsState()
     val ocrPageId by state.readerState.ocrPageId.collectAsState()
+    val translatedBlocks by state.readerState.translatedBlocks.collectAsState()
+    val scannedPages by state.readerState.scannedPages.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
     var imageResult by remember { mutableStateOf<ReaderImageResult?>(null) }
@@ -415,10 +417,26 @@ private fun ContinuousReaderImage(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        val ocr = if (ocrPageId == page.toPageId()) ocrResults else emptyList()
+        // The live flows for the page being scanned right now, the cache for the
+        // pages above and below it that are still on screen. Live first: while a
+        // scan is in flight its page has boxes but no cache entry yet, and text
+        // selection writes straight to the flow.
+        val cached = scannedPages[page.toPageId()]
+        val isCurrent = ocrPageId == page.toPageId()
+        val ocr = when {
+            isCurrent -> ocrResults
+            cached != null -> cached.boxes
+            else -> emptyList()
+        }
+        val translations = when {
+            isCurrent -> translatedBlocks
+            cached != null -> cached.translations
+            else -> emptyMap()
+        }
         ReaderImageContent(
             imageResult = imageResult,
             ocrResults = ocr,
+            translations = translations,
             onSelectionChanged = { results -> state.readerState.ocrResults.value = results },
             onAddNote = { text, x, y -> onAddNote(text, page.pageNumber - 1, x, y) }
         )

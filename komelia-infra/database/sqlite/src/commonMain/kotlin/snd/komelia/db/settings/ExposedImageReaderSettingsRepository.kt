@@ -20,6 +20,7 @@ import snd.komelia.settings.model.NcnnUpscalerSettings
 import snd.komelia.settings.model.OcrEngine
 import snd.komelia.settings.model.OcrLanguage
 import snd.komelia.settings.model.OcrSettings
+import snd.komelia.settings.model.OcrSpeedMode
 import snd.komelia.settings.model.PageDisplayLayout
 import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.PanelsFullPageDisplayMode
@@ -53,10 +54,31 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         ),
                         ocrSettings = OcrSettings(
                             enabled = it[ImageReaderSettingsTable.ocrEnabled],
-                            selectedLanguage = OcrLanguage.valueOf(it[ImageReaderSettingsTable.ocrLanguage]),
-                            engine = OcrEngine.valueOf(it[ImageReaderSettingsTable.ocrEngine]),
-                            rapidOcrModel = RapidOcrModel.valueOf(it[ImageReaderSettingsTable.ocrRapidOcrModel]),
+                            // Names that no longer exist fall back instead of
+                            // throwing: engines and models have been dropped
+                            // (ML Kit, the v4 model family) and valueOf on a
+                            // stale row would take the whole reader down.
+                            selectedLanguage = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrLanguage], OcrLanguage.LATIN
+                            ),
+                            engine = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrEngine], OcrEngine.RAPID_OCR
+                            ),
+                            rapidOcrModel = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrRapidOcrModel],
+                                RapidOcrModel.PP_OCR_V6_SMALL
+                            ),
                             mergeBoxes = it[ImageReaderSettingsTable.ocrMergeBoxes],
+                            speedMode = enumOrDefault(
+                                it[ImageReaderSettingsTable.ocrSpeedMode], OcrSpeedMode.NORMAL
+                            ),
+                        ),
+                        translationSettings = snd.komelia.settings.model.TranslationSettings(
+                            enabled = it[ImageReaderSettingsTable.translationEnabled],
+                            source = snd.komelia.settings.model.TranslationLanguage
+                                .valueOf(it[ImageReaderSettingsTable.translationSource]),
+                            target = snd.komelia.settings.model.TranslationLanguage
+                                .valueOf(it[ImageReaderSettingsTable.translationTarget]),
                         ),
                         pagedScaleType = LayoutScaleType.valueOf(it[ImageReaderSettingsTable.pagedScaleType]),
                         pagedReadingDirection = PagedReadingDirection.valueOf(it[ImageReaderSettingsTable.pagedReadingDirection]),
@@ -126,6 +148,11 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[ocrEngine] = settings.ocrSettings.engine.name
                 it[ocrRapidOcrModel] = settings.ocrSettings.rapidOcrModel.name
                 it[ocrMergeBoxes] = settings.ocrSettings.mergeBoxes
+                it[ocrSpeedMode] = settings.ocrSettings.speedMode.name
+
+                it[translationEnabled] = settings.translationSettings.enabled
+                it[translationSource] = settings.translationSettings.source.name
+                it[translationTarget] = settings.translationSettings.target.name
 
                 it[pagedScaleType] = settings.pagedScaleType.name
                 it[pagedReadingDirection] = settings.pagedReadingDirection.name
@@ -169,3 +196,14 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
         }
     }
 }
+
+/**
+ * Reads an enum stored by name, falling back when the name is gone.
+ *
+ * Settings rows outlive the enums that wrote them: dropping ML Kit and the v4
+ * RapidOCR models left names in the database with nothing to map to, and
+ * `valueOf` would throw there — failing the whole settings load, not just one
+ * field.
+ */
+private inline fun <reified T : Enum<T>> enumOrDefault(name: String, default: T): T =
+    enumValues<T>().firstOrNull { it.name == name } ?: default

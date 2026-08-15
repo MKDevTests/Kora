@@ -115,6 +115,11 @@ android {
     sourceSets["main"].manifest.srcFile("src/androidMain/$manifestFile")
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
+    // Kotlin for the debug variant already comes from src/androidDebug/kotlin,
+    // which is where the multiplatform plugin looks. Point the manifest at the
+    // same folder rather than AGP's own src/debug, so everything debug-only sits
+    // together and nothing here can end up in a release.
+    sourceSets["debug"].manifest.srcFile("src/androidDebug/AndroidManifest.xml")
     // NOTE: src/androidMain/assets is already packaged (that is where
     // logback.xml lives) — no srcDirs override needed, and none wanted since
     // srcDirs() would REPLACE the default list. The speech-bubble detector model

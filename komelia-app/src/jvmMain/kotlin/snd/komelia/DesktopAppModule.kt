@@ -227,6 +227,7 @@ class DesktopAppModule(
             keepReadingRepository = snd.komelia.db.library.ExposedKeepReadingRepository(databases.app),
             seriesLinksCacheRepository = snd.komelia.db.library.ExposedSeriesLinksCacheRepository(databases.app),
             seriesBooksCacheRepository = snd.komelia.db.library.ExposedSeriesBooksCacheRepository(databases.app),
+            translationGlossaryRepository = snd.komelia.db.translation.ExposedTranslationGlossaryRepository(databases.app),
         )
     }
 
@@ -322,6 +323,11 @@ class DesktopAppModule(
     override fun createWhisperModelDownloader(updateClient: UpdateClient): WhisperModelDownloader? = null
 
     override fun createRapidOcrModelDownloader(updateClient: UpdateClient): RapidOcrModelDownloader? = null
+
+    override fun createTranslationEngine(updateClient: UpdateClient): snd.komelia.image.TranslationEngine =
+        snd.komelia.image.NoopTranslationEngine
+
+    override fun createTranslationModelDownloader(updateClient: UpdateClient): snd.komelia.image.TranslationModelDownloader? = null
 
     override fun createOnnxRuntime(): OnnxRuntime? {
         if (!OnnxRuntimeSharedLibraries.isAvailable) {

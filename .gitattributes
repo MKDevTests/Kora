@@ -3,6 +3,10 @@
 # convert them to CRLF and bash refuses to exec the shebang).
 # Vendored third_party/ trees keep whatever line endings they ship with.
 
-scripts/*.sh text eol=lf
-cmake/*.sh text eol=lf
+# A single * stops at the next slash, so scripts/*.sh missed every script in a
+# sub-directory — scripts/ocr-bench/, scripts/translatekit/. They shipped with
+# CRLF waiting to appear on the next fresh checkout. ** matches zero directories
+# too, so the top-level scripts stay covered.
+scripts/**/*.sh text eol=lf
+cmake/**/*.sh text eol=lf
 gradlew text eol=lf

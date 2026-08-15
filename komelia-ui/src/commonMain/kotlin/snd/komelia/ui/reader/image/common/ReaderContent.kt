@@ -305,7 +305,7 @@ fun ReaderContent(
                                     showImageContextMenu = false
                                     val currentImage = when (readerType) {
                                         PAGED -> pagedReaderState.currentSpread.value.pages.firstOrNull()?.imageResult?.image
-                                        CONTINUOUS -> null // TODO
+                                        CONTINUOUS -> continuousReaderState.currentPageImage.value
                                         PANELS -> panelsReaderState?.currentPage?.value?.imageResult?.image
                                     }
                                     currentImage?.let { commonReaderState.scanCurrentPageForText(it) }

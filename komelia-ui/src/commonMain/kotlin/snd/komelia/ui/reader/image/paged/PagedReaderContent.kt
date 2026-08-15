@@ -123,6 +123,7 @@ fun BoxScope.PagedReaderContent(
 
     val ocrResults by pagedReaderState.readerState.ocrResults.collectAsState()
     val ocrPageId by pagedReaderState.readerState.ocrPageId.collectAsState()
+    val translations by pagedReaderState.readerState.translatedBlocks.collectAsState()
 
     val keyEvents = LocalKeyEvents.current
     LaunchedEffect(volumeKeysNavigation, readingDirection) {
@@ -290,6 +291,7 @@ fun BoxScope.PagedReaderContent(
                                         SinglePageLayout(
                                             page = it,
                                             ocrResults = ocr,
+                                            translations = if (ocr.isEmpty()) emptyMap() else translations,
                                             onSelectionChanged = { results -> pagedReaderState.readerState.ocrResults.value = results },
                                             onAddNote = { text, x, y -> onAddNote(text, it.metadata.pageNumber - 1, x, y) }
                                         )
@@ -300,6 +302,7 @@ fun BoxScope.PagedReaderContent(
                                         readingDirection = readingDirection,
                                         ocrResults = ocrResults,
                                         ocrPageId = ocrPageId,
+                                        translations = translations,
                                         onSelectionChanged = { results -> pagedReaderState.readerState.ocrResults.value = results },
                                         onAddNote = { text, page, x, y -> onAddNote(text, page, x, y) }
                                     )
@@ -414,6 +417,7 @@ private fun TransitionPage(page: TransitionPage, loading: Boolean = false) {
 private fun SinglePageLayout(
     page: Page,
     ocrResults: List<snd.komelia.image.OcrElementBox>,
+    translations: Map<Int, String>,
     onSelectionChanged: (List<snd.komelia.image.OcrElementBox>) -> Unit,
     onAddNote: (text: String, x: Float, y: Float) -> Unit,
 ) {
@@ -421,6 +425,7 @@ private fun SinglePageLayout(
         ReaderImageContent(
             imageResult = page.imageResult,
             ocrResults = ocrResults,
+            translations = translations,
             onSelectionChanged = onSelectionChanged,
             onAddNote = onAddNote,
         )
@@ -440,6 +445,7 @@ private fun DoublePageLayout(
     readingDirection: PagedReadingDirection,
     ocrResults: List<snd.komelia.image.OcrElementBox>,
     ocrPageId: snd.komelia.image.ReaderImage.PageId?,
+    translations: Map<Int, String>,
     onSelectionChanged: (List<snd.komelia.image.OcrElementBox>) -> Unit,
     onAddNote: (text: String, page: Int, x: Float, y: Float) -> Unit,
 ) {
@@ -452,6 +458,7 @@ private fun DoublePageLayout(
                 ReaderImageContent(
                     imageResult = page.imageResult,
                     ocrResults = ocr,
+                    translations = if (ocr.isEmpty()) emptyMap() else translations,
                     onSelectionChanged = onSelectionChanged,
                     onAddNote = { text, x, y -> onAddNote(text, page.metadata.pageNumber - 1, x, y) }
                 )
@@ -463,6 +470,7 @@ private fun DoublePageLayout(
                 ReaderImageContent(
                     imageResult = page1.imageResult,
                     ocrResults = ocr1,
+                    translations = if (ocr1.isEmpty()) emptyMap() else translations,
                     onSelectionChanged = onSelectionChanged,
                     onAddNote = { text, x, y -> onAddNote(text, page1.metadata.pageNumber - 1, x, y) }
                 )
@@ -472,6 +480,7 @@ private fun DoublePageLayout(
                 ReaderImageContent(
                     imageResult = page2.imageResult,
                     ocrResults = ocr2,
+                    translations = if (ocr2.isEmpty()) emptyMap() else translations,
                     onSelectionChanged = onSelectionChanged,
                     onAddNote = { text, x, y -> onAddNote(text, page2.metadata.pageNumber - 1, x, y) }
                 )

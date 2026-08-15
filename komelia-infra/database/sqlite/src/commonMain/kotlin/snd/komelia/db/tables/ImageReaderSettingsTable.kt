@@ -44,7 +44,9 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val ortUpscalerTileSize = integer("onnx_runtime_tile_size")
     val ortUpscalerUserModelPath = text("onnx_runtime_model_path").nullable()
     val panelDetectionUrl = text("panel_detection_url").default("https://github.com/eserero/Sipurra/releases/download/model/rf-detr-med.onnx.zip")
-    val rapidOcrModelsUrl = text("rapid_ocr_models_url").default("https://github.com/eserero/Sipurra/releases/download/model/RapidOcrModels.zip")
+    // Kept in step with ImageReaderSettings.RAPID_OCR_MODELS_DEFAULT_URL: this is
+    // what a fresh install gets, V98 is what an existing one gets.
+    val rapidOcrModelsUrl = text("rapid_ocr_models_url").default("https://github.com/MKDevTests/Kora/releases/download/model-v6.1/RapidOcrModels-v6.1.zip")
 
     val panelsFullPageDisplayMode = text("panels_full_page_display_mode").default("BOTH")
     val pagedReaderTapToZoom = bool("paged_reader_tap_to_zoom").default(true)
@@ -56,9 +58,16 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
 
     val ocrEnabled = bool("ocr_enabled").default(false)
     val ocrLanguage = text("ocr_language").default("LATIN")
-    val ocrEngine = text("ocr_engine").default("ML_KIT")
-    val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("ENGLISH_CHINESE")
+    // Defaults for rows created from now on. Existing rows keep whatever they
+    // hold — they are read through enumOrDefault, which maps a name that no
+    // longer exists onto the current one.
+    val ocrEngine = text("ocr_engine").default("RAPID_OCR")
+    val ocrRapidOcrModel = text("ocr_rapid_ocr_model").default("PP_OCR_V6_SMALL")
+    val ocrSpeedMode = text("ocr_speed_mode").default("NORMAL")
     val ocrMergeBoxes = bool("ocr_merge_boxes").default(true)
+    val translationEnabled = bool("translation_enabled").default(false)
+    val translationSource = text("translation_source").default("ENGLISH")
+    val translationTarget = text("translation_target").default("FRENCH")
 
     val pagedSplitDoublePages = bool("paged_split_double_pages").default(false)
     val pagedReaderAutoDirection = bool("paged_reader_auto_direction").default(true)
