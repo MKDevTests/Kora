@@ -28,6 +28,22 @@ object TranslationTextUtils {
     private val sentenceEnd = setOf('.', '!', '?', '…', ':', ',', '"', '\'', '-')
 
     /**
+     * Animal cries, which are sound effects wearing a speech balloon.
+     *
+     * Only ever matched as the whole utterance, so a balloon reading "Meow!" is
+     * a cat and one reading "Did the cat meow?" is a question. Kept narrow for
+     * the words that double as ordinary English — "purr", "growl", "hiss" and
+     * "roar" are verbs, and it is the balloon holding nothing else that makes
+     * them a noise here.
+     */
+    private val animalCries = setOf(
+        "meow", "mew", "mreow", "nya", "nyaa", "nyan", "purr", "hiss",
+        "woof", "arf", "bark", "bow-wow", "yip", "yap", "howl", "growl",
+        "moo", "baa", "oink", "neigh", "quack", "cluck", "cock-a-doodle-doo",
+        "chirp", "tweet", "caw", "hoot", "squeak", "ribbit", "croak", "roar",
+    )
+
+    /**
      * A sound effect painted onto the artwork rather than words in a bubble.
      *
      * Translating them produced nonsense — 'Ping' came back as 'Table de Ping',
@@ -46,6 +62,19 @@ object TranslationTextUtils {
     fun isSoundEffect(text: String): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return false
+
+        // An animal in a comic gets a speech balloon like anyone else, so its
+        // cry arrives punctuated like dialogue and the rule below lets it
+        // through: "Meow!" was translated, and a cat saying "Miaou" in French
+        // is not what the balloon said. Checked before the punctuation test for
+        // exactly that reason.
+        val bare = trimmed.trim { !it.isLetter() }
+        if (bare.isNotEmpty()) {
+            val cry = bare.split(' ').filter { it.isNotBlank() }
+            val single = cry.size == 1 || (cry.size == 2 && cry[0].equals(cry[1], ignoreCase = true))
+            if (single && cry[0].trim { !it.isLetter() }.lowercase() in animalCries) return true
+        }
+
         if (trimmed.last() in sentenceEnd) return false
 
         val words = trimmed.split(' ').filter { it.isNotBlank() }

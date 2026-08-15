@@ -58,4 +58,20 @@ class TranslationTextUtilsTest {
             "the hyphen before an honorific must survive, or 'Maman-san' comes back",
         )
     }
+
+    @Test
+    fun `an animal cry in a balloon is a sound effect despite its punctuation`() {
+        listOf("Meow!", "MEOW!", "Woof!", "Purr...", "Nyaa~!", "Meow meow!", "Ribbit.")
+            .forEach { assertTrue(TranslationTextUtils.isSoundEffect(it), it) }
+    }
+
+    @Test
+    fun `the same word inside a sentence is still dialogue`() {
+        listOf(
+            "Did the cat meow?",
+            "I heard a meow.",
+            "Meow is what she said.",
+            "Don't growl at me!",
+        ).forEach { assertTrue(!TranslationTextUtils.isSoundEffect(it), it) }
+    }
 }
