@@ -297,8 +297,21 @@ class ReaderState(
             readerSettingsRepository.getOcrSettings().collect { ocrSettings.value = it }
         }
         stateScope.launch {
+            var bootstrapped = false
             readerSettingsRepository.getTranslationSettings()
-                .collect { translationSettings.value = it }
+                .collect {
+                    translationSettings.value = it
+                    // Once, on the first settings the reader sees. Turning the
+                    // feature on is what normally fetches the models, and that
+                    // leaves out everyone who already had it on before the
+                    // better engine was fetched alongside the bundled one —
+                    // they would keep reading the fallback's French and have no
+                    // reason to suspect a second engine exists.
+                    if (it.enabled && !bootstrapped) {
+                        bootstrapped = true
+                        ensureTranslationModels(it)
+                    }
+                }
         }
     }
 
@@ -1166,34 +1179,45 @@ class ReaderState(
             else TranslationModelState.Missing
     }
 
+    /** The settings panel's button. The work itself is shared with the automatic path. */
+    fun downloadTranslationModel() {
+        stateScope.launch { fetchBetterModel(translationSettings.value) }
+    }
+
     /**
      * Fetches the better engine's model. Reports bytes as they arrive, because
      * 36MB over a phone connection is long enough that a silent button reads as
      * a broken one.
+     *
+     * Suspends rather than launching, so the automatic path can wait for it and
+     * report once at the end instead of racing its own notification.
      */
-    fun downloadTranslationModel() {
-        val downloader = translationModelDownloader ?: return
-        val settings = translationSettings.value
-        stateScope.launch {
-            try {
-                downloader.download(settings.source, settings.target).collect { progress ->
-                    translationModelState.value = TranslationModelState.Downloading(
-                        completed = progress.completed,
-                        total = progress.total,
-                        what = progress.description.orEmpty(),
-                    )
-                }
-                translationModelState.value = TranslationModelState.Ready
-                // The scan cache holds pages translated by the other engine.
-                clearScanCache()
-            } catch (e: CancellationException) {
-                refreshTranslationModel()
-                throw e
-            } catch (e: Exception) {
-                logger.warn(e) { "translation model download failed" }
-                appNotifications.add(AppNotification.Error("Model download failed: ${e.message}"))
-                refreshTranslationModel()
+    private suspend fun fetchBetterModel(
+        settings: snd.komelia.settings.model.TranslationSettings,
+    ): Boolean {
+        val downloader = translationModelDownloader ?: return false
+        if (!downloader.supports(settings.source, settings.target)) return false
+        if (downloader.isDownloaded(settings.source, settings.target)) return true
+        return try {
+            downloader.download(settings.source, settings.target).collect { progress ->
+                translationModelState.value = TranslationModelState.Downloading(
+                    completed = progress.completed,
+                    total = progress.total,
+                    what = progress.description.orEmpty(),
+                )
             }
+            translationModelState.value = TranslationModelState.Ready
+            // The scan cache holds pages translated by the other engine.
+            clearScanCache()
+            true
+        } catch (e: CancellationException) {
+            refreshTranslationModel()
+            throw e
+        } catch (e: Exception) {
+            logger.warn(e) { "translation model download failed" }
+            appNotifications.add(AppNotification.Error("Model download failed: ${e.message}"))
+            refreshTranslationModel()
+            false
         }
     }
 
@@ -1560,22 +1584,51 @@ class ReaderState(
      * every translate call fails until the user finds a settings screen to
      * download from, which reads as "translation is broken".
      *
+     * Both engines, in one go. The better one used to be a separate button in
+     * the settings panel, and the cost of that was measured the hard way: a
+     * fresh install — a new tablet, or the debug build, which has its own
+     * storage — fell back to the bundled engine without a word, and a page of
+     * its output was read as a quality regression in Kora. The engine that
+     * reads better is not an option to opt into; it is what this feature is.
+     *
+     * The bundled one is still fetched, and first: it is the fallback while the
+     * 36MB arrives, and it is the only one that covers a pair Bergamot has no
+     * model for.
+     *
      * Not restricted to Wi-Fi: the download only happens when the user turns the
      * feature on, and a switch that silently does nothing off Wi-Fi is worse
      * than one that says how big the download is.
      */
     private fun ensureTranslationModels(settings: snd.komelia.settings.model.TranslationSettings) {
         stateScope.launch {
-            if (translationService.isReady(settings.source, settings.target)) return@launch
-            appNotifications.add(AppNotification.Normal("Downloading translation model (~30MB per language)"))
+            val betterMissing = translationModelDownloader
+                ?.let {
+                    it.supports(settings.source, settings.target) &&
+                            !it.isDownloaded(settings.source, settings.target)
+                } == true
+            val bundledMissing = !translationService.isReady(settings.source, settings.target)
+            if (!betterMissing && !bundledMissing) return@launch
+
+            appNotifications.add(
+                AppNotification.Normal(
+                    if (betterMissing) "Downloading translation models (~65MB)"
+                    else "Downloading translation model (~30MB per language)"
+                )
+            )
             try {
-                snd.komelia.perf.PerfTrace.measure("reader.translate.download") {
-                    translationService.downloadModels(
-                        source = settings.source,
-                        target = settings.target,
-                        requireWifi = false,
-                    )
+                if (bundledMissing) {
+                    snd.komelia.perf.PerfTrace.measure("reader.translate.download") {
+                        translationService.downloadModels(
+                            source = settings.source,
+                            target = settings.target,
+                            requireWifi = false,
+                        )
+                    }
                 }
+                // Failures here already notify and are not fatal: the bundled
+                // engine translates the page either way, which is the whole
+                // point of keeping it.
+                if (betterMissing) fetchBetterModel(settings)
                 appNotifications.add(AppNotification.Success("Translation model ready"))
             } catch (e: CancellationException) {
                 throw e
