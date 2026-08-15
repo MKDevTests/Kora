@@ -132,7 +132,23 @@ fun mergeOcrBoxes(
             // three that remain fill 30% of a rect nearly half the page wide.
             .flatMap { undoIfWideAndSparse(it, pageWidth) }
 
-    return finalSegments.flatMap { segment ->
+    // Reading order across the page, which nothing established before: blocks
+    // came out in whatever order the detector emitted them, and the translator
+    // was handed a conversation shuffled. Measured on Ramen Aka Neko 167 page 5,
+    // "AREN'T..." at x=893 arrived after "…YOU GUYS STILL CLOSED?" at x=459 on a
+    // right-to-left page, so the one sentence read back to front.
+    //
+    // Rows are banded rather than compared: two bubbles side by side are never
+    // level to the pixel, so any straight comparison of top edges decides them
+    // on the noise and the horizontal rule below never runs. Quantising keeps
+    // the comparator a total order, which an overlap test would not be.
+    val rowBand = (lineSize * ROW_BAND_LINES).coerceAtLeast(1f)
+    val orderedSegments = finalSegments.sortedWith(
+        compareBy<Segment> { (it.rect.top / rowBand).toInt() }
+            .thenBy { if (direction == ReadingDirection.RTL) -it.rect.right else it.rect.left }
+    )
+
+    return orderedSegments.flatMap { segment ->
         val unifiedBlockIndex = segment.elements.firstOrNull()?.blockIndex ?: 0
         
         // Group elements by their original segments to maintain internal order
@@ -250,6 +266,16 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
  * not load-bearing.
  */
 private const val MIN_COLUMN_OVERLAP = 0.35f
+
+/**
+ * Height of a reading-order row, in lines of lettering.
+ *
+ * Bubbles meant to be read one after the other across a page sit roughly level
+ * but not exactly: on the Ramen Aka Neko page the pair differed by 124px with
+ * lettering around 30px. Three lines is wide enough to hold such a pair in one
+ * row and short enough that a bubble genuinely below another falls into the next.
+ */
+private const val ROW_BAND_LINES = 4f
 
 /**
  * Whether two lines are stacked over each other rather than merely touching.
