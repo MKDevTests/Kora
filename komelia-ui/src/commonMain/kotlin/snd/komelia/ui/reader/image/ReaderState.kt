@@ -1069,7 +1069,14 @@ class ReaderState(
                         else OcrLanguage.LATIN
                     storedSettings.copy(selectedLanguage = language)
                 } else storedSettings
-                val result = withContext(Dispatchers.Default) {
+                // The whole thing, queue included. Every stage below is already
+                // timed on its own, but they all start after the mutex is taken:
+                // a page that waited four seconds behind another scan looks
+                // instant in each of them and slow to the reader, and that gap
+                // is exactly what the document calls TimeToReady. Subtracting
+                // the stages from this is how much was spent waiting.
+                val result = snd.komelia.perf.PerfTrace.measure("reader.page.total") {
+                  withContext(Dispatchers.Default) {
                     ocrMutex.withLock {
                         // Queued behind an in-flight scan. Two things can have
                         // happened while waiting: the reader moved on, and this
@@ -1118,6 +1125,7 @@ class ReaderState(
                             PageScan(boxes, translateBlocks(boxes))
                         }
                     }
+                  }
                 }
                 if (result == null) return@launch
                 cacheScan(pageId, result)
