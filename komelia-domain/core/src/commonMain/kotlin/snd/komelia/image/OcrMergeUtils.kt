@@ -64,10 +64,22 @@ fun mergeOcrBoxes(
                 // line the detector cut in two, so it gets much less room.
                 val xOverlap = horizontalGap == 0f
                 val yOverlap = verticalGap == 0f
+                //
+                // Japanese turns the two axes around. A bubble there is a row
+                // of columns: consecutive columns overlap on Y and are a column
+                // apart on X, which is the mirror of the sentence above. Left
+                // unswapped, the generous allowance sat on the axis that
+                // separates two different bubbles and the tight one on the axis
+                // that joins a bubble's own columns, so a balloon arrived in
+                // pieces and its pieces arrived welded to its neighbours.
+                val stackedGap = if (vertical) horizontalGap else verticalGap
+                val inlineGap = if (vertical) verticalGap else horizontalGap
+                val stacked = if (vertical) yOverlap else xOverlap
+                val inline = if (vertical) xOverlap else yOverlap
                 val shouldMerge = when {
                     xOverlap && yOverlap -> true
-                    xOverlap -> verticalGap <= lineSize * STACKED_GAP_RATIO
-                    yOverlap -> horizontalGap <= lineSize * INLINE_GAP_RATIO
+                    stacked -> stackedGap <= lineSize * STACKED_GAP_RATIO
+                    inline -> inlineGap <= lineSize * INLINE_GAP_RATIO
                     // Diagonal neighbours are two different bubbles, or a
                     // bubble and a sound effect drawn over the artwork.
                     else -> false
@@ -109,8 +121,15 @@ fun mergeOcrBoxes(
     //
     // Not for vertical Japanese, where the columns of a single bubble are
     // exactly the disjoint groups this looks for.
+    //
+    // Japanese runs the same passes on the other axis. Skipping them altogether
+    // was the first attempt and the bench caught what it costs: a block came
+    // out holding two barcode lines that overlap on neither axis, because
+    // nothing was left to undo the diagonal chains the greedy merge builds.
     val finalSegments =
         if (vertical) currentSegments
+            .flatMap { splitIntoColumns(it, vertical = true) }
+            .flatMap { undoIfWideAndSparse(it, pageWidth) }
         else currentSegments
             .flatMap { splitIntoColumns(it) }
             .flatMap { peelOversizedLines(it) }
@@ -143,7 +162,14 @@ fun mergeOcrBoxes(
     // on the noise and the horizontal rule below never runs. Quantising keeps
     // the comparator a total order, which an overlap test would not be.
     val rowBand = (lineSize * ROW_BAND_LINES).coerceAtLeast(1f)
-    val orderedSegments = finalSegments.sortedWith(
+    val orderedSegments = if (vertical) finalSegments.sortedWith(
+        // A Japanese page is read as columns of bubbles, right to left, each
+        // column top to bottom — so the banding goes on X and the rightmost
+        // band comes first. Banded for the same reason as below: two bubbles in
+        // the same column are never aligned to the pixel.
+        compareBy<Segment> { (-it.rect.right / rowBand).toInt() }
+            .thenBy { it.rect.top }
+    ) else finalSegments.sortedWith(
         compareBy<Segment> { (it.rect.top / rowBand).toInt() }
             .thenBy { if (direction == ReadingDirection.RTL) -it.rect.right else it.rect.left }
     )
@@ -219,7 +245,7 @@ private data class Segment(
  * groups, and come back out as separate blocks with their own panels — which is
  * also what stops the reading order interleaving them.
  */
-private fun splitIntoColumns(segment: Segment): List<Segment> {
+private fun splitIntoColumns(segment: Segment, vertical: Boolean = false): List<Segment> {
     val lines = segment.elements.groupBy { it.blockRect }
     if (lines.size < 2) return listOf(segment)
 
@@ -227,11 +253,11 @@ private fun splitIntoColumns(segment: Segment): List<Segment> {
     // when A and C do not touch. A bubble with one short centred line still
     // comes out whole.
     val groups = mutableListOf<MutableList<Rect>>()
-    for (rect in lines.keys.sortedBy { it.left }) {
+    for (rect in lines.keys.sortedBy { if (vertical) it.top else it.left }) {
         // Every group this line reaches, not just the first: a wide line can
         // bridge two groups that do not touch each other, and they are then one
         // bubble. Taking only the first would leave the far side split off.
-        val hits = groups.filter { group -> group.any { sharesColumn(it, rect) } }
+        val hits = groups.filter { group -> group.any { sharesColumn(it, rect, vertical) } }
         if (hits.isEmpty()) {
             groups.add(mutableListOf(rect))
         } else {
@@ -297,10 +323,20 @@ private const val ROW_BAND_LINES = 4f
  * Four pixels of overlap out of 135 was also enough to join 'SORRY.' to
  * 'NOTHING, REALLY.' — two separate bubbles, translated as one sentence.
  */
-private fun sharesColumn(a: Rect, b: Rect): Boolean {
-    val overlap = min(a.right, b.right) - max(a.left, b.left)
+/**
+ * Whether two lines belong to the same bubble on the axis that stacks them.
+ *
+ * Horizontal lettering stacks downwards, so the lines of one bubble overlap
+ * each other left to right. Vertical lettering stacks sideways, so the columns
+ * of one bubble overlap each other top to bottom instead — the same test, read
+ * on the other axis.
+ */
+private fun sharesColumn(a: Rect, b: Rect, vertical: Boolean = false): Boolean {
+    val overlap = if (vertical) min(a.bottom, b.bottom) - max(a.top, b.top)
+    else min(a.right, b.right) - max(a.left, b.left)
     if (overlap <= 0f) return false
-    return overlap >= min(a.width, b.width) * MIN_COLUMN_OVERLAP
+    val extent = if (vertical) min(a.height, b.height) else min(a.width, b.width)
+    return overlap >= extent * MIN_COLUMN_OVERLAP
 }
 
 /** Below this share of the page width, a block is small enough to trust. */

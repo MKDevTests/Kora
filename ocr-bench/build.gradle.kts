@@ -57,4 +57,5 @@ tasks.test {
     }
     // Where run_ocr.py wrote its <page>.boxes.json. Absent, the replay is skipped.
     System.getenv("KORA_BENCH_DIR")?.let { environment("KORA_BENCH_DIR", it) }
+    System.getenv("KORA_BENCH_VERTICAL")?.let { environment("KORA_BENCH_VERTICAL", it) }
 }

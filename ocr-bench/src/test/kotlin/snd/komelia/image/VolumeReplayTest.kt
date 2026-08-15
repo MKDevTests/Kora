@@ -98,7 +98,16 @@ class VolumeReplayTest {
                 )
             }
 
-            val merged = mergeOcrBoxes(boxes, ReadingDirection.LTR, pageWidth = page.width)
+            // KORA_BENCH_VERTICAL replays a Japanese volume: columns read
+            // right to left, which is a different merge and a different page
+            // order, not a variant of the Latin one.
+            val vertical = System.getenv("KORA_BENCH_VERTICAL") != null
+            val merged = mergeOcrBoxes(
+                boxes,
+                if (vertical) ReadingDirection.RTL else ReadingDirection.LTR,
+                vertical = vertical,
+                pageWidth = page.width,
+            )
             val shortName = page.page.substringAfterLast(" - ").substringBefore(" [")
             report.appendLine("== $shortName  ${page.width}x${page.height}  ${boxes.size} lines")
 
@@ -145,14 +154,23 @@ class VolumeReplayTest {
 
                 // Holds by construction: splitIntoColumns leaves every block as
                 // one group of lines that overlap each other horizontally.
-                val sorted = lines.map { it.imageRect }.sortedBy { it.left }
-                var reach = sorted.first().right
+                //
+                // Mirrored for vertical Japanese, where the columns of one
+                // bubble sit side by side and are meant NOT to overlap
+                // horizontally -- it is on the other axis that they must.
+                // Asserting the Latin shape there fails on every correct block,
+                // which is what it did the first time this was pointed at a
+                // Japanese volume.
+                val sorted = lines.map { it.imageRect }
+                    .sortedBy { if (vertical) it.top else it.left }
+                var reach = if (vertical) sorted.first().bottom else sorted.first().right
                 sorted.drop(1).forEach { line ->
+                    val axis = if (vertical) "vertical" else "horizontal"
                     assertTrue(
-                        line.left < reach,
-                        "$shortName block $index holds lines with no horizontal overlap: $text",
+                        (if (vertical) line.top else line.left) < reach,
+                        "$shortName block $index holds lines with no $axis overlap: $text",
                     )
-                    reach = maxOf(reach, line.right)
+                    reach = maxOf(reach, if (vertical) line.bottom else line.right)
                 }
             }
         }
