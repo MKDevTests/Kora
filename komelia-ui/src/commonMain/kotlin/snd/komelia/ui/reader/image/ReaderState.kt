@@ -1319,6 +1319,30 @@ class ReaderState(
         }
     }
 
+    /**
+     * Reads the shipped word list into [snd.komelia.image.OcrSpellRepair].
+     *
+     * Same shape and same reasoning as the phrase book above: a resource rather
+     * than source, read on the first translation rather than at startup. A
+     * failure leaves the repair switched off, which is the behaviour it had
+     * before it existed.
+     */
+    @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+    private suspend fun loadLexicon() {
+        if (snd.komelia.image.OcrSpellRepair.isLoaded) return
+        runCatching {
+            val bytes = io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
+                .readBytes("files/lexicon/en.txt")
+            val words = bytes.decodeToString().lineSequence()
+                .filter { it.isNotBlank() }
+                .toSet()
+            snd.komelia.image.OcrSpellRepair.load(words)
+            translationLogger.info { "lexicon loaded, ${words.size} words" }
+        }.onFailure {
+            logger.warn(it) { "could not read the lexicon — OCR misreads go through unrepaired" }
+        }
+    }
+
     private suspend fun translateBlocks(boxes: List<OcrElementBox>): Map<Int, String> {
         val settings = translationSettings.value
         if (!settings.enabled || boxes.isEmpty()) return emptyMap()
@@ -1331,6 +1355,11 @@ class ReaderState(
         // ran, and it means a term added from the glossary screen applies to
         // the very next page instead of after leaving the reader.
         val glossary = glossaryForCurrentSeries()
+        // Before the blocks are built, because the repair is part of reading the
+        // page rather than part of translating it: the boxes it fixes are what
+        // the sentence casing, the sound-effect test and the phrase book all
+        // work from.
+        if (!japanese) loadLexicon()
         val blocks = boxes
             .groupBy { it.blockIndex }
             .mapValues { (_, elements) ->
@@ -1347,6 +1376,12 @@ class ReaderState(
                     .let {
                         if (japanese) it
                         else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
+                            // After the line breaks are rejoined, so the repair
+                            // sees whole words: "PLID- DING" is two fragments
+                            // until then and neither one is repairable. Before
+                            // the sentence casing, which is why the repair puts
+                            // the capitals back itself.
+                            .let { text -> snd.komelia.image.OcrSpellRepair.apply(text) }
                             .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
                     }
             }
