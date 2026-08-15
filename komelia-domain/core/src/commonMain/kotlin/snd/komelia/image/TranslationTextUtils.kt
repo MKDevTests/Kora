@@ -86,6 +86,26 @@ object TranslationTextUtils {
     }
 
     /**
+     * Whether the balloon was lettered in capitals.
+     *
+     * Comics are drawn in capitals throughout, so this is not about shouting —
+     * it is the ordinary look of the page, and a translation in sentence case
+     * sitting next to untranslated balloons in capitals reads as a different
+     * book. The information is there in what the recogniser returned and was
+     * being thrown away: [toSentenceCase] runs before translation on purpose,
+     * because capitals measurably degrade what the engine returns.
+     *
+     * Needs at least two letters, so "I" and a stray "A" do not drag a whole
+     * balloon into capitals. A single lowercase letter anywhere is enough to
+     * say no, which is what keeps a balloon the letterer set in mixed case out
+     * of this.
+     */
+    fun isAllCaps(text: String): Boolean {
+        val letters = text.filter { it.isLetter() }
+        return letters.length >= 2 && letters.none { it.isLowerCase() }
+    }
+
+    /**
      * Rejoins words the lettering broke across lines.
      *
      * "BUSI- NESS" is one word and must lose the hyphen; "MAMA- SAN" is a name
