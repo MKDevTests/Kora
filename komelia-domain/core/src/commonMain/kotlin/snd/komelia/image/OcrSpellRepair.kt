@@ -111,6 +111,11 @@ object OcrSpellRepair {
 
     private val CONFUSIONS = listOf(
         "li" to "u", "ui" to "u", "ii" to "u", "iu" to "u", "ll" to "u",
+        // The same 'u' read as a single thin stroke rather than two: "I've had
+        // enough" came back "I've had enoigh". Added after measuring, not on
+        // the strength of the one case -- over the same 28 pages it repairs
+        // ENOIGH and changes nothing else, false or true.
+        "i" to "u",
         "rn" to "m", "cl" to "d",
     )
 

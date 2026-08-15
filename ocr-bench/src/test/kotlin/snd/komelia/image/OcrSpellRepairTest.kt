@@ -35,6 +35,8 @@ class OcrSpellRepairTest {
         assertEquals("AMATEUR", OcrSpellRepair.repair("AMATEUIR"))
         assertEquals("USUALLY", OcrSpellRepair.repair("UISUALLY"))
         assertEquals("MUCH", OcrSpellRepair.repair("MLICH"))
+        // The same 'u', read as one thin stroke instead of two.
+        assertEquals("ENOUGH", OcrSpellRepair.repair("ENOIGH"))
     }
 
     @Test
