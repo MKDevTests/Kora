@@ -27,6 +27,31 @@ class BubbleAssemblerTest {
     }
 
     @Test
+    fun `a full stop ends the sentence, it does not trail off`() {
+        // Straight from the tablet, Ramen Aka Neko 164 page 13. Two panels, two
+        // speakers. They were welded, translated as one sentence and then split
+        // back across both balloons, so the second one opened on "…formé" --
+        // the tail of "non entraîné", whose head had stayed in the first.
+        assertEquals(
+            listOf(listOf(0), listOf(1)),
+            BubbleAssembler.group(
+                listOf(
+                    "Tetra-chan used to pretend she was an untrained cat.",
+                    "...With that strange meowing just now?",
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `two dots still count, the letterer does not always use the character`() {
+        assertEquals(
+            listOf(listOf(0, 1)),
+            BubbleAssembler.group(listOf("I mean..", "..if you want to."))
+        )
+    }
+
+    @Test
     fun `a finished question does not swallow the answer`() {
         assertEquals(
             listOf(listOf(0), listOf(1)),

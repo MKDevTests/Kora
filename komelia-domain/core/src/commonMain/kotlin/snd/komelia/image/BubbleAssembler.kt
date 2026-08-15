@@ -114,7 +114,22 @@ object BubbleAssembler {
 
     private const val MAX_BUBBLES_PER_UTTERANCE = 3
     private const val ELLIPSIS_CHARS = "….·"
-    private val ELLIPSIS_END = Regex("[….]\\s*$")
-    private val ELLIPSIS_START = Regex("^\\s*[….]")
+
+    /**
+     * An ellipsis, and nothing else. The character, or two or more full stops
+     * standing in for it.
+     *
+     * These read `[….]` at first, which matches a single full stop — so every
+     * balloon that simply ended its sentence was treated as trailing off. On a
+     * real page that welded two speakers together: "Tetra-chan used to pretend
+     * she was an untrained cat." went to the translator joined to "...With that
+     * strange meowing just now?" from another panel, came back as one sentence,
+     * and was then split across both balloons — the second one reading
+     * "…formé avec cet étrange…" because "non entraîné" had been cut in half.
+     *
+     * A full stop ends a sentence. It is the ellipsis that says it did not.
+     */
+    private val ELLIPSIS_END = Regex("(…|\\.{2,})\\s*$")
+    private val ELLIPSIS_START = Regex("^\\s*(…|\\.{2,})")
     private val WHITESPACE = Regex("\\s+")
 }
