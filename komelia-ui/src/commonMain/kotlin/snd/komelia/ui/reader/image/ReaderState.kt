@@ -1354,28 +1354,45 @@ class ReaderState(
             // tablet not to work: "Meryl Strife" went out spelled right and came
             // back "Meryl Conflife". Applied to the joined sentence, so a term
             // split across two balloons is still one term.
-            val protectedGroups = groupSources.map {
-                glossary.protect(snd.komelia.image.BubbleAssembler.join(it))
-            }
-            val translated = withContext(Dispatchers.Default) {
-                snd.komelia.perf.PerfTrace.measure(
-                    "reader.translate",
-                    count = { it.size }
-                ) {
-                    translationService.translate(
-                        texts = protectedGroups.map { it.text },
-                        source = settings.source,
-                        target = settings.target,
-                    )
+            val joined = groupSources.map { snd.komelia.image.BubbleAssembler.join(it) }
+            val protectedGroups = joined.map { glossary.protect(it) }
+            // Idioms the engine reliably mangles are answered before it sees
+            // them: "Something the matter?" came back "Quelque chose la
+            // matière ?". A small model has no idiomatic reading to reach for,
+            // so this is not something tuning or a bigger model fixes.
+            val known = if (japanese) List(joined.size) { null }
+            else joined.map { snd.komelia.image.PhraseBook.lookup(it) }
+            val pending = known.indices.filter { known[it] == null }
+            val engineOutput = if (pending.isEmpty()) emptyList() else {
+                withContext(Dispatchers.Default) {
+                    snd.komelia.perf.PerfTrace.measure(
+                        "reader.translate",
+                        count = { it.size }
+                    ) {
+                        translationService.translate(
+                            texts = pending.map { protectedGroups[it].text },
+                            source = settings.source,
+                            target = settings.target,
+                        )
+                    }
                 }
+            }
+            // Back into group order. The engine was only given the groups the
+            // phrase book had no answer for, so its results line up with
+            // `pending` rather than with every group.
+            val translated = known.toMutableList()
+            pending.forEachIndexed { position, groupIndex ->
+                translated[groupIndex] = engineOutput.getOrNull(position)
             }
             val published = buildMap {
                 groups.forEachIndexed { groupIndex, positions ->
+                    val answer = translated[groupIndex] ?: return@forEachIndexed
                     // Terms first: everything downstream compares against the
                     // original sentence, and a placeholder matches nothing in
-                    // it.
-                    val restored = protectedGroups[groupIndex]
-                        .restore(translated[groupIndex])
+                    // it. A phrase book answer never went out with placeholders
+                    // in it, so restoring is only for what the engine returned.
+                    val restored = if (known[groupIndex] != null) answer
+                    else protectedGroups[groupIndex].restore(answer)
                     val pieces = snd.komelia.image.BubbleAssembler
                         .distribute(restored, groupSources[groupIndex])
                     positions.forEachIndexed { pieceIndex, position ->

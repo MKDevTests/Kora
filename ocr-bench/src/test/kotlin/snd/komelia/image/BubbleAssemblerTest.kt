@@ -101,3 +101,38 @@ class EnglishTextCleanerTest {
         ).forEach { assertTrue(!EnglishTextCleaner.isTranslatable(it), it) }
     }
 }
+
+class PhraseBookTest {
+
+    @Test
+    fun `answers the idioms measured failing on real pages`() {
+        assertEquals("Un problème ?", PhraseBook.lookup("Something the matter?"))
+        assertEquals("C'est inquiétant.", PhraseBook.lookup("It's concerning"))
+    }
+
+    @Test
+    fun `punctuation and case do not change which phrase it is`() {
+        val expected = PhraseBook.lookup("Something the matter?")
+        listOf(
+            "something the matter",
+            "SOMETHING THE MATTER?!",
+            "Something the matter...?",
+            "  Something the matter ?  ",
+        ).forEach { assertEquals(expected, PhraseBook.lookup(it), it) }
+    }
+
+    @Test
+    fun `a typographic apostrophe matches a plain one`() {
+        assertEquals(PhraseBook.lookup("it's concerning"), PhraseBook.lookup("it\u2019s concerning"))
+    }
+
+    @Test
+    fun `leaves ordinary lines to the engine`() {
+        listOf(
+            "I haven't eaten anything since this morning.",
+            "Something the matter with the soup?",
+            "Meow!",
+            "",
+        ).forEach { assertEquals(null, PhraseBook.lookup(it), it) }
+    }
+}
