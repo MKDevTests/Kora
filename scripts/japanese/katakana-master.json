@@ -1,10 +1,10 @@
 {
   "metadata": {
     "title": "Mots katakana familiers / manga — normalisation JA — V0.7 lots grammaire + 2",
-    "version": "0.8",
+    "version": "0.9",
     "source_language": "ja",
     "target_language": "fr",
-    "entry_count": 450,
+    "entry_count": 462,
     "design_goal": "Glossaire séparé de mots katakana apparaissant au milieu des phrases, notamment pronoms, grammaire stylisée, insultes, emphase, vocabulaire cru et jargon.",
     "matching_recommendation": "contains_anywhere; en cas de chevauchement, préférer la clé la plus longue; éviter si possible de déclencher une clé courte à l'intérieur d'un token katakana plus long",
     "minimum_significant_characters": 2,
@@ -40,7 +40,7 @@
       "kata_slang_verb": 35,
       "kata_mimetic": 35
     },
-    "inherits_version": "0.7",
+    "inherits_version": "0.8",
     "inherited_entry_count": 442,
     "append_only_integrity": {
       "all_v0_3_entries_preserved": true,
@@ -63,18 +63,17 @@
     "scope_note": "V0.4 complète le noyau utile pour manga/dialogue. Au-delà, privilégier les ajouts observés dans le corpus plutôt qu'une expansion générique.",
     "ja_normal_policy": "Seul champ consomme par le moteur, toutes categories confondues. Une valeur n'est ajoutee que si elle a ete mesuree sur le pivot embarque : le katakana laisse fuir du romaji dans l'anglais intermediaire et la forme normale non. Une entree sans ja_normal est une entree que le moteur traduit deja.",
     "ja_normal_coverage": {
-      "entries_with_value": 244,
+      "entries_with_value": 257,
       "entries_null": 4,
-      "entries_absent": 202
+      "entries_absent": 201
     },
     "ja_normal_batch": {
-      "batch": 3,
-      "method": "candidat propose puis valide sur le pivot embarque (phrase porteuse identique des deux cotes)",
-      "candidates_tested": 273,
-      "kept": 73,
-      "rejected_candidate_leaks_too": 7,
-      "rejected_engine_already_correct": 193,
-      "new_entries_from_corpus": 6
+      "batch": 4,
+      "method": "balayage du corpus : chaque katakana non couvert teste dans sa vraie bulle",
+      "swept": 179,
+      "kept": 13,
+      "new_entries": 12,
+      "note": "Les rejets sont du bruit OCR (ボボク, ソソイツ, ヤパイヤパイヤバィ) ou des noms propres (トーキチ, アングラスターニ), pas du vocabulaire manquant."
     }
   },
   "entries": [
@@ -199,7 +198,8 @@
       "translation_fr": "tu",
       "register": "very_rough",
       "category": "kata_pronoun",
-      "priority_rank": 15
+      "priority_rank": 15,
+      "ja_normal": "お前"
     },
     {
       "id": "jakat_0016",
@@ -3925,6 +3925,114 @@
       "register": "informal",
       "category": "kata_grammar",
       "priority_rank": 450
+    },
+    {
+      "id": "jakat_0451",
+      "expression": "サカナ",
+      "ja_normal": "獲物",
+      "translation_fr": "cible",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 451
+    },
+    {
+      "id": "jakat_0452",
+      "expression": "サラリーマン",
+      "ja_normal": "会社員",
+      "translation_fr": "employé de bureau",
+      "register": "neutral",
+      "category": "kata_jargon",
+      "priority_rank": 452
+    },
+    {
+      "id": "jakat_0453",
+      "expression": "グチ",
+      "ja_normal": "愚痴",
+      "translation_fr": "récriminations",
+      "register": "informal",
+      "category": "kata_native",
+      "priority_rank": 453
+    },
+    {
+      "id": "jakat_0454",
+      "expression": "ホンマ",
+      "ja_normal": "本当",
+      "translation_fr": "vraiment",
+      "register": "kansai",
+      "category": "kata_emphasis",
+      "priority_rank": 454
+    },
+    {
+      "id": "jakat_0455",
+      "expression": "ワシャ",
+      "ja_normal": "わしは",
+      "translation_fr": "moi",
+      "register": "old_male",
+      "category": "kata_pronoun",
+      "priority_rank": 455
+    },
+    {
+      "id": "jakat_0456",
+      "expression": "ネー",
+      "ja_normal": "ない",
+      "translation_fr": "pas",
+      "register": "rough",
+      "category": "kata_grammar",
+      "priority_rank": 456
+    },
+    {
+      "id": "jakat_0457",
+      "expression": "スゴ",
+      "ja_normal": "凄",
+      "translation_fr": "sacré",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 457
+    },
+    {
+      "id": "jakat_0458",
+      "expression": "トボ",
+      "ja_normal": "とぼ",
+      "translation_fr": "faire l'innocent",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 458
+    },
+    {
+      "id": "jakat_0459",
+      "expression": "ムカツク",
+      "ja_normal": "腹が立つ",
+      "translation_fr": "ça m'énerve",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 459
+    },
+    {
+      "id": "jakat_0460",
+      "expression": "エライ",
+      "ja_normal": "偉い",
+      "translation_fr": "sacré",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 460
+    },
+    {
+      "id": "jakat_0461",
+      "expression": "ノコノコ",
+      "ja_normal": "のこのこ",
+      "translation_fr": "sans se gêner",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 461
+    },
+    {
+      "id": "jakat_0462",
+      "expression": "ゴッツイ",
+      "ja_normal": "凄い",
+      "translation_fr": "énorme",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 462
     }
   ]
 }
