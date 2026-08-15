@@ -74,15 +74,35 @@ class BergamotTranslationEngine(
         target: TranslationLanguage,
     ): List<String> {
         if (texts.isEmpty()) return texts
-        val model = mutex.withLock { modelFor(source, target) } ?: return texts
-        return texts.map { text ->
-            if (text.isBlank()) text
+        // Held across the translation, not just the load. translate-kit
+        // documents its calls as blocking and its objects as not thread-safe,
+        // and the lock used to be released the moment the model was in hand --
+        // which left two page turns free to enter the same native model at once.
+        return mutex.withLock {
+            val model = modelFor(source, target) ?: return@withLock texts
+            // One batched call rather than one per bubble. A page is ten to
+            // fifteen balloons, so this is one crossing of the JNI boundary
+            // instead of fifteen, and the engine sets up its workspace once.
+            val wanted = texts.indices.filter { texts[it].isNotBlank() }
+            if (wanted.isEmpty()) return@withLock texts
             // isHtml = false: the reader hands over plain sentences. The HTML
             // path exists to re-align inline tags, which is one more thing to
             // get wrong for nothing gained here.
-            else runCatching { model.translate(text, false).text }
-                .onFailure { logger.warn(it) { "translation failed for a block, keeping the original" } }
-                .getOrDefault(text)
+            val batch = runCatching { model.translate(wanted.map { texts[it] }, false) }
+                .onFailure { logger.warn(it) { "batch translation failed, keeping the originals" } }
+                .getOrNull()
+            // A short batch would silently shift every result onto the wrong
+            // bubble, which reads as the translator scrambling the page rather
+            // than as a failure. Keep the originals instead.
+            if (batch == null || batch.size != wanted.size) {
+                if (batch != null) {
+                    logger.warn { "batch returned ${batch.size} of ${wanted.size} — keeping the originals" }
+                }
+                return@withLock texts
+            }
+            val out = texts.toMutableList()
+            wanted.forEachIndexed { position, index -> out[index] = batch[position].text }
+            out
         }
     }
 
