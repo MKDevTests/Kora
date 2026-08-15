@@ -27,4 +27,16 @@ interface TranslationModelDownloader {
 
     /** Frees the disk space again. */
     fun delete(source: TranslationLanguage, target: TranslationLanguage)
+
+    /**
+     * Roughly how much is still to fetch, in megabytes, for a message shown
+     * before the transfer starts.
+     *
+     * Rough on purpose: the exact sizes come from Mozilla's records, and asking
+     * for them means a network round trip before the notification that says a
+     * download is about to happen. Wrong by a few megabytes is fine; wrong by a
+     * factor of two is not, which is why this is not a constant — Japanese goes
+     * through English and so pulls two packs.
+     */
+    fun estimatedMegabytes(source: TranslationLanguage, target: TranslationLanguage): Int
 }

@@ -34,13 +34,20 @@ class BergamotTranslationEngine(
 ) : TranslationEngine {
 
     private val mutex = Mutex()
-    private var loaded: LoadedPair? = null
 
-    private class LoadedPair(val pair: BergamotPair, val model: TranslationModel)
+    /**
+     * The models currently in memory, keyed by pair.
+     *
+     * Was a single slot, and had to stop being one when Japanese arrived:
+     * ja-fr is two hops and evicting one to load the other would pay a model
+     * load twice per page rather than once per book. Capped at [MAX_LOADED],
+     * which is exactly the length of the longest route.
+     */
+    private val loaded = LinkedHashMap<BergamotPair, TranslationModel>()
 
     override suspend fun isReady(source: TranslationLanguage, target: TranslationLanguage): Boolean {
-        val pair = BergamotPair.of(source, target) ?: return false
-        return pair.isComplete(modelRoot)
+        val route = BergamotPair.route(source, target)
+        return route.isNotEmpty() && route.all { it.isComplete(modelRoot) }
     }
 
     /**
@@ -55,7 +62,10 @@ class BergamotTranslationEngine(
     suspend fun canTranslate(
         source: TranslationLanguage,
         target: TranslationLanguage,
-    ): Boolean = mutex.withLock { modelFor(source, target) != null }
+    ): Boolean = mutex.withLock {
+        val route = BergamotPair.route(source, target)
+        route.isNotEmpty() && route.all { modelFor(it) != null }
+    }
 
     /**
      * Nothing to do here. The files are fetched by [BergamotModelDownloader],
@@ -79,48 +89,58 @@ class BergamotTranslationEngine(
         // and the lock used to be released the moment the model was in hand --
         // which left two page turns free to enter the same native model at once.
         return mutex.withLock {
-            val model = modelFor(source, target) ?: return@withLock texts
-            // One batched call rather than one per bubble. A page is ten to
-            // fifteen balloons, so this is one crossing of the JNI boundary
-            // instead of fifteen, and the engine sets up its workspace once.
+            val route = BergamotPair.route(source, target)
+            if (route.isEmpty()) return@withLock texts
             val wanted = texts.indices.filter { texts[it].isNotBlank() }
             if (wanted.isEmpty()) return@withLock texts
-            // isHtml = false: the reader hands over plain sentences. The HTML
-            // path exists to re-align inline tags, which is one more thing to
-            // get wrong for nothing gained here.
-            val batch = runCatching { model.translate(wanted.map { texts[it] }, false) }
-                .onFailure { logger.warn(it) { "batch translation failed, keeping the originals" } }
-                .getOrNull()
-            // A short batch would silently shift every result onto the wrong
-            // bubble, which reads as the translator scrambling the page rather
-            // than as a failure. Keep the originals instead.
-            if (batch == null || batch.size != wanted.size) {
-                if (batch != null) {
-                    logger.warn { "batch returned ${batch.size} of ${wanted.size} — keeping the originals" }
+
+            // Every hop translates the whole batch before the next one starts.
+            // Going bubble by bubble through both hops would load nothing extra
+            // but would cross JNI twice per balloon instead of twice per page.
+            var carried: List<String> = wanted.map { texts[it] }
+            for (pair in route) {
+                val model = modelFor(pair) ?: return@withLock texts
+                val batch = runCatching { model.translate(carried, false) }
+                    .onFailure { logger.warn(it) { "batch translation failed on $pair, keeping the originals" } }
+                    .getOrNull()
+                // A short batch would silently shift every result onto the wrong
+                // bubble, which reads as the translator scrambling the page rather
+                // than as a failure. Keep the originals instead.
+                if (batch == null || batch.size != carried.size) {
+                    if (batch != null) {
+                        logger.warn { "batch returned ${batch.size} of ${carried.size} on $pair — keeping the originals" }
+                    }
+                    return@withLock texts
                 }
-                return@withLock texts
+                carried = batch.map { it.text }
             }
             val out = texts.toMutableList()
-            wanted.forEachIndexed { position, index -> out[index] = batch[position].text }
+            wanted.forEachIndexed { position, index -> out[index] = carried[position] }
             out
         }
     }
 
     override fun release() {
-        loaded?.model?.close()
-        loaded = null
+        loaded.values.forEach { it.close() }
+        loaded.clear()
     }
 
     /**
-     * One live model at a time, for the same reason ML Kit keeps one
-     * translator: the weights are mmap'd, but the engine's workspace is not.
+     * The model for one hop, loading it if it is not already in memory.
+     *
+     * The weights are mmap'd but the engine's workspace is not, so this keeps
+     * at most [MAX_LOADED] and evicts the least recently used — which on a
+     * two-hop route is nothing, and on a change of language pair is the pair
+     * that was left behind.
      */
-    private fun modelFor(
-        source: TranslationLanguage,
-        target: TranslationLanguage,
-    ): TranslationModel? {
-        val pair = BergamotPair.of(source, target) ?: return null
-        loaded?.let { if (it.pair == pair) return it.model }
+    private fun modelFor(pair: BergamotPair): TranslationModel? {
+        loaded[pair]?.let {
+            // Re-inserting moves it to the end, which is what makes the first
+            // entry the least recently used.
+            loaded.remove(pair)
+            loaded[pair] = it
+            return it
+        }
         if (!pair.isComplete(modelRoot)) return null
 
         TranslateKit.init(context)
@@ -130,13 +150,15 @@ class BergamotTranslationEngine(
         }
 
         val (model, vocab, shortlist) = pair.files(modelRoot)
-        loaded?.model?.close()
-        loaded = null
+        while (loaded.size >= MAX_LOADED) {
+            val oldest = loaded.keys.first()
+            loaded.remove(oldest)?.close()
+        }
         return runCatching {
             TranslateKit.loadModel(
                 ModelSpec(
-                    sourceLang = source.code,
-                    targetLang = target.code,
+                    sourceLang = pair.source.code,
+                    targetLang = pair.target.code,
                     modelPath = model.absolutePath,
                     // One entry, not two: this pair shares a single
                     // SentencePiece vocabulary between source and target.
@@ -154,7 +176,12 @@ class BergamotTranslationEngine(
             )
         }
             .onFailure { logger.warn(it) { "could not load the Bergamot model for $pair" } }
-            .onSuccess { loaded = LoadedPair(pair, it) }
+            .onSuccess { loaded[pair] = it }
             .getOrNull()
+    }
+
+    private companion object {
+        /** The length of the longest route: Japanese to French, through English. */
+        const val MAX_LOADED = 2
     }
 }

@@ -1471,6 +1471,42 @@ class ReaderState(
     }
 
     /**
+     * Reads the katakana glossary, once. The Japanese counterpart of
+     * [loadLexicon], and non-fatal for the same reason: without it the page
+     * still translates, it just keeps the invented character names.
+     */
+    @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+    private suspend fun loadKatakanaGlossary() {
+        if (snd.komelia.image.JapaneseKatakanaGlossary.isLoaded) return
+        runCatching {
+            val bytes = io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
+                .readBytes("files/japanese/katakana.json")
+            snd.komelia.image.JapaneseKatakanaGlossary.load(bytes.decodeToString())
+            translationLogger.info {
+                "katakana glossary loaded, ${snd.komelia.image.JapaneseKatakanaGlossary.size} rewrites"
+            }
+        }.onFailure {
+            logger.warn(it) { "could not read the katakana glossary — emphatic katakana goes through as-is" }
+        }
+    }
+
+    /** The Japanese phrase book, same contract as [loadPhraseBook]. */
+    @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
+    private suspend fun loadJapanesePhraseBook() {
+        if (snd.komelia.image.JapanesePhraseBook.isLoaded) return
+        runCatching {
+            val bytes = io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
+                .readBytes("files/phrasebook/ja-fr.json")
+            val table = kotlinx.serialization.json.Json
+                .decodeFromString<Map<String, String>>(bytes.decodeToString())
+            snd.komelia.image.JapanesePhraseBook.load(table)
+            translationLogger.info { "japanese phrase book loaded, ${table.size} expressions" }
+        }.onFailure {
+            logger.warn(it) { "could not read the japanese phrase book — every balloon goes to the engine" }
+        }
+    }
+
+    /**
      * @param foreground false when this page is being prepared behind the one on
      *   screen. The spinner belongs to the page the reader is looking at, and a
      *   prefetch that lit it up would have it turning while nothing is waiting.
@@ -1560,14 +1596,28 @@ class ReaderState(
             // tablet not to work: "Meryl Strife" went out spelled right and came
             // back "Meryl Conflife". Applied to the joined sentence, so a term
             // split across two balloons is still one term.
-            loadPhraseBook()
+            if (japanese) {
+                loadKatakanaGlossary()
+                loadJapanesePhraseBook()
+            } else loadPhraseBook()
             val joined = groupSources.map { snd.komelia.image.BubbleAssembler.join(it) }
+            // After protect, not before: a series glossary term can itself be
+            // katakana, and rewriting it first would leave protect nothing to
+            // find. The placeholders are Latin ("Xqz0"), so the katakana rules
+            // cannot reach them.
             val protectedGroups = joined.map { glossary.protect(it) }
+                .map { protectedText ->
+                    if (!japanese) protectedText
+                    else protectedText.mapText { snd.komelia.image.JapaneseKatakanaGlossary.apply(it) }
+                }
             // Idioms the engine reliably mangles are answered before it sees
             // them: "Something the matter?" came back "Quelque chose la
             // matière ?". A small model has no idiomatic reading to reach for,
             // so this is not something tuning or a bigger model fixes.
-            val known = if (japanese) List(joined.size) { null }
+            // Looked up on `joined`, before the katakana rewrite: the table is
+            // written the way a page is lettered, so a balloon that is an
+            // entry matches as it was read, not as it was normalised.
+            val known = if (japanese) joined.map { snd.komelia.image.JapanesePhraseBook.lookup(it) }
             else joined.map { snd.komelia.image.PhraseBook.lookup(it) }
             val pending = known.indices.filter { known[it] == null }
             val engineOutput = if (pending.isEmpty()) emptyList() else {
@@ -1720,9 +1770,14 @@ class ReaderState(
             val bundledMissing = !translationService.isReady(settings.source, settings.target)
             if (!betterMissing && !bundledMissing) return@launch
 
+            // The bundled engine is ~30MB per language and does not report its
+            // size; the better one does, and it is the one that varies —
+            // Japanese pulls two packs because it goes through English.
+            val betterSize = translationModelDownloader
+                ?.estimatedMegabytes(settings.source, settings.target) ?: 0
             appNotifications.add(
                 AppNotification.Normal(
-                    if (betterMissing) "Downloading translation models (~65MB)"
+                    if (betterMissing) "Downloading translation models (~${30 + betterSize}MB)"
                     else "Downloading translation model (~30MB per language)"
                 )
             )

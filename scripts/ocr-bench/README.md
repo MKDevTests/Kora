@@ -61,3 +61,34 @@ Quand une page se traduit mal, mettre ses lignes dans
 `ocr-bench/src/test/kotlin/snd/komelia/image/OcrMergeUtilsTest.kt` (les
 coordonnées sortent de `run_ocr.py`), vérifier que le test échoue, puis corriger.
 Un cas ajouté est un cas qui ne peut plus revenir.
+
+## Japonais : le pivot bat le direct (mesuré, 15/08/2026)
+
+Les deux documents de conception recommandent `opus-mt-ja-fr` **direct** comme
+moteur V1. Mesuré sur les mêmes phrases (`ja-probe.txt`), il ne gagne pas.
+
+`run_pivot_ja.sh` fait JA→EN→FR avec le moteur qui ship déjà. Le pack `ja-en`
+existe chez Mozilla (v2.1, 52 Mo), au même endroit et au même format que
+`en-fr` : **un pack de plus, aucun nouveau runtime, rien à convertir ni à
+héberger.**
+
+Le direct a été testé à armes égales — `beam 1` comme Bergamot, puis `beam 4`
+pour lui laisser sa meilleure chance. Deux comportements disqualifiants
+survivent aux deux réglages :
+
+    仕方ないだろ。   -> « Tu n'as pas le choix, Nimah. »   nom propre inventé
+    もう十分だ。     -> « C'est assez, Nimah. »            le même fantôme
+    まさか……        -> « Non, non, non, non, non, ... »   répétition dégénérée
+
+Un nom de personnage fabriqué dans une bulle est pire qu'une traduction plate :
+il est faux et il a l'air sûr de lui. Le pivot, lui, échoue à plat
+(しょうがねぇな → « Je ne peux pas l'aider ») — c'est exactement le défaut
+structurel que le document annonçait, et c'est le moins grave des deux.
+
+À armes égales le score est serré (4 partout sur 15). Ce qui tranche, c'est
+que le direct est un *teacher* fp32 de 76M paramètres — la conversion int8
+Bergamot ne peut que le dégrader — contre les 31M du student que le pivot
+utilise déjà.
+
+**Non validé** : 15 phrases choisies à la main, pas de vraies bulles. L'étape
+suivante est l'OCR japonais sur un tome réel.

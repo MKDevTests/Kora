@@ -1,0 +1,4038 @@
+{
+  "metadata": {
+    "title": "Mots katakana familiers / manga — normalisation JA — V0.7 lots grammaire + 2",
+    "version": "0.9",
+    "source_language": "ja",
+    "target_language": "fr",
+    "entry_count": 462,
+    "design_goal": "Glossaire séparé de mots katakana apparaissant au milieu des phrases, notamment pronoms, grammaire stylisée, insultes, emphase, vocabulaire cru et jargon.",
+    "matching_recommendation": "contains_anywhere; en cas de chevauchement, préférer la clé la plus longue; éviter si possible de déclencher une clé courte à l'intérieur d'un token katakana plus long",
+    "minimum_significant_characters": 2,
+    "single_translation_per_entry": true,
+    "fields": [
+      "id",
+      "expression",
+      "ja_normal",
+      "translation_fr",
+      "register",
+      "category",
+      "priority_rank"
+    ],
+    "translation_policy": "translation_fr est une unité lexicale courte (mot, groupe nominal, adjectif ou adverbe), jamais une phrase complète.",
+    "loanword_policy": "Les loanwords évidents normalement bien traduits par les moteurs génériques sont volontairement exclus.",
+    "ocr_noise_policy": "Aucune entrée volontairement issue de bruit OCR.",
+    "matching_policy": "Recherche possible n'importe où dans la phrase. Pour réduire les faux positifs, utiliser longest-match-first et, si le moteur le permet, des limites de token/script pour les clés courtes.",
+    "excluded_ambiguous_grammar_examples": [
+      "ママ",
+      "タイ",
+      "デモ"
+    ],
+    "category_counts": {
+      "kata_pronoun": 50,
+      "kata_grammar": 51,
+      "kata_insult": 54,
+      "kata_emphasis": 60,
+      "kata_crude": 21,
+      "kata_jargon": 20,
+      "kata_address": 13,
+      "kata_native": 70,
+      "kata_social": 35,
+      "kata_slang_verb": 35,
+      "kata_mimetic": 35
+    },
+    "inherits_version": "0.8",
+    "inherited_entry_count": 442,
+    "append_only_integrity": {
+      "all_v0_3_entries_preserved": true,
+      "all_v0_3_ids_preserved": true,
+      "modified_inherited_entries": 0,
+      "missing_inherited_entries": 0
+    },
+    "new_v0_2_categories": {
+      "kata_address": 12
+    },
+    "new_v0_3_categories": {
+      "kata_native": 70
+    },
+    "native_policy": "Mots japonais souvent stylisés en katakana dans les mangas. Les homographes courts ou fortement ambigus sont volontairement exclus afin de limiter les faux positifs en matching contains_anywhere.",
+    "new_v0_4_categories": {
+      "kata_social": 35,
+      "kata_slang_verb": 35,
+      "kata_mimetic": 35
+    },
+    "scope_note": "V0.4 complète le noyau utile pour manga/dialogue. Au-delà, privilégier les ajouts observés dans le corpus plutôt qu'une expansion générique.",
+    "ja_normal_policy": "Seul champ consomme par le moteur, toutes categories confondues. Une valeur n'est ajoutee que si elle a ete mesuree sur le pivot embarque : le katakana laisse fuir du romaji dans l'anglais intermediaire et la forme normale non. Une entree sans ja_normal est une entree que le moteur traduit deja.",
+    "ja_normal_coverage": {
+      "entries_with_value": 257,
+      "entries_null": 4,
+      "entries_absent": 201
+    },
+    "ja_normal_batch": {
+      "batch": 4,
+      "method": "balayage du corpus : chaque katakana non couvert teste dans sa vraie bulle",
+      "swept": 179,
+      "kept": 13,
+      "new_entries": 12,
+      "note": "Les rejets sont du bruit OCR (ボボク, ソソイツ, ヤパイヤパイヤバィ) ou des noms propres (トーキチ, アングラスターニ), pas du vocabulaire manquant."
+    }
+  },
+  "entries": [
+    {
+      "id": "jakat_0001",
+      "expression": "オレ",
+      "translation_fr": "je",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 1
+    },
+    {
+      "id": "jakat_0002",
+      "expression": "オレ様",
+      "translation_fr": "moi-même",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 2
+    },
+    {
+      "id": "jakat_0003",
+      "expression": "オレサマ",
+      "translation_fr": "moi-même",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 3,
+      "ja_normal": "俺様"
+    },
+    {
+      "id": "jakat_0004",
+      "expression": "ボク",
+      "translation_fr": "je",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 4
+    },
+    {
+      "id": "jakat_0005",
+      "expression": "ボクラ",
+      "translation_fr": "nous",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 5,
+      "ja_normal": "僕たち"
+    },
+    {
+      "id": "jakat_0006",
+      "expression": "ボク達",
+      "translation_fr": "nous",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 6
+    },
+    {
+      "id": "jakat_0007",
+      "expression": "ワタシ",
+      "translation_fr": "je",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 7
+    },
+    {
+      "id": "jakat_0008",
+      "expression": "ワタシ達",
+      "translation_fr": "nous",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 8
+    },
+    {
+      "id": "jakat_0009",
+      "expression": "ワタクシ",
+      "translation_fr": "je",
+      "register": "formal",
+      "category": "kata_pronoun",
+      "priority_rank": 9
+    },
+    {
+      "id": "jakat_0010",
+      "expression": "アタシ",
+      "translation_fr": "je",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 10
+    },
+    {
+      "id": "jakat_0011",
+      "expression": "アタシ達",
+      "translation_fr": "nous",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 11
+    },
+    {
+      "id": "jakat_0012",
+      "expression": "ウチ",
+      "translation_fr": "je",
+      "register": "informal",
+      "category": "kata_grammar",
+      "priority_rank": 12,
+      "ja_normal": "うち"
+    },
+    {
+      "id": "jakat_0013",
+      "expression": "ワシ",
+      "translation_fr": "je",
+      "register": "old_male",
+      "category": "kata_pronoun",
+      "priority_rank": 13
+    },
+    {
+      "id": "jakat_0014",
+      "expression": "ワシら",
+      "translation_fr": "nous",
+      "register": "old_male",
+      "category": "kata_pronoun",
+      "priority_rank": 14
+    },
+    {
+      "id": "jakat_0015",
+      "expression": "ワレ",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 15,
+      "ja_normal": "お前"
+    },
+    {
+      "id": "jakat_0016",
+      "expression": "アンタ",
+      "translation_fr": "tu",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 16
+    },
+    {
+      "id": "jakat_0017",
+      "expression": "アンタら",
+      "translation_fr": "vous",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 17
+    },
+    {
+      "id": "jakat_0018",
+      "expression": "アンタ達",
+      "translation_fr": "vous",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 18
+    },
+    {
+      "id": "jakat_0019",
+      "expression": "オマエ",
+      "translation_fr": "tu",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 19
+    },
+    {
+      "id": "jakat_0020",
+      "expression": "オマエら",
+      "translation_fr": "vous",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 20
+    },
+    {
+      "id": "jakat_0021",
+      "expression": "オマエ達",
+      "translation_fr": "vous",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 21
+    },
+    {
+      "id": "jakat_0022",
+      "expression": "オメェ",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 22,
+      "ja_normal": "お前"
+    },
+    {
+      "id": "jakat_0023",
+      "expression": "オメエ",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 23,
+      "ja_normal": "お前"
+    },
+    {
+      "id": "jakat_0024",
+      "expression": "テメェ",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 24,
+      "ja_normal": "お前"
+    },
+    {
+      "id": "jakat_0025",
+      "expression": "テメエ",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 25,
+      "ja_normal": "お前"
+    },
+    {
+      "id": "jakat_0026",
+      "expression": "テメェら",
+      "translation_fr": "vous",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 26,
+      "ja_normal": "お前たち"
+    },
+    {
+      "id": "jakat_0027",
+      "expression": "テメエら",
+      "translation_fr": "vous",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 27,
+      "ja_normal": "お前たち"
+    },
+    {
+      "id": "jakat_0028",
+      "expression": "キミ",
+      "translation_fr": "tu",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 28
+    },
+    {
+      "id": "jakat_0029",
+      "expression": "キミら",
+      "translation_fr": "vous",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 29
+    },
+    {
+      "id": "jakat_0030",
+      "expression": "キミ達",
+      "translation_fr": "vous",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 30
+    },
+    {
+      "id": "jakat_0031",
+      "expression": "キサマ",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 31,
+      "ja_normal": "貴様"
+    },
+    {
+      "id": "jakat_0032",
+      "expression": "キサマら",
+      "translation_fr": "vous",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 32,
+      "ja_normal": "貴様ら"
+    },
+    {
+      "id": "jakat_0033",
+      "expression": "コイツ",
+      "translation_fr": "ce type",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 33
+    },
+    {
+      "id": "jakat_0034",
+      "expression": "コイツら",
+      "translation_fr": "ces types",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 34
+    },
+    {
+      "id": "jakat_0035",
+      "expression": "ソイツ",
+      "translation_fr": "ce type-là",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 35
+    },
+    {
+      "id": "jakat_0036",
+      "expression": "ソイツら",
+      "translation_fr": "ces types-là",
+      "register": "rough",
+      "category": "kata_pronoun",
+      "priority_rank": 36
+    },
+    {
+      "id": "jakat_0037",
+      "expression": "アイツ",
+      "translation_fr": "ce type-là",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 37
+    },
+    {
+      "id": "jakat_0038",
+      "expression": "アイツら",
+      "translation_fr": "ces types-là",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 38
+    },
+    {
+      "id": "jakat_0039",
+      "expression": "ヤツ",
+      "translation_fr": "ce type",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 39
+    },
+    {
+      "id": "jakat_0040",
+      "expression": "ヤツら",
+      "translation_fr": "ces types",
+      "register": "informal",
+      "category": "kata_pronoun",
+      "priority_rank": 40
+    },
+    {
+      "id": "jakat_0041",
+      "expression": "コヤツ",
+      "translation_fr": "cet individu",
+      "register": "archaic",
+      "category": "kata_pronoun",
+      "priority_rank": 41,
+      "ja_normal": "こいつ"
+    },
+    {
+      "id": "jakat_0042",
+      "expression": "ソヤツ",
+      "translation_fr": "cet individu-là",
+      "register": "archaic",
+      "category": "kata_pronoun",
+      "priority_rank": 42,
+      "ja_normal": "そいつ"
+    },
+    {
+      "id": "jakat_0043",
+      "expression": "アヤツ",
+      "translation_fr": "cet individu-là",
+      "register": "archaic",
+      "category": "kata_pronoun",
+      "priority_rank": 43,
+      "ja_normal": "あいつ"
+    },
+    {
+      "id": "jakat_0044",
+      "expression": "オノレ",
+      "translation_fr": "toi",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 44,
+      "ja_normal": "お前"
+    },
+    {
+      "id": "jakat_0045",
+      "expression": "コノヒト",
+      "translation_fr": "cette personne",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 45,
+      "ja_normal": "この人"
+    },
+    {
+      "id": "jakat_0046",
+      "expression": "ソノヒト",
+      "translation_fr": "cette personne-là",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 46,
+      "ja_normal": "その人"
+    },
+    {
+      "id": "jakat_0047",
+      "expression": "アノヒト",
+      "translation_fr": "cette personne-là",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 47,
+      "ja_normal": "あの人"
+    },
+    {
+      "id": "jakat_0048",
+      "expression": "コノコ",
+      "translation_fr": "cet enfant",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 48,
+      "ja_normal": "この子"
+    },
+    {
+      "id": "jakat_0049",
+      "expression": "ソノコ",
+      "translation_fr": "cet enfant-là",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 49,
+      "ja_normal": "その子"
+    },
+    {
+      "id": "jakat_0050",
+      "expression": "アノコ",
+      "translation_fr": "cet enfant-là",
+      "register": "neutral",
+      "category": "kata_pronoun",
+      "priority_rank": 50,
+      "ja_normal": "あの子"
+    },
+    {
+      "id": "jakat_0051",
+      "expression": "コト",
+      "translation_fr": "こと",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 51,
+      "ja_normal": "こと"
+    },
+    {
+      "id": "jakat_0052",
+      "expression": "モノ",
+      "translation_fr": "もの",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 52,
+      "ja_normal": "もの"
+    },
+    {
+      "id": "jakat_0053",
+      "expression": "トコ",
+      "translation_fr": "とこ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 53,
+      "ja_normal": "とこ"
+    },
+    {
+      "id": "jakat_0054",
+      "expression": "トコロ",
+      "translation_fr": "ところ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 54,
+      "ja_normal": "ところ"
+    },
+    {
+      "id": "jakat_0055",
+      "expression": "ワケ",
+      "translation_fr": "わけ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 55,
+      "ja_normal": "わけ"
+    },
+    {
+      "id": "jakat_0056",
+      "expression": "ハズ",
+      "translation_fr": "はず",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 56,
+      "ja_normal": "はず"
+    },
+    {
+      "id": "jakat_0057",
+      "expression": "ツモリ",
+      "translation_fr": "つもり",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 57,
+      "ja_normal": "つもり"
+    },
+    {
+      "id": "jakat_0058",
+      "expression": "ホウ",
+      "translation_fr": "ほう",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 58,
+      "ja_normal": "ほう"
+    },
+    {
+      "id": "jakat_0059",
+      "expression": "タメ",
+      "translation_fr": "ため",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 59,
+      "ja_normal": "ため"
+    },
+    {
+      "id": "jakat_0060",
+      "expression": "ホド",
+      "translation_fr": "ほど",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 60,
+      "ja_normal": "ほど"
+    },
+    {
+      "id": "jakat_0061",
+      "expression": "ダケ",
+      "translation_fr": "だけ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 61,
+      "ja_normal": "だけ"
+    },
+    {
+      "id": "jakat_0062",
+      "expression": "シカ",
+      "translation_fr": "しか",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 62,
+      "ja_normal": "しか"
+    },
+    {
+      "id": "jakat_0063",
+      "expression": "バカリ",
+      "translation_fr": "ばかり",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 63,
+      "ja_normal": "ばかり"
+    },
+    {
+      "id": "jakat_0064",
+      "expression": "グライ",
+      "translation_fr": "ぐらい",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 64,
+      "ja_normal": "ぐらい"
+    },
+    {
+      "id": "jakat_0065",
+      "expression": "クライ",
+      "translation_fr": "くらい",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 65,
+      "ja_normal": "くらい"
+    },
+    {
+      "id": "jakat_0066",
+      "expression": "マデ",
+      "translation_fr": "まで",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 66,
+      "ja_normal": "まで"
+    },
+    {
+      "id": "jakat_0067",
+      "expression": "カラ",
+      "translation_fr": "から",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 67,
+      "ja_normal": "から"
+    },
+    {
+      "id": "jakat_0068",
+      "expression": "ヨリ",
+      "translation_fr": "より",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 68,
+      "ja_normal": "より"
+    },
+    {
+      "id": "jakat_0069",
+      "expression": "ナンカ",
+      "translation_fr": "なんか",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 69,
+      "ja_normal": "なんか"
+    },
+    {
+      "id": "jakat_0070",
+      "expression": "ナンテ",
+      "translation_fr": "なんて",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 70,
+      "ja_normal": "なんて"
+    },
+    {
+      "id": "jakat_0071",
+      "expression": "ナド",
+      "translation_fr": "など",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 71,
+      "ja_normal": "など"
+    },
+    {
+      "id": "jakat_0072",
+      "expression": "トカ",
+      "translation_fr": "とか",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 72,
+      "ja_normal": "とか"
+    },
+    {
+      "id": "jakat_0073",
+      "expression": "ッテ",
+      "translation_fr": "って",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 73,
+      "ja_normal": "って"
+    },
+    {
+      "id": "jakat_0074",
+      "expression": "ッケ",
+      "translation_fr": "っけ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 74,
+      "ja_normal": "っけ"
+    },
+    {
+      "id": "jakat_0075",
+      "expression": "カモ",
+      "translation_fr": "かも",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 75,
+      "ja_normal": "かも"
+    },
+    {
+      "id": "jakat_0076",
+      "expression": "ケド",
+      "translation_fr": "けど",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 76,
+      "ja_normal": "けど"
+    },
+    {
+      "id": "jakat_0077",
+      "expression": "ノニ",
+      "translation_fr": "のに",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 77,
+      "ja_normal": "のに"
+    },
+    {
+      "id": "jakat_0078",
+      "expression": "ノデ",
+      "translation_fr": "ので",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 78,
+      "ja_normal": "ので"
+    },
+    {
+      "id": "jakat_0079",
+      "expression": "ナラ",
+      "translation_fr": "なら",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 79,
+      "ja_normal": "なら"
+    },
+    {
+      "id": "jakat_0080",
+      "expression": "タラ",
+      "translation_fr": "たら",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 80,
+      "ja_normal": "たら"
+    },
+    {
+      "id": "jakat_0081",
+      "expression": "レバ",
+      "translation_fr": "れば",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 81,
+      "ja_normal": "れば"
+    },
+    {
+      "id": "jakat_0082",
+      "expression": "テモ",
+      "translation_fr": "ても",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 82,
+      "ja_normal": "ても"
+    },
+    {
+      "id": "jakat_0083",
+      "expression": "ダッテ",
+      "translation_fr": "だって",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 83,
+      "ja_normal": "だって"
+    },
+    {
+      "id": "jakat_0084",
+      "expression": "ジャ",
+      "translation_fr": "じゃ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 84,
+      "ja_normal": "じゃ"
+    },
+    {
+      "id": "jakat_0085",
+      "expression": "ナク",
+      "translation_fr": "なく",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 85,
+      "ja_normal": "なく"
+    },
+    {
+      "id": "jakat_0086",
+      "expression": "ナイ",
+      "translation_fr": "ない",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 86,
+      "ja_normal": "ない"
+    },
+    {
+      "id": "jakat_0087",
+      "expression": "ラシイ",
+      "translation_fr": "らしい",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 87,
+      "ja_normal": "らしい"
+    },
+    {
+      "id": "jakat_0088",
+      "expression": "ミタイ",
+      "translation_fr": "みたい",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 88,
+      "ja_normal": "みたい"
+    },
+    {
+      "id": "jakat_0089",
+      "expression": "サエ",
+      "translation_fr": "さえ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 89,
+      "ja_normal": "さえ"
+    },
+    {
+      "id": "jakat_0090",
+      "expression": "スラ",
+      "translation_fr": "すら",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 90,
+      "ja_normal": "すら"
+    },
+    {
+      "id": "jakat_0091",
+      "expression": "コソ",
+      "translation_fr": "こそ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 91,
+      "ja_normal": "こそ"
+    },
+    {
+      "id": "jakat_0092",
+      "expression": "クセニ",
+      "translation_fr": "くせに",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 92,
+      "ja_normal": "くせに"
+    },
+    {
+      "id": "jakat_0093",
+      "expression": "セイデ",
+      "translation_fr": "せいで",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 93,
+      "ja_normal": "せいで"
+    },
+    {
+      "id": "jakat_0094",
+      "expression": "オカゲデ",
+      "translation_fr": "おかげで",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 94,
+      "ja_normal": "おかげで"
+    },
+    {
+      "id": "jakat_0095",
+      "expression": "ナガラ",
+      "translation_fr": "ながら",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 95,
+      "ja_normal": "ながら"
+    },
+    {
+      "id": "jakat_0096",
+      "expression": "ドコロ",
+      "translation_fr": "どころ",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 96,
+      "ja_normal": "どころ"
+    },
+    {
+      "id": "jakat_0097",
+      "expression": "ドコロカ",
+      "translation_fr": "どころか",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 97,
+      "ja_normal": "どころか"
+    },
+    {
+      "id": "jakat_0098",
+      "expression": "ワリニ",
+      "translation_fr": "わりに",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 98,
+      "ja_normal": "わりに"
+    },
+    {
+      "id": "jakat_0099",
+      "expression": "タビニ",
+      "translation_fr": "たびに",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 99,
+      "ja_normal": "たびに"
+    },
+    {
+      "id": "jakat_0100",
+      "expression": "ツイデニ",
+      "translation_fr": "ついでに",
+      "register": "rewrite",
+      "category": "kata_grammar",
+      "priority_rank": 100,
+      "ja_normal": "ついでに"
+    },
+    {
+      "id": "jakat_0101",
+      "expression": "バカ",
+      "translation_fr": "idiot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 101
+    },
+    {
+      "id": "jakat_0102",
+      "expression": "アホ",
+      "translation_fr": "idiot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 102
+    },
+    {
+      "id": "jakat_0103",
+      "expression": "ボケ",
+      "translation_fr": "crétin",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 103
+    },
+    {
+      "id": "jakat_0104",
+      "expression": "カス",
+      "translation_fr": "ordure",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 104
+    },
+    {
+      "id": "jakat_0105",
+      "expression": "クズ",
+      "translation_fr": "ordure",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 105
+    },
+    {
+      "id": "jakat_0106",
+      "expression": "ゴミ",
+      "translation_fr": "déchet",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 106
+    },
+    {
+      "id": "jakat_0107",
+      "expression": "ゲス",
+      "translation_fr": "salaud",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 107,
+      "ja_normal": "下衆"
+    },
+    {
+      "id": "jakat_0108",
+      "expression": "ブス",
+      "translation_fr": "laideron",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 108
+    },
+    {
+      "id": "jakat_0109",
+      "expression": "デブ",
+      "translation_fr": "gros",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 109
+    },
+    {
+      "id": "jakat_0110",
+      "expression": "チビ",
+      "translation_fr": "nabot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 110
+    },
+    {
+      "id": "jakat_0111",
+      "expression": "ハゲ",
+      "translation_fr": "chauve",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 111
+    },
+    {
+      "id": "jakat_0112",
+      "expression": "ノロマ",
+      "translation_fr": "lambin",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 112,
+      "ja_normal": "鈍間"
+    },
+    {
+      "id": "jakat_0113",
+      "expression": "マヌケ",
+      "translation_fr": "imbécile",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 113
+    },
+    {
+      "id": "jakat_0114",
+      "expression": "ヘタレ",
+      "translation_fr": "lâche",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 114
+    },
+    {
+      "id": "jakat_0115",
+      "expression": "ビビリ",
+      "translation_fr": "trouillard",
+      "register": "informal",
+      "category": "kata_insult",
+      "priority_rank": 115,
+      "ja_normal": "臆病者"
+    },
+    {
+      "id": "jakat_0116",
+      "expression": "ガキ",
+      "translation_fr": "morveux",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 116
+    },
+    {
+      "id": "jakat_0117",
+      "expression": "クソガキ",
+      "translation_fr": "sale gosse",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 117
+    },
+    {
+      "id": "jakat_0118",
+      "expression": "ジジイ",
+      "translation_fr": "vieux schnock",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 118,
+      "ja_normal": "老人"
+    },
+    {
+      "id": "jakat_0119",
+      "expression": "ババア",
+      "translation_fr": "vieille peau",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 119,
+      "ja_normal": "老婆"
+    },
+    {
+      "id": "jakat_0120",
+      "expression": "ヤロウ",
+      "translation_fr": "salaud",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 120,
+      "ja_normal": "野郎"
+    },
+    {
+      "id": "jakat_0121",
+      "expression": "コノヤロウ",
+      "translation_fr": "salaud",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 121,
+      "ja_normal": "この野郎"
+    },
+    {
+      "id": "jakat_0122",
+      "expression": "クソヤロウ",
+      "translation_fr": "enfoiré",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 122,
+      "ja_normal": "糞野郎"
+    },
+    {
+      "id": "jakat_0123",
+      "expression": "バカヤロウ",
+      "translation_fr": "abruti",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 123
+    },
+    {
+      "id": "jakat_0124",
+      "expression": "クソッタレ",
+      "translation_fr": "connard",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 124
+    },
+    {
+      "id": "jakat_0125",
+      "expression": "チクショウ",
+      "translation_fr": "merde",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 125,
+      "ja_normal": "畜生"
+    },
+    {
+      "id": "jakat_0126",
+      "expression": "コンチクショウ",
+      "translation_fr": "bordel",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 126,
+      "ja_normal": "畜生"
+    },
+    {
+      "id": "jakat_0127",
+      "expression": "クソッ",
+      "translation_fr": "merde",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 127
+    },
+    {
+      "id": "jakat_0128",
+      "expression": "チッ",
+      "translation_fr": "tss",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 128
+    },
+    {
+      "id": "jakat_0129",
+      "expression": "ケッ",
+      "translation_fr": "pff",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 129,
+      "ja_normal": null
+    },
+    {
+      "id": "jakat_0130",
+      "expression": "フン",
+      "translation_fr": "pff",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 130
+    },
+    {
+      "id": "jakat_0131",
+      "expression": "バーカ",
+      "translation_fr": "idiot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 131,
+      "ja_normal": "馬鹿"
+    },
+    {
+      "id": "jakat_0132",
+      "expression": "アーホ",
+      "translation_fr": "idiot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 132,
+      "ja_normal": "阿呆"
+    },
+    {
+      "id": "jakat_0133",
+      "expression": "ボケナス",
+      "translation_fr": "crétin",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 133,
+      "ja_normal": "間抜け"
+    },
+    {
+      "id": "jakat_0134",
+      "expression": "スカポンタン",
+      "translation_fr": "abruti",
+      "register": "comical",
+      "category": "kata_insult",
+      "priority_rank": 134,
+      "ja_normal": "間抜け"
+    },
+    {
+      "id": "jakat_0135",
+      "expression": "アンポンタン",
+      "translation_fr": "imbécile",
+      "register": "comical",
+      "category": "kata_insult",
+      "priority_rank": 135,
+      "ja_normal": "間抜け"
+    },
+    {
+      "id": "jakat_0136",
+      "expression": "タコ",
+      "translation_fr": "idiot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 136
+    },
+    {
+      "id": "jakat_0137",
+      "expression": "ドアホ",
+      "translation_fr": "gros idiot",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 137
+    },
+    {
+      "id": "jakat_0138",
+      "expression": "ドバカ",
+      "translation_fr": "gros idiot",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 138
+    },
+    {
+      "id": "jakat_0139",
+      "expression": "バカタレ",
+      "translation_fr": "abruti",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 139
+    },
+    {
+      "id": "jakat_0140",
+      "expression": "アホタレ",
+      "translation_fr": "idiot",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 140
+    },
+    {
+      "id": "jakat_0141",
+      "expression": "アホンダラ",
+      "translation_fr": "abruti",
+      "register": "kansai_rough",
+      "category": "kata_insult",
+      "priority_rank": 141,
+      "ja_normal": null
+    },
+    {
+      "id": "jakat_0142",
+      "expression": "ボンクラ",
+      "translation_fr": "bon à rien",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 142,
+      "ja_normal": "間抜け"
+    },
+    {
+      "id": "jakat_0143",
+      "expression": "ロクデナシ",
+      "translation_fr": "bon à rien",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 143,
+      "ja_normal": "役立たず"
+    },
+    {
+      "id": "jakat_0144",
+      "expression": "ヨワムシ",
+      "translation_fr": "trouillard",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 144,
+      "ja_normal": "弱虫"
+    },
+    {
+      "id": "jakat_0145",
+      "expression": "クソアマ",
+      "translation_fr": "sale garce",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 145
+    },
+    {
+      "id": "jakat_0146",
+      "expression": "ガキンチョ",
+      "translation_fr": "morveux",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 146,
+      "ja_normal": "悪ガキ"
+    },
+    {
+      "id": "jakat_0147",
+      "expression": "コゾウ",
+      "translation_fr": "morveux",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 147,
+      "ja_normal": "小僧"
+    },
+    {
+      "id": "jakat_0148",
+      "expression": "コムスメ",
+      "translation_fr": "gamine",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 148,
+      "ja_normal": "小娘"
+    },
+    {
+      "id": "jakat_0149",
+      "expression": "クソボウズ",
+      "translation_fr": "sale môme",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 149
+    },
+    {
+      "id": "jakat_0150",
+      "expression": "ヘナチョコ",
+      "translation_fr": "mauviette",
+      "register": "rough",
+      "category": "kata_insult",
+      "priority_rank": 150
+    },
+    {
+      "id": "jakat_0151",
+      "expression": "マジ",
+      "translation_fr": "vraiment",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 151
+    },
+    {
+      "id": "jakat_0152",
+      "expression": "マジで",
+      "translation_fr": "vraiment",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 152
+    },
+    {
+      "id": "jakat_0153",
+      "expression": "ガチ",
+      "translation_fr": "sérieusement",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 153,
+      "ja_normal": "本気"
+    },
+    {
+      "id": "jakat_0154",
+      "expression": "ガチで",
+      "translation_fr": "sérieusement",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 154,
+      "ja_normal": "本気で"
+    },
+    {
+      "id": "jakat_0155",
+      "expression": "メチャ",
+      "translation_fr": "très",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 155,
+      "ja_normal": "とても"
+    },
+    {
+      "id": "jakat_0156",
+      "expression": "メッチャ",
+      "translation_fr": "très",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 156,
+      "ja_normal": "とても"
+    },
+    {
+      "id": "jakat_0157",
+      "expression": "チョー",
+      "translation_fr": "super",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 157
+    },
+    {
+      "id": "jakat_0158",
+      "expression": "バリ",
+      "translation_fr": "super",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 158
+    },
+    {
+      "id": "jakat_0159",
+      "expression": "ヤバイ",
+      "translation_fr": "dingue",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 159
+    },
+    {
+      "id": "jakat_0160",
+      "expression": "ヤベェ",
+      "translation_fr": "dingue",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 160,
+      "ja_normal": "やばい"
+    },
+    {
+      "id": "jakat_0161",
+      "expression": "ヤベエ",
+      "translation_fr": "dingue",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 161,
+      "ja_normal": "やばい"
+    },
+    {
+      "id": "jakat_0162",
+      "expression": "エグイ",
+      "translation_fr": "violent",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 162,
+      "ja_normal": "ひどい"
+    },
+    {
+      "id": "jakat_0163",
+      "expression": "キツイ",
+      "translation_fr": "dur",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 163
+    },
+    {
+      "id": "jakat_0164",
+      "expression": "ダルイ",
+      "translation_fr": "pénible",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 164,
+      "ja_normal": "だるい"
+    },
+    {
+      "id": "jakat_0165",
+      "expression": "ウザイ",
+      "translation_fr": "agaçant",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 165,
+      "ja_normal": "うざい"
+    },
+    {
+      "id": "jakat_0166",
+      "expression": "キモイ",
+      "translation_fr": "dégueu",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 166,
+      "ja_normal": "気持ち悪い"
+    },
+    {
+      "id": "jakat_0167",
+      "expression": "ダサイ",
+      "translation_fr": "ringard",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 167
+    },
+    {
+      "id": "jakat_0168",
+      "expression": "メンドイ",
+      "translation_fr": "pénible",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 168,
+      "ja_normal": "面倒くさい"
+    },
+    {
+      "id": "jakat_0169",
+      "expression": "メンドー",
+      "translation_fr": "pénible",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 169,
+      "ja_normal": "面倒"
+    },
+    {
+      "id": "jakat_0170",
+      "expression": "シンドイ",
+      "translation_fr": "épuisant",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 170,
+      "ja_normal": "しんどい"
+    },
+    {
+      "id": "jakat_0171",
+      "expression": "スゴイ",
+      "translation_fr": "incroyable",
+      "register": "neutral",
+      "category": "kata_emphasis",
+      "priority_rank": 171
+    },
+    {
+      "id": "jakat_0172",
+      "expression": "スゲェ",
+      "translation_fr": "incroyable",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 172
+    },
+    {
+      "id": "jakat_0173",
+      "expression": "スゲエ",
+      "translation_fr": "incroyable",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 173
+    },
+    {
+      "id": "jakat_0174",
+      "expression": "デカイ",
+      "translation_fr": "énorme",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 174
+    },
+    {
+      "id": "jakat_0175",
+      "expression": "デケェ",
+      "translation_fr": "énorme",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 175,
+      "ja_normal": "でかい"
+    },
+    {
+      "id": "jakat_0176",
+      "expression": "デケエ",
+      "translation_fr": "énorme",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 176,
+      "ja_normal": "でかい"
+    },
+    {
+      "id": "jakat_0177",
+      "expression": "チッコイ",
+      "translation_fr": "minuscule",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 177
+    },
+    {
+      "id": "jakat_0178",
+      "expression": "チッセェ",
+      "translation_fr": "minuscule",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 178,
+      "ja_normal": "小さい"
+    },
+    {
+      "id": "jakat_0179",
+      "expression": "チッセエ",
+      "translation_fr": "minuscule",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 179,
+      "ja_normal": "小さい"
+    },
+    {
+      "id": "jakat_0180",
+      "expression": "カワイイ",
+      "translation_fr": "mignon",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 180
+    },
+    {
+      "id": "jakat_0181",
+      "expression": "カッケェ",
+      "translation_fr": "classe",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 181,
+      "ja_normal": "かっこいい"
+    },
+    {
+      "id": "jakat_0182",
+      "expression": "カッケエ",
+      "translation_fr": "classe",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 182,
+      "ja_normal": "かっこいい"
+    },
+    {
+      "id": "jakat_0183",
+      "expression": "カッコイイ",
+      "translation_fr": "classe",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 183
+    },
+    {
+      "id": "jakat_0184",
+      "expression": "ウマイ",
+      "translation_fr": "excellent",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 184,
+      "ja_normal": "うまい"
+    },
+    {
+      "id": "jakat_0185",
+      "expression": "ウメェ",
+      "translation_fr": "excellent",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 185,
+      "ja_normal": "うまい"
+    },
+    {
+      "id": "jakat_0186",
+      "expression": "ウメエ",
+      "translation_fr": "excellent",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 186,
+      "ja_normal": "うまい"
+    },
+    {
+      "id": "jakat_0187",
+      "expression": "マズイ",
+      "translation_fr": "mauvais",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 187
+    },
+    {
+      "id": "jakat_0188",
+      "expression": "サイコー",
+      "translation_fr": "génial",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 188
+    },
+    {
+      "id": "jakat_0189",
+      "expression": "サイテー",
+      "translation_fr": "minable",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 189
+    },
+    {
+      "id": "jakat_0190",
+      "expression": "ビミョー",
+      "translation_fr": "moyen",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 190,
+      "ja_normal": "微妙"
+    },
+    {
+      "id": "jakat_0191",
+      "expression": "フツー",
+      "translation_fr": "normal",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 191,
+      "ja_normal": "普通"
+    },
+    {
+      "id": "jakat_0192",
+      "expression": "ムリ",
+      "translation_fr": "impossible",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 192
+    },
+    {
+      "id": "jakat_0193",
+      "expression": "ムチャ",
+      "translation_fr": "excessif",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 193,
+      "ja_normal": "無茶"
+    },
+    {
+      "id": "jakat_0194",
+      "expression": "メチャクチャ",
+      "translation_fr": "chaotique",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 194
+    },
+    {
+      "id": "jakat_0195",
+      "expression": "ムチャクチャ",
+      "translation_fr": "chaotique",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 195
+    },
+    {
+      "id": "jakat_0196",
+      "expression": "ゼッタイ",
+      "translation_fr": "absolument",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 196,
+      "ja_normal": "絶対"
+    },
+    {
+      "id": "jakat_0197",
+      "expression": "ホント",
+      "translation_fr": "vraiment",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 197
+    },
+    {
+      "id": "jakat_0198",
+      "expression": "ホンキ",
+      "translation_fr": "sérieux",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 198,
+      "ja_normal": "本気"
+    },
+    {
+      "id": "jakat_0199",
+      "expression": "テキトー",
+      "translation_fr": "approximatif",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 199,
+      "ja_normal": "適当"
+    },
+    {
+      "id": "jakat_0200",
+      "expression": "ザツ",
+      "translation_fr": "bâclé",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 200
+    },
+    {
+      "id": "jakat_0201",
+      "expression": "ラク",
+      "translation_fr": "facile",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 201,
+      "ja_normal": "楽"
+    },
+    {
+      "id": "jakat_0202",
+      "expression": "ギリギリ",
+      "translation_fr": "limite",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 202
+    },
+    {
+      "id": "jakat_0203",
+      "expression": "バッチリ",
+      "translation_fr": "parfaitement",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 203
+    },
+    {
+      "id": "jakat_0204",
+      "expression": "ピッタリ",
+      "translation_fr": "parfaitement",
+      "register": "neutral",
+      "category": "kata_emphasis",
+      "priority_rank": 204
+    },
+    {
+      "id": "jakat_0205",
+      "expression": "ガッツリ",
+      "translation_fr": "sérieusement",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 205
+    },
+    {
+      "id": "jakat_0206",
+      "expression": "サクッと",
+      "translation_fr": "rapidement",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 206
+    },
+    {
+      "id": "jakat_0207",
+      "expression": "チャチャッと",
+      "translation_fr": "vite fait",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 207
+    },
+    {
+      "id": "jakat_0208",
+      "expression": "パパッと",
+      "translation_fr": "rapidement",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 208
+    },
+    {
+      "id": "jakat_0209",
+      "expression": "キッチリ",
+      "translation_fr": "précisément",
+      "register": "neutral",
+      "category": "kata_emphasis",
+      "priority_rank": 209,
+      "ja_normal": "きっちり"
+    },
+    {
+      "id": "jakat_0210",
+      "expression": "ハッキリ",
+      "translation_fr": "clairement",
+      "register": "neutral",
+      "category": "kata_emphasis",
+      "priority_rank": 210
+    },
+    {
+      "id": "jakat_0211",
+      "expression": "ケツ",
+      "translation_fr": "fesses",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 211,
+      "ja_normal": "尻"
+    },
+    {
+      "id": "jakat_0212",
+      "expression": "チンコ",
+      "translation_fr": "pénis",
+      "register": "very_crude",
+      "category": "kata_crude",
+      "priority_rank": 212,
+      "ja_normal": "ちんこ"
+    },
+    {
+      "id": "jakat_0213",
+      "expression": "チンポ",
+      "translation_fr": "pénis",
+      "register": "very_crude",
+      "category": "kata_crude",
+      "priority_rank": 213,
+      "ja_normal": "陰茎"
+    },
+    {
+      "id": "jakat_0214",
+      "expression": "マンコ",
+      "translation_fr": "vagin",
+      "register": "very_crude",
+      "category": "kata_crude",
+      "priority_rank": 214,
+      "ja_normal": "まんこ"
+    },
+    {
+      "id": "jakat_0215",
+      "expression": "オッパイ",
+      "translation_fr": "seins",
+      "register": "informal",
+      "category": "kata_crude",
+      "priority_rank": 215,
+      "ja_normal": "おっぱい"
+    },
+    {
+      "id": "jakat_0216",
+      "expression": "パイオツ",
+      "translation_fr": "seins",
+      "register": "slang",
+      "category": "kata_crude",
+      "priority_rank": 216,
+      "ja_normal": "おっぱい"
+    },
+    {
+      "id": "jakat_0217",
+      "expression": "キンタマ",
+      "translation_fr": "testicules",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 217,
+      "ja_normal": null
+    },
+    {
+      "id": "jakat_0218",
+      "expression": "タマキン",
+      "translation_fr": "testicules",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 218,
+      "ja_normal": "金玉"
+    },
+    {
+      "id": "jakat_0219",
+      "expression": "チクビ",
+      "translation_fr": "téton",
+      "register": "informal",
+      "category": "kata_crude",
+      "priority_rank": 219,
+      "ja_normal": "乳首"
+    },
+    {
+      "id": "jakat_0220",
+      "expression": "アソコ",
+      "translation_fr": "parties intimes",
+      "register": "informal",
+      "category": "kata_crude",
+      "priority_rank": 220,
+      "ja_normal": "あそこ"
+    },
+    {
+      "id": "jakat_0221",
+      "expression": "ウンコ",
+      "translation_fr": "merde",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 221,
+      "ja_normal": "うんこ"
+    },
+    {
+      "id": "jakat_0222",
+      "expression": "シッコ",
+      "translation_fr": "urine",
+      "register": "informal",
+      "category": "kata_crude",
+      "priority_rank": 222,
+      "ja_normal": "おしっこ"
+    },
+    {
+      "id": "jakat_0223",
+      "expression": "ションベン",
+      "translation_fr": "urine",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 223,
+      "ja_normal": "小便"
+    },
+    {
+      "id": "jakat_0224",
+      "expression": "ゲロ",
+      "translation_fr": "vomi",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 224,
+      "ja_normal": "げろ"
+    },
+    {
+      "id": "jakat_0225",
+      "expression": "ハナクソ",
+      "translation_fr": "crotte de nez",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 225,
+      "ja_normal": "鼻くそ"
+    },
+    {
+      "id": "jakat_0226",
+      "expression": "ヨダレ",
+      "translation_fr": "bave",
+      "register": "informal",
+      "category": "kata_crude",
+      "priority_rank": 226,
+      "ja_normal": null
+    },
+    {
+      "id": "jakat_0227",
+      "expression": "ツバ",
+      "translation_fr": "salive",
+      "register": "informal",
+      "category": "kata_crude",
+      "priority_rank": 227,
+      "ja_normal": "つば"
+    },
+    {
+      "id": "jakat_0228",
+      "expression": "センズリ",
+      "translation_fr": "masturbation",
+      "register": "very_crude",
+      "category": "kata_crude",
+      "priority_rank": 228,
+      "ja_normal": "自慰"
+    },
+    {
+      "id": "jakat_0229",
+      "expression": "オナニー",
+      "translation_fr": "masturbation",
+      "register": "crude",
+      "category": "kata_crude",
+      "priority_rank": 229,
+      "ja_normal": "自慰"
+    },
+    {
+      "id": "jakat_0230",
+      "expression": "ハナヂ",
+      "translation_fr": "saignement de nez",
+      "register": "neutral",
+      "category": "kata_crude",
+      "priority_rank": 230,
+      "ja_normal": "鼻血"
+    },
+    {
+      "id": "jakat_0231",
+      "expression": "デカ",
+      "translation_fr": "flic",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 231
+    },
+    {
+      "id": "jakat_0232",
+      "expression": "サツ",
+      "translation_fr": "police",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 232,
+      "ja_normal": "警察"
+    },
+    {
+      "id": "jakat_0233",
+      "expression": "マッポ",
+      "translation_fr": "flic",
+      "register": "old_slang",
+      "category": "kata_jargon",
+      "priority_rank": 233,
+      "ja_normal": "警察"
+    },
+    {
+      "id": "jakat_0234",
+      "expression": "ヤーサン",
+      "translation_fr": "yakuza",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 234,
+      "ja_normal": "やくざ"
+    },
+    {
+      "id": "jakat_0235",
+      "expression": "チンピラ",
+      "translation_fr": "voyou",
+      "register": "rough",
+      "category": "kata_jargon",
+      "priority_rank": 235
+    },
+    {
+      "id": "jakat_0236",
+      "expression": "ゴロツキ",
+      "translation_fr": "voyou",
+      "register": "rough",
+      "category": "kata_jargon",
+      "priority_rank": 236
+    },
+    {
+      "id": "jakat_0237",
+      "expression": "オヤブン",
+      "translation_fr": "boss",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 237,
+      "ja_normal": "親分"
+    },
+    {
+      "id": "jakat_0238",
+      "expression": "コブン",
+      "translation_fr": "subordonné",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 238
+    },
+    {
+      "id": "jakat_0239",
+      "expression": "シャバ",
+      "translation_fr": "monde libre",
+      "register": "prison_slang",
+      "category": "kata_jargon",
+      "priority_rank": 239
+    },
+    {
+      "id": "jakat_0240",
+      "expression": "ムショ",
+      "translation_fr": "prison",
+      "register": "prison_slang",
+      "category": "kata_jargon",
+      "priority_rank": 240
+    },
+    {
+      "id": "jakat_0241",
+      "expression": "シノギ",
+      "translation_fr": "gagne-pain",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 241,
+      "ja_normal": "稼ぎ"
+    },
+    {
+      "id": "jakat_0242",
+      "expression": "ドス",
+      "translation_fr": "poignard",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 242
+    },
+    {
+      "id": "jakat_0243",
+      "expression": "チャカ",
+      "translation_fr": "flingue",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 243
+    },
+    {
+      "id": "jakat_0244",
+      "expression": "ブツ",
+      "translation_fr": "marchandise",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 244
+    },
+    {
+      "id": "jakat_0245",
+      "expression": "ドカタ",
+      "translation_fr": "ouvrier du bâtiment",
+      "register": "derogatory",
+      "category": "kata_jargon",
+      "priority_rank": 245,
+      "ja_normal": "土木作業員"
+    },
+    {
+      "id": "jakat_0246",
+      "expression": "リーマン",
+      "translation_fr": "employé de bureau",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 246,
+      "ja_normal": "会社員"
+    },
+    {
+      "id": "jakat_0247",
+      "expression": "キャバ嬢",
+      "translation_fr": "hôtesse de bar",
+      "register": "nightlife",
+      "category": "kata_jargon",
+      "priority_rank": 247,
+      "ja_normal": "ホステス"
+    },
+    {
+      "id": "jakat_0248",
+      "expression": "ソープ嬢",
+      "translation_fr": "travailleuse du sexe",
+      "register": "adult_jargon",
+      "category": "kata_jargon",
+      "priority_rank": 248
+    },
+    {
+      "id": "jakat_0249",
+      "expression": "ヒモ",
+      "translation_fr": "homme entretenu",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 249
+    },
+    {
+      "id": "jakat_0250",
+      "expression": "ホスト",
+      "translation_fr": "hôte de bar",
+      "register": "nightlife",
+      "category": "kata_jargon",
+      "priority_rank": 250
+    },
+    {
+      "id": "jakat_0251",
+      "expression": "オッサン",
+      "translation_fr": "vieux",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 251,
+      "ja_normal": "おじさん"
+    },
+    {
+      "id": "jakat_0252",
+      "expression": "オバサン",
+      "translation_fr": "dame",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 252,
+      "ja_normal": "おばさん"
+    },
+    {
+      "id": "jakat_0253",
+      "expression": "ジイサン",
+      "translation_fr": "grand-père",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 253,
+      "ja_normal": "おじいさん"
+    },
+    {
+      "id": "jakat_0254",
+      "expression": "バアサン",
+      "translation_fr": "grand-mère",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 254,
+      "ja_normal": "おばあさん"
+    },
+    {
+      "id": "jakat_0255",
+      "expression": "ニイチャン",
+      "translation_fr": "grand frère",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 255,
+      "ja_normal": "兄ちゃん"
+    },
+    {
+      "id": "jakat_0256",
+      "expression": "ネエチャン",
+      "translation_fr": "grande sœur",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 256,
+      "ja_normal": "姉ちゃん"
+    },
+    {
+      "id": "jakat_0257",
+      "expression": "アニキ",
+      "translation_fr": "grand frère",
+      "register": "rough",
+      "category": "kata_address",
+      "priority_rank": 257,
+      "ja_normal": "兄貴"
+    },
+    {
+      "id": "jakat_0258",
+      "expression": "アネキ",
+      "translation_fr": "grande sœur",
+      "register": "rough",
+      "category": "kata_address",
+      "priority_rank": 258,
+      "ja_normal": "姉貴"
+    },
+    {
+      "id": "jakat_0259",
+      "expression": "オヤジ",
+      "translation_fr": "père",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 259
+    },
+    {
+      "id": "jakat_0260",
+      "expression": "オフクロ",
+      "translation_fr": "mère",
+      "register": "informal",
+      "category": "kata_address",
+      "priority_rank": 260,
+      "ja_normal": "母親"
+    },
+    {
+      "id": "jakat_0261",
+      "expression": "センパイ",
+      "translation_fr": "aîné",
+      "register": "neutral",
+      "category": "kata_address",
+      "priority_rank": 261,
+      "ja_normal": "先輩"
+    },
+    {
+      "id": "jakat_0262",
+      "expression": "コウハイ",
+      "translation_fr": "cadet",
+      "register": "neutral",
+      "category": "kata_address",
+      "priority_rank": 262,
+      "ja_normal": "後輩"
+    },
+    {
+      "id": "jakat_0263",
+      "expression": "カラダ",
+      "translation_fr": "corps",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 263
+    },
+    {
+      "id": "jakat_0264",
+      "expression": "ココロ",
+      "translation_fr": "cœur",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 264
+    },
+    {
+      "id": "jakat_0265",
+      "expression": "アタマ",
+      "translation_fr": "tête",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 265
+    },
+    {
+      "id": "jakat_0266",
+      "expression": "チカラ",
+      "translation_fr": "force",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 266,
+      "ja_normal": "力"
+    },
+    {
+      "id": "jakat_0267",
+      "expression": "イノチ",
+      "translation_fr": "vie",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 267,
+      "ja_normal": "命"
+    },
+    {
+      "id": "jakat_0268",
+      "expression": "キモチ",
+      "translation_fr": "sentiment",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 268
+    },
+    {
+      "id": "jakat_0269",
+      "expression": "オモイ",
+      "translation_fr": "sentiment",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 269,
+      "ja_normal": "思い"
+    },
+    {
+      "id": "jakat_0270",
+      "expression": "ナカマ",
+      "translation_fr": "compagnon",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 270
+    },
+    {
+      "id": "jakat_0271",
+      "expression": "ミカタ",
+      "translation_fr": "allié",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 271,
+      "ja_normal": "味方"
+    },
+    {
+      "id": "jakat_0272",
+      "expression": "テキ",
+      "translation_fr": "ennemi",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 272,
+      "ja_normal": "敵"
+    },
+    {
+      "id": "jakat_0273",
+      "expression": "オトコ",
+      "translation_fr": "homme",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 273
+    },
+    {
+      "id": "jakat_0274",
+      "expression": "オンナ",
+      "translation_fr": "femme",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 274,
+      "ja_normal": "女"
+    },
+    {
+      "id": "jakat_0275",
+      "expression": "コドモ",
+      "translation_fr": "enfant",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 275,
+      "ja_normal": "子供"
+    },
+    {
+      "id": "jakat_0276",
+      "expression": "オトナ",
+      "translation_fr": "adulte",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 276,
+      "ja_normal": "大人"
+    },
+    {
+      "id": "jakat_0277",
+      "expression": "カゾク",
+      "translation_fr": "famille",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 277,
+      "ja_normal": "家族"
+    },
+    {
+      "id": "jakat_0278",
+      "expression": "トモダチ",
+      "translation_fr": "ami",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 278,
+      "ja_normal": "友達"
+    },
+    {
+      "id": "jakat_0279",
+      "expression": "センセイ",
+      "translation_fr": "professeur",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 279,
+      "ja_normal": "先生"
+    },
+    {
+      "id": "jakat_0280",
+      "expression": "ガクセイ",
+      "translation_fr": "étudiant",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 280,
+      "ja_normal": "学生"
+    },
+    {
+      "id": "jakat_0281",
+      "expression": "ユメ",
+      "translation_fr": "rêve",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 281,
+      "ja_normal": "夢"
+    },
+    {
+      "id": "jakat_0282",
+      "expression": "ウソ",
+      "translation_fr": "mensonge",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 282
+    },
+    {
+      "id": "jakat_0283",
+      "expression": "ナゾ",
+      "translation_fr": "mystère",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 283,
+      "ja_normal": "謎"
+    },
+    {
+      "id": "jakat_0284",
+      "expression": "ワナ",
+      "translation_fr": "piège",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 284,
+      "ja_normal": "罠"
+    },
+    {
+      "id": "jakat_0285",
+      "expression": "カギ",
+      "translation_fr": "clé",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 285
+    },
+    {
+      "id": "jakat_0286",
+      "expression": "タカラ",
+      "translation_fr": "trésor",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 286,
+      "ja_normal": "宝"
+    },
+    {
+      "id": "jakat_0287",
+      "expression": "バケモノ",
+      "translation_fr": "monstre",
+      "register": "rough",
+      "category": "kata_native",
+      "priority_rank": 287
+    },
+    {
+      "id": "jakat_0288",
+      "expression": "ニンゲン",
+      "translation_fr": "humain",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 288,
+      "ja_normal": "人間"
+    },
+    {
+      "id": "jakat_0289",
+      "expression": "ケモノ",
+      "translation_fr": "bête",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 289,
+      "ja_normal": "獣"
+    },
+    {
+      "id": "jakat_0290",
+      "expression": "オバケ",
+      "translation_fr": "fantôme",
+      "register": "informal",
+      "category": "kata_native",
+      "priority_rank": 290
+    },
+    {
+      "id": "jakat_0291",
+      "expression": "ユウレイ",
+      "translation_fr": "fantôme",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 291,
+      "ja_normal": "幽霊"
+    },
+    {
+      "id": "jakat_0292",
+      "expression": "アクマ",
+      "translation_fr": "démon",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 292,
+      "ja_normal": "悪魔"
+    },
+    {
+      "id": "jakat_0293",
+      "expression": "マモノ",
+      "translation_fr": "monstre",
+      "register": "fantasy",
+      "category": "kata_native",
+      "priority_rank": 293,
+      "ja_normal": "魔物"
+    },
+    {
+      "id": "jakat_0294",
+      "expression": "ヨウカイ",
+      "translation_fr": "yôkai",
+      "register": "fantasy",
+      "category": "kata_native",
+      "priority_rank": 294,
+      "ja_normal": "妖怪"
+    },
+    {
+      "id": "jakat_0295",
+      "expression": "カイブツ",
+      "translation_fr": "monstre",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 295
+    },
+    {
+      "id": "jakat_0296",
+      "expression": "キオク",
+      "translation_fr": "mémoire",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 296,
+      "ja_normal": "記憶"
+    },
+    {
+      "id": "jakat_0297",
+      "expression": "キセキ",
+      "translation_fr": "miracle",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 297,
+      "ja_normal": "奇跡"
+    },
+    {
+      "id": "jakat_0298",
+      "expression": "ウンメイ",
+      "translation_fr": "destin",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 298,
+      "ja_normal": "運命"
+    },
+    {
+      "id": "jakat_0299",
+      "expression": "ユウキ",
+      "translation_fr": "courage",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 299,
+      "ja_normal": "勇気"
+    },
+    {
+      "id": "jakat_0300",
+      "expression": "キボウ",
+      "translation_fr": "espoir",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 300,
+      "ja_normal": "希望"
+    },
+    {
+      "id": "jakat_0301",
+      "expression": "ゼツボウ",
+      "translation_fr": "désespoir",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 301,
+      "ja_normal": "絶望"
+    },
+    {
+      "id": "jakat_0302",
+      "expression": "ヤクソク",
+      "translation_fr": "promesse",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 302,
+      "ja_normal": "約束"
+    },
+    {
+      "id": "jakat_0303",
+      "expression": "ネガイ",
+      "translation_fr": "souhait",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 303,
+      "ja_normal": "願い"
+    },
+    {
+      "id": "jakat_0304",
+      "expression": "ヒミツ",
+      "translation_fr": "secret",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 304
+    },
+    {
+      "id": "jakat_0305",
+      "expression": "コトバ",
+      "translation_fr": "paroles",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 305,
+      "ja_normal": "言葉"
+    },
+    {
+      "id": "jakat_0306",
+      "expression": "ナマエ",
+      "translation_fr": "nom",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 306,
+      "ja_normal": "名前"
+    },
+    {
+      "id": "jakat_0307",
+      "expression": "スガタ",
+      "translation_fr": "apparence",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 307,
+      "ja_normal": "姿"
+    },
+    {
+      "id": "jakat_0308",
+      "expression": "ケハイ",
+      "translation_fr": "présence",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 308,
+      "ja_normal": "気配"
+    },
+    {
+      "id": "jakat_0309",
+      "expression": "ニオイ",
+      "translation_fr": "odeur",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 309
+    },
+    {
+      "id": "jakat_0310",
+      "expression": "エガオ",
+      "translation_fr": "sourire",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 310,
+      "ja_normal": "笑顔"
+    },
+    {
+      "id": "jakat_0311",
+      "expression": "ナミダ",
+      "translation_fr": "larmes",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 311,
+      "ja_normal": "涙"
+    },
+    {
+      "id": "jakat_0312",
+      "expression": "コエ",
+      "translation_fr": "voix",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 312
+    },
+    {
+      "id": "jakat_0313",
+      "expression": "ケガ",
+      "translation_fr": "blessure",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 313
+    },
+    {
+      "id": "jakat_0314",
+      "expression": "キズ",
+      "translation_fr": "blessure",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 314
+    },
+    {
+      "id": "jakat_0315",
+      "expression": "ホネ",
+      "translation_fr": "os",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 315
+    },
+    {
+      "id": "jakat_0316",
+      "expression": "チカラワザ",
+      "translation_fr": "force brute",
+      "register": "rough",
+      "category": "kata_native",
+      "priority_rank": 316,
+      "ja_normal": "力技"
+    },
+    {
+      "id": "jakat_0317",
+      "expression": "ホンモノ",
+      "translation_fr": "véritable",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 317
+    },
+    {
+      "id": "jakat_0318",
+      "expression": "ニセモノ",
+      "translation_fr": "faux",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 318
+    },
+    {
+      "id": "jakat_0319",
+      "expression": "ワルモノ",
+      "translation_fr": "méchant",
+      "register": "informal",
+      "category": "kata_native",
+      "priority_rank": 319,
+      "ja_normal": "悪者"
+    },
+    {
+      "id": "jakat_0320",
+      "expression": "ヨソモノ",
+      "translation_fr": "étranger",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 320,
+      "ja_normal": "よそ者"
+    },
+    {
+      "id": "jakat_0321",
+      "expression": "ノケモノ",
+      "translation_fr": "exclu",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 321,
+      "ja_normal": "のけ者"
+    },
+    {
+      "id": "jakat_0322",
+      "expression": "ツワモノ",
+      "translation_fr": "guerrier aguerri",
+      "register": "archaic",
+      "category": "kata_native",
+      "priority_rank": 322,
+      "ja_normal": "強者"
+    },
+    {
+      "id": "jakat_0323",
+      "expression": "タベモノ",
+      "translation_fr": "nourriture",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 323,
+      "ja_normal": "食べ物"
+    },
+    {
+      "id": "jakat_0324",
+      "expression": "ノミモノ",
+      "translation_fr": "boisson",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 324
+    },
+    {
+      "id": "jakat_0325",
+      "expression": "イキモノ",
+      "translation_fr": "être vivant",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 325
+    },
+    {
+      "id": "jakat_0326",
+      "expression": "モチモノ",
+      "translation_fr": "affaires personnelles",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 326
+    },
+    {
+      "id": "jakat_0327",
+      "expression": "ワスレモノ",
+      "translation_fr": "objet oublié",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 327,
+      "ja_normal": "忘れ物"
+    },
+    {
+      "id": "jakat_0328",
+      "expression": "オクリモノ",
+      "translation_fr": "cadeau",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 328,
+      "ja_normal": "贈り物"
+    },
+    {
+      "id": "jakat_0329",
+      "expression": "タカラモノ",
+      "translation_fr": "trésor",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 329,
+      "ja_normal": "宝物"
+    },
+    {
+      "id": "jakat_0330",
+      "expression": "ヨミガエリ",
+      "translation_fr": "résurrection",
+      "register": "fantasy",
+      "category": "kata_native",
+      "priority_rank": 330,
+      "ja_normal": "蘇り"
+    },
+    {
+      "id": "jakat_0331",
+      "expression": "ウラギリ",
+      "translation_fr": "trahison",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 331,
+      "ja_normal": "裏切り"
+    },
+    {
+      "id": "jakat_0332",
+      "expression": "カクゴ",
+      "translation_fr": "résolution",
+      "register": "neutral",
+      "category": "kata_native",
+      "priority_rank": 332
+    },
+    {
+      "id": "jakat_0333",
+      "expression": "ヤンキー",
+      "translation_fr": "délinquant",
+      "register": "rough",
+      "category": "kata_social",
+      "priority_rank": 333
+    },
+    {
+      "id": "jakat_0334",
+      "expression": "スケバン",
+      "translation_fr": "délinquante",
+      "register": "rough",
+      "category": "kata_social",
+      "priority_rank": 334,
+      "ja_normal": "不良少女"
+    },
+    {
+      "id": "jakat_0335",
+      "expression": "ギャル",
+      "translation_fr": "gyaru",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 335
+    },
+    {
+      "id": "jakat_0336",
+      "expression": "オタク",
+      "translation_fr": "otaku",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 336
+    },
+    {
+      "id": "jakat_0337",
+      "expression": "ニート",
+      "translation_fr": "sans-emploi",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 337,
+      "ja_normal": "無職"
+    },
+    {
+      "id": "jakat_0338",
+      "expression": "ヒキコモリ",
+      "translation_fr": "reclus",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 338
+    },
+    {
+      "id": "jakat_0339",
+      "expression": "ボッチ",
+      "translation_fr": "solitaire",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 339,
+      "ja_normal": "独りぼっち"
+    },
+    {
+      "id": "jakat_0340",
+      "expression": "リア充",
+      "translation_fr": "socialement épanoui",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 340
+    },
+    {
+      "id": "jakat_0341",
+      "expression": "インキャ",
+      "translation_fr": "introverti",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 341
+    },
+    {
+      "id": "jakat_0342",
+      "expression": "ヨウキャ",
+      "translation_fr": "extraverti",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 342
+    },
+    {
+      "id": "jakat_0343",
+      "expression": "モブ",
+      "translation_fr": "figurant",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 343
+    },
+    {
+      "id": "jakat_0344",
+      "expression": "ザコ",
+      "translation_fr": "faible",
+      "register": "rough",
+      "category": "kata_social",
+      "priority_rank": 344,
+      "ja_normal": "雑魚"
+    },
+    {
+      "id": "jakat_0345",
+      "expression": "ラスボス",
+      "translation_fr": "boss final",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 345
+    },
+    {
+      "id": "jakat_0346",
+      "expression": "チート",
+      "translation_fr": "triche",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 346
+    },
+    {
+      "id": "jakat_0347",
+      "expression": "ボンボン",
+      "translation_fr": "fils à papa",
+      "register": "rough",
+      "category": "kata_social",
+      "priority_rank": 347
+    },
+    {
+      "id": "jakat_0348",
+      "expression": "パリピ",
+      "translation_fr": "fêtard",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 348,
+      "ja_normal": "遊び人"
+    },
+    {
+      "id": "jakat_0349",
+      "expression": "チャラ男",
+      "translation_fr": "dragueur",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 349,
+      "ja_normal": "軽い男"
+    },
+    {
+      "id": "jakat_0350",
+      "expression": "チャラ女",
+      "translation_fr": "dragueuse",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 350,
+      "ja_normal": "軽い女"
+    },
+    {
+      "id": "jakat_0351",
+      "expression": "メンヘラ",
+      "translation_fr": "instable émotionnel",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 351,
+      "ja_normal": "情緒不安定な人"
+    },
+    {
+      "id": "jakat_0352",
+      "expression": "ヤンデレ",
+      "translation_fr": "yandere",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 352,
+      "ja_normal": "病んだ恋人"
+    },
+    {
+      "id": "jakat_0353",
+      "expression": "ツンデレ",
+      "translation_fr": "tsundere",
+      "register": "informal",
+      "category": "kata_social",
+      "priority_rank": 353
+    },
+    {
+      "id": "jakat_0354",
+      "expression": "ナルシスト",
+      "translation_fr": "narcissique",
+      "register": "neutral",
+      "category": "kata_social",
+      "priority_rank": 354
+    },
+    {
+      "id": "jakat_0355",
+      "expression": "ストーカー",
+      "translation_fr": "harceleur",
+      "register": "neutral",
+      "category": "kata_social",
+      "priority_rank": 355
+    },
+    {
+      "id": "jakat_0356",
+      "expression": "サイコパス",
+      "translation_fr": "psychopathe",
+      "register": "neutral",
+      "category": "kata_social",
+      "priority_rank": 356
+    },
+    {
+      "id": "jakat_0357",
+      "expression": "ヤクザ",
+      "translation_fr": "yakuza",
+      "register": "neutral",
+      "category": "kata_social",
+      "priority_rank": 357
+    },
+    {
+      "id": "jakat_0358",
+      "expression": "ゴクドウ",
+      "translation_fr": "yakuza",
+      "register": "underworld",
+      "category": "kata_social",
+      "priority_rank": 358,
+      "ja_normal": "極道"
+    },
+    {
+      "id": "jakat_0359",
+      "expression": "アニオタ",
+      "translation_fr": "fan d'anime",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 359
+    },
+    {
+      "id": "jakat_0360",
+      "expression": "ドルオタ",
+      "translation_fr": "fan d'idoles",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 360,
+      "ja_normal": "アイドル好き"
+    },
+    {
+      "id": "jakat_0361",
+      "expression": "ガチオタ",
+      "translation_fr": "otaku hardcore",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 361,
+      "ja_normal": "熱狂的な愛好者"
+    },
+    {
+      "id": "jakat_0362",
+      "expression": "ニワカ",
+      "translation_fr": "faux fan",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 362,
+      "ja_normal": "素人"
+    },
+    {
+      "id": "jakat_0363",
+      "expression": "エアプ",
+      "translation_fr": "faux joueur",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 363,
+      "ja_normal": "未経験者"
+    },
+    {
+      "id": "jakat_0364",
+      "expression": "ガチ勢",
+      "translation_fr": "joueur hardcore",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 364,
+      "ja_normal": "本気の人"
+    },
+    {
+      "id": "jakat_0365",
+      "expression": "エンジョイ勢",
+      "translation_fr": "joueur détente",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 365
+    },
+    {
+      "id": "jakat_0366",
+      "expression": "廃人",
+      "translation_fr": "no-life",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 366
+    },
+    {
+      "id": "jakat_0367",
+      "expression": "厨二病",
+      "translation_fr": "chuunibyou",
+      "register": "slang",
+      "category": "kata_social",
+      "priority_rank": 367
+    },
+    {
+      "id": "jakat_0368",
+      "expression": "サボる",
+      "translation_fr": "sécher",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 368
+    },
+    {
+      "id": "jakat_0369",
+      "expression": "ビビる",
+      "translation_fr": "flipper",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 369,
+      "ja_normal": "怖がる"
+    },
+    {
+      "id": "jakat_0370",
+      "expression": "キレる",
+      "translation_fr": "péter les plombs",
+      "register": "rough",
+      "category": "kata_slang_verb",
+      "priority_rank": 370
+    },
+    {
+      "id": "jakat_0371",
+      "expression": "モテる",
+      "translation_fr": "avoir du succès",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 371
+    },
+    {
+      "id": "jakat_0372",
+      "expression": "ハマる",
+      "translation_fr": "devenir accro",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 372
+    },
+    {
+      "id": "jakat_0373",
+      "expression": "バレる",
+      "translation_fr": "être découvert",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 373
+    },
+    {
+      "id": "jakat_0374",
+      "expression": "パクる",
+      "translation_fr": "piquer",
+      "register": "rough",
+      "category": "kata_slang_verb",
+      "priority_rank": 374
+    },
+    {
+      "id": "jakat_0375",
+      "expression": "ググる",
+      "translation_fr": "chercher sur Google",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 375,
+      "ja_normal": "検索する"
+    },
+    {
+      "id": "jakat_0376",
+      "expression": "バズる",
+      "translation_fr": "devenir viral",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 376
+    },
+    {
+      "id": "jakat_0377",
+      "expression": "ディスる",
+      "translation_fr": "critiquer",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 377
+    },
+    {
+      "id": "jakat_0378",
+      "expression": "スルーする",
+      "translation_fr": "ignorer",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 378
+    },
+    {
+      "id": "jakat_0379",
+      "expression": "ミスる",
+      "translation_fr": "se tromper",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 379
+    },
+    {
+      "id": "jakat_0380",
+      "expression": "テンパる",
+      "translation_fr": "paniquer",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 380
+    },
+    {
+      "id": "jakat_0381",
+      "expression": "ヘタる",
+      "translation_fr": "faiblir",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 381
+    },
+    {
+      "id": "jakat_0382",
+      "expression": "トチる",
+      "translation_fr": "se planter",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 382
+    },
+    {
+      "id": "jakat_0383",
+      "expression": "ポシャる",
+      "translation_fr": "tomber à l'eau",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 383,
+      "ja_normal": "駄目になる"
+    },
+    {
+      "id": "jakat_0384",
+      "expression": "ハブる",
+      "translation_fr": "exclure",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 384
+    },
+    {
+      "id": "jakat_0385",
+      "expression": "ダブる",
+      "translation_fr": "faire doublon",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 385
+    },
+    {
+      "id": "jakat_0386",
+      "expression": "サボタージュする",
+      "translation_fr": "saboter",
+      "register": "neutral",
+      "category": "kata_slang_verb",
+      "priority_rank": 386
+    },
+    {
+      "id": "jakat_0387",
+      "expression": "カンニングする",
+      "translation_fr": "tricher",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 387
+    },
+    {
+      "id": "jakat_0388",
+      "expression": "リベンジする",
+      "translation_fr": "retenter",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 388
+    },
+    {
+      "id": "jakat_0389",
+      "expression": "ナンパする",
+      "translation_fr": "draguer",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 389
+    },
+    {
+      "id": "jakat_0390",
+      "expression": "スカウトする",
+      "translation_fr": "recruter",
+      "register": "neutral",
+      "category": "kata_slang_verb",
+      "priority_rank": 390
+    },
+    {
+      "id": "jakat_0391",
+      "expression": "ストーカーする",
+      "translation_fr": "harceler",
+      "register": "rough",
+      "category": "kata_slang_verb",
+      "priority_rank": 391
+    },
+    {
+      "id": "jakat_0392",
+      "expression": "ブロックする",
+      "translation_fr": "bloquer",
+      "register": "neutral",
+      "category": "kata_slang_verb",
+      "priority_rank": 392
+    },
+    {
+      "id": "jakat_0393",
+      "expression": "ミュートする",
+      "translation_fr": "mettre en sourdine",
+      "register": "neutral",
+      "category": "kata_slang_verb",
+      "priority_rank": 393
+    },
+    {
+      "id": "jakat_0394",
+      "expression": "フォローする",
+      "translation_fr": "suivre",
+      "register": "neutral",
+      "category": "kata_slang_verb",
+      "priority_rank": 394
+    },
+    {
+      "id": "jakat_0395",
+      "expression": "リプする",
+      "translation_fr": "répondre",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 395,
+      "ja_normal": "返信する"
+    },
+    {
+      "id": "jakat_0396",
+      "expression": "エゴサする",
+      "translation_fr": "s'auto-rechercher",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 396
+    },
+    {
+      "id": "jakat_0397",
+      "expression": "スクショする",
+      "translation_fr": "capturer l'écran",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 397
+    },
+    {
+      "id": "jakat_0398",
+      "expression": "チートする",
+      "translation_fr": "tricher",
+      "register": "slang",
+      "category": "kata_slang_verb",
+      "priority_rank": 398
+    },
+    {
+      "id": "jakat_0399",
+      "expression": "テイムする",
+      "translation_fr": "apprivoiser",
+      "register": "gaming",
+      "category": "kata_slang_verb",
+      "priority_rank": 399
+    },
+    {
+      "id": "jakat_0400",
+      "expression": "キャリーする",
+      "translation_fr": "porter l'équipe",
+      "register": "gaming",
+      "category": "kata_slang_verb",
+      "priority_rank": 400
+    },
+    {
+      "id": "jakat_0401",
+      "expression": "ナーフする",
+      "translation_fr": "affaiblir",
+      "register": "gaming",
+      "category": "kata_slang_verb",
+      "priority_rank": 401,
+      "ja_normal": "弱くする"
+    },
+    {
+      "id": "jakat_0402",
+      "expression": "バフする",
+      "translation_fr": "renforcer",
+      "register": "gaming",
+      "category": "kata_slang_verb",
+      "priority_rank": 402,
+      "ja_normal": "強くする"
+    },
+    {
+      "id": "jakat_0403",
+      "expression": "イライラ",
+      "translation_fr": "irritation",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 403
+    },
+    {
+      "id": "jakat_0404",
+      "expression": "モヤモヤ",
+      "translation_fr": "malaise",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 404
+    },
+    {
+      "id": "jakat_0405",
+      "expression": "ワクワク",
+      "translation_fr": "excitation",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 405
+    },
+    {
+      "id": "jakat_0406",
+      "expression": "ドキドキ",
+      "translation_fr": "palpitations",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 406
+    },
+    {
+      "id": "jakat_0407",
+      "expression": "ビクビク",
+      "translation_fr": "peur",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 407
+    },
+    {
+      "id": "jakat_0408",
+      "expression": "ニヤニヤ",
+      "translation_fr": "sourire en coin",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 408
+    },
+    {
+      "id": "jakat_0409",
+      "expression": "ニコニコ",
+      "translation_fr": "sourire",
+      "register": "neutral",
+      "category": "kata_mimetic",
+      "priority_rank": 409
+    },
+    {
+      "id": "jakat_0410",
+      "expression": "ウロウロ",
+      "translation_fr": "errance",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 410
+    },
+    {
+      "id": "jakat_0411",
+      "expression": "フラフラ",
+      "translation_fr": "titubant",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 411
+    },
+    {
+      "id": "jakat_0412",
+      "expression": "ボロボロ",
+      "translation_fr": "en lambeaux",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 412
+    },
+    {
+      "id": "jakat_0413",
+      "expression": "ヘトヘト",
+      "translation_fr": "épuisé",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 413
+    },
+    {
+      "id": "jakat_0414",
+      "expression": "クタクタ",
+      "translation_fr": "épuisé",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 414
+    },
+    {
+      "id": "jakat_0415",
+      "expression": "オドオド",
+      "translation_fr": "timidité",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 415,
+      "ja_normal": "おどおど"
+    },
+    {
+      "id": "jakat_0416",
+      "expression": "バラバラ",
+      "translation_fr": "en morceaux",
+      "register": "neutral",
+      "category": "kata_mimetic",
+      "priority_rank": 416
+    },
+    {
+      "id": "jakat_0417",
+      "expression": "メチャメチャ",
+      "translation_fr": "sens dessus dessous",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 417
+    },
+    {
+      "id": "jakat_0418",
+      "expression": "グチャグチャ",
+      "translation_fr": "en bouillie",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 418
+    },
+    {
+      "id": "jakat_0419",
+      "expression": "ベタベタ",
+      "translation_fr": "collant",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 419
+    },
+    {
+      "id": "jakat_0420",
+      "expression": "ベトベト",
+      "translation_fr": "poisseux",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 420
+    },
+    {
+      "id": "jakat_0421",
+      "expression": "ヌルヌル",
+      "translation_fr": "visqueux",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 421
+    },
+    {
+      "id": "jakat_0422",
+      "expression": "ツルツル",
+      "translation_fr": "lisse",
+      "register": "neutral",
+      "category": "kata_mimetic",
+      "priority_rank": 422
+    },
+    {
+      "id": "jakat_0423",
+      "expression": "ザラザラ",
+      "translation_fr": "rugueux",
+      "register": "neutral",
+      "category": "kata_mimetic",
+      "priority_rank": 423
+    },
+    {
+      "id": "jakat_0424",
+      "expression": "フワフワ",
+      "translation_fr": "duveteux",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 424
+    },
+    {
+      "id": "jakat_0425",
+      "expression": "モフモフ",
+      "translation_fr": "tout doux",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 425,
+      "ja_normal": "ふわふわ"
+    },
+    {
+      "id": "jakat_0426",
+      "expression": "カチカチ",
+      "translation_fr": "très dur",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 426
+    },
+    {
+      "id": "jakat_0427",
+      "expression": "グニャグニャ",
+      "translation_fr": "tout mou",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 427
+    },
+    {
+      "id": "jakat_0428",
+      "expression": "ヘロヘロ",
+      "translation_fr": "à bout",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 428
+    },
+    {
+      "id": "jakat_0429",
+      "expression": "ガタガタ",
+      "translation_fr": "tremblant",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 429
+    },
+    {
+      "id": "jakat_0430",
+      "expression": "ブルブル",
+      "translation_fr": "tremblement",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 430,
+      "ja_normal": "震え"
+    },
+    {
+      "id": "jakat_0431",
+      "expression": "ゾクゾク",
+      "translation_fr": "frisson",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 431
+    },
+    {
+      "id": "jakat_0432",
+      "expression": "ムカムカ",
+      "translation_fr": "écœurement",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 432,
+      "ja_normal": "吐き気"
+    },
+    {
+      "id": "jakat_0433",
+      "expression": "スッキリ",
+      "translation_fr": "soulagé",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 433
+    },
+    {
+      "id": "jakat_0434",
+      "expression": "ゲッソリ",
+      "translation_fr": "amaigri",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 434
+    },
+    {
+      "id": "jakat_0435",
+      "expression": "グッタリ",
+      "translation_fr": "épuisé",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 435
+    },
+    {
+      "id": "jakat_0436",
+      "expression": "ハラハラ",
+      "translation_fr": "angoisse",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 436
+    },
+    {
+      "id": "jakat_0437",
+      "expression": "ソワソワ",
+      "translation_fr": "agitation",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 437
+    },
+    {
+      "id": "jakat_0438",
+      "expression": "テメー",
+      "ja_normal": "お前",
+      "translation_fr": "tu",
+      "register": "very_rough",
+      "category": "kata_pronoun",
+      "priority_rank": 438
+    },
+    {
+      "id": "jakat_0439",
+      "expression": "ヤロー",
+      "ja_normal": "野郎",
+      "translation_fr": "salaud",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 439
+    },
+    {
+      "id": "jakat_0440",
+      "expression": "バカヤロー",
+      "ja_normal": "馬鹿野郎",
+      "translation_fr": "abruti",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 440
+    },
+    {
+      "id": "jakat_0441",
+      "expression": "チクショー",
+      "ja_normal": "畜生",
+      "translation_fr": "merde",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 441
+    },
+    {
+      "id": "jakat_0442",
+      "expression": "コノヤロー",
+      "ja_normal": "この野郎",
+      "translation_fr": "salaud",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 442
+    },
+    {
+      "id": "jakat_0443",
+      "expression": "クン",
+      "ja_normal": "くん",
+      "translation_fr": "kun",
+      "register": "neutral",
+      "category": "kata_address",
+      "priority_rank": 443
+    },
+    {
+      "id": "jakat_0444",
+      "expression": "ペチャパイ",
+      "ja_normal": "貧乳",
+      "translation_fr": "petits seins",
+      "register": "rough",
+      "category": "kata_crude",
+      "priority_rank": 444
+    },
+    {
+      "id": "jakat_0445",
+      "expression": "バーロー",
+      "ja_normal": "馬鹿野郎",
+      "translation_fr": "abruti",
+      "register": "very_rough",
+      "category": "kata_insult",
+      "priority_rank": 445
+    },
+    {
+      "id": "jakat_0446",
+      "expression": "マネ",
+      "ja_normal": "真似",
+      "translation_fr": "imitation",
+      "register": "informal",
+      "category": "kata_native",
+      "priority_rank": 446
+    },
+    {
+      "id": "jakat_0447",
+      "expression": "メンド",
+      "ja_normal": "面倒",
+      "translation_fr": "pénible",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 447
+    },
+    {
+      "id": "jakat_0448",
+      "expression": "アト",
+      "ja_normal": "後",
+      "translation_fr": "après",
+      "register": "informal",
+      "category": "kata_grammar",
+      "priority_rank": 448
+    },
+    {
+      "id": "jakat_0449",
+      "expression": "シャブ",
+      "ja_normal": "覚醒剤",
+      "translation_fr": "came",
+      "register": "underworld",
+      "category": "kata_jargon",
+      "priority_rank": 449
+    },
+    {
+      "id": "jakat_0450",
+      "expression": "イヤ",
+      "ja_normal": "いや",
+      "translation_fr": "non",
+      "register": "informal",
+      "category": "kata_grammar",
+      "priority_rank": 450
+    },
+    {
+      "id": "jakat_0451",
+      "expression": "サカナ",
+      "ja_normal": "獲物",
+      "translation_fr": "cible",
+      "register": "slang",
+      "category": "kata_jargon",
+      "priority_rank": 451
+    },
+    {
+      "id": "jakat_0452",
+      "expression": "サラリーマン",
+      "ja_normal": "会社員",
+      "translation_fr": "employé de bureau",
+      "register": "neutral",
+      "category": "kata_jargon",
+      "priority_rank": 452
+    },
+    {
+      "id": "jakat_0453",
+      "expression": "グチ",
+      "ja_normal": "愚痴",
+      "translation_fr": "récriminations",
+      "register": "informal",
+      "category": "kata_native",
+      "priority_rank": 453
+    },
+    {
+      "id": "jakat_0454",
+      "expression": "ホンマ",
+      "ja_normal": "本当",
+      "translation_fr": "vraiment",
+      "register": "kansai",
+      "category": "kata_emphasis",
+      "priority_rank": 454
+    },
+    {
+      "id": "jakat_0455",
+      "expression": "ワシャ",
+      "ja_normal": "わしは",
+      "translation_fr": "moi",
+      "register": "old_male",
+      "category": "kata_pronoun",
+      "priority_rank": 455
+    },
+    {
+      "id": "jakat_0456",
+      "expression": "ネー",
+      "ja_normal": "ない",
+      "translation_fr": "pas",
+      "register": "rough",
+      "category": "kata_grammar",
+      "priority_rank": 456
+    },
+    {
+      "id": "jakat_0457",
+      "expression": "スゴ",
+      "ja_normal": "凄",
+      "translation_fr": "sacré",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 457
+    },
+    {
+      "id": "jakat_0458",
+      "expression": "トボ",
+      "ja_normal": "とぼ",
+      "translation_fr": "faire l'innocent",
+      "register": "informal",
+      "category": "kata_slang_verb",
+      "priority_rank": 458
+    },
+    {
+      "id": "jakat_0459",
+      "expression": "ムカツク",
+      "ja_normal": "腹が立つ",
+      "translation_fr": "ça m'énerve",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 459
+    },
+    {
+      "id": "jakat_0460",
+      "expression": "エライ",
+      "ja_normal": "偉い",
+      "translation_fr": "sacré",
+      "register": "informal",
+      "category": "kata_emphasis",
+      "priority_rank": 460
+    },
+    {
+      "id": "jakat_0461",
+      "expression": "ノコノコ",
+      "ja_normal": "のこのこ",
+      "translation_fr": "sans se gêner",
+      "register": "informal",
+      "category": "kata_mimetic",
+      "priority_rank": 461
+    },
+    {
+      "id": "jakat_0462",
+      "expression": "ゴッツイ",
+      "ja_normal": "凄い",
+      "translation_fr": "énorme",
+      "register": "rough",
+      "category": "kata_emphasis",
+      "priority_rank": 462
+    }
+  ]
+}

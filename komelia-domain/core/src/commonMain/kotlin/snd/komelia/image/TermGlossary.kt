@@ -124,6 +124,16 @@ class ProtectedText internal constructor(
     val isProtected: Boolean get() = terms.isNotEmpty()
 
     /**
+     * Rewrites what goes to the translator, keeping the terms to put back.
+     *
+     * For steps that have to run on protected text: the Japanese katakana
+     * rewrite must not reach a term the reader chose to keep, and the
+     * placeholders are the only thing that guarantees it cannot.
+     */
+    fun mapText(transform: (String) -> String): ProtectedText =
+        ProtectedText(transform(text), terms)
+
+    /**
      * Puts the terms back into a translation.
      *
      * A placeholder the engine dropped simply leaves the term out of the
