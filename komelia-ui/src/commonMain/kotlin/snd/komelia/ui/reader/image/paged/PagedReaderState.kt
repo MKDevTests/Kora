@@ -36,6 +36,7 @@ import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.EdgeSampling
+import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImage.PageId
 import snd.komelia.image.ReaderImageResult
 import snd.komelia.image.getEdgeSampling
@@ -603,6 +604,26 @@ class PagedReaderState(
     @Suppress("DeferredResultUnused")
     private fun enqueueSpreadLoadJob(pagesMeta: List<PageMetadata>) {
         launchSpreadLoadJob(pagesMeta)
+    }
+
+    /**
+     * The first image of the spread after this one, for the text scan to work
+     * ahead of the reader.
+     *
+     * Goes through [getPage], so it reuses the image the reader has already
+     * loaded for that spread and only fetches when it has not. Null at the end
+     * of the book, and null when the image failed to load — either way there is
+     * nothing to prepare.
+     *
+     * The first page of the spread, not both: a two-page spread is two scans and
+     * the second one is speculation on top of speculation.
+     */
+    suspend fun nextSpreadFirstImage(): ReaderImage? {
+        val next = pageSpreads.value
+            .getOrNull(currentSpreadIndex.value + 1)
+            ?.firstOrNull()
+            ?: return null
+        return (getPage(next).imageResult as? ReaderImageResult.Success)?.image
     }
 
     suspend fun getPage(page: PageMetadata): Page {

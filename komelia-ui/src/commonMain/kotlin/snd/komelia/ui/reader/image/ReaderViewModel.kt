@@ -7,8 +7,10 @@ import cafe.adriel.voyager.navigator.Navigator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -28,6 +31,7 @@ import snd.komelia.color.repository.BookColorCorrectionRepository
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.KomeliaPanelDetector
 import snd.komelia.image.KomeliaUpscaler
+import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImageFactory
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaReadListApi
@@ -223,8 +227,36 @@ class ReaderViewModel(
                 }
             }
             .onEach { image ->
-                image?.let { readerState.scanCurrentPageForText(it) }
+                image?.let {
+                    readerState.scanCurrentPageForText(it)
+                    prepareNextPage(it)
+                }
             }.launchIn(screenModelScope)
+    }
+
+    private var prefetchJob: Job? = null
+
+    /**
+     * Starts the next page's scan once the page on screen has finished its own.
+     *
+     * The wait is the point. Both scans take the same lock, and a prefetch that
+     * reached it first would put four seconds in front of the page the reader is
+     * actually looking at — which is the one failure mode that would make this
+     * worse than not prefetching at all. Waiting for the current page to appear
+     * in the scan cache makes the order certain instead of likely.
+     *
+     * Paged only for now. The continuous reader has no equivalent of "the next
+     * page" that is settled while the current one is on screen — it scrolls, so
+     * the answer changes under you — and panels is a different problem again.
+     */
+    private fun prepareNextPage(current: ReaderImage) {
+        prefetchJob?.cancel()
+        if (readerState.readerType.value != PAGED) return
+        prefetchJob = screenModelScope.launch {
+            readerState.scannedPages.first { it.containsKey(current.pageId) }
+            pagedReaderState.nextSpreadFirstImage()
+                ?.let { readerState.prefetchNextPageForText(it) }
+        }
     }
 
     suspend fun initialize(
