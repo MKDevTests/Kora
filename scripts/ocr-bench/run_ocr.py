@@ -33,7 +33,7 @@ WIDTH_HEIGHT_RATIO = 8
 
 
 def build_engine(fast: bool, rec_size: str = "small", limit_side_len: int = 0,
-                 limit_type: str = ""):
+                 limit_type: str = "", cls: bool = False):
     from rapidocr_onnxruntime import RapidOCR
 
     det = MODELS / ("PP-OCRv6_tiny_det_infer.onnx" if fast else "PP-OCRv6_small_det_infer.onnx")
@@ -43,10 +43,10 @@ def build_engine(fast: bool, rec_size: str = "small", limit_side_len: int = 0,
     # own: soulmate came out solilmate, without came out witholt, and no
     # translator recovers from that.
     rec = MODELS / f"PP-OCRv6_{rec_size}_rec_infer.onnx"
-    cls = MODELS / "ch_ppocr_mobile_v2.0_cls_infer.onnx"
+    cls_model = MODELS / "ch_ppocr_mobile_v2.0_cls_infer.onnx"
     keys = MODELS / "ppocrv6_keys.txt"
 
-    missing = [p.name for p in (det, rec, cls, keys) if not p.exists()]
+    missing = [p.name for p in (det, rec, cls_model, keys) if not p.exists()]
     if missing:
         sys.exit(
             f"Missing model files in {MODELS}: {', '.join(missing)}\n"
@@ -72,11 +72,15 @@ def build_engine(fast: bool, rec_size: str = "small", limit_side_len: int = 0,
         return RapidOCR(
             det_model_path=str(det),
             rec_model_path=str(rec),
-            cls_model_path=str(cls),
+            cls_model_path=str(cls_model),
             text_score=TEXT_SCORE,
             # Off for Latin on the tablet too: the classifier is trained on
             # Chinese and flips short Latin crops end over end ("I'M" -> "W,I").
-            use_angle_cls=False,
+            # On for Japanese, and that is what --cls is: manga lettering runs
+            # in vertical columns, the library rotates a tall crop before
+            # recognising it, and without the classifier it is upside down half
+            # the time. OcrService.android.kt ties this to the same condition.
+            use_angle_cls=cls,
             width_height_ratio=WIDTH_HEIGHT_RATIO,
             # Detection resizes the page so its long side fits this, then pads
             # to a multiple of 32. Cost follows the pixel count, so it is
@@ -183,6 +187,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0, help="stop after N pages")
     parser.add_argument("--limit-side-len", type=int, default=0,
                         help="detection input side limit; 0 keeps the default")
+    parser.add_argument("--cls", action="store_true",
+                        help="orientation classifier, as Japanese turns on")
     parser.add_argument("--limit-type", choices=("min", "max"), default="",
                         help="which side --limit-side-len applies to")
     args = parser.parse_args()
@@ -190,7 +196,7 @@ def main() -> None:
     if not args.source.exists():
         sys.exit(f"No such file or directory: {args.source}")
 
-    engine = build_engine(args.fast, args.rec, args.limit_side_len, args.limit_type)
+    engine = build_engine(args.fast, args.rec, args.limit_side_len, args.limit_type, args.cls)
     args.out.mkdir(parents=True, exist_ok=True)
 
     count = 0
