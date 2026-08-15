@@ -38,6 +38,7 @@ kotlin {
                 "snd/komelia/image/EnglishTextCleaner.kt",
                 "snd/komelia/image/PhraseBook.kt",
                 "snd/komelia/image/OcrSpellRepair.kt",
+                "snd/komelia/image/JapaneseKatakanaGlossary.kt",
             )
         }
     }
@@ -45,7 +46,9 @@ kotlin {
 
 dependencies {
     implementation("org.jetbrains.compose.ui:ui-geometry:${libs.versions.compose.multiplatform.get()}")
-    testImplementation(libs.kotlinx.serialization.json)
+    // Not testImplementation: the katakana glossary parses its shipped JSON in
+    // main, so the runtime has to be on the main classpath too.
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(kotlin("test"))
 }
 

@@ -43,14 +43,32 @@ class BergamotModelDownloader(
 ) : TranslationModelDownloader {
 
     override fun supports(source: TranslationLanguage, target: TranslationLanguage): Boolean =
-        BergamotPair.of(source, target) != null
+        BergamotPair.route(source, target).isNotEmpty()
 
     override fun isDownloaded(source: TranslationLanguage, target: TranslationLanguage): Boolean =
-        BergamotPair.of(source, target)?.isComplete(modelRoot) == true
+        BergamotPair.route(source, target)
+            .let { it.isNotEmpty() && it.all { pair -> pair.isComplete(modelRoot) } }
 
+    /**
+     * Deletes every pack the route uses.
+     *
+     * Japanese to French shares its second hop with English to French, so
+     * deleting it takes en-fr with it. That is the honest reading of "delete
+     * the model for this pair" — leaving half a route on disk would show the
+     * feature as downloaded when it cannot run.
+     */
     override fun delete(source: TranslationLanguage, target: TranslationLanguage) {
-        BergamotPair.of(source, target)?.dirIn(modelRoot)?.deleteRecursively()
+        BergamotPair.route(source, target).forEach { it.dirIn(modelRoot).deleteRecursively() }
     }
+
+    /**
+     * Published sizes: en-fr is 36MB, ja-en 52MB. Packs already on disk are not
+     * counted, so turning on Japanese after using French says 52 rather than 88.
+     */
+    override fun estimatedMegabytes(source: TranslationLanguage, target: TranslationLanguage): Int =
+        BergamotPair.route(source, target)
+            .filterNot { it.isComplete(modelRoot) }
+            .sumOf { if (it.source == TranslationLanguage.JAPANESE) 52 else 36 }
 
     /**
      * Downloads the pair, replacing whatever was there.
@@ -62,35 +80,42 @@ class BergamotModelDownloader(
      */
     override fun download(source: TranslationLanguage, target: TranslationLanguage): Flow<UpdateProgress> {
         return flow {
-            val pair = BergamotPair.of(source, target)
-            requireNotNull(pair) { "no Bergamot model for ${source.code}-${target.code}" }
+            val route = BergamotPair.route(source, target)
+            require(route.isNotEmpty()) { "no Bergamot route from ${source.code} to ${target.code}" }
 
-            emit(UpdateProgress(0, 0, "looking up the ${pair.directory} model"))
-            val records = recordsFor(pair)
-
-            val staging = File(modelRoot, "${pair.directory}.partial")
-            staging.deleteRecursively()
-            staging.mkdirs()
-            try {
-                // Weights last: they are 30MB of the 36, so a failure on one of
-                // the small files costs seconds rather than the whole transfer.
-                listOf(
-                    BergamotPair.VOCAB to records.vocab,
-                    BergamotPair.SHORTLIST to records.shortlist,
-                    BergamotPair.MODEL to records.model,
-                ).forEach { (name, record) ->
-                    downloadFile(record, File(staging, name))
-                }
-
-                val target = pair.dirIn(modelRoot)
-                target.deleteRecursively()
-                staging.renameTo(target)
-                emit(UpdateProgress(1, 1, "ready"))
-            } catch (e: Throwable) {
-                staging.deleteRecursively()
-                throw e
-            }
+            // A pack already on disk is skipped rather than fetched again:
+            // turning on Japanese after using English to French should cost the
+            // 52MB of ja-en, not that plus the en-fr already sitting there.
+            route.filterNot { it.isComplete(modelRoot) }.forEach { fetch(it) }
+            emit(UpdateProgress(1, 1, "ready"))
         }.flowOn(Dispatchers.IO)
+    }
+
+    private suspend fun FlowCollector<UpdateProgress>.fetch(pair: BergamotPair) {
+        emit(UpdateProgress(0, 0, "looking up the ${pair.directory} model"))
+        val records = recordsFor(pair)
+
+        val staging = File(modelRoot, "${pair.directory}.partial")
+        staging.deleteRecursively()
+        staging.mkdirs()
+        try {
+            // Weights last: they are 30MB of the 36, so a failure on one of
+            // the small files costs seconds rather than the whole transfer.
+            listOf(
+                BergamotPair.VOCAB to records.vocab,
+                BergamotPair.SHORTLIST to records.shortlist,
+                BergamotPair.MODEL to records.model,
+            ).forEach { (name, record) ->
+                downloadFile(record, File(staging, name))
+            }
+
+            val destination = pair.dirIn(modelRoot)
+            destination.deleteRecursively()
+            staging.renameTo(destination)
+        } catch (e: Throwable) {
+            staging.deleteRecursively()
+            throw e
+        }
     }
 
     private suspend fun FlowCollector<UpdateProgress>.downloadFile(record: Record, into: File) {

@@ -38,18 +38,51 @@ data class BergamotPair(
         /**
          * The pairs Mozilla publishes a direct model for.
          *
-         * Deliberately not every combination: Bergamot has no pivot: en-fr and
-         * fr-en exist as separate models, and a pair with no model has to fall
-         * back to the other engine rather than silently return the input.
-         * Japanese is not on the list at all, which is one reason it stays on
-         * ML Kit for now.
+         * Deliberately not every combination: en-fr and fr-en are separate
+         * models, and a pair with no model has to fall back to the other engine
+         * rather than silently return the input.
+         *
+         * ja-en is on the list. An earlier version of this comment said
+         * Japanese was not published at all — that was wrong, and it is why
+         * nobody looked: the pack is at the same endpoint and in the same
+         * format as en-fr (v2.1, 52MB, one shared vocabulary), so it costs a
+         * download and no new code.
          */
         private val SUPPORTED = setOf(
             TranslationLanguage.ENGLISH to TranslationLanguage.FRENCH,
             TranslationLanguage.FRENCH to TranslationLanguage.ENGLISH,
+            TranslationLanguage.JAPANESE to TranslationLanguage.ENGLISH,
         )
 
         fun of(source: TranslationLanguage, target: TranslationLanguage): BergamotPair? =
             if ((source to target) in SUPPORTED) BergamotPair(source, target) else null
+
+        /**
+         * The hops needed to get from [source] to [target], or an empty list
+         * when there is no way.
+         *
+         * Usually one. Japanese to French is two, through English, because
+         * Mozilla publishes no ja-fr model — and the direct alternative was
+         * measured and rejected: Helsinki's opus-mt-ja-fr invents proper names
+         * ("Tu n'as pas le choix, Nimah" for 仕方ないだろ), at beam 1 and beam
+         * 4 alike, and it is an fp32 teacher of 76M parameters where the pivot
+         * runs on the 31M student. A flat translation beats a fabricated one.
+         *
+         * The pivot's own weakness is known and accepted: an ambiguity resolved
+         * wrongly in English cannot be recovered in French (しょうがねぇな goes
+         * through "i can't help it" and lands on "Je ne peux pas l'aider").
+         */
+        fun route(
+            source: TranslationLanguage,
+            target: TranslationLanguage,
+        ): List<BergamotPair> {
+            if (source == target) return emptyList()
+            of(source, target)?.let { return listOf(it) }
+            // Only English is used as a bridge. Trying every language as a
+            // pivot would find routes nobody wants to read the output of.
+            val first = of(source, TranslationLanguage.ENGLISH) ?: return emptyList()
+            val second = of(TranslationLanguage.ENGLISH, target) ?: return emptyList()
+            return listOf(first, second)
+        }
     }
 }
