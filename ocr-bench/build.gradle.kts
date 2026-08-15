@@ -37,6 +37,7 @@ kotlin {
                 "snd/komelia/image/BubbleAssembler.kt",
                 "snd/komelia/image/EnglishTextCleaner.kt",
                 "snd/komelia/image/PhraseBook.kt",
+                "snd/komelia/image/OcrSpellRepair.kt",
             )
         }
     }

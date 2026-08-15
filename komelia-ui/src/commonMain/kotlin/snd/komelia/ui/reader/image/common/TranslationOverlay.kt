@@ -12,6 +12,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
@@ -150,6 +151,13 @@ private fun measure(
     style = TextStyle(
         color = color,
         fontSize = fontSize.sp,
+        // Comic lettering is heavy, and a balloon filled with the reader's
+        // ordinary body weight reads as a caption pasted over the drawing
+        // rather than as what the character said. Raising the case instead was
+        // tried and rejected: a French balloon in full capitals is harder to
+        // read than the English it replaced, and this is what that change was
+        // actually reaching for.
+        fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
     ),
     constraints = constraints,

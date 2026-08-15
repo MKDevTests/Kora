@@ -85,6 +85,16 @@ object TranslationTextUtils {
         }
     }
 
+    /*
+     * There was an isAllCaps() here, used to letter the translation back in
+     * capitals because that is how the untranslated balloons around it are
+     * drawn. Tried on the tablet and rejected: a full balloon of French
+     * capitals is harder to read than the English it replaced, and the effect
+     * it was reaching for — the overlay looking like lettering rather than a
+     * caption — comes from the weight, not the case. TranslationOverlay draws
+     * bold instead. Do not bring the uppercase back.
+     */
+
     /**
      * Rejoins words the lettering broke across lines.
      *

@@ -32,7 +32,8 @@ TEXT_SCORE = 0.6
 WIDTH_HEIGHT_RATIO = 8
 
 
-def build_engine(fast: bool, rec_size: str = "small"):
+def build_engine(fast: bool, rec_size: str = "small", limit_side_len: int = 0,
+                 limit_type: str = ""):
     from rapidocr_onnxruntime import RapidOCR
 
     det = MODELS / ("PP-OCRv6_tiny_det_infer.onnx" if fast else "PP-OCRv6_small_det_infer.onnx")
@@ -77,6 +78,20 @@ def build_engine(fast: bool, rec_size: str = "small"):
             # Chinese and flips short Latin crops end over end ("I'M" -> "W,I").
             use_angle_cls=False,
             width_height_ratio=WIDTH_HEIGHT_RATIO,
+            # Detection resizes the page so its long side fits this, then pads
+            # to a multiple of 32. Cost follows the pixel count, so it is
+            # quadratic in the scale -- and the risk is entirely on the other
+            # side: below some point the small balloons stop being found.
+            # Zero leaves the library's own default alone.
+            # limit_type decides which side the number applies to, and it is
+            # the whole experiment: the library default is "min", which only
+            # ever scales a page UP when its short side is below the limit.
+            # On a 1400x1993 page every value at or below 1400 therefore does
+            # nothing at all -- a sweep over those measured the same run four
+            # times. "max" caps the long side, which is what actually removes
+            # pixels from detection.
+            **({"det_limit_side_len": limit_side_len} if limit_side_len else {}),
+            **({"det_limit_type": limit_type} if limit_type else {}),
         )
     finally:
         api.read_yaml = original_read_yaml
@@ -166,12 +181,16 @@ def main() -> None:
     parser.add_argument("--rec", choices=("small", "medium"), default="small",
                         help="recogniser size; small is what ships")
     parser.add_argument("--limit", type=int, default=0, help="stop after N pages")
+    parser.add_argument("--limit-side-len", type=int, default=0,
+                        help="detection input side limit; 0 keeps the default")
+    parser.add_argument("--limit-type", choices=("min", "max"), default="",
+                        help="which side --limit-side-len applies to")
     args = parser.parse_args()
 
     if not args.source.exists():
         sys.exit(f"No such file or directory: {args.source}")
 
-    engine = build_engine(args.fast, args.rec)
+    engine = build_engine(args.fast, args.rec, args.limit_side_len, args.limit_type)
     args.out.mkdir(parents=True, exist_ok=True)
 
     count = 0

@@ -74,4 +74,5 @@ class TranslationTextUtilsTest {
             "Don't growl at me!",
         ).forEach { assertTrue(!TranslationTextUtils.isSoundEffect(it), it) }
     }
+
 }

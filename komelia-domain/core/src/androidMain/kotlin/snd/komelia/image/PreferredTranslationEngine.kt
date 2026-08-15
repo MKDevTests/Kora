@@ -3,7 +3,8 @@ package snd.komelia.image
 import io.github.oshai.kotlinlogging.KotlinLogging
 import snd.komelia.settings.model.TranslationLanguage
 
-private val logger = KotlinLogging.logger { }
+/** Same tag as the reader's block dump, so one grep shows both. */
+private val translationLogger = KotlinLogging.logger("KoraTranslate")
 
 /**
  * Uses Bergamot when its model for the pair is on disk, ML Kit otherwise.
@@ -49,12 +50,36 @@ class PreferredTranslationEngine(
         // engine that cannot run returns the input untouched, and so does one
         // handed a page of sound effects. Telling those apart by comparing the
         // output would silently keep the wrong engine.
+        val pair = "${source.code}-${target.code}"
         if (bergamot.canTranslate(source, target)) {
+            announce(pair, "Bergamot")
             return bergamot.translate(texts, source, target)
         }
-        logger.debug { "no Bergamot model for ${source.code}-${target.code}, using ML Kit" }
+        announce(pair, "ML Kit")
         return mlKit.translate(texts, source, target)
     }
+
+    /**
+     * Says which engine is running, once per pair per session.
+     *
+     * This was a debug line, and that cost a full round of testing. The debug
+     * build carries applicationIdSuffix ".debug", so it has its own filesDir and
+     * none of the Bergamot models the release build downloaded — it fell back to
+     * ML Kit without a word, and a page of ML Kit output was read as a Bergamot
+     * regression. The two engines fail differently enough that knowing which one
+     * answered is the first thing to establish: ML Kit leaves a word it does not
+     * know in English ("j'ai eu enoigh"), Bergamot never does.
+     *
+     * On the reader-translation logger so it lands in the same grep as the
+     * blocks it explains.
+     */
+    private fun announce(pair: String, engine: String) {
+        if (announced.add(pair to engine)) {
+            translationLogger.info { "translating $pair with $engine" }
+        }
+    }
+
+    private val announced = mutableSetOf<Pair<String, String>>()
 
     override fun release() {
         bergamot.release()
