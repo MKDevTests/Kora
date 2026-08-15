@@ -1327,42 +1327,68 @@ class ReaderState(
                 // Sound effects are drawn onto the artwork, so a panel over one
                 // hides the drawing to say 'Table de Ping'. Latin only; Japanese
                 // sound effects are a different problem and it is on hold.
-                longEnough && (japanese || !snd.komelia.image.TranslationTextUtils.isSoundEffect(text))
+                longEnough && (japanese || !snd.komelia.image.TranslationTextUtils.isSoundEffect(text)) &&
+                        // Recognition over artwork returns confident nonsense
+                        // rather than nothing, and translating it paints an
+                        // opaque panel over the drawing it came from.
+                        (japanese || snd.komelia.image.EnglishTextCleaner.isTranslatable(text))
             }
         if (blocks.isEmpty()) return emptyMap()
 
-        // Glossary terms leave as placeholders and come back as themselves.
-        // Capitalising them and hoping was tried first and measured on the
-        // tablet not to work: "Meryl Strife" went out spelled right and came
-        // back "Meryl Conflife".
-        val protectedBlocks = blocks.mapValues { (_, text) -> glossary.protect(text) }
-
         isTranslating.value = true
         try {
+            // Block indices are already in reading order, so consecutive here
+            // means consecutive on the page — which is what lets the balloons of
+            // one sentence be recognised as consecutive at all.
             val indices = blocks.keys.toList()
+            val ordered = indices.map { blocks.getValue(it) }
+            // A sentence lettered across two or three balloons goes to the
+            // translator whole. Measured over Ramen Aka Neko 167: 52 of 142
+            // blocks were two words or shorter, and a translator given two words
+            // of a sentence returns two words of nonsense.
+            val groups = if (japanese) ordered.indices.map { listOf(it) }
+            else snd.komelia.image.BubbleAssembler.group(ordered)
+            val groupSources = groups.map { positions -> positions.map { ordered[it] } }
+            // Glossary terms leave as placeholders and come back as themselves.
+            // Capitalising them and hoping was tried first and measured on the
+            // tablet not to work: "Meryl Strife" went out spelled right and came
+            // back "Meryl Conflife". Applied to the joined sentence, so a term
+            // split across two balloons is still one term.
+            val protectedGroups = groupSources.map {
+                glossary.protect(snd.komelia.image.BubbleAssembler.join(it))
+            }
             val translated = withContext(Dispatchers.Default) {
                 snd.komelia.perf.PerfTrace.measure(
                     "reader.translate",
                     count = { it.size }
                 ) {
                     translationService.translate(
-                        texts = indices.map { protectedBlocks.getValue(it).text },
+                        texts = protectedGroups.map { it.text },
                         source = settings.source,
                         target = settings.target,
                     )
                 }
             }
-            val published = indices.zip(translated)
-                .associate { (blockIndex, text) ->
+            val published = buildMap {
+                groups.forEachIndexed { groupIndex, positions ->
                     // Terms first: everything downstream compares against the
                     // original sentence, and a placeholder matches nothing in
                     // it.
-                    val restored = protectedBlocks.getValue(blockIndex).restore(text)
-                    // Honorifics survive translation, the name in front of them
-                    // does not: "MAMA-SAN" came back as "Maman-san".
-                    blockIndex to snd.komelia.image.TranslationTextUtils
-                        .restoreNames(blocks.getValue(blockIndex), restored)
+                    val restored = protectedGroups[groupIndex]
+                        .restore(translated[groupIndex])
+                    val pieces = snd.komelia.image.BubbleAssembler
+                        .distribute(restored, groupSources[groupIndex])
+                    positions.forEachIndexed { pieceIndex, position ->
+                        // Honorifics survive translation, the name in front of
+                        // them does not: "MAMA-SAN" came back as "Maman-san".
+                        put(
+                            indices[position],
+                            snd.komelia.image.TranslationTextUtils
+                                .restoreNames(ordered[position], pieces[pieceIndex])
+                        )
+                    }
                 }
+            }
                 // Sound effects translate to themselves. Painting a panel over
                 // one hides the drawing to display the same word — and a blank
                 // result (「はっ」 came back empty) paints an empty one.
@@ -1401,13 +1427,15 @@ class ReaderState(
                             "conf=${(worst * 100).toInt()}% " +
                             "fill=${(fill * 100).toInt()}% lines=${blockBoxes.size} " +
                             "src='${blocks.getValue(blockIndex)}' " +
-                            // Only when a term was actually held back, so the
-                            // ordinary line stays readable. This is what tells a
-                            // glossary that did nothing apart from an engine
-                            // that dropped the placeholder.
-                            (protectedBlocks.getValue(blockIndex)
-                                .takeIf { it.isProtected }
-                                ?.let { "sent='${it.text}' " } ?: "") +
+                            // Only when the block was not translated on its own,
+                            // so the ordinary line stays readable. This is what
+                            // tells a bad translation apart from a balloon that
+                            // was given the wrong share of a joined sentence.
+                            (groups.firstOrNull { group ->
+                                group.size > 1 && group.any { indices[it] == blockIndex }
+                            }?.let { group ->
+                                "sent='${protectedGroups[groups.indexOf(group)].text}' "
+                            } ?: "") +
                             "-> '$shown'"
                 }
             }

@@ -34,6 +34,8 @@ kotlin {
                 "snd/komelia/image/OcrMergeUtils.kt",
                 "snd/komelia/image/TranslationTextUtils.kt",
                 "snd/komelia/image/TermGlossary.kt",
+                "snd/komelia/image/BubbleAssembler.kt",
+                "snd/komelia/image/EnglishTextCleaner.kt",
             )
         }
     }
