@@ -75,21 +75,4 @@ class TranslationTextUtilsTest {
         ).forEach { assertTrue(!TranslationTextUtils.isSoundEffect(it), it) }
     }
 
-    @Test
-    fun `capitals are recognised so the translation can be raised back`() {
-        listOf("WE REQUEST THAT YOU CEASE", "MEOW", "OH!", "IT'S FINE.")
-            .forEach { assertTrue(TranslationTextUtils.isAllCaps(it), it) }
-    }
-
-    @Test
-    fun `mixed case and near-empty lettering are left alone`() {
-        listOf(
-            "Something the matter?",
-            "WE Request",
-            "I",
-            "A!",
-            "123",
-            "",
-        ).forEach { assertTrue(!TranslationTextUtils.isAllCaps(it), it) }
-    }
 }

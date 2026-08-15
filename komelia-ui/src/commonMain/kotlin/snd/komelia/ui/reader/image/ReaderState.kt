@@ -1406,20 +1406,6 @@ class ReaderState(
             }
         if (blocks.isEmpty()) return emptyMap()
 
-        // Read from the recogniser's own output, before the sentence-casing
-        // above has removed it. Comics are lettered in capitals throughout, so
-        // a translation in sentence case next to untranslated balloons reads as
-        // a different book — but the engine returns measurably worse French
-        // when handed capitals, so the text still goes out lowered and comes
-        // back raised.
-        val lettersInCaps = boxes
-            .groupBy { it.blockIndex }
-            .filterValues { elements ->
-                snd.komelia.image.TranslationTextUtils
-                    .isAllCaps(elements.joinToString(" ") { it.text })
-            }
-            .keys
-
         isTranslating.value = true
         try {
             // Block indices are already in reading order, so consecutive here
@@ -1486,14 +1472,7 @@ class ReaderState(
                         // them does not: "MAMA-SAN" came back as "Maman-san".
                         val named = snd.komelia.image.TranslationTextUtils
                             .restoreNames(ordered[position], pieces[pieceIndex])
-                        // Last, so the names put back just above are raised
-                        // with the rest rather than standing out in the middle
-                        // of a balloon set in capitals.
-                        val blockIndex = indices[position]
-                        put(
-                            blockIndex,
-                            if (blockIndex in lettersInCaps) named.uppercase() else named
-                        )
+                        put(indices[position], named)
                     }
                 }
             }
