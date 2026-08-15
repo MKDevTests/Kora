@@ -55,3 +55,22 @@
 # Keep the whole package incl. constructors/fields touched from native.
 -keep class ai.onnxruntime.** { *; }
 -dontwarn ai.onnxruntime.**
+
+# Same failure, same shape, found the hard way in 1.6.0. translate-kit's native
+# side builds its return value with NewObject, looking the constructor up by
+# signature:
+#
+#   JNI DETECTED ERROR IN APPLICATION: mid == null
+#     in call to NewObjectV
+#     from TranslationResult TranslationModel.nativeTranslate(long, String, boolean)
+#
+# R8 renamed TranslationResult, GetMethodID returned null, and the native code
+# called NewObject with it anyway — so the process aborts with SIGABRT and no
+# Java stack trace. Nothing in Kotlin references that constructor, so R8 has no
+# way to know it is reachable.
+#
+# Invisible in debug, fatal in release: the crash only exists once R8 runs. A
+# debuggable variant does NOT test R8 — that lesson is already written above for
+# onnxruntime and it was learned again here.
+-keep class io.github.marcosholgado.translatekit.** { *; }
+-dontwarn io.github.marcosholgado.translatekit.**
