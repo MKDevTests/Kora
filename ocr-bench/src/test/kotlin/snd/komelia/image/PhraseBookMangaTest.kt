@@ -33,4 +33,29 @@ class PhraseBookMangaTest {
             assertEquals(french, PhraseBook.lookup(balloon), "for balloon '$balloon'")
         }
     }
+
+    @Test
+    fun `the answer takes the capital the balloon had`() {
+        // The shipped table is written as a dictionary of expressions, so most
+        // of its answers are lowercase. A balloon is a line, not an entry.
+        // The shipped table, not a stand-in: load is idempotent and shared.
+        val json = java.io.File(
+            "../komelia-ui/src/commonMain/composeResources/files/phrasebook/en-fr.json"
+        ).readText()
+        PhraseBook.load(
+            kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(json)
+        )
+        assertEquals("C'est pas trop tôt", PhraseBook.lookup("About time!"))
+        assertEquals("C'est pas trop tôt", PhraseBook.lookup("ABOUT TIME!"))
+        assertEquals("c'est pas trop tôt", PhraseBook.lookup("about time"))
+    }
+
+    @Test
+    fun `the second pass over the same volume answers too`() {
+        assertEquals("En effet.", PhraseBook.lookup("Quite."))
+        assertEquals("De rien.", PhraseBook.lookup("It's no trouble."))
+        assertEquals("Ressaisis-toi !", PhraseBook.lookup("Get your act together!"))
+        assertEquals("Merci.", PhraseBook.lookup("Thank... You."))
+        assertEquals("Qui ferait ça ?", PhraseBook.lookup("Who does that"))
+    }
 }

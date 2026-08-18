@@ -56,7 +56,23 @@ object PhraseBook {
      */
     fun lookup(text: String): String? {
         val key = normalise(text)
-        return ENTRIES[key] ?: bulk[key]
+        val answer = ENTRIES[key] ?: bulk[key] ?: return null
+        return matchOpeningCase(text, answer)
+    }
+
+    /**
+     * Gives the answer the capital the balloon had.
+     *
+     * 1276 of the 2046 shipped entries are written lowercase -- "about time"
+     * answers "c'est pas trop tot" -- because the table was built as a
+     * dictionary of expressions rather than of lines. Read as a balloon that
+     * lands mid-page in lowercase, which is what "je suis vraiment desole" and
+     * "oh la la" were.
+     */
+    private fun matchOpeningCase(balloon: String, answer: String): String {
+        val opening = balloon.firstOrNull { it.isLetter() } ?: return answer
+        if (!opening.isUpperCase()) return answer
+        return answer.replaceFirstChar { it.uppercaseChar() }
     }
 
     /**
@@ -96,6 +112,18 @@ object PhraseBook {
         "they say no news is good news right" to
                 "On dit que pas de nouvelles, c'est bonnes nouvelles, non ?",
         // Measured 2026-08-19 on an English manga, with what Bergamot returned.
+        // Second pass over the same volume, once the thirteen above were in.
+        "quite" to "En effet.",                                     // "Tout assez."
+        "and what's more" to "Et il y a mieux.",                    // "Et ce qui est de plus"
+        "it's no trouble" to "De rien.",                            // "Ce n'est pas des ennuis."
+        "always happy to help" to "Toujours ravi d'aider.",
+        "get your act together" to "Ressaisis-toi !",               // "Faites votre acte ensemble"
+        "dang it" to "Zut !",                                       // laisse "dang it" en anglais
+        "thank you" to "Merci.",                                    // "Merci... Vous."
+        "who does that" to "Qui ferait ça ?",
+        "guess there's always tomorrow" to "Il y aura toujours demain.",
+        "oh right" to "Ah, c'est vrai.",                            // "Oh, c'est ça."
+        "head over heels in love" to "Follement amoureux.",
         "huh" to "Hein ?",                                          // "Heint ?"
         "gasp" to "Ha !",                                           // "Halez-vous !"
         "worry not" to "N'aie crainte.",                            // "Inquiète-toi non."
