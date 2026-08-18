@@ -184,8 +184,28 @@ object TranslationTextUtils {
                 else -> sb.append(c)
             }
         }
-        return lonePronounI.replace(sb.toString(), "I")
+        val cased = lonePronounI.replace(sb.toString(), "I")
+        return namedByHonorific.replace(cased) { it.value.replaceFirstChar(Char::uppercaseChar) }
     }
+
+    /**
+     * A name in front of an honorific, which lowering the balloon just took
+     * the capital off.
+     *
+     * Measured: "BUT RITSU-KUN IS RIGHT" came out "but ritsu-kun is right",
+     * and the translator read the name as a common noun and gave it an
+     * article -- "Mais le ritsu-kun a raison". Only the first word of a
+     * balloon gets its capital back otherwise, and a name rarely stands there.
+     *
+     * Built from the honorific list rather than spelled out again, so the two
+     * cannot drift apart, and from the narrow half of it: "sun-tan" is not a
+     * person.
+     */
+    private val namedByHonorific = Regex(
+        "\\b[a-z][a-z]*(?=-(?:" +
+            OcrSpellRepair.NAME_HONORIFICS.joinToString("|") +
+            ")\\b)"
+    )
 
     /**
      * True when translating produced nothing new. Sound effects come back

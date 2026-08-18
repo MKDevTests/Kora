@@ -76,3 +76,38 @@ class TranslationTextUtilsTest {
     }
 
 }
+
+/** Names keep their capital when the balloon is lowered. */
+class HonorificCaseTest {
+
+    @Test
+    fun `a name before an honorific keeps its capital`() {
+        // "Mais le ritsu-kun a raison" -- lowered to a common noun, the
+        // translator gave it an article. Measured on a real page.
+        assertEquals(
+            "But Ritsu-kun is right...",
+            TranslationTextUtils.toSentenceCase("BUT RITSU-KUN IS RIGHT..."),
+        )
+        assertEquals(
+            "Get in, Nohara-kun.",
+            TranslationTextUtils.toSentenceCase("GET IN, NOHARA-KUN."),
+        )
+        assertEquals(
+            "I like you too, Dei-san",
+            TranslationTextUtils.toSentenceCase("I LIKE YOU TOO, DEI-SAN"),
+        )
+    }
+
+    @Test
+    fun `an ordinary hyphenated word is left lowered`() {
+        // The narrow half of the honorific list only: these are English
+        // words, and nothing may read a person into them.
+        assertEquals("He has a sun-tan.", TranslationTextUtils.toSentenceCase("HE HAS A SUN-TAN."))
+        assertEquals("A double-chin.", TranslationTextUtils.toSentenceCase("A DOUBLE-CHIN."))
+    }
+
+    @Test
+    fun `a balloon that was not all caps is untouched`() {
+        assertEquals("but ritsu-kun is right", TranslationTextUtils.toSentenceCase("but ritsu-kun is right"))
+    }
+}

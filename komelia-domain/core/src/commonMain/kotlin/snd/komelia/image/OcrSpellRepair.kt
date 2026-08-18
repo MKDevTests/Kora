@@ -86,10 +86,18 @@ object OcrSpellRepair {
      * Japanese. Entries that are also English words ("chin", "tan") cost
      * nothing here, since a word the lexicon carries is never repaired anyway.
      */
-    private val HONORIFICS = setOf(
+    internal val NAME_HONORIFICS = setOf(
         "kun", "san", "chan", "sama", "senpai", "sempai", "sensei",
-        "dono", "kouhai", "kohai", "tan", "chin", "nee", "nii",
-        "onii", "onee", "oniisan", "oneesan",
+        "dono", "kouhai", "kohai",
+    )
+
+    /**
+     * The rest, kept apart because they are English words too. Refusing to
+     * repair them is free, but nothing may infer a person from them: "sun-tan"
+     * and "double-chin" are not names.
+     */
+    private val HONORIFICS = NAME_HONORIFICS + setOf(
+        "tan", "chin", "nee", "nii", "onii", "onee", "oniisan", "oneesan",
     )
 
     /**
