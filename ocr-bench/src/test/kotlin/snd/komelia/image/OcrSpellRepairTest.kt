@@ -114,12 +114,59 @@ class OcrWordSplitTest {
     }
 
     @Test
-    fun `splits more than two, because the recogniser does`() {
-        // Straight off the tablet on 2026-08-18. The two-way splitter left
-        // this whole and the balloon read "ils semellent labyrinthant".
-        assertEquals("they both smell amazing", OcrSpellRepair.split("theybothsmellamazing"))
+    fun `the run-togethers the corpus actually contains`() {
+        // Replayed over 1213 balloons of five volumes, these are what the
+        // recogniser really glues: an article, a pronoun, a preposition or an
+        // auxiliary stuck to the word after it.
+        assertEquals("a late", OcrSpellRepair.split("alate"))
+        assertEquals("to fight", OcrSpellRepair.split("tofight"))
+        assertEquals("this is", OcrSpellRepair.split("thisis"))
+        assertEquals("i allocated", OcrSpellRepair.split("iallocated"))
+        assertEquals("that should", OcrSpellRepair.split("thatshould"))
+        assertEquals("was outright", OcrSpellRepair.split("wasoutright"))
         // Needs the one-letter "a", which is why it is allowed at all.
         assertEquals("what a", OcrSpellRepair.split("whata"))
+    }
+
+    @Test
+    fun `more than two parts was withdrawn, after measuring it`() {
+        // This used to return "they both smell amazing", and the case was
+        // real: the balloon read "ils semellent labyrinthant" without it.
+        //
+        // It was shipped on 39 balloons and a census over the phrase book,
+        // and both were too weak to see the cost -- a dictionary contains no
+        // proper names. Replayed over 1213 balloons of real pages the
+        // recursion fired 108 times and was wrong about three times in five:
+        // YAKISOBA became "YAK I SOB A", Arboriculture "arbor i culture",
+        // DAMPENERS "DAMPEN ERS". One rescued balloon does not pay for that,
+        // so the search stops at two parts.
+        assertNull(OcrSpellRepair.split("theybothsmellamazing"))
+    }
+
+    @Test
+    fun `what the recogniser glues is never a conjunction`() {
+        // The same 1213 balloons, one iteration later. Requiring a function
+        // word in the lead cut the false splits from 108 to 18, and every one
+        // that survived began with "and" or "or" -- because that is how names
+        // start, not how a dropped space looks. ANDRES became "AND RES"
+        // twice, "ordad" became "or dad". Dropping the conjunctions costs
+        // nothing measurable and leaves 13 true splits of 15.
+        assertNull(OcrSpellRepair.split("andres"))
+        assertNull(OcrSpellRepair.split("ANDRES"))
+        assertNull(OcrSpellRepair.split("ordad"))
+    }
+
+    @Test
+    fun `a name long enough is not a sentence`() {
+        // English decomposes, and the shipped word list carries the pieces:
+        // "ers", "ing", "res", "mats" and "axel" are all in it. Each of these
+        // came apart on a real page before the lead had to be a function
+        // word, and each is checked here because the rule that stops them is
+        // one line and easy to widen by accident.
+        listOf(
+            "DAMPENERS", "RESPAWNED", "MATSURI", "AXELROD", "MOISAN",
+            "outmatched", "YAKISOBA",
+        ).forEach { assertNull(OcrSpellRepair.split(it), it) }
     }
 
     @Test

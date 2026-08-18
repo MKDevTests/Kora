@@ -94,6 +94,11 @@ class VolumeReplayTest {
         // the engine WOULD have said next to what the table says instead --
         // which is the only way to tell a useful entry from a harmful one.
         val answers = StringBuilder()
+        // What OcrSpellRepair changed, one "before -> after" a line. Reported
+        // by the real code rather than recomputed in Python: the repair is
+        // exactly the kind of rule a reimplementation gets subtly wrong, and a
+        // census built on a wrong copy would be worse than no census.
+        val repairs = StringBuilder()
         var blockCount = 0
         var widest = 0f
         var widestWhere = ""
@@ -167,9 +172,10 @@ class VolumeReplayTest {
                 // needs whole words and puts the capitals back itself; leaving
                 // it out meant the word splitter was not exercised by the bench
                 // at all, which is how a bench comes to disagree with the app.
-                val ready = TranslationTextUtils.toSentenceCase(
-                    OcrSpellRepair.apply(TranslationTextUtils.rejoinLineBreaks(text))
-                )
+                val rejoined = TranslationTextUtils.rejoinLineBreaks(text)
+                val repaired = OcrSpellRepair.apply(rejoined)
+                if (repaired != rejoined) repairs.appendLine("$rejoined	$repaired")
+                val ready = TranslationTextUtils.toSentenceCase(repaired)
                 val letters = ready.count { it.isLetter() }
                 val effect = if (TranslationTextUtils.isSoundEffect(ready)) " SFX" else ""
                 val keep = letters >= 2 && ready.length >= 3 && effect.isEmpty() &&
@@ -220,6 +226,7 @@ class VolumeReplayTest {
         out.writeText(report.toString())
         File(dir, "sentences.txt").writeText(sentences.toString())
         File(dir, "answers.txt").writeText(answers.toString())
+        File(dir, "repairs.txt").writeText(repairs.toString())
         println("${pages.size} pages, $blockCount blocks -> ${out.absolutePath}")
         println("widest block: ${(widest * 100).toInt()}% of the page, at $widestWhere")
     }

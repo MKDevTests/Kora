@@ -86,17 +86,47 @@ object OcrSpellRepair {
         segment(lowered, mutableListOf(), readings)
         // Exactly one reading, or none. Two readings means abstain, not pick.
         val only = readings.singleOrNull() ?: return null
+        // And one half has to be a function word. Without this the rule is not
+        // salvageable: measured over 1213 real bubbles it fired 115 times and
+        // was wrong more often than right, because English decomposes. "ers",
+        // "ing", "ed", "dis" and "res" are all in the shipped word list, so
+        // DAMPENERS reads as "dampen ers", RESPAWNED as "res pawned", siting as
+        // "sit ing", and every proper name long enough falls apart too --
+        // MATSURI to "mats uri", AXELROD to "axel rod", MOISAN to "moi san".
+        //
+        // The true cases all look the same and none of the false ones do: the
+        // recogniser drops the space beside a short, extremely common word.
+        // "my leg", "the old", "to fight", "this is", "a late", "i allocated".
+        // Requiring one of those is what separates them, and it costs only
+        // splits nobody needed -- "hit man", "sword fighter", "home page" all
+        // translate perfectly well glued together.
+        // The FIRST half, specifically. That is not a refinement of the rule
+        // above, it is the rule: over the same 1213 bubbles, a function word
+        // leading the token was nearly always a real dropped space, and one
+        // trailing it was nearly always a name coming apart -- "maria no",
+        // "der on", "bois on", "mun do", "yak it". Requiring the lead cuts the
+        // false splits to a handful and leaves the true ones untouched, because
+        // what the recogniser glues is an article or a pronoun onto the word
+        // after it: "a late", "to fight", "this is", "i allocated", "my leg".
+        if (only.first() !in FUNCTION_WORDS) return null
+        // And what follows has to be a word in its own right: a function word,
+        // or long enough that the lexicon carrying it means something. Three
+        // letters is where the shipped list stops being a list of words --
+        // "res" and "ice" are in it, which is all it took to turn ANDRES into
+        // "and res" and the misread "Ofice" into "of ice".
+        if (only.drop(1).any { it !in FUNCTION_WORDS && it.length < MIN_TAIL }) return null
         return matchCase(token, only.joinToString(" "))
     }
 
     /**
      * Collects every way [rest] reads as a run of whole words.
      *
-     * Recursive because the recogniser does not stop at two: measured on a real
-     * page, "they both smell amazing" came back as one token and the two-way
-     * splitter could do nothing with it, so the balloon read "ils semellent
-     * labyrinthant". Four is where it stops — beyond that the search is finding
-     * coincidences rather than words.
+     * Two parts, no more. Deeper searching was tried, on the strength of a
+     * real page where "they both smell amazing" arrived as one token — and it
+     * cost far more than it saved: over 1213 balloons it fired 108 times and
+     * was wrong about three times in five, because a long enough string of
+     * letters can always be read as some run of dictionary words. YAKISOBA
+     * became "YAK I SOB A" and Arboriculture "arbor i culture".
      *
      * Stops as soon as a second reading exists, because the caller abstains
      * either way and a long token has a great many segmentations to enumerate.
@@ -134,12 +164,38 @@ object OcrSpellRepair {
      */
     private fun isWholeWord(part: String): Boolean = when (part.length) {
         0 -> false
-        // English has exactly two one-letter words, and "whata" needs one of
-        // them: without it the token stays whole and reaches the translator.
+        // "a" and "i" are the only one-letter words English has. Safe only
+        // because the search stops at two parts and the first has to be a
+        // function word: with four parts allowed they turned YAKISOBA into
+        // "YAK I SOB A" over the same corpus.
         1 -> part == "a" || part == "i"
         MIN_PART -> part in SHORT_WORDS
         else -> part in lexicon
     }
+
+    /**
+     * The words a dropped space actually happens beside.
+     *
+     * Closed and deliberately short. Every entry earns its place from the
+     * corpus; this is not a stop-word list copied from somewhere, and adding to
+     * it by intuition is how the splitter got into trouble in the first place.
+     * "ok" is absent on purpose -- it turned OKAYE into "ok aye".
+     *
+     * The conjunctions are absent for the same reason, measured: "and", "or"
+     * and "but" led every false split left after this rule came in, because
+     * that is how names begin rather than how a dropped space looks. ANDRES
+     * read as "AND RES" twice and "ordad" as "or dad"; nothing true was lost
+     * by removing them.
+     */
+    private val FUNCTION_WORDS = setOf(
+        "a", "an", "the", "this", "that", "these", "those",
+        "i", "you", "he", "she", "we", "they", "it", "me", "him", "them", "us",
+        "my", "your", "his", "her", "our", "their", "its",
+        "is", "are", "was", "were", "am", "be", "do", "did", "does",
+        "to", "of", "for", "in", "on", "at", "by", "with", "from",
+        "so", "not", "no", "all", "too", "just",
+        "what", "when", "where", "how", "why", "who", "if", "as",
+    )
 
     /** Every two-letter word English actually uses in dialogue. */
     private val SHORT_WORDS = setOf(
@@ -214,11 +270,15 @@ object OcrSpellRepair {
     private const val APOSTROPHE = '\''
 
     /**
-     * Bounds on the search. Four parts covers what the recogniser actually
-     * produces — "theybothsmellamazing" is the worst seen — and a token longer
-     * than this is lettering, not words.
+     * Bounds on the search. Two parts is what survived measurement, and a
+     * token longer than [MAX_SPLIT_LENGTH] is lettering, not words.
+     *
+     * [MIN_TAIL] is three because the two founding cases are "my leg" and "the
+     * old". Four would have been cleaner against the corpus and would have
+     * thrown both of them away.
      */
-    private const val MAX_PARTS = 4
+    private const val MAX_PARTS = 2
+    private const val MIN_TAIL = 3
     private const val MAX_SPLIT_LENGTH = 24
 
     private val CONFUSIONS = listOf(
