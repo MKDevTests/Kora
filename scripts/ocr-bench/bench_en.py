@@ -84,14 +84,25 @@ def ocr(source: Path, out: Path, pages: int | None, reocr: bool) -> None:
 
 
 def replay(out: Path) -> Path:
-    """Step 2: the real Kotlin, producing exactly what the reader would send."""
+    """Step 2: the real Kotlin, producing exactly what the reader would send.
+
+    Every path is quoted: capture directories are named after the volume and
+    volumes have spaces in their names, which turned KORA_BENCH_DIR into a
+    command Gradle never saw. The failure was silent because the output was
+    piped through grep, whose exit code is the pipeline's -- so a broken run
+    looked exactly like a run that found nothing to report. Filtering happens in
+    Python now, where a non-zero Gradle still fails.
+    """
     print("[2/4] Kotlin pipeline (merge, splitter, casing, phrase book)")
-    wsl(
-        f"cd {WSL_REPO} && ANDROID_HOME={ANDROID_HOME} "
-        f"KORA_BENCH_DIR={to_wsl(out)} "
-        f"./gradlew :ocr-bench:test --tests '*VolumeReplay*' --rerun-tasks -q "
-        f"2>&1 | grep -E 'pages,|widest|FAILED' || true"
+    output = wsl(
+        f"cd '{WSL_REPO}' && ANDROID_HOME='{ANDROID_HOME}' "
+        f"KORA_BENCH_DIR='{to_wsl(out)}' "
+        f"./gradlew :ocr-bench:test --tests '*VolumeReplay*' --rerun-tasks",
+        quiet=True,
     )
+    for line in output.splitlines():
+        if "pages," in line or "widest" in line:
+            print(f"      {line.strip()}")
     sentences = out / "sentences.txt"
     if not sentences.is_file():
         sys.exit(f"the replay wrote no sentences.txt in {out}")
@@ -103,8 +114,8 @@ def translate(sentences: Path, out: Path) -> Path:
     french = out / "french.txt"
     print("[3/4] Bergamot en-fr")
     wsl(
-        f"cd {WSL_REPO} && ./scripts/ocr-bench/run_bergamot.sh "
-        f"{to_wsl(sentences)} {to_wsl(french)}",
+        f"cd '{WSL_REPO}' && ./scripts/ocr-bench/run_bergamot.sh "
+        f"'{to_wsl(sentences)}' '{to_wsl(french)}'",
         quiet=True,
     )
     if not french.is_file():
@@ -194,8 +205,9 @@ def main() -> None:
 
     source = Path(args.source)
     if source.exists():
-        name = source.stem
-        out = BENCH / name
+        # Spaces out of the capture name as well as quoted in the commands:
+        # this name is typed by hand on every replay.
+        out = BENCH / source.stem.replace(" ", "-")
         ocr(source, out, args.pages, args.reocr)
     else:
         # A name rather than a path: replay what is already captured. This is

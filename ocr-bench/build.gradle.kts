@@ -32,6 +32,7 @@ kotlin {
             kotlin.include(
                 "snd/komelia/image/OcrElementBox.kt",
                 "snd/komelia/image/OcrMergeUtils.kt",
+                "snd/komelia/image/OcrScriptFilter.kt",
                 "snd/komelia/image/TranslationTextUtils.kt",
                 "snd/komelia/image/TermGlossary.kt",
                 "snd/komelia/image/BubbleAssembler.kt",

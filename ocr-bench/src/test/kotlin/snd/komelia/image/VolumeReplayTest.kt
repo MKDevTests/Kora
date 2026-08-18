@@ -60,6 +60,19 @@ class VolumeReplayTest {
             println("KORA_BENCH_DIR not set — skipping the volume replay")
             return
         }
+        // Both tables the reader loads at scan time. Without them the repair
+        // silently does nothing and the phrase book falls back to its forty
+        // curated entries -- so the bench would report a pipeline weaker than
+        // the one that ships, and every measurement taken from it would be
+        // pessimistic by an unknown amount.
+        val lexicon = File("../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt")
+        assertTrue(lexicon.isFile, "shipped lexicon missing at ${lexicon.absolutePath}")
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+
+        val table = File("../komelia-ui/src/commonMain/composeResources/files/phrasebook/en-fr.json")
+        assertTrue(table.isFile, "shipped phrase book missing at ${table.absolutePath}")
+        PhraseBook.load(Json.decodeFromString<Map<String, String>>(table.readText()))
+
         dirs.forEach { replay(it) }
     }
 
@@ -76,6 +89,11 @@ class VolumeReplayTest {
         // cannot drift from what ships the way a Python copy of these rules
         // would.
         val sentences = StringBuilder()
+        // The phrase book's answer for each sentence, or blank. Written beside
+        // sentences.txt rather than folded into it, so the bench can show what
+        // the engine WOULD have said next to what the table says instead --
+        // which is the only way to tell a useful entry from a harmful one.
+        val answers = StringBuilder()
         var blockCount = 0
         var widest = 0f
         var widestWhere = ""
@@ -102,8 +120,14 @@ class VolumeReplayTest {
             // right to left, which is a different merge and a different page
             // order, not a variant of the Latin one.
             val vertical = System.getenv("KORA_BENCH_VERTICAL") != null
+            // Before the merge, exactly where ReaderState.performScan puts it.
+            // Without it the credits and advertising pages of a scanlation --
+            // which are Japanese -- reach the translator, and the bench reports
+            // bubbles the reader would never have seen.
+            val kept = if (vertical) OcrScriptFilter.keepCjk(boxes)
+            else OcrScriptFilter.keepLatin(boxes)
             val merged = mergeOcrBoxes(
-                boxes,
+                kept,
                 if (vertical) ReadingDirection.RTL else ReadingDirection.LTR,
                 vertical = vertical,
                 pageWidth = page.width,
@@ -111,6 +135,7 @@ class VolumeReplayTest {
             val shortName = page.page.substringAfterLast(" - ").substringBefore(" [")
             report.appendLine("== $shortName  ${page.width}x${page.height}  ${boxes.size} lines")
 
+            val prepared = mutableListOf<String>()
             merged.groupBy { it.blockIndex }.forEach { (index, lines) ->
                 blockCount++
                 val rect = lines.first().blockRect
@@ -137,13 +162,19 @@ class VolumeReplayTest {
                 val others = heights.dropLast(1)
                 val ratio = if (others.isEmpty()) 1f else heights.last() / others[others.size / 2]
 
-                val effect = if (TranslationTextUtils.isSoundEffect(text)) " SFX" else ""
-                if (effect.isEmpty()) {
-                    val ready = TranslationTextUtils.toSentenceCase(
-                        TranslationTextUtils.rejoinLineBreaks(text)
-                    )
-                    sentences.appendLine(ready)
-                }
+                // The rest of ReaderState.translateBlocks, in its order. The
+                // repair sits between the rejoin and the casing because it
+                // needs whole words and puts the capitals back itself; leaving
+                // it out meant the word splitter was not exercised by the bench
+                // at all, which is how a bench comes to disagree with the app.
+                val ready = TranslationTextUtils.toSentenceCase(
+                    OcrSpellRepair.apply(TranslationTextUtils.rejoinLineBreaks(text))
+                )
+                val letters = ready.count { it.isLetter() }
+                val effect = if (TranslationTextUtils.isSoundEffect(ready)) " SFX" else ""
+                val keep = letters >= 2 && ready.length >= 3 && effect.isEmpty() &&
+                        EnglishTextCleaner.isTranslatable(ready)
+                if (keep) prepared += ready
                 report.appendLine(
                     "   block %-3d [%4d,%4d %4dx%4d] w=%2d%% fill=%3d%% lines=%-2d h=%.1fx%s  %s".format(
                         index, rect.left.toInt(), rect.top.toInt(),
@@ -173,11 +204,22 @@ class VolumeReplayTest {
                     reach = maxOf(reach, if (vertical) line.bottom else line.right)
                 }
             }
+
+            // A sentence lettered across two or three balloons goes to the
+            // translator whole, and the engine's answer depends on getting it
+            // whole -- so the bench has to group before it translates, or it
+            // measures a pipeline nobody ships.
+            BubbleAssembler.group(prepared).forEach { positions ->
+                val joined = BubbleAssembler.join(positions.map { prepared[it] })
+                sentences.appendLine(joined)
+                answers.appendLine(PhraseBook.lookup(joined).orEmpty())
+            }
         }
 
         val out = File(dir, "report.txt")
         out.writeText(report.toString())
         File(dir, "sentences.txt").writeText(sentences.toString())
+        File(dir, "answers.txt").writeText(answers.toString())
         println("${pages.size} pages, $blockCount blocks -> ${out.absolutePath}")
         println("widest block: ${(widest * 100).toInt()}% of the page, at $widestWhere")
     }
