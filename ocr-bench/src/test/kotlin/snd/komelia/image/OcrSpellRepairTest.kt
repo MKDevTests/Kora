@@ -79,3 +79,89 @@ class OcrSpellRepairTest {
         assertEquals("DON'T", OcrSpellRepair.apply("DON'T"))
     }
 }
+
+/**
+ * The other half of the repair: words the recogniser ran together.
+ *
+ * Split out of [OcrSpellRepairTest] because the interesting test here is not a
+ * list of cases but a census — a splitter is only worth having if it changes
+ * almost nothing it should not, and that has to be counted rather than hoped.
+ */
+class OcrWordSplitTest {
+
+    private val lexicon = File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+    private val phrases = File(
+        "../komelia-ui/src/commonMain/composeResources/files/phrasebook/en-fr.json"
+    )
+
+    init {
+        assertTrue(lexicon.isFile, "shipped lexicon missing at ${lexicon.absolutePath}")
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `splits the run-togethers found on real pages`() {
+        // Read off the tablet on 2026-08-18. "myleg" went to the translator
+        // untouched and came back "blesser myleg"; "theold" cost the sentence
+        // its "vieil".
+        assertEquals("my leg", OcrSpellRepair.split("myleg"))
+        assertEquals("the old", OcrSpellRepair.split("theold"))
+        // All caps in, all caps out — comic lettering, and toSentenceCase
+        // downstream decides what to lower by looking for a lowercase letter.
+        assertEquals("MY LEG", OcrSpellRepair.split("MYLEG"))
+    }
+
+    @Test
+    fun `a word the lexicon knows is never pulled apart`() {
+        // Each of these splits cleanly into two real words and must not.
+        listOf("cannot", "anymore", "himself", "into", "nothing", "someone")
+            .forEach { assertNull(OcrSpellRepair.split(it), it) }
+    }
+
+    @Test
+    fun `abstains when the token reads two ways`() {
+        // "therein" is "there in" and "the rein". Two readings, so neither.
+        assertNull(OcrSpellRepair.split("therein"))
+    }
+
+    @Test
+    fun `the lexicon's two-letter fragments are not treated as words`() {
+        // "ld", "ms" and "eg" are all in the shipped word list. Against it
+        // raw, "theold" reads as both "the old" and "theo ld" and the
+        // splitter abstains on the case it exists for; "comms" becomes
+        // "com ms".
+        assertNull(OcrSpellRepair.split("comms"))
+    }
+
+    @Test
+    fun `leaves contractions and short tokens alone`() {
+        assertNull(OcrSpellRepair.split("you're"))
+        assertNull(OcrSpellRepair.split("isit"))
+    }
+
+    /**
+     * The census. Every token of the shipped phrase book is real English a
+     * reader will meet, so anything the splitter touches there is a false
+     * positive on ordinary text.
+     */
+    @Test
+    fun `changes nothing in two thousand real expressions`() {
+        assertTrue(phrases.isFile, "shipped phrase book missing at ${phrases.absolutePath}")
+        val table = kotlinx.serialization.json.Json
+            .decodeFromString<Map<String, String>>(phrases.readText())
+        val tokens = table.keys
+            .flatMap { Regex("""[\p{L}\p{N}']+""").findAll(it).map { m -> m.value } }
+            .toSet()
+        val touched = tokens.mapNotNull { token ->
+            OcrSpellRepair.split(token)?.let { token to it }
+        }
+        println("word split census: ${tokens.size} distinct tokens, ${touched.size} split")
+        touched.take(40).forEach { (from, to) -> println("  $from -> $to") }
+        assertTrue(
+            touched.size * 100 <= tokens.size,
+            "split ${touched.size} of ${tokens.size} real tokens — over one percent: $touched"
+        )
+    }
+}

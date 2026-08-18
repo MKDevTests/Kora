@@ -50,9 +50,72 @@ object OcrSpellRepair {
     fun apply(text: String): String {
         if (lexicon.isEmpty() || text.isEmpty()) return text
         return TOKEN.replace(text) { match ->
-            repair(match.value) ?: match.value
+            repair(match.value) ?: split(match.value) ?: match.value
         }
     }
+
+    /**
+     * Two words the recogniser ran together, put back apart.
+     *
+     * PP-OCRv6 drops the space between words often enough on comic lettering to
+     * matter. Measured on real pages: "hurt my leg" came back "hurt myleg" and
+     * the translator answered "blesser myleg" — an unknown token passes through
+     * untranslated and takes the sentence with it. "the old man" came back
+     * "theold man" and lost "vieil" exactly the same way.
+     *
+     * That the recogniser is where the space goes was established by
+     * elimination, not assumed. Nothing between it and here can remove one: the
+     * merge step only regroups boxes and never touches their text, the elements
+     * of a block are joined *with* a space, [TranslationTextUtils.rejoinLineBreaks]
+     * needs a hyphen to fire, and this object works one token at a time.
+     *
+     * Same two rules as [repair], for the same reason. A token the lexicon
+     * knows is never touched, so "cannot", "anymore" and "himself" cannot be
+     * pulled apart by construction. A token that splits two ways is left alone
+     * rather than guessed at.
+     */
+    internal fun split(token: String): String? {
+        if (token.length < MIN_SPLIT_LENGTH) return null
+        // A contraction is one word with a mark in it. Cutting "you're" gives
+        // two fragments, not two words.
+        if (APOSTROPHE in token) return null
+        val lowered = token.lowercase()
+        if (lowered in lexicon) return null
+        var answer: String? = null
+        for (at in MIN_PART..(lowered.length - MIN_PART)) {
+            val head = lowered.substring(0, at)
+            if (!isWholeWord(head)) continue
+            val tail = lowered.substring(at)
+            if (!isWholeWord(tail)) continue
+            // A second reading means abstain, not pick.
+            if (answer != null) return null
+            answer = "$head $tail"
+        }
+        return answer?.let { matchCase(token, it) }
+    }
+
+    /**
+     * Whether a half is a word a balloon could contain.
+     *
+     * Two-letter halves are checked against a closed list rather than the
+     * lexicon, because the shipped word list is not one: it carries "ld", "ms",
+     * "eg" and other fragments that no reader ever sees on a page. They are
+     * harmless everywhere else and ruinous here — "theold" reads as both "the
+     * old" and "theo ld" against the raw lexicon, so the splitter saw two
+     * readings and abstained on the very case it exists for.
+     */
+    private fun isWholeWord(part: String): Boolean = when {
+        part.length < MIN_PART -> false
+        part.length == MIN_PART -> part in SHORT_WORDS
+        else -> part in lexicon
+    }
+
+    /** Every two-letter word English actually uses in dialogue. */
+    private val SHORT_WORDS = setOf(
+        "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi", "if", "in",
+        "is", "it", "me", "my", "no", "of", "oh", "ok", "on", "or", "so", "to",
+        "up", "us", "we",
+    )
 
     /**
      * The repaired spelling of one token, or null to leave it alone.
@@ -108,6 +171,16 @@ object OcrSpellRepair {
      * became "rn" and "0e" became "oe".
      */
     private const val MIN_LENGTH = 3
+
+    /**
+     * Below five characters a run-together cannot be told from a short word the
+     * lexicon happens not to carry, and two-letter halves are what make it
+     * work at all — "myleg" is "my leg" and the "my" is only two letters.
+     * Five is the shortest length at which both halves can clear that bar.
+     */
+    private const val MIN_SPLIT_LENGTH = 5
+    private const val MIN_PART = 2
+    private const val APOSTROPHE = '\''
 
     private val CONFUSIONS = listOf(
         "li" to "u", "ui" to "u", "ii" to "u", "iu" to "u", "ll" to "u",
