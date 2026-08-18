@@ -87,6 +87,37 @@ class OcrSpellRepairTest {
  * list of cases but a census — a splitter is only worth having if it changes
  * almost nothing it should not, and that has to be counted rather than hoped.
  */
+class OcrThinStrokeTest {
+
+    private val lexicon = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `a u drawn as one thin stroke reads as l`() {
+        // Every one off a real volume, and the reason the pair exists.
+        assertEquals("because", OcrSpellRepair.repair("becalse"))
+        assertEquals("guy", OcrSpellRepair.repair("gly"))
+        assertEquals("soulmate", OcrSpellRepair.repair("sollmate"))
+        assertEquals("until", OcrSpellRepair.repair("lntil"))
+        assertEquals("count", OcrSpellRepair.repair("colnt"))
+        assertEquals("sounds", OcrSpellRepair.repair("solnds"))
+    }
+
+    @Test
+    fun `the other direction is not admitted`() {
+        // 'l' is far commoner than 'u', and reading it backwards invented
+        // words on the same corpus: "up" misread "uip" became "lip", and the
+        // name "moue" became "mole".
+        assertNull(OcrSpellRepair.repair("uip"))
+        assertNull(OcrSpellRepair.repair("moue"))
+    }
+}
+
 class OcrWordSplitTest {
 
     private val lexicon = File(

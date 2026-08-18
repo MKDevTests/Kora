@@ -284,8 +284,9 @@ object OcrSpellRepair {
     /** Every single-substitution rewrite of [word], in both directions. */
     private fun candidates(word: String): Set<String> {
         val out = mutableSetOf<String>()
-        for ((a, b) in CONFUSIONS) {
-            for ((from, to) in listOf(a to b, b to a)) {
+        val both = CONFUSIONS.flatMap { (a, b) -> listOf(a to b, b to a) }
+        for ((from, to) in both + ONE_WAY) {
+            run {
                 var start = 0
                 while (true) {
                     val at = word.indexOf(from, start)
@@ -345,6 +346,21 @@ object OcrSpellRepair {
         "i" to "u",
         "rn" to "m", "cl" to "d",
     )
+
+    /**
+     * Read in one direction only.
+     *
+     * A 'u' drawn as a single thin stroke comes back as 'l' just as it comes
+     * back as 'i': "because" as "becalse", "guy" as "gly", "soulmate" as
+     * "sollmate", "until" as "lntil", "count" as "colnt". Measured over the
+     * eight captures of the bench it repaired eleven balloons.
+     *
+     * The other direction is not admitted, because 'l' is a far commoner
+     * letter than 'u' and the same measurement showed it inventing words:
+     * "up" misread "uip" became "lip", and a letterer's name "moue" became
+     * "mole". Nothing was lost by dropping it but one repair of "balus".
+     */
+    private val ONE_WAY = listOf("l" to "u")
 
     /** Letters, digits and the apostrophe: "don't" is one token, not two. */
     private val TOKEN = Regex("[\\p{L}\\p{N}']+")
