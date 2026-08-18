@@ -236,6 +236,28 @@ class OcrWordSplitTest {
             "split ${touched.size} of ${tokens.size} real tokens — over one percent: $touched"
         )
     }
+
+    @Test
+    fun `an auxiliary or a quantifier leads a dropped space too`() {
+        // All five off one manga volume, where the recogniser glues these as
+        // readily as it glues articles and pronouns.
+        assertEquals("have they", OcrSpellRepair.split("havethey"))
+        assertEquals("been looking", OcrSpellRepair.split("beenlooking"))
+        assertEquals("some reason", OcrSpellRepair.split("somereason"))
+        assertEquals("four leaf", OcrSpellRepair.split("fourleaf"))
+        assertEquals("two girls", OcrSpellRepair.split("twogirls"))
+    }
+
+    @Test
+    fun `a productive prefix never leads one`() {
+        // Measured, and the reason the batch above stops where it does: "out",
+        // "over", "up", "down" and "back" build English words rather than
+        // standing beside them, and admitting them cut two real words in half
+        // on the comics -- "outmatched" became "out matched", which Bergamot
+        // then read as "a l'ecart", and "overreliance" came apart the same way.
+        assertNull(OcrSpellRepair.split("outmatched"))
+        assertNull(OcrSpellRepair.split("overreliance"))
+    }
 }
 
 /**

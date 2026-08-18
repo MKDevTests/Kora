@@ -244,6 +244,11 @@ object OcrSpellRepair {
         "to", "of", "for", "in", "on", "at", "by", "with", "from",
         "so", "not", "no", "all", "too", "just",
         "what", "when", "where", "how", "why", "who", "if", "as",
+        "have", "has", "had", "been", "being",
+        "can", "could", "will", "would", "should",
+        "which", "there", "here", "than",
+        "some", "any", "every", "more", "still", "then", "now",
+        "one", "two", "three", "four",
     )
 
     /** Every two-letter word English actually uses in dialogue. */
