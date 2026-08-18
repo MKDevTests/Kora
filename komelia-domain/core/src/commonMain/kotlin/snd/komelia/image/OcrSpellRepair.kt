@@ -54,8 +54,41 @@ object OcrSpellRepair {
         if (lexicon.isEmpty() || text.isEmpty()) return text
         return TOKEN.replace(text) { match ->
             if (isNaming(text, match)) match.value
-            else repair(match.value) ?: split(match.value) ?: match.value
+            else zeroInANumber(match.value)
+                ?: repair(match.value)
+                ?: split(match.value)
+                ?: match.value
         }
+    }
+
+    /**
+     * A zero drawn as a letter o, inside a number.
+     *
+     * Comic lettering draws the two the same, and the recogniser follows the
+     * shape. Measured across four series and 740 balloons: "7o years", "8o
+     * years", "2oo years", "18oo yen", "Camera o1" -- and the cost is not a
+     * spelling, it is a fact. "rotting here for 8o years" was translated
+     * "pendant deux ans".
+     *
+     * Deliberately narrower than the digit confusions this file measured and
+     * threw out. Those rewrote a digit inside a word, where "0e" became "oe"
+     * and a bare M became "rn"; this fires only on a token made of nothing but
+     * digits and the letter o, with at least one digit present, so there is no
+     * word for it to damage. A lone "o" is left alone, and so is any token
+     * carrying a letter other than o.
+     */
+    private fun zeroInANumber(token: String): String? {
+        if (token.length < MIN_NUMBER_LENGTH) return null
+        var digits = false
+        for (c in token) {
+            when {
+                c.isDigit() -> digits = true
+                c == 'o' || c == 'O' -> Unit
+                else -> return null
+            }
+        }
+        if (!digits) return null
+        return token.map { if (it == 'o' || it == 'O') '0' else it }.joinToString("")
     }
 
     /**
@@ -320,6 +353,7 @@ object OcrSpellRepair {
      * work at all — "myleg" is "my leg" and the "my" is only two letters.
      * Five is the shortest length at which both halves can clear that bar.
      */
+    private const val MIN_NUMBER_LENGTH = 2
     private const val MIN_SPLIT_LENGTH = 5
     private const val MIN_PART = 2
     private const val APOSTROPHE = '\''

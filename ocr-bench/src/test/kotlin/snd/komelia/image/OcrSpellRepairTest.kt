@@ -87,6 +87,40 @@ class OcrSpellRepairTest {
  * list of cases but a census — a splitter is only worth having if it changes
  * almost nothing it should not, and that has to be counted rather than hoped.
  */
+class OcrNumberZeroTest {
+
+    private val lexicon = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `a zero drawn as an o comes back a zero`() {
+        // All five off real pages, across four series.
+        assertEquals("70 years", OcrSpellRepair.apply("7o years"))
+        assertEquals("80 years", OcrSpellRepair.apply("8o years"))
+        assertEquals("200 years", OcrSpellRepair.apply("2oo years"))
+        assertEquals("1800 yen", OcrSpellRepair.apply("18oo yen"))
+        assertEquals("Camera 01", OcrSpellRepair.apply("Camera o1"))
+    }
+
+    @Test
+    fun `a word is never touched`() {
+        // The rule fires only on a token of digits and o, so there is no word
+        // for it to damage -- which is what the digit confusions this file
+        // measured and threw out could not say.
+        assertEquals("o", OcrSpellRepair.apply("o"))
+        assertEquals("oo", OcrSpellRepair.apply("oo"))
+        assertEquals("go", OcrSpellRepair.apply("go"))
+        assertEquals("solo", OcrSpellRepair.apply("solo"))
+        assertEquals("1st", OcrSpellRepair.apply("1st"))
+        assertEquals("o'clock", OcrSpellRepair.apply("o'clock"))
+    }
+}
+
 class OcrThinStrokeTest {
 
     private val lexicon = java.io.File(
