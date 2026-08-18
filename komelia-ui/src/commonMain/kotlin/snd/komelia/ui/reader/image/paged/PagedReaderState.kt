@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.reactivecircus.cache4k.Cache
 import io.github.reactivecircus.cache4k.CacheEvent.Evicted
 import io.github.reactivecircus.cache4k.CacheEvent.Expired
@@ -32,6 +33,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
@@ -53,6 +56,7 @@ import snd.komelia.settings.model.PagedReadingDirection.RIGHT_TO_LEFT
 import snd.komelia.ui.reader.image.BookState
 import snd.komelia.ui.reader.image.PageHalf
 import snd.komelia.ui.reader.image.PageMetadata
+import snd.komelia.ui.reader.image.ReaderImageBudget
 import snd.komelia.ui.reader.image.ReaderState
 import snd.komelia.ui.reader.image.ScreenScaleState
 import snd.komelia.ui.reader.image.SpreadIndex
@@ -68,6 +72,8 @@ import kotlin.math.roundToInt
  * turning pages, long enough that dragging the progress bar queues nothing.
  */
 private const val PREFETCH_IDLE_MS = 250L
+
+private val logger = KotlinLogging.logger { }
 
 class PagedReaderState(
     private val cleanupScope: CoroutineScope,
@@ -89,19 +95,39 @@ class PagedReaderState(
     /** Pending read-ahead, cancelled by the next navigation. See [schedulePrefetch]. */
     private var prefetchJob: kotlinx.coroutines.Job? = null
 
+    /**
+     * The entry ceiling. Kept as a cheap upper bound, but it is not what keeps
+     * memory in check — see [ReaderImageBudget] and [trimToBudget], which trim
+     * underneath it in bytes.
+     */
     private val imageCache = Cache.Builder<PageId, Deferred<Page>>()
         .maximumCacheSize(16)
-        .eventListener {
-            val value = when (it) {
-                is Evicted -> it.value
-                is Expired -> it.value
-                is Removed -> it.value
+        .eventListener { event ->
+            val value = when (event) {
+                is Evicted -> event.value
+                is Expired -> event.value
+                is Removed -> event.value
                 else -> null
             } ?: return@eventListener
 
-            cleanupScope.launch { value.await().imageResult?.image?.close() }
+            cleanupScope.launch {
+                // Also when cache4k evicts on its own, so the two views of what
+                // is cached cannot drift apart.
+                cacheBudgetMutex.withLock { cachedPageBytes.remove(event.key) }
+                value.await().imageResult?.image?.close()
+            }
         }
         .build()
+
+    /**
+     * What each cached page is estimated to cost, oldest first.
+     *
+     * Insertion-ordered on purpose: the head is what gets dropped when the
+     * budget is exceeded. Held beside the cache rather than inside it because
+     * cache4k weighs entries by count and offers no hook to weigh them by size.
+     */
+    private val cachedPageBytes = LinkedHashMap<PageId, Long>()
+    private val cacheBudgetMutex = Mutex()
 
     val pageSpreads = MutableStateFlow<List<List<PageMetadata>>>(emptyList())
     val currentSpreadIndex = MutableStateFlow(0)
@@ -245,6 +271,10 @@ class PagedReaderState(
         screenScaleState.enableOverscrollArea(false)
         screenScaleState.edgeHandoffEnabled = false
         imageCache.invalidateAll()
+        // invalidateAll does not report the entries it drops, so the byte view
+        // has to be emptied by hand or it would keep charging for pages that
+        // are gone.
+        cleanupScope.launch { cacheBudgetMutex.withLock { cachedPageBytes.clear() } }
     }
 
     private suspend fun updateSpreadImageState(
@@ -559,7 +589,7 @@ class PagedReaderState(
                     } else null
                 } else null
                 Page(meta, imageResult, edgeSampling, imageSize)
-            }.also { imageCache.put(pageId, it) }
+            }.also { cachePage(pageId, it) }
         }
 
         return pageLoadScope.async {
@@ -626,6 +656,59 @@ class PagedReaderState(
         return (getPage(next).imageResult as? ReaderImageResult.Success)?.image
     }
 
+    /**
+     * Caches the page and, once it has actually loaded, charges it against the
+     * budget.
+     *
+     * The charge cannot happen at insertion time: the size is only known after
+     * the decode, and a page that is still loading has no size to weigh.
+     */
+    private fun cachePage(pageId: PageId, job: Deferred<Page>) {
+        imageCache.put(pageId, job)
+        pageLoadScope.launch {
+            val page = runCatching { job.await() }.getOrNull() ?: return@launch
+            val image = (page.imageResult as? ReaderImageResult.Success)?.image
+            // The full-resolution image is what is retained; the display size
+            // is only a fallback for a page whose original size never arrived.
+            val size = image?.originalSize?.value ?: page.imageSize
+            trimToBudget(pageId, ReaderImageBudget.estimateBytes(size))
+        }
+    }
+
+    /**
+     * Drops the oldest cached pages until the reader is back under budget.
+     *
+     * Never the spread on screen, and never the page that just arrived — those
+     * are the two the reader is about to draw, and dropping either would make
+     * the fix visible as a flicker instead of invisible as it should be.
+     */
+    private suspend fun trimToBudget(pageId: PageId, bytes: Long) {
+        val onScreen = currentSpread.value.pages.mapTo(mutableSetOf()) { it.metadata.toPageId() }
+        val dropped = cacheBudgetMutex.withLock {
+            cachedPageBytes.remove(pageId) // re-inserted at the tail: newest ages last
+            cachedPageBytes[pageId] = bytes
+            // Summed rather than kept as a running total: an entry cache4k
+            // evicted on its own is removed asynchronously, and a counter would
+            // drift below zero and stop trimming altogether.
+            var total = cachedPageBytes.values.sum()
+            val dropped = mutableListOf<PageId>()
+            val entries = cachedPageBytes.entries.iterator()
+            while (entries.hasNext() && total > ReaderImageBudget.BYTES) {
+                val entry = entries.next()
+                if (entry.key == pageId || entry.key in onScreen) continue
+                total -= entry.value
+                dropped += entry.key
+                entries.remove()
+            }
+            dropped
+        }
+        if (dropped.isEmpty()) return
+        // Outside the lock: invalidate fires the eviction listener, which takes
+        // the same lock to keep the two views in step.
+        dropped.forEach { imageCache.invalidate(it) }
+        logger.info { "page cache over budget, dropped ${dropped.size}: $dropped" }
+    }
+
     suspend fun getPage(page: PageMetadata): Page {
         val pageId = page.toPageId()
         val cached = imageCache.get(pageId)
@@ -646,7 +729,7 @@ class PagedReaderState(
                     } else null
                 } else null
                 Page(page, imageResult, edgeSampling, imageSize)
-            }.also { imageCache.put(pageId, it) }
+            }.also { cachePage(pageId, it) }
             job.await()
         }
     }

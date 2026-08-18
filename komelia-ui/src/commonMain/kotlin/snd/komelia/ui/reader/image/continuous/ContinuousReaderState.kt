@@ -43,6 +43,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
@@ -62,6 +64,7 @@ import snd.komelia.settings.model.ContinuousReadingDirection.RIGHT_TO_LEFT
 import snd.komelia.settings.model.ContinuousReadingDirection.TOP_TO_BOTTOM
 import snd.komelia.ui.reader.image.BookState
 import snd.komelia.ui.reader.image.PageMetadata
+import snd.komelia.ui.reader.image.ReaderImageBudget
 import snd.komelia.ui.reader.image.ReaderState
 import snd.komelia.ui.reader.image.ScreenScaleState
 import snd.komelia.ui.strings.AppStrings
@@ -158,6 +161,11 @@ class ContinuousReaderState(
     private val endOfBookAcked = MutableStateFlow(false)
     private val startOfBookAcked = MutableStateFlow(false)
 
+    /**
+     * The entry ceiling. As in the paged reader, it is not what keeps memory in
+     * check — ten entries is a comfortable webtoon and more than twice a safe
+     * amount of comic. See [ReaderImageBudget] and [trimToBudget].
+     */
     private val imageCache = Cache.Builder<PageId, Deferred<ReaderImageResult>>()
         .maximumCacheSize(10)
         .eventListener {
@@ -169,11 +177,17 @@ class ContinuousReaderState(
             } ?: return@eventListener
 
             cleanupScope.launch {
+                // Kept in step with the cache even when cache4k evicts on its own.
+                cacheBudgetMutex.withLock { cachedPageBytes.remove(key) }
                 val image = value.await().image ?: return@launch
                 if (!imagesInUse.containsKey(key)) image.close()
             }
         }
         .build()
+
+    /** What each cached page costs, oldest first. See the paged reader. */
+    private val cachedPageBytes = LinkedHashMap<PageId, Long>()
+    private val cacheBudgetMutex = Mutex()
     private val imagesInUse: MutableMap<PageId, ReaderImage> = ConcurrentMap()
 
     /** Per-page content bands for the smart scroll. Empty list = analysis failed. */
@@ -363,6 +377,7 @@ class ContinuousReaderState(
         bubbleDetectionStarted.clear()
         contentBandCache.clear()
         imageCache.invalidateAll()
+        cleanupScope.launch { cacheBudgetMutex.withLock { cachedPageBytes.clear() } }
     }
 
     suspend fun onCurrentPageChange(page: PageMetadata) {
@@ -782,10 +797,46 @@ class ContinuousReaderState(
 
         val job = if (cached != null && !cached.isCancelled) cached
         else imageLoadScope.async { imageLoader.loadReaderImage(requestPage.bookId, requestPage.pageNumber) }
-            .also { imageCache.put(pageId, it) }
+            .also { cachePage(pageId, it) }
 
 
         return job
+    }
+
+    /**
+     * Caches the page and charges it against the byte budget once it has loaded.
+     *
+     * Pages still on screen are never charged out: closing one would blank a
+     * band the reader is looking at, and the eviction listener refuses to close
+     * them anyway, so invalidating them would free nothing.
+     */
+    private fun cachePage(pageId: PageId, job: Deferred<ReaderImageResult>) {
+        imageCache.put(pageId, job)
+        imageLoadScope.launch {
+            val image = runCatching { job.await() }.getOrNull()?.image ?: return@launch
+            trimToBudget(pageId, ReaderImageBudget.estimateBytes(image.originalSize.value))
+        }
+    }
+
+    private suspend fun trimToBudget(pageId: PageId, bytes: Long) {
+        val dropped = cacheBudgetMutex.withLock {
+            cachedPageBytes.remove(pageId)
+            cachedPageBytes[pageId] = bytes
+            var total = cachedPageBytes.values.sum()
+            val dropped = mutableListOf<PageId>()
+            val entries = cachedPageBytes.entries.iterator()
+            while (entries.hasNext() && total > ReaderImageBudget.BYTES) {
+                val entry = entries.next()
+                if (entry.key == pageId || imagesInUse.containsKey(entry.key)) continue
+                total -= entry.value
+                dropped += entry.key
+                entries.remove()
+            }
+            dropped
+        }
+        if (dropped.isEmpty()) return
+        dropped.forEach { imageCache.invalidate(it) }
+        logger.info { "page cache over budget, dropped ${dropped.size}: $dropped" }
     }
 
     private suspend fun updateVisibleImages() {
