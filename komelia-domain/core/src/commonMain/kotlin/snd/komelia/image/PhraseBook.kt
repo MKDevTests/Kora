@@ -95,6 +95,10 @@ object PhraseBook {
         "no news is good news" to "Pas de nouvelles, bonnes nouvelles.",
         "they say no news is good news right" to
                 "On dit que pas de nouvelles, c'est bonnes nouvelles, non ?",
+        // Measured 2026-08-18 on an English comic, with what Bergamot returned.
+        "no looking back" to "On ne regarde pas en arrière.",       // "Pas de recul."
+        "we'll be fine" to "Ça ira.",                               // "Nous serons bien,"
+        "new year's" to "Le Nouvel An",                             // "Nouvelles années"
 
         // Set phrases a reader meets constantly and that go word for word.
         "thanks for the meal" to "Merci pour le repas !",

@@ -2,6 +2,7 @@ package snd.komelia.image
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BubbleAssemblerTest {
@@ -133,6 +134,20 @@ class PhraseBookTest {
     fun `answers the idioms measured failing on real pages`() {
         assertEquals("Un problème ?", PhraseBook.lookup("Something the matter?"))
         assertEquals("C'est inquiétant.", PhraseBook.lookup("It's concerning"))
+        // 2026-08-18, English comic. The engine answered "Pas de recul.",
+        // "Nous serons bien," and "Nouvelles années" respectively.
+        assertEquals("On ne regarde pas en arrière.", PhraseBook.lookup("No looking back."))
+        assertEquals("Ça ira.", PhraseBook.lookup("We'll be fine,"))
+        assertEquals("Le Nouvel An", PhraseBook.lookup("New year's"))
+    }
+
+    @Test
+    fun `a balloon that merely contains an idiom is left to the engine`() {
+        // The table is whole-utterance by design. "No looking back" inside a
+        // longer sentence has a different French shape, and answering it from
+        // the table would put the wrong clause on the page.
+        assertNull(PhraseBook.lookup("There's no looking back now, is there?"))
+        assertNull(PhraseBook.lookup("We'll be fine as long as nobody talks."))
     }
 
     @Test
