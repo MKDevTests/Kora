@@ -186,9 +186,14 @@ object TranslationTextUtils {
         }
         val cased = lonePronounI.replace(sb.toString(), "I")
         val named = namedByHonorific.replace(cased) { it.value.replaceFirstChar(Char::uppercaseChar) }
-        return addressedByName.replace(named) { m ->
+        val addressed = addressedByName.replace(named) { m ->
             if (OcrSpellRepair.knows(m.value)) m.value
             else m.value.replaceFirstChar(Char::uppercaseChar)
+        }
+        return surnameAfterGivenName.replace(addressed) { m ->
+            val (given, family) = m.destructured
+            if (OcrSpellRepair.knows(given) || OcrSpellRepair.knows(family)) m.value
+            else given + " " + family.replaceFirstChar(Char::uppercaseChar)
         }
     }
 
@@ -232,6 +237,16 @@ object TranslationTextUtils {
      * That is the price of the rule and it is worth paying at ten to one.
      */
     private val addressedByName = Regex("(?<=, )[a-z]{3,}")
+
+    /**
+     * A family name behind a given name.
+     *
+     * Lowering the balloon leaves a capital on the first word of a sentence
+     * only, so "TAKESHI KOVACS!" comes out "Takeshi kovacs!" and the
+     * translator reads the surname as a common noun. Two words the shipped
+     * lexicon knows neither of, one behind the other, are a person.
+     */
+    private val surnameAfterGivenName = Regex("""\b([A-Z][a-z]{2,})\s+([a-z]{3,})\b""")
 
     private val namedByHonorific = Regex(
         "\\b[a-z][a-z]*(?=-(?:" +

@@ -155,3 +155,46 @@ class AddressedByNameTest {
         )
     }
 }
+
+class SurnameAfterGivenNameTest {
+
+    private val lexicon = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `a surname behind a given name keeps its capital`() {
+        // Measured: the surname was read as a common noun once the balloon
+        // was lowered, and only the first word of a sentence gets a capital
+        // back, so the given name stands alone and the family name does not.
+        assertEquals(
+            "That's me. Takeshi Kovacs. Formerly employed as an envoy.",
+            TranslationTextUtils.toSentenceCase(
+                "THAT'S ME. TAKESHI KOVACS. FORMERLY EMPLOYED AS AN ENVOY."
+            ),
+        )
+    }
+
+    @Test
+    fun `two ordinary words are left alone`() {
+        // The lexicon carries both, which is what keeps this off English.
+        assertEquals(
+            "Never mind that.",
+            TranslationTextUtils.toSentenceCase("NEVER MIND THAT."),
+        )
+    }
+
+    @Test
+    fun `a known word behind an unknown one is left alone`() {
+        // Half a pair is not a person: "Kovacs said" must not become
+        // "Kovacs Said".
+        assertEquals(
+            "Kovacs said nothing.",
+            TranslationTextUtils.toSentenceCase("KOVACS SAID NOTHING."),
+        )
+    }
+}
