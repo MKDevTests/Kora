@@ -49,3 +49,4 @@ stable.sqlite
 # Similar-series bench: local scratch index pulled from the server
 scripts/similar-bench/index_*.json
 __pycache__/
+_bench-en/
