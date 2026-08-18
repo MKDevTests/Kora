@@ -114,6 +114,31 @@ class OcrWordSplitTest {
     }
 
     @Test
+    fun `splits more than two, because the recogniser does`() {
+        // Straight off the tablet on 2026-08-18. The two-way splitter left
+        // this whole and the balloon read "ils semellent labyrinthant".
+        assertEquals("they both smell amazing", OcrSpellRepair.split("theybothsmellamazing"))
+        // Needs the one-letter "a", which is why it is allowed at all.
+        assertEquals("what a", OcrSpellRepair.split("whata"))
+    }
+
+    @Test
+    fun `a half the lexicon does not carry cannot be split off`() {
+        // "soremorsefully" is "so remorsefully" and stays whole, because
+        // "remorsefully" is not among the 37166 words that ship. That is the
+        // real ceiling of this repair and it is the lexicon's, not the
+        // algorithm's: every half has to be a word we can look up.
+        assertNull(OcrSpellRepair.split("soremorsefully"))
+    }
+
+    @Test
+    fun `lettering is not words`() {
+        // Long runs of the same letter are a shout drawn on the page. Bounded
+        // rather than trusted to the lexicon, so the search cannot wander.
+        assertNull(OcrSpellRepair.split("whwhwhwhooaaaaaaaaaaaaaaaaaaaaaaaa"))
+    }
+
+    @Test
     fun `a word the lexicon knows is never pulled apart`() {
         // Each of these splits cleanly into two real words and must not.
         listOf("cannot", "anymore", "himself", "into", "nothing", "someone")

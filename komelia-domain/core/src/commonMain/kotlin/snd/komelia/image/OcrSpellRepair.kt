@@ -79,19 +79,47 @@ object OcrSpellRepair {
         // A contraction is one word with a mark in it. Cutting "you're" gives
         // two fragments, not two words.
         if (APOSTROPHE in token) return null
+        if (token.length > MAX_SPLIT_LENGTH) return null
         val lowered = token.lowercase()
         if (lowered in lexicon) return null
-        var answer: String? = null
-        for (at in MIN_PART..(lowered.length - MIN_PART)) {
-            val head = lowered.substring(0, at)
-            if (!isWholeWord(head)) continue
-            val tail = lowered.substring(at)
-            if (!isWholeWord(tail)) continue
-            // A second reading means abstain, not pick.
-            if (answer != null) return null
-            answer = "$head $tail"
+        val readings = mutableListOf<List<String>>()
+        segment(lowered, mutableListOf(), readings)
+        // Exactly one reading, or none. Two readings means abstain, not pick.
+        val only = readings.singleOrNull() ?: return null
+        return matchCase(token, only.joinToString(" "))
+    }
+
+    /**
+     * Collects every way [rest] reads as a run of whole words.
+     *
+     * Recursive because the recogniser does not stop at two: measured on a real
+     * page, "they both smell amazing" came back as one token and the two-way
+     * splitter could do nothing with it, so the balloon read "ils semellent
+     * labyrinthant". Four is where it stops — beyond that the search is finding
+     * coincidences rather than words.
+     *
+     * Stops as soon as a second reading exists, because the caller abstains
+     * either way and a long token has a great many segmentations to enumerate.
+     */
+    private fun segment(
+        rest: String,
+        parts: MutableList<String>,
+        into: MutableList<List<String>>,
+    ) {
+        if (into.size > 1) return
+        if (rest.isEmpty()) {
+            if (parts.size >= 2) into += parts.toList()
+            return
         }
-        return answer?.let { matchCase(token, it) }
+        if (parts.size == MAX_PARTS) return
+        for (at in 1..rest.length) {
+            val head = rest.substring(0, at)
+            if (!isWholeWord(head)) continue
+            parts += head
+            segment(rest.substring(at), parts, into)
+            parts.removeAt(parts.lastIndex)
+            if (into.size > 1) return
+        }
     }
 
     /**
@@ -104,9 +132,12 @@ object OcrSpellRepair {
      * old" and "theo ld" against the raw lexicon, so the splitter saw two
      * readings and abstained on the very case it exists for.
      */
-    private fun isWholeWord(part: String): Boolean = when {
-        part.length < MIN_PART -> false
-        part.length == MIN_PART -> part in SHORT_WORDS
+    private fun isWholeWord(part: String): Boolean = when (part.length) {
+        0 -> false
+        // English has exactly two one-letter words, and "whata" needs one of
+        // them: without it the token stays whole and reaches the translator.
+        1 -> part == "a" || part == "i"
+        MIN_PART -> part in SHORT_WORDS
         else -> part in lexicon
     }
 
@@ -181,6 +212,14 @@ object OcrSpellRepair {
     private const val MIN_SPLIT_LENGTH = 5
     private const val MIN_PART = 2
     private const val APOSTROPHE = '\''
+
+    /**
+     * Bounds on the search. Four parts covers what the recogniser actually
+     * produces — "theybothsmellamazing" is the worst seen — and a token longer
+     * than this is lettering, not words.
+     */
+    private const val MAX_PARTS = 4
+    private const val MAX_SPLIT_LENGTH = 24
 
     private val CONFUSIONS = listOf(
         "li" to "u", "ui" to "u", "ii" to "u", "iu" to "u", "ll" to "u",
