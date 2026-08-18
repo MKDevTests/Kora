@@ -95,6 +95,19 @@ object PhraseBook {
         "no news is good news" to "Pas de nouvelles, bonnes nouvelles.",
         "they say no news is good news right" to
                 "On dit que pas de nouvelles, c'est bonnes nouvelles, non ?",
+        // Measured 2026-08-19 on an English manga, with what Bergamot returned.
+        "huh" to "Hein ?",                                          // "Heint ?"
+        "gasp" to "Ha !",                                           // "Halez-vous !"
+        "worry not" to "N'aie crainte.",                            // "Inquiète-toi non."
+        "love is blind" to "L'amour est aveugle.",                  // "Amour est aveugle."
+        "see you later" to "À plus tard !",                         // "On vous voit plus tard !"
+        "which is it then" to "Alors, c'est quoi ?",                // "C'est qui, alors ?"
+        "what's that for" to "C'est pour quoi faire ?",             // "C'est à quoi ?"
+        "would you like one" to "Tu en veux une ?",                 // "Voulez-vous un?"
+        "what are you trying to get at" to "Où veux-tu en venir ?", // "À quoi essayez-vous de vous rendre ?"
+        "but you must beware" to "Mais prends garde.",              // "Mais vous devez vous méfie."
+        "head over heels" to "Fou amoureux.",
+        "in short love at first sight" to "Bref : le coup de foudre.", // "Bref: le amour à première vue."
         // Measured 2026-08-18 on an English comic, with what Bergamot returned.
         "no looking back" to "On ne regarde pas en arrière.",       // "Pas de recul."
         "we'll be fine" to "Ça ira.",                               // "Nous serons bien,"
