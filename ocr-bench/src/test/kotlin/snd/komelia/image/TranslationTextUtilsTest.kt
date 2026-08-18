@@ -111,3 +111,47 @@ class HonorificCaseTest {
         assertEquals("but ritsu-kun is right", TranslationTextUtils.toSentenceCase("but ritsu-kun is right"))
     }
 }
+
+/** Names spoken to, which the lowering pass used to bury. */
+class AddressedByNameTest {
+
+    private val lexicon = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `a name after a comma keeps its capital`() {
+        // All three measured on real pages: the name was read as a common noun
+        // and given an article, or eaten outright.
+        assertEquals(
+            "You trying to say something about women, Rankin?",
+            TranslationTextUtils.toSentenceCase("YOU TRYING TO SAY SOMETHING ABOUT WOMEN, RANKIN?"),
+        )
+        assertEquals("Let's go, Olto!", TranslationTextUtils.toSentenceCase("LET'S GO, OLTO!"))
+        assertEquals("Focus, Takeshi.", TranslationTextUtils.toSentenceCase("FOCUS, TAKESHI."))
+    }
+
+    @Test
+    fun `an ordinary word after a comma is left alone`() {
+        // The lexicon is what separates the two, and it is checked first.
+        assertEquals(
+            "Well, maybe, but not today.",
+            TranslationTextUtils.toSentenceCase("WELL, MAYBE, BUT NOT TODAY."),
+        )
+    }
+
+    @Test
+    fun `a name anywhere else is not touched`() {
+        // Measured and rejected: applied to the whole sentence this stopped
+        // ordinary English being translated at all, because the shipped list
+        // does not carry every word.
+        assertEquals(
+            "Its turbid waters.",
+            TranslationTextUtils.toSentenceCase("ITS TURBID WATERS."),
+        )
+    }
+}

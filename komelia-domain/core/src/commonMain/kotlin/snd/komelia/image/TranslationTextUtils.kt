@@ -185,7 +185,11 @@ object TranslationTextUtils {
             }
         }
         val cased = lonePronounI.replace(sb.toString(), "I")
-        return namedByHonorific.replace(cased) { it.value.replaceFirstChar(Char::uppercaseChar) }
+        val named = namedByHonorific.replace(cased) { it.value.replaceFirstChar(Char::uppercaseChar) }
+        return addressedByName.replace(named) { m ->
+            if (OcrSpellRepair.knows(m.value)) m.value
+            else m.value.replaceFirstChar(Char::uppercaseChar)
+        }
     }
 
     /**
@@ -201,6 +205,34 @@ object TranslationTextUtils {
      * cannot drift apart, and from the narrow half of it: "sun-tan" is not a
      * person.
      */
+    /**
+     * Somebody addressed by name, after the balloon was lowered.
+     *
+     * A comic is lettered in capitals, so the whole balloon is lowered before
+     * translating, and a character's name goes down with it. The translator
+     * then reads it as a common noun: "about women, rankin?" came back "sur les
+     * femmes, le Rankin ?", article and all, and "Dammit, Fingerman, I thought
+     * you were top five" lost the name entirely to "Bourdonne, je croyais".
+     *
+     * Only after a comma, which is where a name being spoken to sits, and only
+     * for a word the shipped lexicon does not know. Both halves of that were
+     * measured, on the 1208 balloons of the bench:
+     *
+     *  - anywhere in the sentence: 202 balloons changed, roughly twelve gains
+     *    against six losses. Ordinary English the 37166-word list happens not
+     *    to carry stopped being translated -- "weren't Halfhard firing" kept
+     *    "Halfhard", "its Turbid waters" kept "Turbid" -- and the capitals
+     *    leaked into the French, where "You Wot!" came back "Vous Avez Woot !".
+     *  - after a comma only: 35 balloons, about twenty gains against two, and
+     *    no leaked capitals. Olto seven times, Fingerman four, Kovacs and
+     *    Takeshi three each.
+     *
+     * The two it still costs are a real word the list is missing, sitting where
+     * a name would: "cleric, Swordfighter, etc." and "junkie, Bonebag gums".
+     * That is the price of the rule and it is worth paying at ten to one.
+     */
+    private val addressedByName = Regex("(?<=, )[a-z]{3,}")
+
     private val namedByHonorific = Regex(
         "\\b[a-z][a-z]*(?=-(?:" +
             OcrSpellRepair.NAME_HONORIFICS.joinToString("|") +

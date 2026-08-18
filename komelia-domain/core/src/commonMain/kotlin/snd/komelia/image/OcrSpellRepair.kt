@@ -38,6 +38,9 @@ object OcrSpellRepair {
 
     val isLoaded: Boolean get() = lexicon.isNotEmpty()
 
+    /** Whether the shipped word list carries [word]. Empty list knows nothing. */
+    internal fun knows(word: String): Boolean = word.lowercase() in lexicon
+
     fun load(words: Set<String>) {
         if (lexicon.isEmpty()) lexicon = words
     }
