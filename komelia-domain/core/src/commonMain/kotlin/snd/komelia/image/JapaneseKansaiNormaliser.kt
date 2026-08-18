@@ -49,7 +49,10 @@ object JapaneseKansaiNormaliser {
 
         /**
          * ~はん is さん after a name, and the last two morae of ごはん otherwise.
-         * Requires a kanji or katakana before it and the end of the clause after.
+         * What separates them is what comes before: a name ends in kanji or
+         * katakana, ご does not. What comes after may be the end of the clause
+         * or a particle — 二丁はんが went untouched while the guard demanded a
+         * terminal, and the balloon came back "deux-cho han".
          */
         PERSON_SUFFIX,
 
@@ -147,7 +150,7 @@ object JapaneseKansaiNormaliser {
                 val before = text.getOrNull(at - 1)
                 val after = text.getOrNull(end)
                 before != null && (before.isKanji() || before.isKatakana()) &&
-                        (after == null || after.isTerminal())
+                        (after == null || after.isTerminal() || after in PARTICLES)
             }
 
             Guard.SENTENCE_FINAL_DO ->
@@ -186,6 +189,12 @@ object JapaneseKansaiNormaliser {
     private fun Char.isTerminal(): Boolean = this in TERMINAL || isWhitespace()
 
     private const val TERMINAL = "！？!?。、…‥・♪♡"
+
+    /**
+     * The particles that may follow an honorific. ごはん is already excluded by
+     * what precedes はん, so this list does not have to protect it.
+     */
+    private const val PARTICLES = "がはをにでともへやのねよかなぞぜさ"
 
     private fun guardFor(expression: String, declared: String?): Guard = when (declared) {
         "person_suffix" -> Guard.PERSON_SUFFIX

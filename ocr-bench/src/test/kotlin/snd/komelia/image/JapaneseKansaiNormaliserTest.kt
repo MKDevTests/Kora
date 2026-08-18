@@ -97,4 +97,29 @@ class JapaneseKansaiNormaliserTest {
             assertTrue(!latin.containsMatchIn(out), "latin text injected into Japanese: $out")
         }
     }
+
+    @Test
+    fun `han is san before a particle, never inside gohan`() {
+        loadShipped()
+        // 二丁はんが came back "deux-cho han" while the guard demanded a
+        // terminal after はん. What keeps ごはん safe is the ご before it.
+        assertEquals("二丁さんがノコノコやってきた", JapaneseKansaiNormaliser.apply("二丁はんがノコノコやってきた"))
+        assertEquals("二丁さん！", JapaneseKansaiNormaliser.apply("二丁はん！"))
+        // 言うといて is not in the table — only 言うとく is — so it stays as it
+        // is. The point of the line is the はん before it.
+        assertEquals("親分さんに言うといて", JapaneseKansaiNormaliser.apply("親分はんに言うといて"))
+        for (text in listOf("ごはんを食べる", "ごはんが好き", "一般的な話")) {
+            assertEquals(text, JapaneseKansaiNormaliser.apply(text), "fired outside an honorific: $text")
+        }
+    }
+
+    @Test
+    fun `ware is the katakana pronoun and only when it is the whole run`() {
+        loadShipped()
+        assertEquals("お前が二丁かい", JapaneseKansaiNormaliser.apply("ワレが二丁かい"))
+        // ワレワレ is one run of four, so the two-character key cannot claim it,
+        // and 言われた is hiragana, which the katakana guard never reaches.
+        assertEquals("ワレワレは宇宙人だ", JapaneseKansaiNormaliser.apply("ワレワレは宇宙人だ"))
+        assertEquals("言われたからだまってた", JapaneseKansaiNormaliser.apply("言われたからだまってた"))
+    }
 }

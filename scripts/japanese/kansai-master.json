@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "0.2",
+    "version": "0.3",
     "source": "japonais_kansai_ben_normalisation_v0_1.json (147 entrees + 24 regles)",
-    "entry_count": 186,
+    "entry_count": 187,
     "veto": {
       "ちゃう": "bulle 124: 見えちゃう/落ちちゃう sont la contraction de ~てしまう, pas 違う. Gardee sous guard after_n_or_start."
     },
@@ -22,7 +22,9 @@
       "へんやろ": "bulle 152: ~へん n'existait que verbe par verbe",
       "へんかった": "meme cause, passe",
       "へん": "negatif kansai generique",
-      "ちゃう": "reintroduit sous garde"
+      "ちゃう": "reintroduit sous garde",
+      "ワレ": "log ja3: absent de la v0.1 alors que ワイ y est. Katakana, donc aligne sur le run — ne peut pas tirer dans ワレワレ ni dans 言われた.",
+      "はん": "log ja3: la garde exigeait une ponctuation apres はん, donc 二丁はんが restait intact et sortait « deux-cho han ». Les particules sont admises."
     },
     "measured_on": "50 pages du lecteur, 231 bulles distinctes (kora-ja2.log)"
   },
@@ -768,6 +770,10 @@
     {
       "expression": "ワシ",
       "ja_normal": "俺"
+    },
+    {
+      "expression": "ワレ",
+      "ja_normal": "お前"
     },
     {
       "expression": "ど",
