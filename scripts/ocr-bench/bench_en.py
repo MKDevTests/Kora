@@ -35,6 +35,7 @@ Gradle and the Bergamot binary live in WSL. Both are invoked as they are.
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -61,6 +62,27 @@ def wsl(command: str, quiet: bool = False) -> str:
 def to_wsl(path: Path) -> str:
     text = str(path).replace("\\", "/")
     return "/mnt/" + text[0].lower() + text[2:]
+
+
+def slug(name: str) -> str:
+    """A capture name that survives every shell between here and Gradle.
+
+    Volume filenames carry punctuation that each broke this differently, and
+    none of it failed where it was written:
+
+      - commas. KORA_BENCH_DIR is comma-separated by design, so replaying "The
+        100 Girlfriends Who Really, Really, Really..." asked the replay for six
+        directories that do not exist. It found none and reported nothing.
+      - apostrophes. "A Late-Start Tamer's" ends the single-quoted bash string
+        the command is passed as, and bash stopped at "unexpected EOF".
+      - spaces, which arrived at bash as separate words.
+
+    So the name is reduced to letters, digits and dashes rather than quoted
+    more carefully: quoting has to be right in three shells at once, and this
+    only has to be right here. Capped because it is typed by hand on replay.
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")
+    return cleaned[:60].rstrip("-")
 
 
 WSL_REPO = None  # set in main(), once to_wsl exists
@@ -205,9 +227,7 @@ def main() -> None:
 
     source = Path(args.source)
     if source.exists():
-        # Spaces out of the capture name as well as quoted in the commands:
-        # this name is typed by hand on every replay.
-        out = BENCH / source.stem.replace(" ", "-")
+        out = BENCH / slug(source.stem)
         ocr(source, out, args.pages, args.reocr)
     else:
         # A name rather than a path: replay what is already captured. This is
