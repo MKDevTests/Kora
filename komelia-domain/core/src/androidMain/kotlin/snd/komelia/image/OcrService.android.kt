@@ -140,6 +140,25 @@ actual class OcrService {
             // that made whole panels unusable ('HP L f n 7J iQ 75#+').
             global.textScore = 0.6f
             global.intraOpNumThreads = threads
+            // ONNX Runtime's CPU arena, off.
+            //
+            // Measured on the tablet, reading the same volume twice: with the
+            // reader alone the native heap sits at 273MB and stays there. The
+            // moment the OCR engine is built it jumps by a full gigabyte, and
+            // leaving the reader gives none of it back -- 1.1GB went to swap
+            // instead of being freed. That is what an arena does: it takes
+            // memory from the system and keeps it, which is a good trade on a
+            // desktop and the wrong one here, where the app was killed for
+            // LOW_MEMORY while reading a comic.
+            //
+            // Nothing in the library can free it after the fact. RapidOCR has
+            // no close(), OrtInferSession has none either, and it holds its
+            // OrtSession in a private final field -- the sessions live as long
+            // as the process. Refusing the arena up front is the only lever
+            // that does not go through reflection.
+            det.useArena = false
+            cls.useArena = false
+            rec.useArena = false
         }
         // On the reader-translation logger, not the general one: which detector
         // ran and whether the orientation classifier is on are the two things a
