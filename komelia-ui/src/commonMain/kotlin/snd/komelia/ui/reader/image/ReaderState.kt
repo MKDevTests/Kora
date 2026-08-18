@@ -1162,7 +1162,8 @@ class ReaderState(
                     val japanese = translationSetting.enabled &&
                             translationSetting.source == snd.komelia.settings.model.TranslationLanguage.JAPANESE
                     val rawBoxes = if (translationSetting.enabled) {
-                        if (japanese) snd.komelia.image.OcrScriptFilter.keepCjk(scanned)
+                        if (japanese) snd.komelia.image.JapaneseFuriganaFilter
+                            .apply(snd.komelia.image.OcrScriptFilter.keepCjk(scanned))
                         else snd.komelia.image.OcrScriptFilter.keepLatin(scanned)
                     } else scanned
 

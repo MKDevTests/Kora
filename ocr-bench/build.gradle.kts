@@ -41,6 +41,7 @@ kotlin {
                 "snd/komelia/image/JapaneseKatakanaGlossary.kt",
                 "snd/komelia/image/JapaneseKansaiNormaliser.kt",
                 "snd/komelia/image/JapaneseOcrRepair.kt",
+                "snd/komelia/image/JapaneseFuriganaFilter.kt",
             )
         }
     }
@@ -63,4 +64,6 @@ tasks.test {
     // Where run_ocr.py wrote its <page>.boxes.json. Absent, the replay is skipped.
     System.getenv("KORA_BENCH_DIR")?.let { environment("KORA_BENCH_DIR", it) }
     System.getenv("KORA_BENCH_VERTICAL")?.let { environment("KORA_BENCH_VERTICAL", it) }
+    // A ~1200px capture. The furigana filter must stay inert on those.
+    System.getenv("KORA_FURIGANA_LOWRES_DIR")?.let { environment("KORA_FURIGANA_LOWRES_DIR", it) }
 }
