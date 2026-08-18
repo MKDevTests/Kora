@@ -1032,6 +1032,16 @@ class ReaderState(
      * Dropped whenever the engine or the languages change: the cached boxes and
      * translations were produced by the old settings.
      */
+    /**
+     * A cached scan, moved to the end of the queue because it was just used.
+     *
+     * The touch matters here as much as in the caller's fast path: a page can
+     * be answered from the cache after waiting on the scan lock, and a hit that
+     * did not count as use would let a page age out while being read.
+     */
+    private fun cachedScan(pageId: PageId): PageScan? =
+        scanCache.value[pageId]?.also { cacheScan(pageId, it) }
+
     private fun clearScanCache() {
         scanCache.value = emptyMap()
     }
@@ -1098,7 +1108,6 @@ class ReaderState(
                     stillWanted = { ocrPageId.value == pageId },
                 )
                 if (result == null) return@launch
-                cacheScan(pageId, result)
                 // A scan that outlived its page must not publish: its boxes would be
                 // drawn over a different image, which is the "blue boxes land in the
                 // wrong place for a few seconds" symptom. It is still cached above —
@@ -1150,7 +1159,18 @@ class ReaderState(
                 // page is nobody's business any more; or the page came
                 // back and was scanned by another job, whose result is
                 // now in the cache.
-                scanCache.value[pageId] ?: if (!stillWanted()) null else {
+                // Published under the lock, not by the caller.
+                //
+                // Both callers used to cache the result after performScan
+                // returned, which is after the lock was released -- and the
+                // lock is what de-duplicates. A second job that had waited
+                // behind this scan for its whole duration took the lock the
+                // instant it was freed, read the cache before the first
+                // caller had written to it, and scanned the same page again.
+                // Measured over 48 pages: three duplicates, 3.2s, 3.7s and
+                // 11.4s apart -- one scan duration, which is the signature of
+                // starting exactly when the other finished.
+                cachedScan(pageId) ?: if (!stillWanted()) null else {
                     // Diagnostic, not decoration. Reading logs show every page
                     // recognised twice, five seconds apart, for byte-identical
                     // results — and never a "scan cache hit" to explain it.
@@ -1195,6 +1215,7 @@ class ReaderState(
                     } else rawBoxes
 
                     PageScan(boxes, translateBlocks(boxes, foreground))
+                        .also { cacheScan(pageId, it) }
                 }
             }
         }
@@ -1261,7 +1282,6 @@ class ReaderState(
                     foreground = false,
                     stillWanted = { prefetchPageId.value == pageId },
                 ) ?: return@launch
-                cacheScan(pageId, result)
                 translationLogger.info {
                     "prefetched $pageId (${result.boxes.size} boxes, " +
                             "${result.translations.size} translated)"
