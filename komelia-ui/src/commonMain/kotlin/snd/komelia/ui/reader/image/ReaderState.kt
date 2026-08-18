@@ -1151,6 +1151,15 @@ class ReaderState(
                 // back and was scanned by another job, whose result is
                 // now in the cache.
                 scanCache.value[pageId] ?: if (!stillWanted()) null else {
+                    // Diagnostic, not decoration. Reading logs show every page
+                    // recognised twice, five seconds apart, for byte-identical
+                    // results — and never a "scan cache hit" to explain it.
+                    // Which page each scan is for, and which caller asked, is
+                    // the one thing the log does not say, so nothing can be
+                    // concluded without it. Remove once that is settled.
+                    translationLogger.info {
+                        "scan start $pageId via $label, cached=${scanCache.value.keys}"
+                    }
                     val scanned = snd.komelia.perf.PerfTrace.measure(
                         "reader.ocr.${settings.engine}",
                         count = { it.size }
