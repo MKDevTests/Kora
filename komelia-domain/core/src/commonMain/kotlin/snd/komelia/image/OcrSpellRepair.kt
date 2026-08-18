@@ -50,9 +50,47 @@ object OcrSpellRepair {
     fun apply(text: String): String {
         if (lexicon.isEmpty() || text.isEmpty()) return text
         return TOKEN.replace(text) { match ->
-            repair(match.value) ?: split(match.value) ?: match.value
+            if (isNaming(text, match)) match.value
+            else repair(match.value) ?: split(match.value) ?: match.value
         }
     }
+
+    /**
+     * Whether this token is an honorific, or the name one is attached to.
+     *
+     * Measured over 1213 balloons: the stroke table's three worst mistakes
+     * were all here. "KUN" is not in the word list and "KIN" is, so every
+     * RITSU-KUN and NOHARA-KUN was renamed -- three times in one volume, and
+     * it will fire on every manga page where one character addresses another.
+     * KIDO-SAN became KUDO-SAN the same way, from the other side of the
+     * hyphen.
+     *
+     * Both halves are protected rather than just the honorific, because the
+     * hyphen is what identifies the name: "kido" alone is unknowable, "kido-"
+     * followed by an honorific is a person. That is the only reliable signal
+     * for a proper name in all-caps lettering, and it costs nothing -- an
+     * ordinary English word does not sit before "-san".
+     */
+    private fun isNaming(text: String, match: MatchResult): Boolean {
+        if (match.value.lowercase() in HONORIFICS) return true
+        val after = match.range.last + 1
+        if (after >= text.length || text[after] != HYPHEN) return false
+        val next = TOKEN.find(text, after + 1) ?: return false
+        if (next.range.first != after + 1) return false
+        return next.value.lowercase().removeSuffix("'s") in HONORIFICS
+    }
+
+    /**
+     * The honorifics a translated manga actually prints. Closed, and short on
+     * purpose: this exists to stop the repair renaming people, not to teach it
+     * Japanese. Entries that are also English words ("chin", "tan") cost
+     * nothing here, since a word the lexicon carries is never repaired anyway.
+     */
+    private val HONORIFICS = setOf(
+        "kun", "san", "chan", "sama", "senpai", "sempai", "sensei",
+        "dono", "kouhai", "kohai", "tan", "chin", "nee", "nii",
+        "onii", "onee", "oniisan", "oneesan",
+    )
 
     /**
      * Two words the recogniser ran together, put back apart.
@@ -268,6 +306,7 @@ object OcrSpellRepair {
     private const val MIN_SPLIT_LENGTH = 5
     private const val MIN_PART = 2
     private const val APOSTROPHE = '\''
+    private const val HYPHEN = '-'
 
     /**
      * Bounds on the search. Two parts is what survived measurement, and a

@@ -237,3 +237,48 @@ class OcrWordSplitTest {
         )
     }
 }
+
+/**
+ * Names, which the repair has no business rewriting.
+ *
+ * Split out because the evidence is different in kind: these are not cases
+ * the repair got wrong on one page, they are a class it cannot get right,
+ * and the only defence is refusing to touch them.
+ */
+class OcrHonorificTest {
+
+    private val lexicon = File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `an honorific is never repaired into a word`() {
+        // "kun" is not in the word list and "kin" is, so the u-for-i rule
+        // renamed every character addressed by name. Three times in one
+        // volume of the corpus, and it fires wherever manga is polite.
+        assertEquals("RITSU-KUN", OcrSpellRepair.apply("RITSU-KUN"))
+        assertEquals("NOHARA-KUN.", OcrSpellRepair.apply("NOHARA-KUN."))
+    }
+
+    @Test
+    fun `the name before an honorific is protected too`() {
+        // From the other side of the hyphen: KIDO-SAN became KUDO-SAN,
+        // because "kudo" is in the word list and "kido" is not. The hyphen
+        // followed by an honorific is what says this is a person, and it is
+        // the only such signal available in all-caps lettering.
+        assertEquals("KIDO-SAN!", OcrSpellRepair.apply("KIDO-SAN!"))
+        assertEquals("Dei-san's", OcrSpellRepair.apply("Dei-san's"))
+        assertEquals("LULUS-CHAN...", OcrSpellRepair.apply("LULUS-CHAN..."))
+    }
+
+    @Test
+    fun `an ordinary hyphenated word is still repaired`() {
+        // The guard is the honorific, not the hyphen. Anything else keeps
+        // working exactly as it did.
+        assertEquals("WELL-UNTRAINED", OcrSpellRepair.apply("WELL-UINTRAINED"))
+    }
+}
