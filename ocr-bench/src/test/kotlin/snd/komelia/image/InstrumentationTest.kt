@@ -67,19 +67,19 @@ class SeamFidelityTest {
     }
 
     /**
-     * The distinction the assembler's own comment gets wrong.
+     * "Really...?" is the case the finished-sentence rule was written for, and
+     * it now really reaches that rule.
      *
-     * It cites "Really...?" as the case the finished-sentence rule exists for,
-     * but that balloon ends in a question mark, so the end-of-ellipsis test
-     * fails first and the refusal never reaches that rule. The outcome is the
-     * same -- not joined -- which is why the comment survived; the reason is
-     * not, which is exactly what this instrumentation is for. The rule really
-     * fires when the punctuation comes before the trailing dots.
+     * It did not before: the end-of-ellipsis test anchored on whitespace, so a
+     * balloon whose dots were followed by a question mark failed it and was
+     * refused one step earlier. Same outcome either way -- which is why nobody
+     * noticed -- but the reason was wrong, and the reason is what the log
+     * reports. Tolerating punctuation after the run fixed both.
      */
     @Test
     fun `a finished question is refused, for the right reason`() {
         assertEquals(
-            listOf(BubbleAssembler.Seam.NO_ELLIPSIS_END),
+            listOf(BubbleAssembler.Seam.SENTENCE_ENDED),
             BubbleAssembler.explain(listOf("Really...?", "...I see."))
         )
         assertEquals(
@@ -112,6 +112,34 @@ class SeamFidelityTest {
         // And the assembler really did stop there, so the reason is not a story
         // the tracer tells about a decision that went the other way.
         assertEquals(listOf(listOf(0, 1, 2), listOf(3)), BubbleAssembler.group(four))
+    }
+
+    /**
+     * The ellipsis the recogniser broke, measured on the bench: five of these
+     * across eight volumes, each one a sentence that went to the translator in
+     * halves. A single full stop still must not open the run -- that mistake
+     * once welded two speakers together.
+     */
+    @Test
+    fun `a stray dot around the ellipsis still reads as a seam`() {
+        assertEquals(
+            listOf(BubbleAssembler.Seam.JOINED),
+            BubbleAssembler.explain(listOf("NEITHER OF THEM...", ".….ARE LETTING UP!"))
+        )
+        assertEquals(
+            listOf(BubbleAssembler.Seam.JOINED),
+            BubbleAssembler.explain(listOf("BREAK YOUR OPPONENT'S RHYTHM...", ".…AND SET YOUR OWN."))
+        )
+        // The single ellipsis character on its own still works.
+        assertEquals(
+            listOf(BubbleAssembler.Seam.JOINED),
+            BubbleAssembler.explain(listOf("ALL RIGHT, I'M READY...", "…DARK..."))
+        )
+        // And a plain full stop is still the end of a sentence, not a seam.
+        assertEquals(
+            listOf(BubbleAssembler.Seam.NO_ELLIPSIS),
+            BubbleAssembler.explain(listOf("She was an untrained cat.", "With that meowing just now?"))
+        )
     }
 
     @Test

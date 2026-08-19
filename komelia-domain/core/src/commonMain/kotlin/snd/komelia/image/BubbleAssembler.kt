@@ -204,8 +204,18 @@ object BubbleAssembler {
      * "…formé avec cet étrange…" because "non entraîné" had been cut in half.
      *
      * A full stop ends a sentence. It is the ellipsis that says it did not.
+     *
+     * The surrounding `[^\w]*` is for what the recogniser does to a lettered
+     * ellipsis, which is to read one dot of it as its own character and drop it
+     * outside the run: ".….ARE LETTING UP!" and ".…SO MY STRENGTH..." both
+     * carry the ellipsis, one stray full stop ahead of it. Anchoring on
+     * whitespace alone missed those, and their balloons went to the translator
+     * as sentence fragments -- "Neither of them..." and "...are letting up!"
+     * translated apart. Measured over the eight bench volumes, 1 927
+     * boundaries: five recovered, none lost. Still not `[….]`, which was the
+     * founding mistake -- a single full stop must not open the run.
      */
-    private val ELLIPSIS_END = Regex("(…|\\.{2,})\\s*$")
-    private val ELLIPSIS_START = Regex("^\\s*(…|\\.{2,})")
+    private val ELLIPSIS_END = Regex("(…|\\.{2,})[^\\w]*$")
+    private val ELLIPSIS_START = Regex("^[^\\w]*(…|\\.{2,})")
     private val WHITESPACE = Regex("\\s+")
 }
