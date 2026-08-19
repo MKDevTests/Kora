@@ -45,6 +45,7 @@ kotlin {
                 "snd/komelia/image/JapaneseFuriganaFilter.kt",
                 "snd/komelia/image/JapanesePhraseBook.kt",
                 "snd/komelia/image/CreditLine.kt",
+                "snd/komelia/image/TranslationInput.kt",
             )
         }
     }
