@@ -1559,6 +1559,36 @@ class ReaderState(
      *   screen. The spinner belongs to the page the reader is looking at, and a
      *   prefetch that lit it up would have it turning while nothing is waiting.
      */
+    /**
+     * Which of [candidates] are the book's credits. See [snd.komelia.image.CreditLine];
+     * this half is only the geometry, taken from the boxes the blocks were built
+     * from.
+     */
+    private fun creditBlocks(
+        candidates: Map<Int, String>,
+        boxes: List<OcrElementBox>,
+        pageId: ReaderImage.PageId,
+    ): Set<Int> {
+        if (candidates.isEmpty()) return emptySet()
+        val byBlock = boxes.groupBy { it.blockIndex }
+        val lines = candidates.mapNotNull { (blockIndex, text) ->
+            val rects = byBlock[blockIndex]?.map { it.blockRect } ?: return@mapNotNull null
+            if (rects.isEmpty()) return@mapNotNull null
+            snd.komelia.image.CreditLine.Line(
+                index = blockIndex,
+                text = text,
+                left = rects.minOf { it.left },
+                top = rects.minOf { it.top },
+                right = rects.maxOf { it.right },
+                bottom = rects.maxOf { it.bottom },
+            )
+        }
+        // 0 when the page list has not arrived: CreditLine then only trusts the
+        // opening pages, rather than reading the whole book as back matter.
+        val pageCount = booksState.value?.currentBookPages?.size ?: 0
+        return snd.komelia.image.CreditLine.detect(lines, pageId.pageNumber, pageCount)
+    }
+
     private suspend fun translateBlocks(
         boxes: List<OcrElementBox>,
         foreground: Boolean,
@@ -1636,6 +1666,10 @@ class ReaderState(
                         // opaque panel over the drawing it came from.
                         (japanese || snd.komelia.image.EnglishTextCleaner.isTranslatable(text))
             }
+            // Dropped, not blanked: a block that never reaches the translator
+            // has no panel painted over it, so the credits stay on the page as
+            // they were printed instead of coming back as "B y you ji Miur a".
+            .let { candidates -> candidates - creditBlocks(candidates, boxes, pageId) }
         if (blocks.isEmpty()) return emptyMap()
 
         if (foreground) isTranslating.value = true
