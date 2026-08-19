@@ -100,4 +100,20 @@ class JapaneseKatakanaGlossaryTest {
             assertTrue(!latin.containsMatchIn(out), "latin text injected into Japanese: $out")
         }
     }
+
+    @Test
+    fun `a katakana word that is also a given name is left alone`() {
+        loadShipped()
+        // ユメ is 夢 and it is also Yume. Measured over 1686 balloons the rule
+        // fired twice, both times on the name -- どうした？ユメ would have asked
+        // a dream how it was doing -- and never once on the noun.
+        //
+        // Disabled rather than guarded: over the whole 257-entry table it is
+        // the ONLY key that doubles as a common given name, so a general
+        // proper-noun detector would be built for a single case.
+        assertEquals("どうした？ユメ", JapaneseKatakanaGlossary.apply("どうした？ユメ"))
+        assertEquals("ユメ(变装中)", JapaneseKatakanaGlossary.apply("ユメ(变装中)"))
+        // The rest of the table is untouched.
+        assertEquals("気持ち悪い", JapaneseKatakanaGlossary.apply("キモイ"))
+    }
 }

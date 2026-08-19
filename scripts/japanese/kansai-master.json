@@ -1,0 +1,784 @@
+{
+  "metadata": {
+    "version": "0.3",
+    "source": "japonais_kansai_ben_normalisation_v0_1.json (147 entrees + 24 regles)",
+    "entry_count": 187,
+    "veto": {
+      "ちゃう": "bulle 124: 見えちゃう/落ちちゃう sont la contraction de ~てしまう, pas 違う. Gardee sous guard after_n_or_start."
+    },
+    "added": {
+      "ワシャ": "bulle 165: ワシ seul laissait 俺ャ",
+      "わしゃ": "bulle 169, meme cause",
+      "ワイら": "symetrique de ワイ",
+      "んヤド": "bulle 165: ヤド nu apres ん donnait んんだ",
+      "ヤド": "copule kansai finale, absente de la v0.1",
+      "どうゆう": "bulle 195: 言う ici donnait « Qu'en dis-tu »",
+      "どうゆー": "meme mot, graphie allongee",
+      "やないかい": "bulle 157: やな->だな tirait dans やない",
+      "やないの": "meme cause",
+      "やなくても": "meme cause",
+      "やなくて": "bulle 225: やな->だな tirait dans やなくて",
+      "やない": "meme cause, forme courte",
+      "へんやろ": "bulle 152: ~へん n'existait que verbe par verbe",
+      "へんかった": "meme cause, passe",
+      "へん": "negatif kansai generique",
+      "ちゃう": "reintroduit sous garde",
+      "ワレ": "log ja3: absent de la v0.1 alors que ワイ y est. Katakana, donc aligne sur le run — ne peut pas tirer dans ワレワレ ni dans 言われた.",
+      "はん": "log ja3: la garde exigeait une ponctuation apres はん, donc 二丁はんが restait intact et sortait « deux-cho han ». Les particules sont admises."
+    },
+    "measured_on": "50 pages du lecteur, 231 bulles distinctes (kora-ja2.log)"
+  },
+  "entries": [
+    {
+      "expression": "どないすんねん",
+      "ja_normal": "どうするんだ"
+    },
+    {
+      "expression": "やったらあかん",
+      "ja_normal": "やってはいけない"
+    },
+    {
+      "expression": "やらんとあかん",
+      "ja_normal": "やらないといけない"
+    },
+    {
+      "expression": "何やっとんねん",
+      "ja_normal": "何をやっているんだ"
+    },
+    {
+      "expression": "何言うとんねん",
+      "ja_normal": "何を言っているんだ"
+    },
+    {
+      "expression": "行かんとあかん",
+      "ja_normal": "行かないといけない"
+    },
+    {
+      "expression": "行ったらあかん",
+      "ja_normal": "行ってはいけない"
+    },
+    {
+      "expression": "見つからへんど",
+      "ja_normal": "見つからないぞ"
+    },
+    {
+      "expression": "言うたらあかん",
+      "ja_normal": "言ってはいけない"
+    },
+    {
+      "expression": "しょうもない",
+      "ja_normal": "くだらない"
+    },
+    {
+      "expression": "しょーもない",
+      "ja_normal": "くだらない"
+    },
+    {
+      "expression": "せんとあかん",
+      "ja_normal": "しないといけない"
+    },
+    {
+      "expression": "なんでやねん",
+      "ja_normal": "何でだよ"
+    },
+    {
+      "expression": "はよせんかい",
+      "ja_normal": "早くしろ"
+    },
+    {
+      "expression": "やってもうた",
+      "ja_normal": "やってしまった"
+    },
+    {
+      "expression": "やってもろた",
+      "ja_normal": "やってもらった"
+    },
+    {
+      "expression": "やっとんねん",
+      "ja_normal": "やっているんだ"
+    },
+    {
+      "expression": "やらなあかん",
+      "ja_normal": "やらなければならない"
+    },
+    {
+      "expression": "ゆうとんねん",
+      "ja_normal": "言っているんだ"
+    },
+    {
+      "expression": "何しとんねん",
+      "ja_normal": "何しているんだ"
+    },
+    {
+      "expression": "出てこんかい",
+      "ja_normal": "出てこい"
+    },
+    {
+      "expression": "待っとんねん",
+      "ja_normal": "待っているんだ"
+    },
+    {
+      "expression": "持っとんねん",
+      "ja_normal": "持っているんだ"
+    },
+    {
+      "expression": "知っとんねん",
+      "ja_normal": "知っているんだ"
+    },
+    {
+      "expression": "行かなあかん",
+      "ja_normal": "行かなければならない"
+    },
+    {
+      "expression": "見たらあかん",
+      "ja_normal": "見てはいけない"
+    },
+    {
+      "expression": "見つからへん",
+      "ja_normal": "見つからない"
+    },
+    {
+      "expression": "言うてもうた",
+      "ja_normal": "言ってしまった"
+    },
+    {
+      "expression": "言うとんねん",
+      "ja_normal": "言っているんだ"
+    },
+    {
+      "expression": "言わなあかん",
+      "ja_normal": "言わなければならない"
+    },
+    {
+      "expression": "おっちゃん",
+      "ja_normal": "おじさん"
+    },
+    {
+      "expression": "おばちゃん",
+      "ja_normal": "おばさん"
+    },
+    {
+      "expression": "ぎょうさん",
+      "ja_normal": "たくさん"
+    },
+    {
+      "expression": "してんねん",
+      "ja_normal": "しているんだ"
+    },
+    {
+      "expression": "しとんねん",
+      "ja_normal": "しているんだ"
+    },
+    {
+      "expression": "しゃあない",
+      "ja_normal": "仕方ない"
+    },
+    {
+      "expression": "しゃーない",
+      "ja_normal": "仕方ない"
+    },
+    {
+      "expression": "せなあかん",
+      "ja_normal": "しなければならない"
+    },
+    {
+      "expression": "たらあかん",
+      "ja_normal": "たらだめ"
+    },
+    {
+      "expression": "ちゃうねん",
+      "ja_normal": "違うんだ"
+    },
+    {
+      "expression": "ちゃうやろ",
+      "ja_normal": "違うだろう"
+    },
+    {
+      "expression": "てもええで",
+      "ja_normal": "てもいいよ"
+    },
+    {
+      "expression": "どないした",
+      "ja_normal": "どうした"
+    },
+    {
+      "expression": "へんかった",
+      "ja_normal": "なかった"
+    },
+    {
+      "expression": "やってへん",
+      "ja_normal": "やっていない"
+    },
+    {
+      "expression": "やっとった",
+      "ja_normal": "やっていた"
+    },
+    {
+      "expression": "やないかい",
+      "ja_normal": "じゃないか"
+    },
+    {
+      "expression": "やなくても",
+      "ja_normal": "じゃなくても"
+    },
+    {
+      "expression": "やらんかい",
+      "ja_normal": "やれ"
+    },
+    {
+      "expression": "わからへん",
+      "ja_normal": "わからない"
+    },
+    {
+      "expression": "出さんかい",
+      "ja_normal": "出せ"
+    },
+    {
+      "expression": "分からへん",
+      "ja_normal": "分からない"
+    },
+    {
+      "expression": "知っとった",
+      "ja_normal": "知っていた"
+    },
+    {
+      "expression": "聞かんかい",
+      "ja_normal": "聞け"
+    },
+    {
+      "expression": "行かんかい",
+      "ja_normal": "行け"
+    },
+    {
+      "expression": "見せんかい",
+      "ja_normal": "見せろ"
+    },
+    {
+      "expression": "見てもろた",
+      "ja_normal": "見てもらった"
+    },
+    {
+      "expression": "見てんねん",
+      "ja_normal": "見ているんだ"
+    },
+    {
+      "expression": "見とんねん",
+      "ja_normal": "見ているんだ"
+    },
+    {
+      "expression": "見なあかん",
+      "ja_normal": "見なければならない"
+    },
+    {
+      "expression": "見られへん",
+      "ja_normal": "見られない"
+    },
+    {
+      "expression": "言わんかい",
+      "ja_normal": "言え"
+    },
+    {
+      "expression": "買われへん",
+      "ja_normal": "買えない"
+    },
+    {
+      "expression": "返さんかい",
+      "ja_normal": "返せ"
+    },
+    {
+      "expression": "逃がさへん",
+      "ja_normal": "逃がさない"
+    },
+    {
+      "expression": "黙らんかい",
+      "ja_normal": "黙れ"
+    },
+    {
+      "expression": "あかんで",
+      "ja_normal": "だめだよ"
+    },
+    {
+      "expression": "あらへん",
+      "ja_normal": "ない"
+    },
+    {
+      "expression": "あんさん",
+      "ja_normal": "あなた"
+    },
+    {
+      "expression": "おまはん",
+      "ja_normal": "あなた"
+    },
+    {
+      "expression": "おらへん",
+      "ja_normal": "いない"
+    },
+    {
+      "expression": "かまへん",
+      "ja_normal": "構わない"
+    },
+    {
+      "expression": "きやへん",
+      "ja_normal": "来ない"
+    },
+    {
+      "expression": "きーひん",
+      "ja_normal": "来ない"
+    },
+    {
+      "expression": "けーへん",
+      "ja_normal": "来ない"
+    },
+    {
+      "expression": "こーへん",
+      "ja_normal": "来ない"
+    },
+    {
+      "expression": "しいひん",
+      "ja_normal": "しない"
+    },
+    {
+      "expression": "してへん",
+      "ja_normal": "していない"
+    },
+    {
+      "expression": "しとった",
+      "ja_normal": "していた"
+    },
+    {
+      "expression": "しーひん",
+      "ja_normal": "しない"
+    },
+    {
+      "expression": "せえへん",
+      "ja_normal": "しない"
+    },
+    {
+      "expression": "せやから",
+      "ja_normal": "だから"
+    },
+    {
+      "expression": "せやけど",
+      "ja_normal": "だけど"
+    },
+    {
+      "expression": "せんかい",
+      "ja_normal": "しろ"
+    },
+    {
+      "expression": "ちゃうで",
+      "ja_normal": "違うよ"
+    },
+    {
+      "expression": "てもうた",
+      "ja_normal": "てしまった"
+    },
+    {
+      "expression": "てもええ",
+      "ja_normal": "てもいい"
+    },
+    {
+      "expression": "できひん",
+      "ja_normal": "できない"
+    },
+    {
+      "expression": "できへん",
+      "ja_normal": "できない"
+    },
+    {
+      "expression": "でもうた",
+      "ja_normal": "でしまった"
+    },
+    {
+      "expression": "どうゆう",
+      "ja_normal": "どういう"
+    },
+    {
+      "expression": "どうゆー",
+      "ja_normal": "どういう"
+    },
+    {
+      "expression": "なんでや",
+      "ja_normal": "何でだ"
+    },
+    {
+      "expression": "なんぼや",
+      "ja_normal": "いくらだ"
+    },
+    {
+      "expression": "へんやろ",
+      "ja_normal": "ないだろ"
+    },
+    {
+      "expression": "ほんなら",
+      "ja_normal": "それなら"
+    },
+    {
+      "expression": "ほんまに",
+      "ja_normal": "本当に"
+    },
+    {
+      "expression": "めっちゃ",
+      "ja_normal": "とても"
+    },
+    {
+      "expression": "やったる",
+      "ja_normal": "やってあげる"
+    },
+    {
+      "expression": "やっとく",
+      "ja_normal": "やっておく"
+    },
+    {
+      "expression": "やっとる",
+      "ja_normal": "やっている"
+    },
+    {
+      "expression": "やっとん",
+      "ja_normal": "やっている"
+    },
+    {
+      "expression": "やないの",
+      "ja_normal": "じゃないの"
+    },
+    {
+      "expression": "やなくて",
+      "ja_normal": "じゃなくて"
+    },
+    {
+      "expression": "ゆうてる",
+      "ja_normal": "言っている"
+    },
+    {
+      "expression": "ゆうとる",
+      "ja_normal": "言っている"
+    },
+    {
+      "expression": "んかいな",
+      "ja_normal": "のかな"
+    },
+    {
+      "expression": "出えへん",
+      "ja_normal": "出ない"
+    },
+    {
+      "expression": "動かへん",
+      "ja_normal": "動かない"
+    },
+    {
+      "expression": "寝えへん",
+      "ja_normal": "寝ない"
+    },
+    {
+      "expression": "待っとる",
+      "ja_normal": "待っている"
+    },
+    {
+      "expression": "持っとる",
+      "ja_normal": "持っている"
+    },
+    {
+      "expression": "教えたる",
+      "ja_normal": "教えてあげる"
+    },
+    {
+      "expression": "来んかい",
+      "ja_normal": "来い"
+    },
+    {
+      "expression": "殺さへん",
+      "ja_normal": "殺さない"
+    },
+    {
+      "expression": "殺せへん",
+      "ja_normal": "殺せない"
+    },
+    {
+      "expression": "知っとる",
+      "ja_normal": "知っている"
+    },
+    {
+      "expression": "知っとん",
+      "ja_normal": "知っている"
+    },
+    {
+      "expression": "知らへん",
+      "ja_normal": "知らない"
+    },
+    {
+      "expression": "置いとく",
+      "ja_normal": "置いておく"
+    },
+    {
+      "expression": "聞かへん",
+      "ja_normal": "聞かない"
+    },
+    {
+      "expression": "行かへん",
+      "ja_normal": "行かない"
+    },
+    {
+      "expression": "見えへん",
+      "ja_normal": "見えない"
+    },
+    {
+      "expression": "見せたる",
+      "ja_normal": "見せてあげる"
+    },
+    {
+      "expression": "見とった",
+      "ja_normal": "見ていた"
+    },
+    {
+      "expression": "見んかい",
+      "ja_normal": "見ろ"
+    },
+    {
+      "expression": "言うとく",
+      "ja_normal": "言っておく"
+    },
+    {
+      "expression": "言うとる",
+      "ja_normal": "言っている"
+    },
+    {
+      "expression": "言うとん",
+      "ja_normal": "言っている"
+    },
+    {
+      "expression": "言わへん",
+      "ja_normal": "言わない"
+    },
+    {
+      "expression": "許さへん",
+      "ja_normal": "許さない"
+    },
+    {
+      "expression": "許せへん",
+      "ja_normal": "許せない"
+    },
+    {
+      "expression": "食べへん",
+      "ja_normal": "食べない"
+    },
+    {
+      "expression": "飲まへん",
+      "ja_normal": "飲まない"
+    },
+    {
+      "expression": "あかん",
+      "ja_normal": "だめ"
+    },
+    {
+      "expression": "いうた",
+      "ja_normal": "言った"
+    },
+    {
+      "expression": "いうて",
+      "ja_normal": "言って"
+    },
+    {
+      "expression": "おかん",
+      "ja_normal": "母親"
+    },
+    {
+      "expression": "おとん",
+      "ja_normal": "父親"
+    },
+    {
+      "expression": "かいな",
+      "ja_normal": "かな"
+    },
+    {
+      "expression": "さかい",
+      "ja_normal": "から"
+    },
+    {
+      "expression": "しとる",
+      "ja_normal": "している"
+    },
+    {
+      "expression": "しとん",
+      "ja_normal": "している"
+    },
+    {
+      "expression": "せやで",
+      "ja_normal": "そうだよ"
+    },
+    {
+      "expression": "せやな",
+      "ja_normal": "そうだな"
+    },
+    {
+      "expression": "せやろ",
+      "ja_normal": "そうだろう"
+    },
+    {
+      "expression": "ちゃう",
+      "ja_normal": "違う",
+      "guard": "after_n_or_start"
+    },
+    {
+      "expression": "どない",
+      "ja_normal": "どう"
+    },
+    {
+      "expression": "なんぼ",
+      "ja_normal": "いくら"
+    },
+    {
+      "expression": "ほなな",
+      "ja_normal": "じゃあな"
+    },
+    {
+      "expression": "ほんま",
+      "ja_normal": "本当"
+    },
+    {
+      "expression": "やから",
+      "ja_normal": "だから"
+    },
+    {
+      "expression": "やけど",
+      "ja_normal": "だけど"
+    },
+    {
+      "expression": "やない",
+      "ja_normal": "じゃない"
+    },
+    {
+      "expression": "やねん",
+      "ja_normal": "なんだ"
+    },
+    {
+      "expression": "やのに",
+      "ja_normal": "なのに"
+    },
+    {
+      "expression": "やろか",
+      "ja_normal": "だろうか"
+    },
+    {
+      "expression": "やろな",
+      "ja_normal": "だろうな"
+    },
+    {
+      "expression": "やんか",
+      "ja_normal": "じゃないか"
+    },
+    {
+      "expression": "ゆうた",
+      "ja_normal": "言った"
+    },
+    {
+      "expression": "ゆうて",
+      "ja_normal": "言って"
+    },
+    {
+      "expression": "ようけ",
+      "ja_normal": "たくさん"
+    },
+    {
+      "expression": "わしゃ",
+      "ja_normal": "俺は"
+    },
+    {
+      "expression": "んやろ",
+      "ja_normal": "んだろう"
+    },
+    {
+      "expression": "んヤド",
+      "ja_normal": "んだ"
+    },
+    {
+      "expression": "ワイら",
+      "ja_normal": "俺たち"
+    },
+    {
+      "expression": "ワシャ",
+      "ja_normal": "俺は"
+    },
+    {
+      "expression": "見とる",
+      "ja_normal": "見ている"
+    },
+    {
+      "expression": "見とん",
+      "ja_normal": "見ている"
+    },
+    {
+      "expression": "言うた",
+      "ja_normal": "言った"
+    },
+    {
+      "expression": "言うて",
+      "ja_normal": "言って"
+    },
+    {
+      "expression": "せや",
+      "ja_normal": "そうだ"
+    },
+    {
+      "expression": "ねん",
+      "ja_normal": "んだ"
+    },
+    {
+      "expression": "はん",
+      "ja_normal": "さん",
+      "guard": "person_suffix"
+    },
+    {
+      "expression": "へん",
+      "ja_normal": "ない"
+    },
+    {
+      "expression": "ほな",
+      "ja_normal": "それでは"
+    },
+    {
+      "expression": "やで",
+      "ja_normal": "だよ"
+    },
+    {
+      "expression": "やな",
+      "ja_normal": "だな"
+    },
+    {
+      "expression": "やろ",
+      "ja_normal": "だろう"
+    },
+    {
+      "expression": "やん",
+      "ja_normal": "じゃない"
+    },
+    {
+      "expression": "ゆう",
+      "ja_normal": "言う"
+    },
+    {
+      "expression": "んや",
+      "ja_normal": "んだ"
+    },
+    {
+      "expression": "ヤド",
+      "ja_normal": "んだ"
+    },
+    {
+      "expression": "ワイ",
+      "ja_normal": "俺"
+    },
+    {
+      "expression": "ワシ",
+      "ja_normal": "俺"
+    },
+    {
+      "expression": "ワレ",
+      "ja_normal": "お前"
+    },
+    {
+      "expression": "ど",
+      "ja_normal": "ぞ",
+      "guard": "sentence_final_do"
+    }
+  ]
+}

@@ -73,10 +73,32 @@ class VolumeReplayTest {
         assertTrue(table.isFile, "shipped phrase book missing at ${table.absolutePath}")
         PhraseBook.load(Json.decodeFromString<Map<String, String>>(table.readText()))
 
+        // The same three for Japanese, and for the same reason. Loaded
+        // unconditionally rather than behind KORA_BENCH_VERTICAL: a missing
+        // table does not fail, it quietly answers nothing, and a bench that
+        // measures a glossary which was never loaded reports zero and looks
+        // like a finding.
+        val japanesePhrases = File("../komelia-ui/src/commonMain/composeResources/files/phrasebook/ja-fr.json")
+        assertTrue(japanesePhrases.isFile, "shipped japanese phrase book missing at ${japanesePhrases.absolutePath}")
+        JapanesePhraseBook.load(Json.decodeFromString<Map<String, String>>(japanesePhrases.readText()))
+
+        val katakana = File("../komelia-ui/src/commonMain/composeResources/files/japanese/katakana.json")
+        assertTrue(katakana.isFile, "shipped katakana glossary missing at ${katakana.absolutePath}")
+        JapaneseKatakanaGlossary.load(katakana.readText())
+
+        val kansai = File("../komelia-ui/src/commonMain/composeResources/files/japanese/kansai.json")
+        assertTrue(kansai.isFile, "shipped kansai table missing at ${kansai.absolutePath}")
+        JapaneseKansaiNormaliser.load(kansai.readText())
+
         dirs.forEach { replay(it) }
     }
 
     private fun replay(dir: File) {
+        // KORA_BENCH_VERTICAL replays a Japanese volume: columns read right to
+        // left, which is a different merge and a different page order, not a
+        // variant of the Latin one. Read once for the whole volume, because the
+        // guardrail at the end of this function needs it too.
+        val vertical = System.getenv("KORA_BENCH_VERTICAL") != null
         val pages = dir.listFiles { f -> f.name.endsWith(".boxes.json") }
             ?.sortedBy { it.name }
             ?: emptyList()
@@ -99,7 +121,13 @@ class VolumeReplayTest {
         // exactly the kind of rule a reimplementation gets subtly wrong, and a
         // census built on a wrong copy would be worse than no census.
         val repairs = StringBuilder()
+        // Which Japanese table rewrote what, "table<TAB>before<TAB>after". The
+        // dialect and glossary tables run one after the other on the same
+        // sentence, so a single before/after would hide which of the two moved
+        // it -- and they are judged separately.
+        val rewrites = StringBuilder()
         var blockCount = 0
+        var sentenceCount = 0
         var widest = 0f
         var widestWhere = ""
 
@@ -121,15 +149,17 @@ class VolumeReplayTest {
                 )
             }
 
-            // KORA_BENCH_VERTICAL replays a Japanese volume: columns read
-            // right to left, which is a different merge and a different page
-            // order, not a variant of the Latin one.
-            val vertical = System.getenv("KORA_BENCH_VERTICAL") != null
             // Before the merge, exactly where ReaderState.performScan puts it.
             // Without it the credits and advertising pages of a scanlation --
             // which are Japanese -- reach the translator, and the bench reports
             // bubbles the reader would never have seen.
-            val kept = if (vertical) OcrScriptFilter.keepCjk(boxes)
+            //
+            // The furigana filter belongs to the same step and in the same
+            // order -- ReaderState builds `rawBoxes` as
+            // JapaneseFuriganaFilter.apply(keepCjk(scanned)). Leaving it out
+            // here fed the merge the phonetic gloss printed beside the kanji,
+            // which is exactly the noise it was written to remove.
+            val kept = if (vertical) JapaneseFuriganaFilter.apply(OcrScriptFilter.keepCjk(boxes))
             else OcrScriptFilter.keepLatin(boxes)
             val merged = mergeOcrBoxes(
                 kept,
@@ -144,7 +174,11 @@ class VolumeReplayTest {
             merged.groupBy { it.blockIndex }.forEach { (index, lines) ->
                 blockCount++
                 val rect = lines.first().blockRect
-                val text = lines.sortedBy { it.lineIndex }.joinToString(" ") { it.text }
+                // Japanese does not separate words with spaces, and inserting
+                // them between the columns of a bubble splits words the
+                // detector happened to cut in two.
+                val text = lines.sortedBy { it.lineIndex }
+                    .joinToString(if (vertical) "" else " ") { it.text }
                 val covered = lines.sumOf { (it.imageRect.width * it.imageRect.height).toDouble() }
                 val fill = (covered / (rect.width * rect.height) * 100).toInt()
                 val widthShare = rect.width / page.width
@@ -167,18 +201,44 @@ class VolumeReplayTest {
                 val others = heights.dropLast(1)
                 val ratio = if (others.isEmpty()) 1f else heights.last() / others[others.size / 2]
 
-                // The rest of ReaderState.translateBlocks, in its order. The
-                // repair sits between the rejoin and the casing because it
-                // needs whole words and puts the capitals back itself; leaving
-                // it out meant the word splitter was not exercised by the bench
-                // at all, which is how a bench comes to disagree with the app.
-                val rejoined = TranslationTextUtils.rejoinLineBreaks(text)
-                val repaired = OcrSpellRepair.apply(rejoined)
-                if (repaired != rejoined) repairs.appendLine("$rejoined	$repaired")
-                val ready = TranslationTextUtils.toSentenceCase(repaired)
-                val letters = ready.count { it.isLetter() }
-                val effect = if (TranslationTextUtils.isSoundEffect(ready)) " SFX" else ""
-                val keep = letters >= 2 && ready.length >= 3 && effect.isEmpty() &&
+                // The rest of ReaderState.translateBlocks, in its order and
+                // down the same branch. The repair sits between the rejoin and
+                // the casing because it needs whole words and puts the capitals
+                // back itself; leaving it out meant the word splitter was not
+                // exercised by the bench at all, which is how a bench comes to
+                // disagree with the app.
+                //
+                // Everything on the Latin side is Latin-only in the app too,
+                // and running it on Japanese is not a small inaccuracy: the
+                // sound-effect test and EnglishTextCleaner are written against
+                // an alphabet, and pointed at a Japanese volume they threw away
+                // 203 of 210 blocks -- 第01話 and メゲー世界は came out as
+                // sound effects. A bench that keeps 3% of the page cannot
+                // measure anything about the page.
+                val ready: String
+                val letters: Int
+                val effect: String
+                if (vertical) {
+                    // Homoglyphs rather than spelling, so no word list, and it
+                    // runs before anything else looks at the text: the phrase
+                    // book, the dialect table and the glossary all match on what
+                    // the page says, and ニ丁 is not what it says.
+                    ready = JapaneseOcrRepair.apply(text)
+                    if (ready != text) repairs.appendLine("$text	$ready")
+                    letters = ready.count { it.isLetter() }
+                    effect = ""
+                } else {
+                    val rejoined = TranslationTextUtils.rejoinLineBreaks(text)
+                    val repaired = OcrSpellRepair.apply(rejoined)
+                    if (repaired != rejoined) repairs.appendLine("$rejoined	$repaired")
+                    ready = TranslationTextUtils.toSentenceCase(repaired)
+                    letters = ready.count { it.isLetter() }
+                    effect = if (TranslationTextUtils.isSoundEffect(ready)) " SFX" else ""
+                }
+                // A whole Japanese bubble can be two characters ("はい"), where
+                // three would already be a sentence -- hence the lower bar.
+                val keep = if (vertical) letters >= 2
+                else letters >= 2 && ready.length >= 3 && effect.isEmpty() &&
                         EnglishTextCleaner.isTranslatable(ready)
                 if (keep) prepared += ready
                 report.appendLine(
@@ -215,11 +275,63 @@ class VolumeReplayTest {
             // translator whole, and the engine's answer depends on getting it
             // whole -- so the bench has to group before it translates, or it
             // measures a pipeline nobody ships.
-            BubbleAssembler.group(prepared).forEach { positions ->
+            //
+            // Japanese does not group: the assembler keys on ellipses and on a
+            // Latin sentence not having ended, neither of which says anything
+            // about a Japanese page. One bubble, one sentence.
+            val groups = if (vertical) prepared.indices.map { listOf(it) }
+            else BubbleAssembler.group(prepared)
+            groups.forEach { positions ->
                 val joined = BubbleAssembler.join(positions.map { prepared[it] })
-                sentences.appendLine(joined)
-                answers.appendLine(PhraseBook.lookup(joined).orEmpty())
+                // Looked up on the joined text, before the rewrites: both tables
+                // are written the way a page is lettered, so a balloon that is
+                // an entry matches as it was read.
+                val answer = if (vertical) JapanesePhraseBook.lookup(joined)
+                else PhraseBook.lookup(joined)
+                // Dialect first, then the katakana glossary -- ReaderState's
+                // order, and it matters: a Kansai form can itself be katakana.
+                val out: String
+                if (vertical) {
+                    val dialect = JapaneseKansaiNormaliser.apply(joined)
+                    out = JapaneseKatakanaGlossary.apply(dialect)
+                    // One line per table that fired, named. Counting how many
+                    // sentences changed is not enough to decide anything: the
+                    // question a table has to answer is which rule of it earns
+                    // its place, and a rewrite nobody can attribute cannot be
+                    // removed with any confidence.
+                    if (dialect != joined) rewrites.appendLine("kansai	$joined	$dialect")
+                    if (out != dialect) rewrites.appendLine("katakana	$dialect	$out")
+                } else out = joined
+                sentences.appendLine(out)
+                answers.appendLine(answer.orEmpty())
+                sentenceCount++
             }
+        }
+
+        // How much of the page reached the translator. Not a quality figure --
+        // a guardrail against one specific way this file has already broken:
+        // a rule written for one language filtering the other's text out.
+        //
+        // That bug did not announce itself. The replay ran, the report was
+        // full, the tests passed, and 203 of 210 Japanese blocks were quietly
+        // dropped as English sound effects. It was found by reading the report
+        // for another reason. This is what would have caught it.
+        //
+        // The thresholds are far below what is measured, because the point is
+        // to catch a collapse and never to complain about a volume that
+        // happens to be quiet. Japanese runs 95-100% (the filters are off, only
+        // the two-letter minimum applies); Latin runs 75-80%, lower because
+        // grouping merges balloons and the sound-effect test really does fire.
+        // The bug scored 3%.
+        if (blockCount >= MIN_BLOCKS_TO_JUDGE) {
+            val kept = sentenceCount.toFloat() / blockCount
+            val floor = if (vertical) VERTICAL_FLOOR else LATIN_FLOOR
+            assertTrue(
+                kept >= floor,
+                "${dir.name}: only ${(kept * 100).toInt()}% of $blockCount blocks reached the " +
+                        "translator (floor ${(floor * 100).toInt()}%). A filter meant for the " +
+                        "other language is probably eating this one.",
+            )
         }
 
         val out = File(dir, "report.txt")
@@ -227,7 +339,15 @@ class VolumeReplayTest {
         File(dir, "sentences.txt").writeText(sentences.toString())
         File(dir, "answers.txt").writeText(answers.toString())
         File(dir, "repairs.txt").writeText(repairs.toString())
+        File(dir, "rewrites.txt").writeText(rewrites.toString())
         println("${pages.size} pages, $blockCount blocks -> ${out.absolutePath}")
         println("widest block: ${(widest * 100).toInt()}% of the page, at $widestWhere")
+    }
+
+    private companion object {
+        /** Below this a volume is a handful of title pages and the ratio is noise. */
+        const val MIN_BLOCKS_TO_JUDGE = 30
+        const val VERTICAL_FLOOR = 0.70f
+        const val LATIN_FLOOR = 0.40f
     }
 }
