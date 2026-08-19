@@ -1665,6 +1665,9 @@ class ReaderState(
                     else protectedText
                         .mapText { snd.komelia.image.JapaneseKansaiNormaliser.apply(it) }
                         .mapText { snd.komelia.image.JapaneseKatakanaGlossary.apply(it) }
+                        // After the katakana table, which is about emphasis;
+                        // this one is about vocabulary the model never learned.
+                        .mapText { snd.komelia.image.JapaneseDomainGlossary.apply(it) }
                 }
             // Idioms the engine reliably mangles are answered before it sees
             // them: "Something the matter?" came back "Quelque chose la

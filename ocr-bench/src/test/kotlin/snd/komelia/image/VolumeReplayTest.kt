@@ -278,14 +278,16 @@ class VolumeReplayTest {
                 val out: String
                 if (vertical) {
                     val dialect = JapaneseKansaiNormaliser.apply(joined)
-                    out = JapaneseKatakanaGlossary.apply(dialect)
+                    val glossed = JapaneseKatakanaGlossary.apply(dialect)
+                    out = JapaneseDomainGlossary.apply(glossed)
                     // One line per table that fired, named. Counting how many
                     // sentences changed is not enough to decide anything: the
                     // question a table has to answer is which rule of it earns
                     // its place, and a rewrite nobody can attribute cannot be
                     // removed with any confidence.
                     if (dialect != joined) rewrites.appendLine("kansai	$joined	$dialect")
-                    if (out != dialect) rewrites.appendLine("katakana	$dialect	$out")
+                    if (glossed != dialect) rewrites.appendLine("katakana	$dialect	$glossed")
+                    if (out != glossed) rewrites.appendLine("domain	$glossed	$out")
                 } else out = joined
                 sentences.appendLine(out)
                 answers.appendLine(answer.orEmpty())
