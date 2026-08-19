@@ -40,6 +40,7 @@ kotlin {
                 "snd/komelia/image/PhraseBook.kt",
                 "snd/komelia/image/OcrSpellRepair.kt",
                 "snd/komelia/image/JapaneseKatakanaGlossary.kt",
+                "snd/komelia/image/JapaneseDomainGlossary.kt",
                 "snd/komelia/image/JapaneseKansaiNormaliser.kt",
                 "snd/komelia/image/JapaneseOcrRepair.kt",
                 "snd/komelia/image/JapaneseFuriganaFilter.kt",
