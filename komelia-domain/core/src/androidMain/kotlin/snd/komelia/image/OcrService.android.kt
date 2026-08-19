@@ -9,7 +9,6 @@ import snd.komelia.image.AndroidBitmap.toBitmap
 import androidx.compose.ui.geometry.Rect
 import io.github.oshai.kotlinlogging.KotlinLogging
 import snd.komelia.settings.model.OcrLanguage
-import snd.komelia.settings.model.OcrSpeedMode
 import snd.komelia.settings.model.OcrSettings
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
@@ -23,7 +22,7 @@ actual class OcrService {
 
     /** Keyed by orientation classification and speed mode: both are baked into
      *  the engine's config, so each combination needs its own instance. */
-    private val rapidOcrEngines = mutableMapOf<Pair<Boolean, OcrSpeedMode>, RapidOCR>()
+    private val rapidOcrEngines = mutableMapOf<Boolean, RapidOCR>()
     /**
      * Per-character boxes were only there to guess word boundaries from the
      * gaps between letters. The recogniser turned out to emit spaces itself
@@ -65,7 +64,7 @@ actual class OcrService {
         // the time — that is exactly what the orientation classifier is for.
         // Latin pages are upright and do not pay for it.
         val vertical = settings.selectedLanguage == OcrLanguage.JAPANESE
-        val engine = getRapidOcrEngine(vertical, settings.speedMode) ?: return emptyList()
+        val engine = getRapidOcrEngine(vertical) ?: return emptyList()
         return recognizeWithRapidOcr(engine, softwareBitmap)
     }
 
@@ -81,8 +80,8 @@ actual class OcrService {
         bottom = bottom * factor,
     )
 
-    private fun getRapidOcrEngine(useCls: Boolean, speedMode: OcrSpeedMode): RapidOCR? {
-        val existing = rapidOcrEngines[useCls to speedMode]
+    private fun getRapidOcrEngine(useCls: Boolean): RapidOCR? {
+        val existing = rapidOcrEngines[useCls]
         if (existing != null) return existing
 
         val modelsDir = context.filesDir.resolve("rapidocr_models").toPath()
@@ -95,15 +94,15 @@ actual class OcrService {
         // dictionary, so pairing it with a v4 detector or v4 keys produces
         // confident nonsense rather than an error.
         //
-        // Fast mode only swaps the detector, and only if the tiny model is in
-        // the downloaded bundle — an older bundle must not silently produce no
-        // OCR at all.
-        val tinyDet = modelsDir.resolve("PP-OCRv6_tiny_det_infer.onnx")
-        val fast = speedMode == OcrSpeedMode.FAST && tinyDet.exists()
-        if (speedMode == OcrSpeedMode.FAST && !fast) {
-            logger.warn { "Fast OCR asked for but PP-OCRv6_tiny_det_infer.onnx is missing — using the small detector" }
-        }
-        val detModel = if (fast) tinyDet else modelsDir.resolve("PP-OCRv6_small_det_infer.onnx")
+        // The small detector, and only it. A tiny detector shipped alongside
+        // it for a while behind a "Fast" switch, and it was measured not to be
+        // worth the choice: barely any faster, and it cost 1.3 points of
+        // recall on printed English and 5.2 on artistic text -- which on a
+        // comic page is the sound effects and the lettering over artwork.
+        // Detection is 1.7-1.9 s of a 3.3-4.4 s scan on a 1400x1993 comic
+        // page, so the ceiling on what swapping it can save was low to begin
+        // with. Removed on 2026-08-19.
+        val detModel = modelsDir.resolve("PP-OCRv6_small_det_infer.onnx")
         val clsModel = modelsDir.resolve("ch_ppocr_mobile_v2.0_cls_infer.onnx")
         val recModel = modelsDir.resolve("PP-OCRv6_small_rec_infer.onnx")
         val keysFile = modelsDir.resolve("ppocrv6_keys.txt")
@@ -165,13 +164,13 @@ actual class OcrService {
         // page of odd results is read against, and they have to be in the same
         // grep as the blocks themselves.
         ocrLogger.info {
-            "RapidOCR PP-OCRv6 engine, det=${if (fast) "tiny" else "small"}, " +
+            "RapidOCR PP-OCRv6 engine, det=small, " +
                     "$threads threads, cls=$useCls"
         }
 
         return try {
             val engine = RapidOCR.create(context, config)
-            rapidOcrEngines[useCls to speedMode] = engine
+            rapidOcrEngines[useCls] = engine
             engine
         } catch (e: Exception) {
             logger.error(e) { "Failed to create the RapidOCR engine" }
