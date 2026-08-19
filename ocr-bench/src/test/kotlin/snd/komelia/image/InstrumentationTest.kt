@@ -203,6 +203,32 @@ class PhraseBookTraceTest {
         assertNull(PhraseBook.lookupTraced("The quiet house on the hill was quite empty that evening."))
     }
 
+    /**
+     * The six balloons the bench found losing their ending, once it could see
+     * this table at all.
+     */
+    @Test
+    fun `a shouted balloon keeps its exclamation`() {
+        assertEquals("Fiche le camp !", PhraseBook.lookup("Shove off!"))
+        assertEquals("Mon Dieu !", PhraseBook.lookup("Oh my god!"))
+        assertEquals("Je suis vraiment désolé !", PhraseBook.lookup("I'm really sorry!"))
+        // The whole run comes back, so a double shout stays one.
+        assertEquals("Je suis tellement désolé !!", PhraseBook.lookup("I'm so sorry!!"))
+    }
+
+    @Test
+    fun `an answer with its own ending is left alone`() {
+        // "huh" answers "Hein ?" deliberately; "HUH?!" must not make it "Hein ??!".
+        assertEquals("Hein ?", PhraseBook.lookup("Huh?!"))
+        assertEquals("Hein ?", PhraseBook.lookup("Huh?"))
+    }
+
+    @Test
+    fun `a quiet balloon gains nothing`() {
+        assertEquals("À ma connaissance", PhraseBook.lookup("As far as I know..."))
+        assertEquals("Au cas où", PhraseBook.lookup("Just in case,"))
+    }
+
     /** The traced form must not answer differently from the plain one. */
     @Test
     fun `lookup and lookupTraced agree`() {
