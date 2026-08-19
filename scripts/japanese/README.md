@@ -1,4 +1,4 @@
-# Les deux tables japonaises
+# Les trois tables japonaises
 
 Ce dossier tient les **sources** ; ce qui part dans l'APK est une version
 réduite sous `komelia-ui/src/commonMain/composeResources/files/`.
@@ -6,7 +6,13 @@ réduite sous `komelia-ui/src/commonMain/composeResources/files/`.
 | source | ressource embarquée | lue par |
 |---|---|---|
 | `katakana-master.json` | `files/japanese/katakana.json` | `JapaneseKatakanaGlossary` |
+| `kansai-master.json` | `files/japanese/kansai.json` | `JapaneseKansaiNormaliser` |
 | `expressions-master.json` | `files/phrasebook/ja-fr.json` | `JapanesePhraseBook` |
+
+L'ordre dans le lecteur est imposé et il compte : réparation OCR
+(`JapaneseOcrRepair`) → dialecte → katakana → expressions figées → traduction.
+`ワシャ` doit devenir `俺は` pendant que c'est encore une suite de katakana, et
+`ニ丁` doit redevenir `二丁` avant que quoi que ce soit d'autre le lise.
 
 ## Régénérer les ressources
 
@@ -20,8 +26,40 @@ io.open("komelia-ui/src/commonMain/composeResources/files/japanese/katakana.json
         "w", encoding="utf-8").write(
     json.dumps({"version": d["metadata"]["version"], "entries": keep},
                ensure_ascii=False, separators=(",", ":")))
+
+d = json.load(open("scripts/japanese/kansai-master.json", encoding="utf-8"))
+keep = [{k: v for k, v in x.items() if k in ("expression", "ja_normal", "guard")}
+        for x in d["entries"]]
+io.open("komelia-ui/src/commonMain/composeResources/files/japanese/kansai.json",
+        "w", encoding="utf-8").write(
+    json.dumps({"version": d["metadata"]["version"], "entries": keep},
+               ensure_ascii=False, separators=(",", ":")))
 PY
 ```
+
+## Le kansai-ben
+
+`kansai-master.json` part du fichier de Mathieu
+(`japonais_kansai_ben_normalisation_v0_1.json`, 147 entrées + 24 règles) et y
+ajoute ce que la mesure a réclamé. Entrées et règles sont fusionnées en **une**
+table triée du plus long au plus court : c'est ce tri qui fait gagner `やないかい`
+sur `やな` sans avoir à écrire une priorité à la main.
+
+Mesuré sur les 231 bulles distinctes de 50 pages lues : **19 bulles touchées, 9
+franchement meilleures, aucune régression franche**, dont quatre inversions de
+sens remises à l'endroit (`見つからへんど` répondait « peut être trouvé »).
+
+Les cinq corrections apportées au fichier d'origine, chacune avec la bulle qui
+l'a exigée, sont dans `metadata.added` et `metadata.veto` du master. La plus
+importante : `ちゃう` seul est la contraction de `~てしまう` bien plus souvent
+que `違う`, donc il ne tire qu'en tête de bulle ou après `ん`.
+
+## Les homoglyphes OCR
+
+`JapaneseOcrRepair` n'a pas de fichier : deux paires tiennent dans le code.
+Neuf paires visuellement identiques ont été essayées sur 722 lignes reconnues
+de deux tomes ; sept n'ont produit **aucune** réparation correcte et une
+réparation fausse (`3カ月` → `3力月`). Ne pas les remettre sans les remesurer.
 
 Seuls `expression` et `ja_normal` partent. `translation_fr` reste ici : c'est
 une glose de contrôle, **le moteur ne doit jamais la lire**. Une version du
