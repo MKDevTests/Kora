@@ -1714,7 +1714,10 @@ class ReaderState(
                     // it. A phrase book answer never went out with placeholders
                     // in it, so restoring is only for what the engine returned.
                     val restored = if (known[groupIndex] != null) answer
-                    else protectedGroups[groupIndex].restore(answer)
+                    else snd.komelia.image.TranslationOutputRepair.collapseInventedRepeats(
+                        source = joined[groupIndex],
+                        translated = protectedGroups[groupIndex].restore(answer),
+                    )
                     val pieces = snd.komelia.image.BubbleAssembler.distribute(
                         restored,
                         groupSources[groupIndex],
