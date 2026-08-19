@@ -1,0 +1,11 @@
+book	page	block	source	repairs	grouped_source	phrasebook	seam	output	error_category	expected_fr	acceptable_fr	severity	notes
+100-girlfriends			Her cute cuteyclite cute cute facey-cute! Face isso closeyclose!	CONFUSION:'CLITE'>'CUTE' CONFUSION:'CLITE'>'CUTE'			NO_ELLIPSIS	Son mignon mignoncyclite mignon mignon mignon facey-cute! Face est si proche!	D			meaning_changed	deliberate babbling in the lettering; the repair fires on it and cannot help
+100-girlfriends			I'm so sorry!!			BULK:'i'm so sorry'		Je suis tellement desole !!	E2		Je suis tellement desolee !!	awkward	speaker is female; a fixed table cannot agree in gender, the engine got it right by luck
+100-girlfriends			If yol're looking for a snack, I brought bocky.				NO_ELLIPSIS	Si tu cherches une collation, j'ai apporte du bocky.	D			cosmetic	'you're' read as 'yol're'; the engine recovered anyway
+100-girlfriends			Ifi don't stop her now, his first kiss'll get taken!				NO_ELLIPSIS	Si je ne l'arrete pas maintenant, son premier baiser sera pris !	D			awkward	'If I' run together as 'Ifi'
+100-girlfriends			Like they say, you get better if you pass your cold to someone else!				NO_ELLIPSIS	Comme on dit, tu t'ameliores si tu passes ton froid a quelqu'un d'autre !	C		Comme on dit, on guerit en refilant son rhume a quelqu'un d'autre !	meaning_changed	'cold' read as temperature, 'get better' as self-improvement
+100-girlfriends			The gamehad already begun!!				NO_ELLIPSIS	Le jeu avait deja commence !!	D	Le jeu avait deja commence !!		cosmetic	'game had' run together; the output happened to survive it
+100-girlfriends			They're going fora hat trick!!				NO_ELLIPSIS	Ils vont pour un tour du chapeau !!	C		Ils visent le triple !|Ils tentent le coup du chapeau !	meaning_changed	'hat trick' rendered literally; also 'for a' run together
+100-girlfriends			Whoeverkisses him first...				NO_ELLIPSIS_START	Celui qui le fait d'abord...	D	Celui qui l'embrasse en premier...		meaning_changed	'Whoever kisses' run together; the splitter missed it and the verb was lost
+altered-carbon			Cofus cofus cofus				NO_ELLIPSIS	Cofus Cofus cofus	D			cosmetic	a cough drawn as lettering; recognised as words and left untranslated
+blue-box	1	11	Neither of them...		Neither of them Are letting up!		JOINED	Aucun d'eux...					fixed 19/08: the ellipsis was read with a stray dot and the seam was missed

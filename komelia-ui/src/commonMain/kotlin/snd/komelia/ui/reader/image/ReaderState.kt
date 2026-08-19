@@ -1212,7 +1212,7 @@ class ReaderState(
                         }
                     } else rawBoxes
 
-                    PageScan(boxes, translateBlocks(boxes, foreground))
+                    PageScan(boxes, translateBlocks(boxes, foreground, pageId))
                         .also { cacheScan(pageId, it) }
                 }
             }
@@ -1541,6 +1541,11 @@ class ReaderState(
     private suspend fun translateBlocks(
         boxes: List<OcrElementBox>,
         foreground: Boolean,
+        // Only for the diagnostic line below. Scans run on several workers at
+        // once, so their block lines interleave in logcat and there is no way
+        // to tell which page one belongs to unless it says so itself -- which
+        // is what a corpus of errors needs before it can name a page.
+        pageId: PageId,
     ): Map<Int, String> {
         val settings = translationSettings.value
         if (!settings.enabled || boxes.isEmpty()) return emptyMap()
@@ -1745,7 +1750,7 @@ class ReaderState(
                 else blockBoxes.sumOf { (it.imageRect.width * it.imageRect.height).toDouble() }
                     .toFloat() / blockArea
                 translationLogger.info {
-                    "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
+                    "page $pageId block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
                             "${rect.width.toInt()}x${rect.height.toInt()}] " +
                             "conf=${(worst * 100).toInt()}% " +
                             "fill=${(fill * 100).toInt()}% lines=${blockBoxes.size} " +
