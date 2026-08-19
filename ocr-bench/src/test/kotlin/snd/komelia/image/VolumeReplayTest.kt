@@ -127,6 +127,7 @@ class VolumeReplayTest {
         // it -- and they are judged separately.
         val rewrites = StringBuilder()
         var blockCount = 0
+        var ocrLineCount = 0
         var sentenceCount = 0
         var widest = 0f
         var widestWhere = ""
@@ -171,6 +172,7 @@ class VolumeReplayTest {
                 pageWidth = page.width,
             )
             val shortName = page.page.substringAfterLast(" - ").substringBefore(" [")
+            ocrLineCount += boxes.size
             report.appendLine("== $shortName  ${page.width}x${page.height}  ${boxes.size} lines")
 
             // The one implementation, the same one ReaderState calls. This file
@@ -306,6 +308,27 @@ class VolumeReplayTest {
         // the two-letter minimum applies); Latin runs 75-80%, lower because
         // grouping merges balloons and the sound-effect test really does fire.
         // The bug scored 3%.
+        // Before the ratio below, because the ratio cannot see this case: it
+        // needs MIN_BLOCKS_TO_JUDGE blocks to say anything, and the failure it
+        // most needs to catch destroys the blocks themselves.
+        //
+        // Replaying the Japanese volumes without KORA_BENCH_VERTICAL runs
+        // keepLatin over vertical text. 45 pages and several hundred recognised
+        // lines came out as 3 blocks, sentences.txt held two lines of romaji,
+        // and the run reported success -- 3 is below 30, so nothing judged it.
+        // A whole volume can be silently emptied and the only signal was that
+        // the numbers looked wrong to a human reading them.
+        if (ocrLineCount >= MIN_LINES_TO_JUDGE) {
+            val survived = blockCount.toFloat() / ocrLineCount
+            assertTrue(
+                survived >= MIN_BLOCK_YIELD,
+                "${dir.name}: $ocrLineCount recognised lines produced only $blockCount " +
+                        "blocks. The volume has been emptied before the merge -- for a " +
+                        "Japanese volume this is KORA_BENCH_VERTICAL missing, which sends " +
+                        "vertical text through the Latin script filter.",
+            )
+        }
+
         if (blockCount >= MIN_BLOCKS_TO_JUDGE) {
             val kept = sentenceCount.toFloat() / blockCount
             val floor = if (vertical) VERTICAL_FLOOR else LATIN_FLOOR
@@ -330,6 +353,15 @@ class VolumeReplayTest {
     private companion object {
         /** Below this a volume is a handful of title pages and the ratio is noise. */
         const val MIN_BLOCKS_TO_JUDGE = 30
+
+        /**
+         * The merge groups lines into blocks, so blocks are always fewer than
+         * lines -- the real volumes sit between 0.35 and 0.6. A tenth is far
+         * below anything the merge produces and well above the 0.01 an emptied
+         * volume gives.
+         */
+        const val MIN_LINES_TO_JUDGE = 100
+        const val MIN_BLOCK_YIELD = 0.10f
         const val VERTICAL_FLOOR = 0.70f
         const val LATIN_FLOOR = 0.40f
     }

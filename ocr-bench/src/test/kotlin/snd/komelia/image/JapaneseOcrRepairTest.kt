@@ -45,4 +45,54 @@ class JapaneseOcrRepairTest {
         assertEquals("ニ", JapaneseOcrRepair.apply("ニ"))
         assertEquals("そうニね", JapaneseOcrRepair.apply("そうニね"))
     }
+
+    @Test
+    fun `a katakana word that lost its handakuten is put back`() {
+        // The corpus case: 14 occurrences against 11 correct ones.
+        assertEquals(
+            "良ければ正式に私たちのパーティーに入らない？",
+            JapaneseOcrRepair.apply("良ければ正式に私たちのハーティーに入らない？"),
+        )
+        assertEquals("より適切なサポートができた", JapaneseOcrRepair.apply("より適切なサホートができた"))
+    }
+
+    @Test
+    fun `a mark the recogniser invented is taken back off`() {
+        // The other direction, and the reason a skeleton alone cannot decide:
+        // here the unmarked spelling is the correct one.
+        assertEquals("湯けむりハーレム", JapaneseOcrRepair.apply("湯けむりバーレム"))
+    }
+
+    @Test
+    fun `a word already spelled correctly is untouched`() {
+        for (text in listOf("パーティー", "ハーレム", "サポート", "ダンジョン")) {
+            assertEquals(text, JapaneseOcrRepair.apply(text))
+        }
+    }
+
+    @Test
+    fun `a name is not renamed into a word that looks like it`() {
+        // Every one of these is a real risk that kept a word off the list: ヒール
+        // (heal) appears in all seven volumes and ボール would rewrite it, ホール
+        // is a hall, カート a cart, and フレイヤー is a person.
+        for (text in listOf("ヒール", "ホール", "カート", "フレイヤー", "トア")) {
+            assertEquals(text, JapaneseOcrRepair.apply(text))
+        }
+    }
+
+    @Test
+    fun `a run that merely contains a word is left whole`() {
+        // ランクハーティー visibly holds パーティー, and splitting a run on that
+        // guess is how a repair starts renaming people. One run is one word.
+        assertEquals("ランクハーティー", JapaneseOcrRepair.apply("ランクハーティー"))
+    }
+
+    @Test
+    fun `the two repairs do not interfere`() {
+        // The homoglyph rule still fires in a sentence the word list also touches.
+        assertEquals(
+            "二丁のパーティー",
+            JapaneseOcrRepair.apply("ニ丁のハーティー"),
+        )
+    }
 }
