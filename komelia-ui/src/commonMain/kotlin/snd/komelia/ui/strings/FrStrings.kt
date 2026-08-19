@@ -555,6 +555,7 @@ val FrStrings = AppStrings(
         "epubReader" to "Lecteur EPUB",
         "epubReaderSettings" to "Réglages du lecteur EPUB",
         "error" to "Erreur",
+        "errorLoadingPage" to "Cette page n'a pas pu être chargée",
         "errors" to "Erreurs",
         "eventListener" to "Écoute des événements",
         "exclusionMode" to "Mode exclusion",

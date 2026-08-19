@@ -543,6 +543,7 @@ val EnStrings = AppStrings(
         "epubReader" to "Epub Reader",
         "epubReaderSettings" to "Epub Reader Settings",
         "error" to "Error",
+        "errorLoadingPage" to "This page could not be loaded",
         "errors" to "Errors",
         "eventListener" to "Event Listener",
         "exclusionMode" to "Exclusion mode",

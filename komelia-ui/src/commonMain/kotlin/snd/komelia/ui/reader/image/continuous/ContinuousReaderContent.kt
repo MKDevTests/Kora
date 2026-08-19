@@ -402,7 +402,11 @@ private fun ContinuousReaderImage(
 
     val coroutineScope = rememberCoroutineScope()
     var imageResult by remember { mutableStateOf<ReaderImageResult?>(null) }
-    DisposableEffect(Unit) {
+    // Bumped by the retry button. The effect keys on it so pressing it runs the
+    // load again; without a key the DisposableEffect fires once for the page's
+    // whole life on screen and a failed page can never be asked for twice.
+    var retryCount by remember { mutableStateOf(0) }
+    DisposableEffect(retryCount) {
         coroutineScope.launch {
             val result = state.getImage(page)
             result.image?.let { state.onPageDisplay(page, it) }
@@ -437,6 +441,11 @@ private fun ContinuousReaderImage(
             imageResult = imageResult,
             ocrResults = ocr,
             translations = translations,
+            onRetry = {
+                imageResult = null
+                state.invalidatePage(page)
+                retryCount++
+            },
             onSelectionChanged = { results -> state.readerState.ocrResults.value = results },
             onAddNote = { text, x, y -> onAddNote(text, page.pageNumber - 1, x, y) }
         )

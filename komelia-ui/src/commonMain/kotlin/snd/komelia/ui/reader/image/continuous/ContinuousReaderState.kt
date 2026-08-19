@@ -791,6 +791,24 @@ class ContinuousReaderState(
         return requestedPageJob.await()
     }
 
+    /**
+     * Drops a page's cached load so the next request fetches it again.
+     *
+     * The cache holds the Deferred, and a load that FAILED completed normally
+     * carrying a ReaderImageResult.Error -- it is not cancelled, so the
+     * `!isCancelled` guard in [launchImageJob] hands the failure back forever.
+     * That is why a page that timed out stayed broken while its neighbour was
+     * fine, and why nothing short of reopening the book fixed it.
+     *
+     * Deliberately manual rather than automatic on error: the continuous reader
+     * asks for a page on every scroll tick, so invalidating inside the failure
+     * path would turn one dead page into a request loop against a server that
+     * is already struggling. The reader asks, once, by pressing the button.
+     */
+    fun invalidatePage(page: PageMetadata) {
+        imageCache.invalidate(page.toPageId())
+    }
+
     private fun launchImageJob(requestPage: PageMetadata): Deferred<ReaderImageResult> {
         val pageId = requestPage.toPageId()
         val cached = imageCache.get(pageId)

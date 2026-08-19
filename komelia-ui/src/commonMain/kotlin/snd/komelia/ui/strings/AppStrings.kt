@@ -436,6 +436,7 @@ class UiStrings(private val values: Map<String, String>) {
     val epubReader: String get() = at("epubReader")
     val epubReaderSettings: String get() = at("epubReaderSettings")
     val error: String get() = at("error")
+    val errorLoadingPage: String get() = at("errorLoadingPage")
     val errors: String get() = at("errors")
     val eventListener: String get() = at("eventListener")
     val exclusionMode: String get() = at("exclusionMode")
