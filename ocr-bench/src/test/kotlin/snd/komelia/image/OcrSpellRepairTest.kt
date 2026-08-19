@@ -87,6 +87,71 @@ class OcrSpellRepairTest {
  * list of cases but a census — a splitter is only worth having if it changes
  * almost nothing it should not, and that has to be counted rather than hoped.
  */
+class OcrNumberZeroTest {
+
+    private val lexicon = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `a zero drawn as an o comes back a zero`() {
+        // All five off real pages, across four series.
+        assertEquals("70 years", OcrSpellRepair.apply("7o years"))
+        assertEquals("80 years", OcrSpellRepair.apply("8o years"))
+        assertEquals("200 years", OcrSpellRepair.apply("2oo years"))
+        assertEquals("1800 yen", OcrSpellRepair.apply("18oo yen"))
+        assertEquals("Camera 01", OcrSpellRepair.apply("Camera o1"))
+    }
+
+    @Test
+    fun `a word is never touched`() {
+        // The rule fires only on a token of digits and o, so there is no word
+        // for it to damage -- which is what the digit confusions this file
+        // measured and threw out could not say.
+        assertEquals("o", OcrSpellRepair.apply("o"))
+        assertEquals("oo", OcrSpellRepair.apply("oo"))
+        assertEquals("go", OcrSpellRepair.apply("go"))
+        assertEquals("solo", OcrSpellRepair.apply("solo"))
+        assertEquals("1st", OcrSpellRepair.apply("1st"))
+        assertEquals("o'clock", OcrSpellRepair.apply("o'clock"))
+    }
+}
+
+class OcrThinStrokeTest {
+
+    private val lexicon = java.io.File(
+        "../komelia-ui/src/commonMain/composeResources/files/lexicon/en.txt"
+    )
+
+    init {
+        OcrSpellRepair.load(lexicon.readLines().filter { it.isNotBlank() }.toSet())
+    }
+
+    @Test
+    fun `a u drawn as one thin stroke reads as l`() {
+        // Every one off a real volume, and the reason the pair exists.
+        assertEquals("because", OcrSpellRepair.repair("becalse"))
+        assertEquals("guy", OcrSpellRepair.repair("gly"))
+        assertEquals("soulmate", OcrSpellRepair.repair("sollmate"))
+        assertEquals("until", OcrSpellRepair.repair("lntil"))
+        assertEquals("count", OcrSpellRepair.repair("colnt"))
+        assertEquals("sounds", OcrSpellRepair.repair("solnds"))
+    }
+
+    @Test
+    fun `the other direction is not admitted`() {
+        // 'l' is far commoner than 'u', and reading it backwards invented
+        // words on the same corpus: "up" misread "uip" became "lip", and the
+        // name "moue" became "mole".
+        assertNull(OcrSpellRepair.repair("uip"))
+        assertNull(OcrSpellRepair.repair("moue"))
+    }
+}
+
 class OcrWordSplitTest {
 
     private val lexicon = File(
@@ -235,6 +300,28 @@ class OcrWordSplitTest {
             touched.size * 100 <= tokens.size,
             "split ${touched.size} of ${tokens.size} real tokens — over one percent: $touched"
         )
+    }
+
+    @Test
+    fun `an auxiliary or a quantifier leads a dropped space too`() {
+        // All five off one manga volume, where the recogniser glues these as
+        // readily as it glues articles and pronouns.
+        assertEquals("have they", OcrSpellRepair.split("havethey"))
+        assertEquals("been looking", OcrSpellRepair.split("beenlooking"))
+        assertEquals("some reason", OcrSpellRepair.split("somereason"))
+        assertEquals("four leaf", OcrSpellRepair.split("fourleaf"))
+        assertEquals("two girls", OcrSpellRepair.split("twogirls"))
+    }
+
+    @Test
+    fun `a productive prefix never leads one`() {
+        // Measured, and the reason the batch above stops where it does: "out",
+        // "over", "up", "down" and "back" build English words rather than
+        // standing beside them, and admitting them cut two real words in half
+        // on the comics -- "outmatched" became "out matched", which Bergamot
+        // then read as "a l'ecart", and "overreliance" came apart the same way.
+        assertNull(OcrSpellRepair.split("outmatched"))
+        assertNull(OcrSpellRepair.split("overreliance"))
     }
 }
 

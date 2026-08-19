@@ -20,7 +20,6 @@ import snd.komelia.settings.model.NcnnUpscalerSettings
 import snd.komelia.settings.model.OcrEngine
 import snd.komelia.settings.model.OcrLanguage
 import snd.komelia.settings.model.OcrSettings
-import snd.komelia.settings.model.OcrSpeedMode
 import snd.komelia.settings.model.PageDisplayLayout
 import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.PanelsFullPageDisplayMode
@@ -69,9 +68,6 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                                 RapidOcrModel.PP_OCR_V6_SMALL
                             ),
                             mergeBoxes = it[ImageReaderSettingsTable.ocrMergeBoxes],
-                            speedMode = enumOrDefault(
-                                it[ImageReaderSettingsTable.ocrSpeedMode], OcrSpeedMode.NORMAL
-                            ),
                         ),
                         translationSettings = snd.komelia.settings.model.TranslationSettings(
                             enabled = it[ImageReaderSettingsTable.translationEnabled],
@@ -148,7 +144,6 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[ocrEngine] = settings.ocrSettings.engine.name
                 it[ocrRapidOcrModel] = settings.ocrSettings.rapidOcrModel.name
                 it[ocrMergeBoxes] = settings.ocrSettings.mergeBoxes
-                it[ocrSpeedMode] = settings.ocrSettings.speedMode.name
 
                 it[translationEnabled] = settings.translationSettings.enabled
                 it[translationSource] = settings.translationSettings.source.name
