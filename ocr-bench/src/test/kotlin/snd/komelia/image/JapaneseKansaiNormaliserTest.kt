@@ -24,6 +24,74 @@ class JapaneseKansaiNormaliserTest {
     }
 
     @Test
+    fun `hen is a negation, not the middle of sonohen`() {
+        loadShipped()
+        // そのへん is "around there". Unguarded, the generic ~へん rule turned
+        // そのへんで into そのないで on a real page of the bench corpus.
+        assertEquals(
+            "そのへんで…",
+            JapaneseKansaiNormaliser.apply("そのへんで…"),
+        )
+        // The guard is the -a column: a Kansai negation attaches to the 未然形.
+        // 逃がさ-へん qualifies, and still fires.
+        assertEquals(
+            "逃がさない",
+            JapaneseKansaiNormaliser.apply("逃がさへん"),
+        )
+    }
+
+    @Test
+    fun `yaro is the copula, never the tail of a volitive`() {
+        loadShipped()
+        // Both produced だろうう -- not a word in any language -- before the
+        // guard. The う is the whole difference.
+        assertEquals(
+            "ほらほら触ってやろうかぁ？",
+            JapaneseKansaiNormaliser.apply("ほらほら触ってやろうかぁ？"),
+        )
+        assertEquals(
+            "せめて話だけでも聞いてやろうぜ",
+            JapaneseKansaiNormaliser.apply("せめて話だけでも聞いてやろうぜ"),
+        )
+        // And it still fires where it is really the copula.
+        assertEquals(
+            "そうだろう？",
+            JapaneseKansaiNormaliser.apply("そうやろ？"),
+        )
+    }
+
+    @Test
+    fun `kaina closes a question and does nothing inside shikainai`() {
+        loadShipped()
+        // 四人しかいない is "there are only four of them". The rule cut it to
+        // 四人しかない, which changes the verb of existence.
+        assertEquals(
+            "世界に四人しかいない勇者",
+            JapaneseKansaiNormaliser.apply("世界に四人しかいない勇者"),
+        )
+        assertEquals(
+            "そうかな？",
+            JapaneseKansaiNormaliser.apply("そうかいな？"),
+        )
+    }
+
+    @Test
+    fun `yuu alone is gone, the past and te forms stay`() {
+        loadShipped()
+        // そうきゆう is 早急 with its reading run together by the recogniser.
+        // ゆう→言う fired inside it and produced そうき言う早急に. Measured over
+        // 1686 balloons the bare key fired once, wrongly, and never usefully.
+        assertEquals(
+            "そうきゆう早急にお帰り頂こう",
+            JapaneseKansaiNormaliser.apply("そうきゆう早急にお帰り頂こう"),
+        )
+        // The trailing やろ IS the copula here, at the end of the clause, so it
+        // normalises too -- both rules doing their job on one line.
+        assertEquals("言っただろう", JapaneseKansaiNormaliser.apply("ゆうたやろ"))
+        assertEquals("言って", JapaneseKansaiNormaliser.apply("ゆうて"))
+    }
+
+    @Test
     fun `puts the negation back`() {
         loadShipped()
         // Returned "peut être trouvé" — the opposite of the line — until ~へん

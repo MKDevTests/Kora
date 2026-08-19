@@ -116,6 +116,11 @@ class VolumeReplayTest {
         // exactly the kind of rule a reimplementation gets subtly wrong, and a
         // census built on a wrong copy would be worse than no census.
         val repairs = StringBuilder()
+        // Which Japanese table rewrote what, "table<TAB>before<TAB>after". The
+        // dialect and glossary tables run one after the other on the same
+        // sentence, so a single before/after would hide which of the two moved
+        // it -- and they are judged separately.
+        val rewrites = StringBuilder()
         var blockCount = 0
         var widest = 0f
         var widestWhere = ""
@@ -283,8 +288,18 @@ class VolumeReplayTest {
                 else PhraseBook.lookup(joined)
                 // Dialect first, then the katakana glossary -- ReaderState's
                 // order, and it matters: a Kansai form can itself be katakana.
-                val out = if (!vertical) joined
-                else JapaneseKatakanaGlossary.apply(JapaneseKansaiNormaliser.apply(joined))
+                val out: String
+                if (vertical) {
+                    val dialect = JapaneseKansaiNormaliser.apply(joined)
+                    out = JapaneseKatakanaGlossary.apply(dialect)
+                    // One line per table that fired, named. Counting how many
+                    // sentences changed is not enough to decide anything: the
+                    // question a table has to answer is which rule of it earns
+                    // its place, and a rewrite nobody can attribute cannot be
+                    // removed with any confidence.
+                    if (dialect != joined) rewrites.appendLine("kansai	$joined	$dialect")
+                    if (out != dialect) rewrites.appendLine("katakana	$dialect	$out")
+                } else out = joined
                 sentences.appendLine(out)
                 answers.appendLine(answer.orEmpty())
             }
@@ -295,6 +310,7 @@ class VolumeReplayTest {
         File(dir, "sentences.txt").writeText(sentences.toString())
         File(dir, "answers.txt").writeText(answers.toString())
         File(dir, "repairs.txt").writeText(repairs.toString())
+        File(dir, "rewrites.txt").writeText(rewrites.toString())
         println("${pages.size} pages, $blockCount blocks -> ${out.absolutePath}")
         println("widest block: ${(widest * 100).toInt()}% of the page, at $widestWhere")
     }
