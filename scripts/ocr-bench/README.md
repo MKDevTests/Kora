@@ -45,15 +45,67 @@ graphe transformerait une vérification de deux secondes en build.
 
 ## Ce que le banc ne teste pas
 
-- **La traduction elle-même** : ML Kit Translate est Android uniquement. Le banc
-  donne le texte source des blocs, pas le français.
 - **Le rendu à l'écran** : il donne les rectangles et les couleurs de panneau,
   pas la mise en page finale.
+- **Le partage d'une phrase entre ses bulles** : `bench_en.py` compare la
+  phrase envoyée au moteur, pas les morceaux redistribués à chaque bulle. Une
+  phrase groupée peut être juste et mal découpée à l'écran.
 
 Ces deux points restent une vérification sur tablette. Tout le reste — quelles
 lignes forment une bulle, dans quel ordre elles se lisent, la taille du panneau
-peint, les onomatopées, les mots coupés en fin de ligne, les honorifiques — se
-règle ici.
+peint, les onomatopées, les mots coupés en fin de ligne, les honorifiques, et
+depuis `bench_en.py` **le français lui-même** — se règle ici.
+
+> Corrigé le 19/08/2026 : cette section affirmait que le banc ne donnait pas le
+> français. C'était vrai du temps de ML Kit ; `bench_en.py` fait tourner le vrai
+> binaire Bergamot depuis, et consulte le carnet d'expressions comme le lecteur.
+
+## Le carnet d'expressions dans le banc
+
+`bench_en.py` donne le dernier mot au carnet, exactement comme le lecteur. Le
+rapport affiche chaque réponse **en face de ce que Bergamot aurait rendu** :
+
+```
+  phrase book answers, against what Bergamot would have returned:
+    src   Shove off!
+    book  Fiche le camp !
+    was   Pellez !
+```
+
+C'est la seule vue qui distingue une entrée utile d'une entrée inutile — ici
+« Pellez ! » montre que le moteur avait lu *shovel*, alors que `What's up?`
+donne le même résultat des deux côtés et ne gagne rien.
+
+Ça n'a pas toujours été le cas : le Kotlin écrivait ses réponses dans
+`answers.txt` et le rapport ne lisait que la sortie de Bergamot. Un « 0 changed »
+après un ajout d'entrées ne voulait donc rien dire.
+
+## Le corpus d'erreurs
+
+`translation_errors.tsv` recense les bulles sorties fausses, avec le compte-rendu
+que le pipeline fait de lui-même. Il s'alimente depuis la tablette :
+
+```bash
+adb logcat -d -s KoraTranslate > session.txt
+python scripts/ocr-bench/collect_errors.py session.txt
+```
+
+Le script remplit les neuf colonnes que le log connaît (`source`, `repairs`,
+`grouped_source`, `phrasebook`, `seam`, `output`…) et laisse `error_category`
+vide. **Une ligne sans catégorie est une bulle non relue, pas une bulle
+correcte.** Les colonnes remplies à la main ne sont jamais écrasées.
+
+Catégories : `A` expression figée, `B` fragment mal groupé, `C` construction
+ratée par le moteur, `D` source cassée par l'OCR, `E1` casse ou nom propre,
+`E2` registre.
+
+`expected_fr` ne se remplit que là où une seule bonne réponse existe — `A` et
+`D`. Pour `C` et `E2`, plusieurs formulations conviennent : les mettre dans
+`acceptable_fr`, séparées par `|`.
+
+Deux pièges : un build antérieur à l'instrumentation n'écrit pas les lignes
+`page … block …`, et une page servie par le cache de scan (en mémoire) n'écrit
+rien du tout — relancer l'app avant de lire.
 
 ## Ajouter un cas
 

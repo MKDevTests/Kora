@@ -1212,7 +1212,7 @@ class ReaderState(
                         }
                     } else rawBoxes
 
-                    PageScan(boxes, translateBlocks(boxes, foreground))
+                    PageScan(boxes, translateBlocks(boxes, foreground, pageId))
                         .also { cacheScan(pageId, it) }
                 }
             }
@@ -1541,6 +1541,11 @@ class ReaderState(
     private suspend fun translateBlocks(
         boxes: List<OcrElementBox>,
         foreground: Boolean,
+        // Only for the diagnostic line below. Scans run on several workers at
+        // once, so their block lines interleave in logcat and there is no way
+        // to tell which page one belongs to unless it says so itself -- which
+        // is what a corpus of errors needs before it can name a page.
+        pageId: PageId,
     ): Map<Int, String> {
         val settings = translationSettings.value
         if (!settings.enabled || boxes.isEmpty()) return emptyMap()
@@ -1558,9 +1563,13 @@ class ReaderState(
         // the sentence casing, the sound-effect test and the phrase book all
         // work from.
         if (!japanese) loadLexicon()
+        // What each repair rule rewrote, kept for the diagnostic log below. A
+        // rule that reads a token wrong shows its damage two stages later, in
+        // French, and without this there is nothing left to say which one fired.
+        val repairs = mutableMapOf<Int, List<snd.komelia.image.OcrSpellRepair.Change>>()
         val blocks = boxes
             .groupBy { it.blockIndex }
-            .mapValues { (_, elements) ->
+            .mapValues { (blockIndex, elements) ->
                 elements
                     .sortedWith(compareBy({ it.lineIndex }, { it.elementIndex }))
                     // Japanese does not separate words with spaces, and inserting
@@ -1579,7 +1588,11 @@ class ReaderState(
                             // until then and neither one is repairable. Before
                             // the sentence casing, which is why the repair puts
                             // the capitals back itself.
-                            .let { text -> snd.komelia.image.OcrSpellRepair.apply(text) }
+                            .let { text ->
+                                val repaired = snd.komelia.image.OcrSpellRepair.applyTraced(text)
+                                if (repaired.changes.isNotEmpty()) repairs[blockIndex] = repaired.changes
+                                repaired.text
+                            }
                             .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
                     }
             }
@@ -1644,8 +1657,14 @@ class ReaderState(
             // Looked up on `joined`, before the katakana rewrite: the table is
             // written the way a page is lettered, so a balloon that is an
             // entry matches as it was read, not as it was normalised.
+            // Traced rather than plain: the bench replays the pipeline only as
+            // far as the engine, so this table's effect is invisible to it and
+            // the log is the one place a hit can be told from the engine
+            // happening to agree. Empty for Japanese, which has its own table.
+            val bookAnswers = if (japanese) emptyList()
+            else joined.map { snd.komelia.image.PhraseBook.lookupTraced(it) }
             val known = if (japanese) joined.map { snd.komelia.image.JapanesePhraseBook.lookup(it) }
-            else joined.map { snd.komelia.image.PhraseBook.lookup(it) }
+            else bookAnswers.map { it?.french }
             val pending = known.indices.filter { known[it] == null }
             val engineOutput = if (pending.isEmpty()) emptyList() else {
                 withContext(Dispatchers.Default) {
@@ -1701,6 +1720,16 @@ class ReaderState(
             // the OCR split, a rect smaller than the bubble, or a translation
             // that came back unchanged — and only this tells the three apart.
             //     adb logcat | Select-String "KoraTranslate"
+            // Why each boundary between two consecutive blocks was or was not a
+            // seam. The cap is reached about once in a thousand balloons, so
+            // what the assembler costs is in what it refuses, not in what it
+            // caps -- and a sentence that should have been joined and was not
+            // looks exactly like an ordinary short balloon on screen.
+            // Empty for Japanese, where the assembler is bypassed entirely and
+            // every block is its own group -- reporting seams it never
+            // consulted would be inventing them.
+            val seams = if (japanese) emptyList()
+            else snd.komelia.image.BubbleAssembler.explain(ordered)
             indices.forEach { blockIndex ->
                 val blockBoxes = boxes.filter { it.blockIndex == blockIndex }
                 val rect = blockBoxes.first().blockRect
@@ -1721,7 +1750,7 @@ class ReaderState(
                 else blockBoxes.sumOf { (it.imageRect.width * it.imageRect.height).toDouble() }
                     .toFloat() / blockArea
                 translationLogger.info {
-                    "block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
+                    "page $pageId block $blockIndex rect=[${rect.left.toInt()},${rect.top.toInt()} " +
                             "${rect.width.toInt()}x${rect.height.toInt()}] " +
                             "conf=${(worst * 100).toInt()}% " +
                             "fill=${(fill * 100).toInt()}% lines=${blockBoxes.size} " +
@@ -1735,6 +1764,24 @@ class ReaderState(
                             }?.let { group ->
                                 "sent='${protectedGroups[groups.indexOf(group)].text}' "
                             } ?: "") +
+                            // Which repair rewrote what, so a rule that reads a
+                            // token wrong is a lookup instead of a hunt.
+                            (repairs[blockIndex]?.joinToString(" ") { change ->
+                                "fix=${change.rule}:'${change.before}'>'${change.after}'"
+                            }?.plus(" ") ?: "") +
+                            // Whether the phrase book answered, on which key and
+                            // from which table. A curated entry that answers
+                            // badly is a mistake to fix; a bulk one is a
+                            // candidate for removal.
+                            (groups.indexOfFirst { it.any { position -> indices[position] == blockIndex } }
+                                .takeIf { it >= 0 }
+                                ?.let { bookAnswers.getOrNull(it) }
+                                ?.let { "pb=${it.tier}:'${it.key}' " } ?: "") +
+                            // How this block's boundary with the next one was
+                            // decided. Counting these over a volume is what
+                            // measures the groupings the assembler missed.
+                            (seams.getOrNull(indices.indexOf(blockIndex))
+                                ?.let { "seam=$it " } ?: "") +
                             "-> '$shown'"
                 }
             }

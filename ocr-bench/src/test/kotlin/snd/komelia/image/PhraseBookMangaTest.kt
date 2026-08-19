@@ -45,8 +45,11 @@ class PhraseBookMangaTest {
         PhraseBook.load(
             kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(json)
         )
-        assertEquals("C'est pas trop tôt", PhraseBook.lookup("About time!"))
-        assertEquals("C'est pas trop tôt", PhraseBook.lookup("ABOUT TIME!"))
+        // The exclamation comes back too, for the same reason the capital does:
+        // the entry is a dictionary headword, the balloon is a line someone
+        // shouted. See `a shouted balloon keeps its exclamation`.
+        assertEquals("C'est pas trop tôt !", PhraseBook.lookup("About time!"))
+        assertEquals("C'est pas trop tôt !", PhraseBook.lookup("ABOUT TIME!"))
         assertEquals("c'est pas trop tôt", PhraseBook.lookup("about time"))
     }
 

@@ -50,15 +50,50 @@ object OcrSpellRepair {
      * exactly as it was — including spacing and punctuation, which the caller's
      * later stages depend on.
      */
-    fun apply(text: String): String {
-        if (lexicon.isEmpty() || text.isEmpty()) return text
-        return TOKEN.replace(text) { match ->
-            if (isNaming(text, match)) match.value
-            else zeroInANumber(match.value)
-                ?: repair(match.value)
-                ?: split(match.value)
-                ?: match.value
+    fun apply(text: String): String = applyTraced(text).text
+
+    /**
+     * The same rewrite as [apply], with one entry per token it changed.
+     *
+     * A repair rule is a wager: it fires on a token the lexicon does not carry
+     * and bets that its own reading is the right one. When the bet is wrong the
+     * damage shows up two stages later, in French, with nothing left to say
+     * which rule caused it -- and that is how a widened function-word list got
+     * as far as turning "outmatched" into "out matched" before anyone noticed.
+     * The rule name in the log turns that from a hunt into a lookup.
+     */
+    fun applyTraced(text: String): Repaired {
+        if (lexicon.isEmpty() || text.isEmpty()) return Repaired(text, emptyList())
+        val changes = mutableListOf<Change>()
+        val out = TOKEN.replace(text) { match ->
+            val token = match.value
+            if (isNaming(text, match)) token
+            else {
+                val repaired = zeroInANumber(token)?.also { changes += Change(token, it, Rule.DIGIT_ZERO) }
+                    ?: repair(token)?.also { changes += Change(token, it, Rule.CONFUSION) }
+                    ?: split(token)?.also { changes += Change(token, it, Rule.WORD_SPLIT) }
+                repaired ?: token
+            }
         }
+        return Repaired(out, changes)
+    }
+
+    /** The rewritten text, and what was rewritten to get it. */
+    data class Repaired(val text: String, val changes: List<Change>)
+
+    /** One token the repair rewrote, and the rule that did it. */
+    data class Change(val before: String, val after: String, val rule: Rule)
+
+    /** Which repair fired. Named after what it reads, not how it is coded. */
+    enum class Rule {
+        /** A zero drawn as the letter o, inside a number. */
+        DIGIT_ZERO,
+
+        /** A letter confused for another of the same shape, as u for l. */
+        CONFUSION,
+
+        /** Two words the lettering ran together, split back apart. */
+        WORD_SPLIT,
     }
 
     /**

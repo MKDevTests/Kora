@@ -42,6 +42,82 @@ object BubbleAssembler {
     }
 
     /**
+     * Why each boundary between two consecutive blocks was or was not a seam.
+     *
+     * [group] answers what happened; this answers why, which is the question
+     * that matters. A group welded from two speakers shows up on screen and
+     * gets reported. A sentence that should have been joined and was not looks
+     * exactly like an ordinary short balloon, so nobody reports it -- and
+     * measured on four series, only one group ever reached the three-balloon
+     * cap, meaning the cap is not where the losses are. The refusals are.
+     *
+     * Returns one decision per boundary, so element `i` describes the seam
+     * between block `i` and block `i + 1` and the list is one shorter than
+     * [texts]. Empty for fewer than two blocks.
+     *
+     * Costs a second pass over the page's text, which is why it is separate
+     * from [group] rather than folded into it: the reader calls [group] on
+     * every page and this only when the diagnostic log is being collected.
+     */
+    fun explain(texts: List<String>): List<Seam> {
+        if (texts.size < 2) return emptyList()
+        val sizes = IntArray(texts.size) { 1 }
+        return (0 until texts.lastIndex).map { index ->
+            val left = texts[index].trimEnd()
+            val right = texts[index + 1].trimStart()
+            val reason = when {
+                left.isEmpty() || right.isEmpty() -> Seam.EMPTY
+                !ELLIPSIS_END.containsMatchIn(left) && !ELLIPSIS_START.containsMatchIn(right) ->
+                    Seam.NO_ELLIPSIS
+                !ELLIPSIS_END.containsMatchIn(left) -> Seam.NO_ELLIPSIS_END
+                !ELLIPSIS_START.containsMatchIn(right) -> Seam.NO_ELLIPSIS_START
+                left.dropLastWhile { it in ELLIPSIS_CHARS }.endsWith('?') ||
+                        left.dropLastWhile { it in ELLIPSIS_CHARS }.endsWith('!') ->
+                    Seam.SENTENCE_ENDED
+                sizes[index] >= MAX_BUBBLES_PER_UTTERANCE -> Seam.CAP_REACHED
+                else -> Seam.JOINED
+            }
+            // Carries the running group size forward so CAP_REACHED can be told
+            // apart from an ordinary refusal, which is the whole point of
+            // knowing whether the cap costs anything.
+            if (reason == Seam.JOINED) sizes[index + 1] = sizes[index] + 1
+            reason
+        }
+    }
+
+    /**
+     * What one boundary between two blocks was.
+     *
+     * [NO_ELLIPSIS] is the overwhelming majority and is not interesting on its
+     * own -- two unrelated balloons look exactly like that. The ones worth
+     * counting are [NO_ELLIPSIS_END] and [NO_ELLIPSIS_START], where the
+     * lettering agreed on one side only, and [CAP_REACHED], which is the
+     * refusal the design documents keep proposing to relax.
+     */
+    enum class Seam {
+        /** Joined into one utterance. */
+        JOINED,
+
+        /** Neither side carries the continuation ellipsis. */
+        NO_ELLIPSIS,
+
+        /** The next balloon opens with an ellipsis; this one does not end with one. */
+        NO_ELLIPSIS_END,
+
+        /** This balloon ends with an ellipsis; the next does not open with one. */
+        NO_ELLIPSIS_START,
+
+        /** The ellipsis was there, but the balloon had finished its sentence. */
+        SENTENCE_ENDED,
+
+        /** Both sides agreed and the three-balloon cap refused anyway. */
+        CAP_REACHED,
+
+        /** One of the two blocks held no text. */
+        EMPTY,
+    }
+
+    /**
      * Whether [next] carries on from [current].
      *
      * Both sides must agree. An ellipsis at the end of one balloon alone is
@@ -128,8 +204,18 @@ object BubbleAssembler {
      * "…formé avec cet étrange…" because "non entraîné" had been cut in half.
      *
      * A full stop ends a sentence. It is the ellipsis that says it did not.
+     *
+     * The surrounding `[^\w]*` is for what the recogniser does to a lettered
+     * ellipsis, which is to read one dot of it as its own character and drop it
+     * outside the run: ".….ARE LETTING UP!" and ".…SO MY STRENGTH..." both
+     * carry the ellipsis, one stray full stop ahead of it. Anchoring on
+     * whitespace alone missed those, and their balloons went to the translator
+     * as sentence fragments -- "Neither of them..." and "...are letting up!"
+     * translated apart. Measured over the eight bench volumes, 1 927
+     * boundaries: five recovered, none lost. Still not `[….]`, which was the
+     * founding mistake -- a single full stop must not open the run.
      */
-    private val ELLIPSIS_END = Regex("(…|\\.{2,})\\s*$")
-    private val ELLIPSIS_START = Regex("^\\s*(…|\\.{2,})")
+    private val ELLIPSIS_END = Regex("(…|\\.{2,})[^\\w]*$")
+    private val ELLIPSIS_START = Regex("^[^\\w]*(…|\\.{2,})")
     private val WHITESPACE = Regex("\\s+")
 }

@@ -150,12 +150,36 @@ def lines_of(path: Path) -> list[str]:
 
 
 def report(out: Path, sentences: Path, french: Path, accept: bool) -> int:
-    """Step 4: only what moved. This is the part that replaces reading a volume."""
+    """Step 4: only what moved. This is the part that replaces reading a volume.
+
+    The phrase book has the last word here, exactly as it does in the reader.
+    It used not to: the replay wrote its answers to answers.txt and this
+    function read only Bergamot's output, so every balloon the table covers was
+    compared on a translation the app never shows. A run reporting "0 changed"
+    after a batch of entries was added meant nothing, and nearly cost a batch
+    that was correcting twenty-two balloons on the tablet.
+    """
     src, fr = lines_of(sentences), lines_of(french)
     if len(src) != len(fr):
         sys.exit(f"{len(src)} sentences but {len(fr)} translations — not aligned")
 
-    current = {s: f for s, f in zip(src, fr) if s.strip()}
+    # Blank for every sentence the table has no answer for, so it lines up with
+    # the other two. Missing entirely if the replay predates this file.
+    answers_path = out / "answers.txt"
+    answers = lines_of(answers_path) if answers_path.is_file() else []
+    if answers and len(answers) != len(src):
+        sys.exit(f"{len(src)} sentences but {len(answers)} phrase book answers — not aligned")
+    answers += [""] * (len(src) - len(answers))
+
+    current, from_book = {}, {}
+    for sentence, engine, answer in zip(src, fr, answers):
+        if not sentence.strip():
+            continue
+        if answer.strip():
+            current[sentence] = answer.strip()
+            from_book[sentence] = engine
+        else:
+            current[sentence] = engine
     (out / "current.tsv").write_text(
         "".join(f"{s}\t{f}\n" for s, f in current.items()), encoding="utf-8"
     )
@@ -181,7 +205,17 @@ def report(out: Path, sentences: Path, french: Path, accept: bool) -> int:
     gone = [s for s in baseline if s not in current]
 
     print(f"\n[4/4] {len(current)} bubbles: {len(changed)} changed, "
-          f"{len(added)} new, {len(gone)} gone")
+          f"{len(added)} new, {len(gone)} gone"
+          + (f", {len(from_book)} answered by the phrase book" if from_book else ""))
+    # What the table saved, side by side with what the engine would have said.
+    # This is the only view that tells a useful entry from a harmful one, and it
+    # is the reason the answers are kept in their own file rather than folded in.
+    if from_book:
+        print(f"\n  phrase book answers, against what Bergamot would have returned:")
+        for sentence, engine in list(from_book.items())[:10]:
+            print(f"    src   {sentence}")
+            print(f"    book  {current[sentence]}")
+            print(f"    was   {engine}")
     for source, before, after in changed:
         print(f"\n  src   {source}")
         print(f"  was   {before}")

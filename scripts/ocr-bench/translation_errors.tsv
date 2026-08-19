@@ -1,0 +1,154 @@
+book	page	block	source	repairs	grouped_source	phrasebook	seam	output	error_category	expected_fr	acceptable_fr	severity	notes
+0P1J8B3CXB8QF	79	1	That doesn't exactly sound scientific to me!!!				NO_ELLIPSIS	Ça ne me semble pas vraiment scientifique !!!					
+0P1J8B3CXB8QF	79	2	Have to pass it with your mouth!!!				NO_ELLIPSIS	Il faut le passer avec la bouche !!!					
+0P1J8B3CXB8QF	79	12	Like they say, you get better if you pass your cold to someone else!				NO_ELLIPSIS	Comme on dit, tu t'améliores si tu passes ton froid à quelqu'un d'autre !	C			meaning_changed	'cold' read as temperature, 'get better' as self-improvement
+0P1J8B3CXB8QF	79	25	They're going fora hat trick!!				NO_ELLIPSIS	Ils vont pour un tour du chapeau !!	C			meaning_changed	'hat trick' rendered literally
+0P1J8B3CXB8QF	79	38	Oh,golly gosh garble. Her.Face is close and cute cute cute cute cute!!	CONFUSION:'CUITE'>'CUTE' CONFUSION:'CLITE'>'CUTE' CONFUSION:'CLTE'>'CUTE'			NO_ELLIPSIS	Oh, golly gosh garble. Her.Face est proche et mignon mignon mignon mignon mignon mignon!!	D			meaning_changed	deliberate babbling; the repair fires on it and cannot help
+0P1J8B3CXB8QF	79	41	Let's see whether he has a fever first.				NO_ELLIPSIS	Voyons s'il a d'abord de la fièvre.					
+0P1J8B3CXB8QF	79	42	Wait! We can't be sure that he has a cold yet!				NO_ELLIPSIS	Attends ! On ne peut pas encore être sûr qu'il ait un rhume !					
+0P1J8B3CXB8QF	79	53	Ba-boin!!					(dropped)					
+0P1J8B3CXB8QF	80	0	In my family we test for fevers with our lips as well as our foreheads. It'll just take a moment!				NO_ELLIPSIS	Dans ma famille, nous testons la fièvre avec nos lèvres ainsi que nos fronts. Ça va prendre un moment !					
+0P1J8B3CXB8QF	80	3	Did you learn that at a doctor's office or a hostess club?				NO_ELLIPSIS	Avez-vous appris cela dans un cabinet de médecin ou un club d'hôtesse ?					
+0P1J8B3CXB8QF	80	17	Mmm...				NO_ELLIPSIS_START	(dropped)					
+0P1J8B3CXB8QF	80	18	Have you both lost your marbles				NO_ELLIPSIS	Vous avez tous les deux perdu vos billes					
+0P1J8B3CXB8QF	80	29	It's too late! We need to go for mouth-to mouth!	WORD_SPLIT:'TOMOUTH'>'TO MOUTH'			NO_ELLIPSIS	Il est trop tard ! On doit aller pour la bouche à bouche !					
+0P1J8B3CXB8QF	80	30	So pass out already!!!				NO_ELLIPSIS	Alors, évanons-toi déjà !!!	C			awkward	'evanons-toi' -- invented verb form
+0P1J8B3CXB8QF	80	34	Can we calm down?				NO_ELLIPSIS	On peut se calmer ?					
+0P1J8B3CXB8QF	80	36	What's gotten into you two?!				NO_ELLIPSIS	Qu'est-ce qui vous a pris ?!					
+0P1J8B3CXB8QF	80	42	Why are you so bent on--					Pourquoi es-tu si plié...	C			meaning_changed	'bent on' read as physically bent
+0P1J8B3CXB8QF	81	1	Wait... Are you two trying to...				NO_ELLIPSIS_START	Attends... Vous essayez de...					
+0P1J8B3CXB8QF	81	3	L-l-ll-l-like, as if!				NO_ELLIPSIS	L-l-l-l-like, comme si !	C			meaning_changed	stammer left in English; the word itself was never translated
+0P1J8B3CXB8QF	81	7	How am I supposed to keep a secret with you around?!				NO_ELLIPSIS	Comment suis-je censé garder un secret avec toi ?!					
+0P1J8B3CXB8QF	81	14	Kiss me?!				NO_ELLIPSIS	Embrasse-moi ?!					
+0P1J8B3CXB8QF	81	16	That reaction isn't exactly persuasive!	CONFUSION:'PERSLASIVE'>'PERSUASIVE'			NO_ELLIPSIS	Cette réaction n'est pas vraiment convaincante !					
+0P1J8B3CXB8QF	81	22	Just so they could give me a kiss...	CONFUSION:'COLLD'>'COULD'			NO_ELLIPSIS_START	Juste pour qu'ils me donnent un baiser...					
+0P1J8B3CXB8QF	81	23	They went'so far...				NO_ELLIPSIS_START	Ils sont allés si loin...					
+0P1J8B3CXB8QF	81	25	Although...				NO_ELLIPSIS_START	Bien que...					
+0P1J8B3CXB8QF	81	31	That's so sweet!				NO_ELLIPSIS	C'est tellement gentil !					
+0P1J8B3CXB8QF	81	34	You could've just asked.				NO_ELLIPSIS	Tu n'aurais pas pu demander.	C			meaning_changed	reversed: it means you could simply have asked
+0P1J8B3CXB8QF	81	38	I wanted to kiss you two myself.					Je voulais vous embrasser moi-même.					
+0P1J8B3CXB8QF	82	0	As soon as we asked...				NO_ELLIPSIS_START	Dès que nous avons demandé...					
+0P1J8B3CXB8QF	82	3	We'd have to decide who would be first.				NO_ELLIPSIS	Il faudrait décider qui serait le premier.					
+0P1J8B3CXB8QF	82	11	And jumping the line worked better for you, huh?!				NO_ELLIPSIS	Et sauter la ligne a mieux fonctionné pour vous, hein ?!	C			meaning_changed	'jumping the line' rendered literally
+0P1J8B3CXB8QF	82	12	Pot, meet kettle.				NO_ELLIPSIS	Pot, rencontre bouilloire.	A			meaning_changed	set phrase rendered word for word
+0P1J8B3CXB8QF	82	21	So that's why...				NO_ELLIPSIS_START	Alors c'est pour ça que...					
+0P1J8B3CXB8QF	82	23	Don't worry!			BULK:'don't worry'	NO_ELLIPSIS	Ne t'inquiète pas !					
+0P1J8B3CXB8QF	82	26	You were fighting.					Tu te battus.	C			meaning_changed	'Tu te battus' -- invented past tense
+0P1J8B3CXB8QF	83	0	Yesterday, I cooked lp a plan...				NO_ELLIPSIS_START	Hier, j'ai préparé un plan...	D			cosmetic	'cooked up' read as 'cooked lp'; the engine recovered
+0P1J8B3CXB8QF	83	1	Yesterday? Like, the same day we started dating?				NO_ELLIPSIS	Hier ? Le même jour, on a commencé à sortir ensemble ?					
+0P1J8B3CXB8QF	83	8	Just in case anything like this happened!				NO_ELLIPSIS	Juste au cas où quelque chose comme ça arriveraie !	C			awkward	'arriveraie' -- invented verb form
+0P1J8B3CXB8QF	83	13	Honestly, thinking about everything we'd do together kept me lp all night.				NO_ELLIPSIS	Honnêtement, penser à tout ce qu'on ferait ensemble m'a gardé toute la nuit.					
+0P1J8B3CXB8QF	83	27	I imagined one situation after another to figure out how to make you the happiest girls in the world!				NO_ELLIPSIS	J'ai imaginé une situation après l'autre pour trouver comment faire de vous les filles les plus heureuses du monde!					
+0P1J8B3CXB8QF	83	36	Throb!!				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	83	37	As far as settling who'd have the first kiss...					Pour ce qui est de régler qui aurait le premier baiser...					
+0P1J8B3CXB8QF	84	0	Not knowing who got the first kiss.				NO_ELLIPSIS	Ne pas savoir qui a eu le premier baiser.					
+0P1J8B3CXB8QF	84	1	We'd solve it by...				NO_ELLIPSIS_START	On le résoudrait par...					
+0P1J8B3CXB8QF	84	5	I don't know!!				NO_ELLIPSIS	Je ne sais pas !!					
+0P1J8B3CXB8QF	84	6	Who kissed you first?				NO_ELLIPSIS	Qui t'a embrassé en premier ?					
+0P1J8B3CXB8QF	84	13	Right. If we're together, we'll see what happens. If we're apart, Rentaro-kun will know who he was with.				NO_ELLIPSIS	C'est vrai. Si nous sommes ensemble, nous verrons ce qui se passe. Si nous sommes séparés, Rentaro-kun saura avec qui il était.					
+0P1J8B3CXB8QF	84	16	Hmm? I can sort of see what you mean...				NO_ELLIPSIS_START	Hmm ? Je peux voir ce que tu veux dire...					
+0P1J8B3CXB8QF	84	23	You'll both be equally likely to have had my first kiss.				NO_ELLIPSIS	Vous aurez tous les deux aussi de chances d'avoir eu mon premier baiser.	C			awkward	'aussi de chances' -- ungrammatical
+0P1J8B3CXB8QF	84	34	But how do the two of us avoid knowing who went first?				NO_ELLIPSIS	Mais comment nous éviteons-nous de savoir qui est allé en premier ?	C			awkward	'eviteons-nous' -- invented verb form
+0P1J8B3CXB8QF	84	38	And I can think of you both equally as my first kiss.				NO_ELLIPSIS	Et je peux penser à vous deux comme mon premier baiser.					
+0P1J8B3CXB8QF	84	46	And that...					Et que...					
+0P1J8B3CXB8QF	85	0	We each take one of these.				NO_ELLIPSIS	Nous prenons chacun l'un d'entre eux.					
+0P1J8B3CXB8QF	85	1	Is where these come in.				NO_ELLIPSIS	C'est là qu'elles entrent.					
+0P1J8B3CXB8QF	85	5	Music players?				NO_ELLIPSIS	Des joueurs de musique ?	C			meaning_changed	'players' read as people, not devices
+0P1J8B3CXB8QF	85	13	Dice? Blindfolds?				NO_ELLIPSIS	Dés ? Bandeaux ?					
+0P1J8B3CXB8QF	85	16	I'll turn back, put on the earbuds, and play this song.				NO_ELLIPSIS	Je vais faire demi-tour, mettre les écouteurs, et jouer cette chanson.					
+0P1J8B3CXB8QF	85	17	Then you decide who stands where.				NO_ELLIPSIS	Alors vous décidez qui se trouve où.					
+0P1J8B3CXB8QF	85	30	My first kiss~				NO_ELLIPSIS	Mon premier baiser~					
+0P1J8B3CXB8QF	85	32	Because it's my first kiss.				NO_ELLIPSIS	Parce que c'est mon premier baiser.					
+0P1J8B3CXB8QF	85	34	When you press play...				NO_ELLIPSIS_START	Quand vous appuyez sur jouer...	C			awkward	'appuyez sur jouer' -- 'play' read as the verb
+0P1J8B3CXB8QF	85	39	They play the kiteretsu ed, my first kiss at max volume on repeat.	CONFUSION:'VOLLIME'>'VOLUME'			NO_ELLIPSIS	Ils jouent au kiteretsu ed, mon premier baiser au volume max à répétition.					
+0P1J8B3CXB8QF	85	43	Why that song?				NO_ELLIPSIS	Pourquoi cette chanson ?					
+0P1J8B3CXB8QF	85	52	My First Kiss Anshin Papa					Mon premier baiser Anshin Papa					
+0P1J8B3CXB8QF	86	1	Then you two throw your die and go to your places.				NO_ELLIPSIS	Ensuite, vous deux, vous jetez votre dé et allez chez vous.					
+0P1J8B3CXB8QF	86	2	That way, if you move or make any noises...				NO_ELLIPSIS_START	Ainsi, si vous bougez ou faites des bruits...					
+0P1J8B3CXB8QF	86	13	Whoever got the bigger number stands on the right and the other goes to the left.				NO_ELLIPSIS	Celui qui a eu le plus grand nombre se tient à droite et l'autre va à gauche.					
+0P1J8B3CXB8QF	86	19	I won't notice.				NO_ELLIPSIS	Je ne le remarquerai pas.					
+0P1J8B3CXB8QF	86	27	This way your positions are decided at random.				NO_ELLIPSIS	Ainsi, vos positions sont décidées au hasard.					
+0P1J8B3CXB8QF	86	29	I'll have no idea who's right and who's left.				NO_ELLIPSIS	Je n'aurai aucune idée de qui a raison et qui reste.	C			meaning_changed	'right' read as correct; the whole point is left and right
+0P1J8B3CXB8QF	86	40	You send a message to me by line.				NO_ELLIPSIS	Tu m'envoies un message par ligne.	C			meaning_changed	LINE is the messaging app, not a line
+0P1J8B3CXB8QF	86	43	Then you put on your blindfolds and play music through your earbuds.				NO_ELLIPSIS	Ensuite, vous mettez vos bandes des yeux et jouez de la musique à travers vos écouteurs.	C			awkward	'bandes des yeux' instead of bandeaux
+0P1J8B3CXB8QF	86	55	When I get the signal...				NO_ELLIPSIS_START	Quand j'ai le signal...					
+0P1J8B3CXB8QF	86	60	A random number of seconds from eleven to sixty-six.				NO_ELLIPSIS	Un nombre aléatoire de secondes de onze à soixante-six.					
+0P1J8B3CXB8QF	86	62	I check the number and put the blindfold back on.	CONFUSION:'PLT'>'PUT'			NO_ELLIPSIS	Je vérifie le numéro et remets le bandeau.					
+0P1J8B3CXB8QF	86	63	Once I'm done, I throw the die again.				NO_ELLIPSIS	Une fois que j'ai fini, je jette à nouveau le dé.					
+0P1J8B3CXB8QF	86	67	I throw my die twice.				NO_ELLIPSIS	Je jette ma mort deux fois.	C			meaning_changed	'die' read as death, not a dice
+0P1J8B3CXB8QF	86	83	One... Two... Three...					Un... Deux... Trois...					
+0P1J8B3CXB8QF	86	84	I use the numbers to wait...				NO_ELLIPSIS_START	J'utilise les chiffres pour attendre...					
+0P1J8B3CXB8QF	87	1	If the number is odd, I'll start at the right.				NO_ELLIPSIS	Si le chiffre est impair, je commencerai à droite.					
+0P1J8B3CXB8QF	87	4	I walk towards where you two are and kiss both of you in turn.				NO_ELLIPSIS	Je marche vers l'endroit où vous êtes et vous embrassez tous les deux à tour de compte.					
+0P1J8B3CXB8QF	87	15	If it's even, I'll start left.				NO_ELLIPSIS	Si c'est même, je vais repartir.	C			meaning_changed	'even' read as 'meme', 'start left' as 'repartir'
+0P1J8B3CXB8QF	87	22	Because you would've waited a random number of seconds earlier...				NO_ELLIPSIS_START	Parce que vous auriez attendu un nombre aléatoire de secondes plus tôt...					
+0P1J8B3CXB8QF	87	26	You won't be able to figure out who was kissed first and who was second.				NO_ELLIPSIS	Vous ne pourrez pas savoir qui a été embrassé en premier et qui était deuxième.					
+0P1J8B3CXB8QF	87	37	Once I've kissed both of you, I go back to my place.				NO_ELLIPSIS	Une fois que je vous ai embrassés tous les deux, je retourne chez moi.					
+0P1J8B3CXB8QF	87	39	I throw the die twice and wait a random amount of time again.				NO_ELLIPSIS	Je jette le dé deux fois et j'attends à nouveau un temps aléatoire.					
+0P1J8B3CXB8QF	87	41	I send a line message.				NO_ELLIPSIS	J'envoie un message de ligne.					
+0P1J8B3CXB8QF	87	47	I'm done.				NO_ELLIPSIS	J'en ai fini.					
+0P1J8B3CXB8QF	87	67	Once you get the signal, you throw your dice again and decide who stands on the left and right.				NO_ELLIPSIS	Une fois que vous avez le signal, vous lavez à nouveau vos dés et décidez qui se tient à gauche et à droite.					
+0P1J8B3CXB8QF	87	68	Then I won't be able to tell who was originally standing where.					Alors je ne pourrai pas dire qui se tenait à l'origine où.					
+0P1J8B3CXB8QF	88	0	Is the wonderful memory of having shared our first kiss with the person we love.				NO_ELLIPSIS	Est-ce le merveilleux souvenir d'avoir partagé notre premier baiser avec la personne que nous aimons.					
+0P1J8B3CXB8QF	88	6	All that's left...				NO_ELLIPSIS_START	Tout ce qui reste...					
+0P1J8B3CXB8QF	88	9	You send me another line...				NO_ELLIPSIS_START	Tu m'envoie une autre ligne...					
+0P1J8B3CXB8QF	88	24	Fin.				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	88	25	Off and it's mission complete.				NO_ELLIPSIS	Et c'est la mission terminée.					
+0P1J8B3CXB8QF	88	32	Hold it!				NO_ELLIPSIS	Tiens-le !					
+0P1J8B3CXB8QF	88	36	Amazing! I never could've thought up such a splendid scheme!				NO_ELLIPSIS	Incroyable ! Je n'aurais jamais pu penser à un projet aussi splendide !					
+0P1J8B3CXB8QF	88	44	"Like an elaborate, romantic ""liar game""!"				NO_ELLIPSIS	"Comme un ""jeu menteur"" élaboré et romantique!"					
+0P1J8B3CXB8QF	88	50	The others wouldn't see it happen!				NO_ELLIPSIS	Les autres ne le verraient pas arriver !					
+0P1J8B3CXB8QF	88	51	What do we do if someone cheats and takes off the blindfold or whatever?				NO_ELLIPSIS	Que faire si quelqu'un triche et enlève le bandeau ou quoi que ce soit?					
+0P1J8B3CXB8QF	88	55	Ah, but that's the beauty of it.	CONFUSION:'BEALTY'>'BEAUTY'			NO_ELLIPSIS	Ah, mais c'est la beauté de ça.					
+0P1J8B3CXB8QF	88	57	I've got a special solution for just that problem!	CONFUSION:'SOLLTION'>'SOLUTION'			NO_ELLIPSIS	J'ai une solution spéciale pour ce problème !					
+0P1J8B3CXB8QF	88	60	Yeah?				NO_ELLIPSIS	Oui ?					
+0P1J8B3CXB8QF	88	76	Yup.					(dropped)					
+0P1J8B3CXB8QF	89	0	Logic stocks are crashing! Sell, sell, sell!				NO_ELLIPSIS	Les stocks logiques s'effondrent ! Vendez, vendez, vendez !					
+0P1J8B3CXB8QF	89	4	We all pinky promise not to cheat.				NO_ELLIPSIS	Nous promettons tous de ne pas tricher.					
+0P1J8B3CXB8QF	89	12	Why would anyone not keep a pinky promise?				NO_ELLIPSIS	Pourquoi quelqu'un ne tiendrait-il pas une promesse rose ?					
+0P1J8B3CXB8QF	89	13	How're we				NO_ELLIPSIS	Comment on est					
+0P1J8B3CXB8QF	89	19	Caey Breo-				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	89	23	Ken.				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	89	26	You're way too wholesome!!				NO_ELLIPSIS	Vous êtes trop sain !!					
+0P1J8B3CXB8QF	89	29	Twang!				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	89	31	I swear on my life, this promise will not be broken!!				NO_ELLIPSIS	Je jure sur ma vie, cette promesse ne sera pas brisée !!					
+0P1J8B3CXB8QF	89	33	Cross my heart and hope to die!				NO_ELLIPSIS	Croise mon cœur et espère mourir !					
+0P1J8B3CXB8QF	89	38	Stick a needle in my eye!				NO_ELLIPSIS	Mettez une aiguille dans mon œil !					
+0P1J8B3CXB8QF	89	42	Okay, let's do it!					Ok, faisons-le !					
+0P1J8B3CXB8QF	90	0	I will~				NO_ELLIPSIS	Je vais~					
+0P1J8B3CXB8QF	90	3	All my~				NO_ELLIPSIS	Tout mon~					
+0P1J8B3CXB8QF	90	4	Give you~ ba-oump #t:				NO_ELLIPSIS	Vous donner~ ba-oum #t:					
+0P1J8B3CXB8QF	90	8	Looove!				NO_ELLIPSIS	L'amour !					
+0P1J8B3CXB8QF	90	13	Evens... That means I'm starting at the left.				NO_ELLIPSIS	Les soirées... Ça veut dire que je commence à gauche.					
+0P1J8B3CXB8QF	90	19	This feels almost illegal.				NO_ELLIPSIS	Cela semble presque illégal.					
+0P1J8B3CXB8QF	90	30	This should bethe I think,	WORD_SPLIT:'ITHINK'>'I THINK'			NO_ELLIPSIS	Cela devrait être la mes pensée,					
+0P1J8B3CXB8QF	90	33	Beinthe right spot				NO_ELLIPSIS	Beinthe le bon endroit					
+0P1J8B3CXB8QF	90	38	But how ami supposed to tell where to put my face?	WORD_SPLIT:'HOWAMI'>'HOW AMI'			NO_ELLIPSIS	Mais comment ami a supposé dire où mettre mon visage ?					
+0P1J8B3CXB8QF	90	40	Know.				NO_ELLIPSIS	Savoir.					
+0P1J8B3CXB8QF	90	41	Ifiput my:hands on.Her shoulders...				NO_ELLIPSIS_START	Ifiput my:hands on.Ses épaules...					
+0P1J8B3CXB8QF	90	49	Definitely don't wantito headbutt anyone.					Certainement ne veux pas de tête butt qui que ce soit.					
+0P1J8B3CXB8QF	91	0	IT'S HAKARilin!				NO_ELLIPSIS	C'EST HAKARIlin !					
+0P1J8B3CXB8QF	91	3	For the sake of inda karane's selfesteem, the reasoning behind this conclusion will be kept strictly confidential.	CONFUSION:'CONCLUISION'>'CONCLUSION'			NO_ELLIPSIS	Pour l'estime de soi d'inda karane, le raisonnement derrière cette conclusion sera strictement confidentiel.					
+0P1J8B3CXB8QF	91	16	If you want even more...				NO_ELLIPSIS_START	Si vous voulez encore plus...					
+0P1J8B3CXB8QF	91	19	I wouldn't mind, Rentaro-kun...				NO_ELLIPSIS_START	Ça ne me dérange pas, Rentaro-kun...					
+0P1J8B3CXB8QF	91	25	S-stop... You're already the most precious thing in the world...	WORD_SPLIT:'THEMOST'>'THE MOST'				S-stop... Tu es déjà la chose la plus précieuse au monde...					
+0P1J8B3CXB8QF	92	0	What went wrong? What'd I miss?				NO_ELLIPSIS	Qu'est-ce qui a mal tourné ? Qu'est-ce qui m'a manqué ?					
+0P1J8B3CXB8QF	92	1	Jolt!!				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	92	6	Nothing... Big...				NO_ELLIPSIS_START	Rien... Grand...					
+0P1J8B3CXB8QF	92	9	Sorry, Karane. We have to start over.				NO_ELLIPSIS	Désolé, Karane. Il faut recommencer.					
+0P1J8B3CXB8QF	92	14	Yoink!!				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	92	16	Bluushh!H!				NO_ELLIPSIS	(dropped)					
+0P1J8B3CXB8QF	92	17	Okay, fess up! What really happened				NO_ELLIPSIS	Ok, fess up ! Qu'est-ce qui s'est réellement passé					
+0P1J8B3CXB8QF	92	19	Absolutely nothing				NO_ELLIPSIS	Absolument rien					
+0P1J8B3CXB8QF	92	28	Thereset.				NO_ELLIPSIS	Assemblée.					
+0P1J8B3CXB8QF	92	29	Yawn!					Bâille !					
+100-girlfriends			Her cute cuteyclite cute cute facey-cute! Face isso closeyclose!	CONFUSION:'CLITE'>'CUTE' CONFUSION:'CLITE'>'CUTE'			NO_ELLIPSIS	Son mignon mignoncyclite mignon mignon mignon facey-cute! Face est si proche!	D			meaning_changed	deliberate babbling in the lettering; the repair fires on it and cannot help
+100-girlfriends			I'm so sorry!!			BULK:'i'm so sorry'		Je suis tellement desole !!	E2		Je suis tellement desolee !!	awkward	speaker is female; a fixed table cannot agree in gender, the engine got it right by luck
+100-girlfriends			If yol're looking for a snack, I brought bocky.				NO_ELLIPSIS	Si tu cherches une collation, j'ai apporte du bocky.	D			cosmetic	'you're' read as 'yol're'; the engine recovered anyway
+100-girlfriends			Ifi don't stop her now, his first kiss'll get taken!				NO_ELLIPSIS	Si je ne l'arrete pas maintenant, son premier baiser sera pris !	D			awkward	'If I' run together as 'Ifi'
+100-girlfriends			Like they say, you get better if you pass your cold to someone else!				NO_ELLIPSIS	Comme on dit, tu t'ameliores si tu passes ton froid a quelqu'un d'autre !	C		Comme on dit, on guerit en refilant son rhume a quelqu'un d'autre !	meaning_changed	'cold' read as temperature, 'get better' as self-improvement
+100-girlfriends			The gamehad already begun!!				NO_ELLIPSIS	Le jeu avait deja commence !!	D	Le jeu avait deja commence !!		cosmetic	'game had' run together; the output happened to survive it
+100-girlfriends			They're going fora hat trick!!				NO_ELLIPSIS	Ils vont pour un tour du chapeau !!	C		Ils visent le triple !|Ils tentent le coup du chapeau !	meaning_changed	'hat trick' rendered literally; also 'for a' run together
+100-girlfriends			Whoeverkisses him first...				NO_ELLIPSIS_START	Celui qui le fait d'abord...	D	Celui qui l'embrasse en premier...		meaning_changed	'Whoever kisses' run together; the splitter missed it and the verb was lost
+altered-carbon			Cofus cofus cofus				NO_ELLIPSIS	Cofus Cofus cofus	D			cosmetic	a cough drawn as lettering; recognised as words and left untranslated
+blue-box	1	11	Neither of them...		Neither of them Are letting up!		JOINED	Aucun d'eux...					fixed 19/08: the ellipsis was read with a stray dot and the seam was missed

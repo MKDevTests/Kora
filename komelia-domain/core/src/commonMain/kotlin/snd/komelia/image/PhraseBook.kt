@@ -54,11 +54,43 @@ object PhraseBook {
      * where the engine was seen failing, and one of them disagreeing with the
      * general list means the general list is wrong for comics.
      */
-    fun lookup(text: String): String? {
+    fun lookup(text: String): String? = lookupTraced(text)?.french
+
+    /**
+     * The same answer as [lookup], with the key that matched and the tier that
+     * held it.
+     *
+     * Exists because the bench cannot see this table -- it replays the Kotlin
+     * pipeline up to the engine, and [lookup] is called past that point, in the
+     * reader. A run of the bench reporting "0 changed" after a batch of entries
+     * was added is therefore meaningless, and nearly cost a batch that was
+     * correcting twenty-two balloons on the tablet. Until the bench is wired
+     * end-to-end, the log is the only place the table's effect is visible, and
+     * a hit without its key cannot be told from the engine happening to agree.
+     */
+    fun lookupTraced(text: String): Answer? {
         val key = normalise(text)
-        val answer = ENTRIES[key] ?: bulk[key] ?: return null
-        return matchOpeningCase(text, answer)
+        ENTRIES[key]?.let { return Answer(dressed(text, it), key, Tier.CURATED) }
+        bulk[key]?.let { return Answer(dressed(text, it), key, Tier.BULK) }
+        return null
     }
+
+    /** Gives the answer the capital and the ending the balloon was lettered with. */
+    private fun dressed(balloon: String, answer: String): String =
+        matchClosingPunctuation(balloon, matchOpeningCase(balloon, answer))
+
+    /** A phrase book hit: what it answered, on which key, from which tier. */
+    data class Answer(val french: String, val key: String, val tier: Tier)
+
+    /**
+     * Which table answered.
+     *
+     * Worth separating in the log because the two are maintained differently:
+     * [CURATED] entries were each written against a page where the engine was
+     * seen failing, so a bad one is a mistake to fix, while [BULK] comes from a
+     * general expression list and a bad one is a candidate for removal.
+     */
+    enum class Tier { CURATED, BULK }
 
     /**
      * Gives the answer the capital the balloon had.
@@ -74,6 +106,35 @@ object PhraseBook {
         if (!opening.isUpperCase()) return answer
         return answer.replaceFirstChar { it.uppercaseChar() }
     }
+
+    /**
+     * Gives the answer back the shout or the question the balloon was drawn
+     * with.
+     *
+     * Same reason as [matchOpeningCase], and found the same way. The shipped
+     * table is a dictionary of expressions, so "shove off" answers "fiche le
+     * camp" with no punctuation at all -- and a balloon lettered "SHOVE OFF!"
+     * came out flat while the engine it replaced had kept the exclamation.
+     * Measured once the bench could finally see this table: six of the
+     * forty-four balloons it answers lost their ending that way.
+     *
+     * Only when the answer has no strong punctuation of its own. An entry that
+     * ends in "?" was written that way on purpose -- "huh" answers "Hein ?" --
+     * and a balloon lettered "HUH?!" must not turn it into "Hein ??!". A full
+     * stop is replaced rather than kept, since the balloon disagrees with it.
+     */
+    private fun matchClosingPunctuation(balloon: String, answer: String): String {
+        val trimmed = answer.trimEnd()
+        if (trimmed.isEmpty()) return answer
+        if (trimmed.last() in STRONG_PUNCTUATION) return answer
+        val ending = balloon.trimEnd().takeLastWhile { it in STRONG_PUNCTUATION }
+        if (ending.isEmpty()) return answer
+        // French sets a space before these; the curated entries are written
+        // that way, so an answer that gains one has to match them.
+        return trimmed.trimEnd('.') + " " + ending
+    }
+
+    private const val STRONG_PUNCTUATION = "!?"
 
     /**
      * Strips everything that does not change which phrase this is.
