@@ -108,7 +108,52 @@ object JapaneseOcrRepair {
 
     private const val COUNTERS = "丁人本回個度発杯枚匹台冊軒階年月日時分秒歳番件"
 
-    fun apply(text: String): String = repairMarks(repairHomoglyphs(text))
+    fun apply(text: String): String = repairMarks(repairScript(repairHomoglyphs(text)))
+
+    /**
+     * Three characters the recogniser reaches for out of the wrong script.
+     *
+     * 别 and 龄 are simplified Chinese; Japanese writes 別 and 齢 and has no use
+     * for the simplified forms at all, so they are replaced unconditionally.
+     * They turn up in the stat screens the genre is full of — 年龄:21 性别:女 came
+     * back as "Année 龄:21 性别:女 race: personnes" and becomes "Âge: 21 Sexe:
+     * Race féminine".
+     *
+     * The ASCII hyphen stands in for the 長音 mark between two katakana: ペ-ジ is
+     * ページ, and the engine answered "127Peg" for it on six pages. Between
+     * anything else the hyphen is left alone — 内政:5-魅力:31 is a real one.
+     *
+     * 世 is read for せ, and this one needs the same guard as ニ, pointing the
+     * other way. Where a kanji sits beside it, 世 is itself: 世界, 世間, 前世,
+     * 今世, 出世, 異世界. Where only kana surround it, it is the kana — the
+     * phonetic gloss the furigana filter could not remove because the merge had
+     * already folded it into the block: 世んいん船員, 世んそう戦争, ま世き魔石.
+     * Over the corpus the rule fires 9 times and holds back 42, and the 9 are
+     * all gloss.
+     *
+     * Turning the gloss into kana does not delete it, and it does not have to:
+     * 世かい世界の危機 gave "une crise dans le monde ou dans le monde", where
+     * せかい世界の危機 gives "une crise dans le monde".
+     */
+    private fun repairScript(text: String): String {
+        if (text.isEmpty()) return text
+        var out: StringBuilder? = null
+        fun set(i: Int, c: Char) {
+            val builder = out ?: StringBuilder(text).also { out = it }
+            builder[i] = c
+        }
+        for (i in text.indices) {
+            val before = text.getOrNull(i - 1)
+            val after = text.getOrNull(i + 1)
+            when (text[i]) {
+                '别' -> set(i, '別')
+                '龄' -> set(i, '齢')
+                '-' -> if (before?.isKatakana() == true && after?.isKatakana() == true) set(i, 'ー')
+                '世' -> if (before?.isKanji() != true && after?.isKanji() != true) set(i, 'せ')
+            }
+        }
+        return out?.toString() ?: text
+    }
 
     /**
      * Rewrites a katakana run to the spelling the word actually has, when the

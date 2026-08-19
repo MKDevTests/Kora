@@ -14,7 +14,7 @@ base	Sekai-01	DLRAW.NET-0037	plain	おい起きろ	Hey, wake up.	Hé, réveille-
 base	Isekai-01	DLRAW.TO-Met_110	long	そんな不純なことを考えながら次なる問題を解決するべく商人組合に向かうと…	Thinking about such impureness, I went to the merchant union to solve the next problem ...	En pensant à une telle impureté, je suis allé au syndicat marchand pour résoudre le prochain problème...	ok	
 base	Isekai-01	DLRAW.TO-Met_10	plain	赤子の時に拾われて育てられた恩を忘れおって！！	Forget the kindness that was picked up and raised when you were a baby! !	Oubliez la gentillesse qui a été ramassée et élevée quand vous étiez bébé! !	degraded	ja-en
 base	Isekai-01	DLRAW.TO-Met_12	plain	おいっ！そやつを出立まで拘束しておけ！	hey!Keep him until he leaves!	Hé !Garde-le jusqu'à ce qu'il parte !	ok	
-base	Zeccho-02	DLRAW.CC_p_003	plain	127ペ-ジ	127Peg	127Peg	wrong	ocr
+base	Zeccho-02	DLRAW.CC_p_003	plain	127ページ	127Peg	127 pages	ok	
 base	Zeccho-02	DLRAW.CC_p_039	plain	ローサちゃんはいつも話し相手になってくれるしねぇ	Rosa always talks to me.	Rosa me parle toujours.	ok	
 base	Otome-Game-01	DLRAW.TO_p_001	plain	第()4話	(The fourth)	(Le quatrième)	degraded	ocr
 base	Yushapati-05	DLRAW.APP_0015	tiny	はい	yes.	Oui.	ok	
@@ -46,7 +46,7 @@ base	Isekai-01	DLRAW.TO-Met_123	plain	長らく歴代当主が内政を放置し
 base	Sekai-01	DLRAW.NET-0007	long	相手選んてください一応俺は男なのて…というのは建前で本当は俺は…	Please choose the other party For the time being, I am a man ... that is actually I ...	Veuillez choisir l'autre partie Pour le moment, je suis un homme ... c'est en fait je ...	degraded	ocr
 base	Sekai-01	DLRAW.NET-0044	dialect	ほらほら触ってやろうかぁ？	Come on, let's touch it, okay?	Allez, on y touche, d'accord ?	ok	
 base	Yushapati-05	DLRAW.APP_0035	plain	気を付けるのじゃ	be careful.	Soyez prudent.	ok	
-base	Isekai-01	DLRAW.TO-Met_113	plain	年龄:21 性别:女種族:人族	Year 龄:21 性别:女 race: people	Année 龄:21 性别:女 race: personnes	wrong	ocr
+base	Isekai-01	DLRAW.TO-Met_113	plain	年齢:21 性別:女種族:人族	Year 龄:21 性别:女 race: people	Âge: 21 Sexe: Race féminine: Personnes	degraded	ja-en
 base	Yushapati-01	DLRAW.APP_019	plain	まあ…それなら依頼を達成できるかもしれないが…	Well, then... you may be able to make a request, but...	Eh bien, alors... vous pourrez peut-être faire une demande, mais...	ok	
 base	Otome-Game-01	DLRAW.TO_p_029	plain	いえ共和国を…	No, the Republic...	Non, la République...	ok	
 base	Sekai-01	DLRAW.NET-0034	dialect	いやあ雷使うとしはらく目悪くなっちゃうんあははだよねもう大丈夫マジごめんね）ええと田端は…	Well, if you use lightning, it will be very bad. I'm sorry, it's okay.) Well, Tabata is ...	Si vous utilisez la foudre, ce sera très mauvais. Je suis désolé, c'est bon.) Eh bien, Tabata est...	degraded	ocr
@@ -129,7 +129,7 @@ base	Sekai-01	DLRAW.NET-0007	plain	接触すると	when you come into contact	lo
 base	Yushapati-05	DLRAW.APP_0018	katakana	セリオン！俺は貴様の参加こそ認めていない！	Serion!I do not recognize your participation!	Serion!Je ne reconnais pas votre participation!	ok	
 base	Isekai-01	DLRAW.TO-Met_116	plain	承知しまし…んっ…！	I know. . . . !	Je sais. . . . !	ok	
 base	Isekai-01	DLRAW.TO-Met_11	plain	世間でも馬鹿王子と名高かったのだが	He was known as a stupid prince.	Il était connu comme un prince stupide.	ok	
-base	Otome-Game-01	DLRAW.TO_p_019	katakana	世かい世界の危機に相応しいラスボスよ	Russs, worthy of the crisis of the world.	Russs, digne de la crise du monde.	wrong	ja-en
+base	Otome-Game-01	DLRAW.TO_p_019	katakana	せかい世界の危機に相応しいラスボスよ	Russs, worthy of the crisis of the world.	Vous êtes un boss de lass digne de la crise du monde.	wrong	ja-en
 base	Sekai-01	DLRAW.NET-0012	plain	その亜人女性たち全員のお相手をして頂きます	I will deal with all of these sub-women.	Je m'occuperai de toutes ces sous-femmes.	degraded	ja-en
 base	Zeccho-01	DLRAW.CC_023	plain	両親も亡くなってから経営もできなくて放置してるの…	My parents have been unable to manage my business since they died.	Mes parents n'ont pas pu gérer mon entreprise depuis leur mort.	degraded	ja-en
 base	Sekai-01	DLRAW.NET-0024	plain	おかしいだる!	it's crazy!	C'est fou !	ok	
@@ -137,7 +137,7 @@ base	Otome-Game-01	DLRAW.TO_p_011	plain	何も考えてない人達は羨まし�
 base	Zeccho-02	DLRAW.CC_p_017	tiny	よし…	All right.	Très bien.	ok	
 base	Zeccho-01	DLRAW.CC_030	tiny	ほら	Hey, hey.	Hé, hé.	ok	
 base	Sekai-01	DLRAW.NET-0023	plain	あなたのも…	yours too.	Le vôtre aussi.	ok	
-base	Otome-Game-01	DLRAW.TO_p_019	dialect	バッドエンドなら世かい世界が滅びちゃうわね	If it is a bad end, the world will be destroyed.	Si c'est une mauvaise fin, le monde sera détruit.	ok	
+base	Otome-Game-01	DLRAW.TO_p_019	dialect	バッドエンドならせかい世界が滅びちゃうわね	If it is a bad end, the world will be destroyed.	Mauvaise fin, le monde va être détruit.	degraded	ja-en
 base	Yushapati-05	DLRAW.APP_0016	plain	それに聞いているぞ？	And you're listening to that?	Et vous écoutez ça ?	ok	
 base	Sekai-01	DLRAW.NET-0017	tiny	泣いた	I cried.	J'ai pleuré.	ok	
 base	Zeccho-02	DLRAW.CC_p_027	plain	ちょっと待った！何勝手にいい感じに	Wait a minute!How much of a good feeling.	Attendez une minute! Combien de bon sentiment.	wrong	ja-en
@@ -145,7 +145,7 @@ base	Zeccho-02	DLRAW.CC_p_031	plain	どいののか？	how's it going?	Comment �
 base	Sekai-01	DLRAW.NET-0020	plain	気にしない	I don't care.	Je m'en fiche.	ok	
 base	Yushapati-01	DLRAW.APP_014	tiny	あなた…	you...	vous...	ok	
 base	Sekai-01	DLRAW.NET-0005	plain	天使族初めて見た…	This is the first time I have seen an angel...	C'est la première fois que je vois un ange...	ok	
-base	Zeccho-01	DLRAW.CC_004	plain	73ペ-ジ	73Peg	73Peg	wrong	ocr
+base	Zeccho-01	DLRAW.CC_004	plain	73ページ	73Peg	73pages	ok	
 base	Sekai-01	DLRAW.NET-0020	katakana	結構ガッツリ	Pretty gutsy.	Plutôt gutsy.	degraded	en-fr
 base	Zeccho-02	DLRAW.CC_p_041	plain	さぞこの宿でも迷惑をかけているんでしょうね…	I guess you are causing trouble in this inn too...	Je suppose que vous causez des ennuis dans cette auberge aussi...	ok	
 base	Isekai-01	DLRAW.TO-Met_08	plain	「叡智の至宝」と称されるほどになった	"It has become so popular that it has been called ""the treasure of wisdom""."	"Il est devenu si populaire qu'on l'a appelé ""le trésor de la sagesse""."	ok	
@@ -168,7 +168,7 @@ hard	Yushapati-01	DLRAW.APP_018	katakana	冒険者は登録されているチー
 hard	Sekai-01	DLRAW.NET-0044	katakana	バレバレだから	it's a revelation.	C'est une révélation.	wrong	ja-en
 hard	Isekai-01	DLRAW.TO-Met_119	katakana	・アルヘルド様いい自いかする…	Al-Held, you have to be good to yourself...	Al-Held, tu dois être bon avec toi-même...	degraded	ocr
 hard	Yushapati-01	DLRAW.APP_028	katakana	良ければ正式に私たちのチームに入らない？	Would you like to officially join our herty?	Souhaitez-vous rejoindre officiellement notre équipe?	ok	
-hard	Otome-Game-01	DLRAW.TO_p_008	katakana	この船…アインホルンは世んいん船員なんかいらねーんだよ	this ship ... einhorn doesn't want a world of sailors.	ce vaisseau... einhorn ne veut pas d'un monde de marins.	wrong	ocr
+hard	Otome-Game-01	DLRAW.TO_p_008	katakana	この船…アインホルンはせんいん船員なんかいらねーんだよ	this ship ... einhorn doesn't want a world of sailors.	ce vaisseau... einhorn ne veut pas d'un marin.	ok	
 hard	Isekai-01	DLRAW.TO-Met_07	katakana	…お前が叡智の至宝」と名高いアルベルトか？	"Are you the supreme treasure of wisdom?"""	Êtes-vous le trésor suprême de la sagesse ? »	degraded	ja-en
 hard	Yushapati-05	DLRAW.APP_0030	katakana	おぬしのチームは	Onushi's party	l'équipe nushi	degraded	ja-en
 hard	Yushapati-05	DLRAW.APP_0015	katakana	一応英雄……アレンのチームにいたことはある	I've been to the Braves... Allen's Hearty.	J'ai déjà fait partie de l'équipe d'Allen.	ok	
@@ -195,5 +195,5 @@ hard	Yushapati-01	DLRAW.APP_030	long	それで彼女に心配をかけないた�
 hard	Sekai-01	DLRAW.NET-0013	long	いや軽すぎますから！！その温度で言われる方の気持ち考えてもらえます！？	No, it is too light! ! Can you think about the feelings of those who are told at that temperature?	Non, c'est trop léger ! ! Pouvez-vous penser aux sentiments de ceux qui sont racontés à cette température?	ok	
 hard	Yushapati-05	DLRAW.APP_0039	long	この王都に英雄やSランク冒険者が集まっていると聞いたんだけど	I heard that the heroes and S-rank adventurers are gathered in this royal capital	J'ai entendu dire que les héros et les aventuriers de rang S sont rassemblés dans cette capitale royale	ok	
 hard	Yushapati-05	DLRAW.APP_0038	long	ありがとうございますそうだついでにひとつ聞いてもいいかしら？	Thank you. Can I ask you something?	Merci. Je peux te demander quelque chose ?	ok	
-hard	Isekai-01	DLRAW.TO-Met_110	long	武勇：19 統率：21 知力364内政：71魅力：77年龄:48 性别:男種族：人族	勇勇:19 Leadership: 21 智力364 内政:71 Attractive:77 years 龄:48 Sexual:Men:Men:Peoples	勇勇:19 Leadership: 21 智力364 内政:71 Attrayant:77 ans 龄:48 Sexuel:Men:Men:Peoples	wrong	ocr
-hard	Otome-Game-01	DLRAW.TO_p_020	long	本当によろしいのですか？それはそれで世か世界の危機を招きますが	Are you sure?and that leads to a crisis in the world or the world.	Êtes-vous sûr?et cela conduit à une crise dans le monde ou dans le monde.	ok	
+hard	Isekai-01	DLRAW.TO-Met_110	long	武勇：19 統率：21 知力364内政：71魅力：77年齢:48 性別:男種族：人族	勇勇:19 Leadership: 21 智力364 内政:71 Attractive:77 years 龄:48 Sexual:Men:Men:Peoples	勇勇:19 Leadership: 21 知力364 内政:71 Attractif:77:48 Sexe:race masculine:Genre:Genre	degraded	ocr
+hard	Otome-Game-01	DLRAW.TO_p_020	long	本当によろしいのですか？それはそれでせか世界の危機を招きますが	Are you sure?and that leads to a crisis in the world or the world.	Êtes-vous sûr?et cela conduit à une crise dans le monde	ok	
