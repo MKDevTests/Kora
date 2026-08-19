@@ -54,11 +54,39 @@ object PhraseBook {
      * where the engine was seen failing, and one of them disagreeing with the
      * general list means the general list is wrong for comics.
      */
-    fun lookup(text: String): String? {
+    fun lookup(text: String): String? = lookupTraced(text)?.french
+
+    /**
+     * The same answer as [lookup], with the key that matched and the tier that
+     * held it.
+     *
+     * Exists because the bench cannot see this table -- it replays the Kotlin
+     * pipeline up to the engine, and [lookup] is called past that point, in the
+     * reader. A run of the bench reporting "0 changed" after a batch of entries
+     * was added is therefore meaningless, and nearly cost a batch that was
+     * correcting twenty-two balloons on the tablet. Until the bench is wired
+     * end-to-end, the log is the only place the table's effect is visible, and
+     * a hit without its key cannot be told from the engine happening to agree.
+     */
+    fun lookupTraced(text: String): Answer? {
         val key = normalise(text)
-        val answer = ENTRIES[key] ?: bulk[key] ?: return null
-        return matchOpeningCase(text, answer)
+        ENTRIES[key]?.let { return Answer(matchOpeningCase(text, it), key, Tier.CURATED) }
+        bulk[key]?.let { return Answer(matchOpeningCase(text, it), key, Tier.BULK) }
+        return null
     }
+
+    /** A phrase book hit: what it answered, on which key, from which tier. */
+    data class Answer(val french: String, val key: String, val tier: Tier)
+
+    /**
+     * Which table answered.
+     *
+     * Worth separating in the log because the two are maintained differently:
+     * [CURATED] entries were each written against a page where the engine was
+     * seen failing, so a bad one is a mistake to fix, while [BULK] comes from a
+     * general expression list and a bad one is a candidate for removal.
+     */
+    enum class Tier { CURATED, BULK }
 
     /**
      * Gives the answer the capital the balloon had.
