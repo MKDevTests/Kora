@@ -94,6 +94,11 @@ class VolumeReplayTest {
     }
 
     private fun replay(dir: File) {
+        // KORA_BENCH_VERTICAL replays a Japanese volume: columns read right to
+        // left, which is a different merge and a different page order, not a
+        // variant of the Latin one. Read once for the whole volume, because the
+        // guardrail at the end of this function needs it too.
+        val vertical = System.getenv("KORA_BENCH_VERTICAL") != null
         val pages = dir.listFiles { f -> f.name.endsWith(".boxes.json") }
             ?.sortedBy { it.name }
             ?: emptyList()
@@ -122,6 +127,7 @@ class VolumeReplayTest {
         // it -- and they are judged separately.
         val rewrites = StringBuilder()
         var blockCount = 0
+        var sentenceCount = 0
         var widest = 0f
         var widestWhere = ""
 
@@ -143,10 +149,6 @@ class VolumeReplayTest {
                 )
             }
 
-            // KORA_BENCH_VERTICAL replays a Japanese volume: columns read
-            // right to left, which is a different merge and a different page
-            // order, not a variant of the Latin one.
-            val vertical = System.getenv("KORA_BENCH_VERTICAL") != null
             // Before the merge, exactly where ReaderState.performScan puts it.
             // Without it the credits and advertising pages of a scanlation --
             // which are Japanese -- reach the translator, and the bench reports
@@ -302,7 +304,34 @@ class VolumeReplayTest {
                 } else out = joined
                 sentences.appendLine(out)
                 answers.appendLine(answer.orEmpty())
+                sentenceCount++
             }
+        }
+
+        // How much of the page reached the translator. Not a quality figure --
+        // a guardrail against one specific way this file has already broken:
+        // a rule written for one language filtering the other's text out.
+        //
+        // That bug did not announce itself. The replay ran, the report was
+        // full, the tests passed, and 203 of 210 Japanese blocks were quietly
+        // dropped as English sound effects. It was found by reading the report
+        // for another reason. This is what would have caught it.
+        //
+        // The thresholds are far below what is measured, because the point is
+        // to catch a collapse and never to complain about a volume that
+        // happens to be quiet. Japanese runs 95-100% (the filters are off, only
+        // the two-letter minimum applies); Latin runs 75-80%, lower because
+        // grouping merges balloons and the sound-effect test really does fire.
+        // The bug scored 3%.
+        if (blockCount >= MIN_BLOCKS_TO_JUDGE) {
+            val kept = sentenceCount.toFloat() / blockCount
+            val floor = if (vertical) VERTICAL_FLOOR else LATIN_FLOOR
+            assertTrue(
+                kept >= floor,
+                "${dir.name}: only ${(kept * 100).toInt()}% of $blockCount blocks reached the " +
+                        "translator (floor ${(floor * 100).toInt()}%). A filter meant for the " +
+                        "other language is probably eating this one.",
+            )
         }
 
         val out = File(dir, "report.txt")
@@ -313,5 +342,12 @@ class VolumeReplayTest {
         File(dir, "rewrites.txt").writeText(rewrites.toString())
         println("${pages.size} pages, $blockCount blocks -> ${out.absolutePath}")
         println("widest block: ${(widest * 100).toInt()}% of the page, at $widestWhere")
+    }
+
+    private companion object {
+        /** Below this a volume is a handful of title pages and the ratio is noise. */
+        const val MIN_BLOCKS_TO_JUDGE = 30
+        const val VERTICAL_FLOOR = 0.70f
+        const val LATIN_FLOOR = 0.40f
     }
 }
