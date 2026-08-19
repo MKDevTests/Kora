@@ -131,7 +131,10 @@ class VolumeReplayTest {
         var widest = 0f
         var widestWhere = ""
 
-        pages.forEach { file ->
+        pages.forEachIndexed { pageIndex, file ->
+            // 1-based, and only CreditLine reads it: the front matter and
+            // the colophon are where a credit can be.
+            val pageNumber = pageIndex + 1
             val page = json.decodeFromString<PageJson>(file.readText())
             val boxes = page.boxes.mapIndexed { index, box ->
                 val rect = Rect(
@@ -170,7 +173,16 @@ class VolumeReplayTest {
             val shortName = page.page.substringAfterLast(" - ").substringBefore(" [")
             report.appendLine("== $shortName  ${page.width}x${page.height}  ${boxes.size} lines")
 
-            val prepared = mutableListOf<String>()
+            // The one implementation, the same one ReaderState calls. This file
+            // used to carry a copy, and the copy ran the Latin rules over
+            // Japanese -- 203 blocks of 210 dropped as English sound effects,
+            // for as long as Japanese had been in the bench.
+            val prep = TranslationInput.prepare(
+                boxes = merged,
+                japanese = vertical,
+                pageNumber = pageNumber,
+                pageCount = pages.size,
+            )
             merged.groupBy { it.blockIndex }.forEach { (index, lines) ->
                 blockCount++
                 val rect = lines.first().blockRect
@@ -215,37 +227,16 @@ class VolumeReplayTest {
                 // 203 of 210 blocks -- 第01話 and メゲー世界は came out as
                 // sound effects. A bench that keeps 3% of the page cannot
                 // measure anything about the page.
-                val ready: String
-                val letters: Int
-                val effect: String
-                if (vertical) {
-                    // Homoglyphs rather than spelling, so no word list, and it
-                    // runs before anything else looks at the text: the phrase
-                    // book, the dialect table and the glossary all match on what
-                    // the page says, and ニ丁 is not what it says.
-                    ready = JapaneseOcrRepair.apply(text)
-                    if (ready != text) repairs.appendLine("$text	$ready")
-                    letters = ready.count { it.isLetter() }
-                    effect = ""
-                } else {
-                    val rejoined = TranslationTextUtils.rejoinLineBreaks(text)
-                    val repaired = OcrSpellRepair.apply(rejoined)
-                    if (repaired != rejoined) repairs.appendLine("$rejoined	$repaired")
-                    ready = TranslationTextUtils.toSentenceCase(repaired)
-                    letters = ready.count { it.isLetter() }
-                    effect = if (TranslationTextUtils.isSoundEffect(ready)) " SFX" else ""
-                }
-                // A whole Japanese bubble can be two characters ("はい"), where
-                // three would already be a sentence -- hence the lower bar.
-                val keep = if (vertical) letters >= 2
-                else letters >= 2 && ready.length >= 3 && effect.isEmpty() &&
-                        EnglishTextCleaner.isTranslatable(ready)
-                if (keep) prepared += ready
+                // "out" rather than "SFX": the pipeline decides what is
+                // dropped and for several reasons -- too short, a sound effect,
+                // artwork read as text, a credit line. Naming one of them here
+                // would be this file guessing again.
+                val dropped = if (index in prep.blocks) "" else " out"
                 report.appendLine(
                     "   block %-3d [%4d,%4d %4dx%4d] w=%2d%% fill=%3d%% lines=%-2d h=%.1fx%s  %s".format(
                         index, rect.left.toInt(), rect.top.toInt(),
                         rect.width.toInt(), rect.height.toInt(),
-                        (widthShare * 100).toInt(), fill, lines.size, ratio, effect, text,
+                        (widthShare * 100).toInt(), fill, lines.size, ratio, dropped, text,
                     )
                 )
 
@@ -271,18 +262,10 @@ class VolumeReplayTest {
                 }
             }
 
-            // A sentence lettered across two or three balloons goes to the
-            // translator whole, and the engine's answer depends on getting it
-            // whole -- so the bench has to group before it translates, or it
-            // measures a pipeline nobody ships.
-            //
-            // Japanese does not group: the assembler keys on ellipses and on a
-            // Latin sentence not having ended, neither of which says anything
-            // about a Japanese page. One bubble, one sentence.
-            val groups = if (vertical) prepared.indices.map { listOf(it) }
-            else BubbleAssembler.group(prepared)
-            groups.forEach { positions ->
-                val joined = BubbleAssembler.join(positions.map { prepared[it] })
+            prep.repairs.forEach { (index, changes) ->
+                changes.forEach { repairs.appendLine("${changes.size}	${it.before}	${it.after}	${it.rule}	block $index") }
+            }
+            prep.joined.forEach { joined ->
                 // Looked up on the joined text, before the rewrites: both tables
                 // are written the way a page is lettered, so a balloon that is
                 // an entry matches as it was read.

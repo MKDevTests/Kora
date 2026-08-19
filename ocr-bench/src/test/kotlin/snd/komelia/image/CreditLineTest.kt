@@ -84,6 +84,16 @@ class CreditLineTest {
         // Both are wide enough and both carry a keyword. What separates them is
         // that they are said to someone.
         assertFalse(CreditLine.isCreditLine("TRANSLATION NOTE!", 8.5f))
+        // The long form, which the closing-! guard cannot see because the
+        // sentence keeps going. Found by sharing the pipeline with the bench:
+        // this line had been silently losing its translation.
+        assertFalse(
+            CreditLine.isCreditLine(
+                "Translation note! Dei matsuri's speaking style is based on the tokyo " +
+                        "shitamachi (low-town) dialect, which these days is essentially historical.",
+                24f,
+            )
+        )
         assertFalse(CreditLine.isCreditLine("Support the Author!", 7.8f))
     }
 

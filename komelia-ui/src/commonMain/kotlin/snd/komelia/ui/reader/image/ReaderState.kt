@@ -1580,41 +1580,6 @@ class ReaderState(
      *   screen. The spinner belongs to the page the reader is looking at, and a
      *   prefetch that lit it up would have it turning while nothing is waiting.
      */
-    /**
-     * Which of [candidates] are the book's credits. See [snd.komelia.image.CreditLine];
-     * this half is only the geometry, taken from the boxes the blocks were built
-     * from.
-     */
-    private fun creditBlocks(
-        candidates: Map<Int, String>,
-        boxes: List<OcrElementBox>,
-        pageId: ReaderImage.PageId,
-    ): Set<Int> {
-        if (candidates.isEmpty()) return emptySet()
-        val byBlock = boxes.groupBy { it.blockIndex }
-        val lines = candidates.mapNotNull { (blockIndex, text) ->
-            val elements = byBlock[blockIndex] ?: return@mapNotNull null
-            if (elements.isEmpty()) return@mapNotNull null
-            val rects = elements.map { it.blockRect }
-            snd.komelia.image.CreditLine.Line(
-                index = blockIndex,
-                text = text,
-                left = rects.minOf { it.left },
-                top = rects.minOf { it.top },
-                right = rects.maxOf { it.right },
-                bottom = rects.maxOf { it.bottom },
-                // Two credits printed one above the other merge into one block,
-                // and its ratio is then half a line's. Measured wrong once: the
-                // Akane-banashi colophon was translated because of it.
-                lineCount = elements.map { it.lineIndex }.distinct().size,
-            )
-        }
-        // 0 when the page list has not arrived: CreditLine then only trusts the
-        // opening pages, rather than reading the whole book as back matter.
-        val pageCount = booksState.value?.currentBookPages?.size ?: 0
-        return snd.komelia.image.CreditLine.detect(lines, pageId.pageNumber, pageCount)
-    }
-
     private suspend fun translateBlocks(
         boxes: List<OcrElementBox>,
         foreground: Boolean,
@@ -1643,80 +1608,31 @@ class ReaderState(
         // What each repair rule rewrote, kept for the diagnostic log below. A
         // rule that reads a token wrong shows its damage two stages later, in
         // French, and without this there is nothing left to say which one fired.
-        val repairs = mutableMapOf<Int, List<snd.komelia.image.OcrSpellRepair.Change>>()
-        val blocks = boxes
-            .groupBy { it.blockIndex }
-            .mapValues { (blockIndex, elements) ->
-                elements
-                    .sortedWith(compareBy({ it.lineIndex }, { it.elementIndex }))
-                    // Japanese does not separate words with spaces, and inserting
-                    // them between the columns of a bubble splits words that the
-                    // detector happened to cut in two.
-                    .joinToString(if (japanese) "" else " ") { it.text }
-                    .trim()
-                    // Both cleanups are about Latin lettering: a word the
-                    // letterer broke across two lines, and the full caps comics
-                    // are drawn in. Neither exists in Japanese.
-                    .let {
-                        // The Japanese repair is homoglyphs rather than
-                        // spelling, so it needs no word list and runs before
-                        // anything else looks at the text: the phrase book, the
-                        // dialect table and the katakana glossary all match on
-                        // what the page says, and ニ丁 is not what it says.
-                        if (japanese) snd.komelia.image.JapaneseOcrRepair.apply(it)
-                        else snd.komelia.image.TranslationTextUtils.rejoinLineBreaks(it)
-                            // After the line breaks are rejoined, so the repair
-                            // sees whole words: "PLID- DING" is two fragments
-                            // until then and neither one is repairable. Before
-                            // the sentence casing, which is why the repair puts
-                            // the capitals back itself.
-                            .let { text ->
-                                val repaired = snd.komelia.image.OcrSpellRepair.applyTraced(text)
-                                if (repaired.changes.isNotEmpty()) repairs[blockIndex] = repaired.changes
-                                repaired.text
-                            }
-                            .let { text -> snd.komelia.image.TranslationTextUtils.toSentenceCase(text) }
-                    }
-            }
-            // Single letters and bare digits are artwork the OCR mistook for
-            // text ('R', 'n' at 20x5px, 'e' at 8x7px, '1', 'V'). Translating them
-            // is meaningless, and painting an opaque panel over them puts black
-            // squares on the drawing.
-            //
-            // Japanese needs a lower bar: a whole bubble can be two characters
-            // ("はい"), where three would already be a sentence.
-            .filterValues { text ->
-                val letters = text.count { it.isLetter() }
-                val longEnough = if (japanese) letters >= 2 else letters >= 2 && text.length >= 3
-                // Sound effects are drawn onto the artwork, so a panel over one
-                // hides the drawing to say 'Table de Ping'. Latin only; Japanese
-                // sound effects are a different problem and it is on hold.
-                longEnough && (japanese || !snd.komelia.image.TranslationTextUtils.isSoundEffect(text)) &&
-                        // Recognition over artwork returns confident nonsense
-                        // rather than nothing, and translating it paints an
-                        // opaque panel over the drawing it came from.
-                        (japanese || snd.komelia.image.EnglishTextCleaner.isTranslatable(text))
-            }
-            // Dropped, not blanked: a block that never reaches the translator
-            // has no panel painted over it, so the credits stay on the page as
-            // they were printed instead of coming back as "B y you ji Miur a".
-            .let { candidates -> candidates - creditBlocks(candidates, boxes, pageId) }
-        if (blocks.isEmpty()) return emptyMap()
+        // One implementation, shared with the bench -- see TranslationInput.
+        // This used to live here and be copied there, and the copy ran the
+        // Latin rules over Japanese: 203 of 210 blocks thrown away as English
+        // sound effects, silently, for as long as Japanese had been in the
+        // bench. Keeping two in step was the thing that did not work.
+        val prepared = snd.komelia.image.TranslationInput.prepare(
+            boxes = boxes,
+            japanese = japanese,
+            pageNumber = pageId.pageNumber,
+            // 0 when the page list has not arrived: CreditLine then only trusts
+            // the opening pages, rather than reading the whole book as back
+            // matter.
+            pageCount = booksState.value?.currentBookPages?.size ?: 0,
+        )
+        if (prepared.isEmpty) return emptyMap()
+        val blocks = prepared.blocks
+        val repairs = prepared.repairs
+        val groups = prepared.groups
+        val groupSources = prepared.groupSources
+        val joined = prepared.joined
+        val ordered = prepared.ordered
+        val indices = prepared.order
 
         if (foreground) isTranslating.value = true
         try {
-            // Block indices are already in reading order, so consecutive here
-            // means consecutive on the page — which is what lets the balloons of
-            // one sentence be recognised as consecutive at all.
-            val indices = blocks.keys.toList()
-            val ordered = indices.map { blocks.getValue(it) }
-            // A sentence lettered across two or three balloons goes to the
-            // translator whole. Measured over Ramen Aka Neko 167: 52 of 142
-            // blocks were two words or shorter, and a translator given two words
-            // of a sentence returns two words of nonsense.
-            val groups = if (japanese) ordered.indices.map { listOf(it) }
-            else snd.komelia.image.BubbleAssembler.group(ordered)
-            val groupSources = groups.map { positions -> positions.map { ordered[it] } }
             // Glossary terms leave as placeholders and come back as themselves.
             // Capitalising them and hoping was tried first and measured on the
             // tablet not to work: "Meryl Strife" went out spelled right and came
@@ -1727,7 +1643,14 @@ class ReaderState(
                 loadKatakanaGlossary()
                 loadJapanesePhraseBook()
             } else loadPhraseBook()
-            val joined = groupSources.map { snd.komelia.image.BubbleAssembler.join(it) }
+            // After protect, not before: a series glossary term can itself be
+            // katakana, and rewriting it first would leave protect nothing to
+            // find. The placeholders are Latin ("Xqz0"), so the katakana rules
+            // cannot reach them.
+            // Dialect before the katakana rewrite, which is the order the table
+            // was measured in: ワシャ has to become 俺は while it is still a
+            // katakana run, and ヤド has to become んだ before anything else
+            // claims those two characters.
             // After protect, not before: a series glossary term can itself be
             // katakana, and rewriting it first would leave protect nothing to
             // find. The placeholders are Latin ("Xqz0"), so the katakana rules
@@ -1832,8 +1755,7 @@ class ReaderState(
             // Empty for Japanese, where the assembler is bypassed entirely and
             // every block is its own group -- reporting seams it never
             // consulted would be inventing them.
-            val seams = if (japanese) emptyList()
-            else snd.komelia.image.BubbleAssembler.explain(ordered)
+            val seams = prepared.seams
             indices.forEach { blockIndex ->
                 val blockBoxes = boxes.filter { it.blockIndex == blockIndex }
                 val rect = blockBoxes.first().blockRect

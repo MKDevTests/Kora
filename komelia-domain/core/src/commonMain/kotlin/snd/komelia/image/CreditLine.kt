@@ -93,9 +93,16 @@ object CreditLine {
         // does not exclaim and it does not ask.
         if (trimmed.endsWith('!') || trimmed.endsWith('?')) return false
         val match = KEYWORD.find(trimmed) ?: return false
-        // "STORY 180: I WANTED TO MEASURE" is a chapter number, not a byline.
         val after = trimmed.substring(match.range.last + 1).trimStart()
+        // "STORY 180: I WANTED TO MEASURE" is a chapter number, not a byline.
         if (after.firstOrNull()?.isDigit() == true) return false
+        // A translator's note is the opposite of a credit: it is written to be
+        // read. Scanlations print them by the page — "Translation note! Dei
+        // matsuri's speaking style is based on the tokyo shitamachi dialect,
+        // which these days is essentially historical..." runs sixty words and
+        // never reaches a closing !, so the exclamation guard above cannot see
+        // it. Notes are a genre, not one stray line.
+        if (after.startsWith("note", ignoreCase = true)) return false
         return true
     }
 
