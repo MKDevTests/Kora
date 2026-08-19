@@ -38,7 +38,17 @@ package snd.komelia.image
  */
 object CreditLine {
 
-    /** One recognised line of text, in image pixels. */
+    /**
+     * One recognised block of text, in image pixels.
+     *
+     * [lineCount] is what the ratio is measured against, and getting it wrong is
+     * what made this miss its first real page: the shape that identifies a
+     * credit belongs to ONE line of type, but a block can hold several stacked
+     * on top of each other. Akane-banashi prints its story and translation
+     * credits one above the other and they merge into a single block, whose
+     * height is twice a line's and whose ratio is therefore half -- 4.5 against
+     * the 9.1 and 9.8 the lines have on their own.
+     */
     data class Line(
         val index: Int,
         val text: String,
@@ -46,6 +56,7 @@ object CreditLine {
         val top: Float,
         val right: Float,
         val bottom: Float,
+        val lineCount: Int = 1,
     )
 
     /**
@@ -88,9 +99,10 @@ object CreditLine {
         return true
     }
 
+    /** Width against the height of a SINGLE line -- see [Line.lineCount]. */
     private fun aspectRatio(line: Line): Float {
         val width = line.right - line.left
-        val height = line.bottom - line.top
+        val height = (line.bottom - line.top) / line.lineCount.coerceAtLeast(1)
         return if (width <= 0f || height <= 0f) 0f else width / height
     }
 
@@ -115,10 +127,10 @@ object CreditLine {
 
     /**
      * A credit line is a ribbon: one line of small type running across the page.
-     * A speech balloon is lettered several lines deep and comes out near square
-     * — the corpus medians are 8.9 against 3.5. Six sits between them and is
-     * what takes "STORY!" (2.5) and "STORY OR..." (5.2), both dialogue, out of
-     * the set.
+     * A speech balloon is lettered several lines deep, and each of ITS lines is
+     * short — the corpus medians are 8.9 against 3.5, both measured per line.
+     * Six sits between them and is what takes "STORY!" (2.5) and "STORY OR..."
+     * (5.2), both dialogue, out of the set.
      */
     private const val MIN_ASPECT = 6f
     private const val FRONT_MATTER_PAGES = 5

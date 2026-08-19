@@ -1572,8 +1572,9 @@ class ReaderState(
         if (candidates.isEmpty()) return emptySet()
         val byBlock = boxes.groupBy { it.blockIndex }
         val lines = candidates.mapNotNull { (blockIndex, text) ->
-            val rects = byBlock[blockIndex]?.map { it.blockRect } ?: return@mapNotNull null
-            if (rects.isEmpty()) return@mapNotNull null
+            val elements = byBlock[blockIndex] ?: return@mapNotNull null
+            if (elements.isEmpty()) return@mapNotNull null
+            val rects = elements.map { it.blockRect }
             snd.komelia.image.CreditLine.Line(
                 index = blockIndex,
                 text = text,
@@ -1581,6 +1582,10 @@ class ReaderState(
                 top = rects.minOf { it.top },
                 right = rects.maxOf { it.right },
                 bottom = rects.maxOf { it.bottom },
+                // Two credits printed one above the other merge into one block,
+                // and its ratio is then half a line's. Measured wrong once: the
+                // Akane-banashi colophon was translated because of it.
+                lineCount = elements.map { it.lineIndex }.distinct().size,
             )
         }
         // 0 when the page list has not arrived: CreditLine then only trusts the

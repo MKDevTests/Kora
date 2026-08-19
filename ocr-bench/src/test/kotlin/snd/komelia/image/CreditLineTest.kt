@@ -13,15 +13,45 @@ import kotlin.test.assertTrue
  */
 class CreditLineTest {
 
-    private fun line(index: Int, text: String, ratio: Float, top: Float = 100f) =
+    private fun line(index: Int, text: String, ratio: Float, top: Float = 100f, lines: Int = 1) =
         CreditLine.Line(
             index = index,
             text = text,
             left = 0f,
             top = top,
             right = 20f * ratio,
-            bottom = top + 20f,
+            bottom = top + 20f * lines,
+            lineCount = lines,
         )
+
+    @Test
+    fun `two credits printed one above the other still read as credits`() {
+        // The Akane-banashi colophon, and the case that reached the tablet
+        // translated: two lines of ratio 9.1 and 9.8 merge into one block whose
+        // ratio is 4.5, which is below the threshold. Measured against a single
+        // line's height, they are what they were.
+        val stacked = listOf(
+            CreditLine.Line(
+                index = 0,
+                text = "Story by yuki suenaga translation: stephen paul",
+                left = 250f, top = 1075f, right = 500f, bottom = 1130f,
+                lineCount = 2,
+            )
+        )
+        // 250 wide over 55 tall is 4.5 for the block, and 9.1 for each of its
+        // two lines. Only the second number is the shape of a credit.
+        assertEquals(setOf(0), CreditLine.detect(stacked, pageNumber = 1, pageCount = 190))
+    }
+
+    @Test
+    fun `a balloon lettered several lines deep is still not a credit`() {
+        // The correction must not swallow dialogue: a balloon's OWN lines are
+        // short, which is the whole distinction.
+        val balloon = listOf(
+            line(0, "But in strategy and technique, the story is clearly different.", ratio = 2.4f, lines = 7),
+        )
+        assertEquals(emptySet(), CreditLine.detect(balloon, pageNumber = 1, pageCount = 190))
+    }
 
     @Test
     fun `the credits of a comic are recognised`() {
