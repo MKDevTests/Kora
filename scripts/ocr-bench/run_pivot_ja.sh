@@ -22,6 +22,21 @@
 #   Helsinki-NLP/opus-mt-ja-fr, and did not win. See the notes in
 #   scripts/ocr-bench/README.md.
 #
+# JAEN_BEAM and ENFR_BEAM override the beam size of each hop independently,
+# defaulting to 1 -- which is what the app runs: translator.cpp builds a minimal
+# config with "beam-size: 1" whenever the caller passes no config, and
+# BergamotTranslationEngine passes configYaml = null. Checked, not assumed.
+#
+# Setting one beam for "the pivot" is meaningless, and measuring it that way
+# wasted a run: raising both hops at once changed 176 of 198 bubbles and could
+# not say which hop caused what. Isolated, ja-en accounts for 149 and en-fr for
+# 118, with 91 bubbles changed by both.
+#
+# The measurement that closed the question, blind-annotated on the 149 bubbles
+# ja-en beam 4 changes: 35 better, 28 worse, 86 equivalent. Binomial p = 0.45 --
+# indistinguishable from chance. For comparison every table shipped so far runs
+# at 15/0, 11/0, 9/0. Beam is not the lever the corpus needed.
+#
 # Setup: same bergamot build as run_bergamot.sh, plus the ja-en pack in
 # $BERGAMOT_MODELS/../jaen. Download it the way the app does: the records at
 # firefox.settings.services.mozilla.com, newest version that has all three file
@@ -39,8 +54,8 @@ BIN="$ROOT/bergamot-translator/build/app/bergamot"
 # Both hops take the same settings the app runs with: beam 1 and int8shift. A
 # bench that quietly gave itself beam 4 would be measuring a different engine
 # from the one the reader has.
-hop() { # <pair> <in> <out>
-    local pair="$1" dir="$MODELS/$1" conf="$ROOT/$1.yml"
+hop() { # <pair> <in> <out> <beam>
+    local pair="$1" dir="$MODELS/$1" conf="$ROOT/$1.yml" beam="${4:-1}"
     [[ -d "$dir" ]] || { echo "missing model pack: $dir"; exit 1; }
     cat > "$conf" <<EOF
 models:
@@ -51,7 +66,7 @@ vocabs:
 shortlist:
   - $dir/lex.50.50.$pair.s2t.bin
   - false
-beam-size: 1
+beam-size: $beam
 normalize: 1.0
 word-penalty: 0
 max-length-break: 128
@@ -67,6 +82,6 @@ EOF
     "$BIN" --model-config-paths "$conf" --cpu-threads 4 --log-level critical < "$2" > "$3"
 }
 
-hop jaen "$IN" /tmp/pivot-en.txt
-hop enfr /tmp/pivot-en.txt "$OUT"
+hop jaen "$IN" /tmp/pivot-en.txt "${JAEN_BEAM:-1}"
+hop enfr /tmp/pivot-en.txt "$OUT" "${ENFR_BEAM:-1}"
 echo "english kept at /tmp/pivot-en.txt"
