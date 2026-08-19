@@ -7,6 +7,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -342,9 +344,23 @@ class HomeViewModel(
             // different threads and would otherwise race on the list.
             val publishLock = Mutex()
 
+            // Four at a time, not all of them at once.
+            //
+            // Measured 2026-08-20 on the user's own server: /api/v1/books/ondeck
+            // answered curl in 1.6s with the app closed, and took 23 152, 24 090
+            // and 25 643ms from inside this fan-out. Twice it went past the 30s
+            // socket timeout and the shelf died with a SocketTimeoutException
+            // after 31 157ms, having received not one byte of response.
+            //
+            // Eleven shelves launched together is eleven queries landing on the
+            // server at once while it is also serving covers; the five that got
+            // answered came back in ~1.5s and the rest waited behind them. Same
+            // bound as the genre counts, the next-releases scan and the
+            // favorites resolver, all added for the same reason.
+            val shelfLimit = Semaphore(MAX_CONCURRENT_SHELVES)
             withForYou.mapIndexed { index, filter ->
                 screenModelScope.async {
-                    val data = fetchFilterData(filter, force) ?: return@async
+                    val data = shelfLimit.withPermit { fetchFilterData(filter, force) } ?: return@async
                     publishLock.withLock {
                         slots[index] = data
                         currentFilters.value = slots.filterNotNull()
@@ -523,6 +539,9 @@ class HomeViewModel(
     }
 
     private companion object {
+        /** Shelves resolved at once. See the fan-out above for the measurement. */
+        const val MAX_CONCURRENT_SHELVES = 4
+
         /** How long the server must stay quiet before a reload is worth doing. */
         val RELOAD_QUIET_PERIOD = 1.5.seconds
 
