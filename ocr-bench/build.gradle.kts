@@ -43,6 +43,7 @@ kotlin {
                 "snd/komelia/image/JapaneseKansaiNormaliser.kt",
                 "snd/komelia/image/JapaneseOcrRepair.kt",
                 "snd/komelia/image/JapaneseFuriganaFilter.kt",
+                "snd/komelia/image/JapanesePhraseBook.kt",
             )
         }
     }
