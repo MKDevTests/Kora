@@ -283,7 +283,13 @@ class DesktopAppModule(
             install(HttpTimeout) {
                 requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
                 connectTimeoutMillis = 30_000
-                socketTimeoutMillis = 30_000
+                // Raised from 30s on 2026-08-20. Measured that day: the same
+                // /api/v1/books/ondeck answered in 1.6s to curl with the app
+                // closed, and took 23-25s inside the app -- three times, and
+                // twice it crossed 30s and the shelf died. The server is fine;
+                // the burst is ours. 60s is the safety net, not the fix: the
+                // fix is the bound on how many requests we fire at once.
+                socketTimeoutMillis = 60_000
             }
         }
 
