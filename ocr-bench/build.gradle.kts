@@ -44,6 +44,7 @@ kotlin {
                 "snd/komelia/image/JapaneseOcrRepair.kt",
                 "snd/komelia/image/JapaneseFuriganaFilter.kt",
                 "snd/komelia/image/JapanesePhraseBook.kt",
+                "snd/komelia/image/CreditLine.kt",
             )
         }
     }

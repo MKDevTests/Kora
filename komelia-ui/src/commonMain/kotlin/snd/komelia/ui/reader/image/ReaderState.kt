@@ -748,25 +748,46 @@ class ReaderState(
      * why the readers key their "book changed" work on the current book's id.
      *
      * Runs on [stateScope], so leaving the reader cancels it.
+     *
+     * Nothing here may escape. This is a convenience the reader is designed to
+     * do without -- [loadNextBook] simply stays on the current volume when
+     * nextBook is null, and the next page turn asks again. But it runs in a
+     * bare launch, so an exception it lets go reaches the app's uncaught
+     * handler and closes the application. That is not a theory: a reader was
+     * shut down mid-volume by a 30s socket timeout on this exact call, and
+     * [getNextBook] only converts a 404 -- a timeout is not a
+     * ClientRequestException and went straight past it.
+     *
+     * This is also the slowest call the reader makes (the 2788/11940/14354ms
+     * above), so it is the likeliest of all of them to reach that ceiling.
      */
     private fun prefetchNextBook() {
         val anchor = booksState.value?.currentBook ?: return
         nextBookPrefetch?.cancel()
         nextBookPrefetch = stateScope.launch {
-            // Still measured, just no longer waited on: this is the number that
-            // used to BE the open time, and it is worth knowing when it drifts.
-            val (next, pages) = PerfTrace.measure("reader.nextBook background") {
-                val nb = getNextBook(anchor)
-                nb to (if (nb != null) loadBookPages(nb) else emptyList())
-            }
+            try {
+                // Still measured, just no longer waited on: this is the number that
+                // used to BE the open time, and it is worth knowing when it drifts.
+                val (next, pages) = PerfTrace.measure("reader.nextBook background") {
+                    val nb = getNextBook(anchor)
+                    nb to (if (nb != null) loadBookPages(nb) else emptyList())
+                }
 
-            // Only if the reader is still on the book we started from: a fast
-            // second page-turn has already moved on, and its own prefetch owns
-            // the state now.
-            val current = booksState.value ?: return@launch
-            if (current.currentBook.id != anchor.id) return@launch
-            booksState.value = current.copy(nextBook = next, nextBookPages = pages)
-            preloadFirstPage(next)
+                // Only if the reader is still on the book we started from: a fast
+                // second page-turn has already moved on, and its own prefetch owns
+                // the state now.
+                val current = booksState.value ?: return@launch
+                if (current.currentBook.id != anchor.id) return@launch
+                booksState.value = current.copy(nextBook = next, nextBookPages = pages)
+                preloadFirstPage(next)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Warn, not debug: unlike the page prefetch nobody re-runs this
+                // in the foreground and reports it properly, so this line is the
+                // only trace that the next volume is missing.
+                logger.warn(e) { "next book prefetch failed for ${anchor.id}" }
+            }
         }
     }
 
@@ -1559,6 +1580,41 @@ class ReaderState(
      *   screen. The spinner belongs to the page the reader is looking at, and a
      *   prefetch that lit it up would have it turning while nothing is waiting.
      */
+    /**
+     * Which of [candidates] are the book's credits. See [snd.komelia.image.CreditLine];
+     * this half is only the geometry, taken from the boxes the blocks were built
+     * from.
+     */
+    private fun creditBlocks(
+        candidates: Map<Int, String>,
+        boxes: List<OcrElementBox>,
+        pageId: ReaderImage.PageId,
+    ): Set<Int> {
+        if (candidates.isEmpty()) return emptySet()
+        val byBlock = boxes.groupBy { it.blockIndex }
+        val lines = candidates.mapNotNull { (blockIndex, text) ->
+            val elements = byBlock[blockIndex] ?: return@mapNotNull null
+            if (elements.isEmpty()) return@mapNotNull null
+            val rects = elements.map { it.blockRect }
+            snd.komelia.image.CreditLine.Line(
+                index = blockIndex,
+                text = text,
+                left = rects.minOf { it.left },
+                top = rects.minOf { it.top },
+                right = rects.maxOf { it.right },
+                bottom = rects.maxOf { it.bottom },
+                // Two credits printed one above the other merge into one block,
+                // and its ratio is then half a line's. Measured wrong once: the
+                // Akane-banashi colophon was translated because of it.
+                lineCount = elements.map { it.lineIndex }.distinct().size,
+            )
+        }
+        // 0 when the page list has not arrived: CreditLine then only trusts the
+        // opening pages, rather than reading the whole book as back matter.
+        val pageCount = booksState.value?.currentBookPages?.size ?: 0
+        return snd.komelia.image.CreditLine.detect(lines, pageId.pageNumber, pageCount)
+    }
+
     private suspend fun translateBlocks(
         boxes: List<OcrElementBox>,
         foreground: Boolean,
@@ -1641,6 +1697,10 @@ class ReaderState(
                         // opaque panel over the drawing it came from.
                         (japanese || snd.komelia.image.EnglishTextCleaner.isTranslatable(text))
             }
+            // Dropped, not blanked: a block that never reaches the translator
+            // has no panel painted over it, so the credits stay on the page as
+            // they were printed instead of coming back as "B y you ji Miur a".
+            .let { candidates -> candidates - creditBlocks(candidates, boxes, pageId) }
         if (blocks.isEmpty()) return emptyMap()
 
         if (foreground) isTranslating.value = true
