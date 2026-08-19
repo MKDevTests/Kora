@@ -72,6 +72,28 @@ object JapaneseKansaiNormaliser {
          * and it is derived from the key rather than written in the file.
          */
         KATAKANA_RUN,
+
+        /**
+         * ~へん is the Kansai negation, and a negation attaches to the 未然形 --
+         * the verb stem ending in an -a kana. 見つから-へん qualifies; そのへん
+         * ("around there") does not, and became そのない on a real page.
+         */
+        NEGATIVE_STEM,
+
+        /**
+         * やろ is the copula や plus ろ, and it is NOT the last two morae of the
+         * volitive ~やろう. 触ってやろうか became 触ってだろううか -- which is
+         * not Japanese at all -- and 一生懸命やろうって the same way. The う is
+         * the whole difference.
+         */
+        NOT_VOLITIVE,
+
+        /**
+         * A sentence-final particle, and only that. かいな closes a question;
+         * inside しかいない it cut 四人しかいない ("there are only four of
+         * them") down to 四人しかない, changing the verb of existence.
+         */
+        CLAUSE_FINAL,
     }
 
     private class Rewrite(val key: String, val replacement: String, val guard: Guard) {
@@ -160,6 +182,12 @@ object JapaneseKansaiNormaliser {
             Guard.AFTER_N_OR_START -> at == 0 || text[at - 1] == 'ん'
 
             Guard.KATAKANA_RUN -> runEnds[at] == at + katakanaHead
+
+            Guard.NEGATIVE_STEM -> text.getOrNull(at - 1)?.let { it in A_ROW } == true
+
+            Guard.NOT_VOLITIVE -> text.getOrNull(end) != 'う'
+
+            Guard.CLAUSE_FINAL -> text.substring(end).all { it.isTerminal() }
         }
     }
 
@@ -196,7 +224,16 @@ object JapaneseKansaiNormaliser {
      */
     private const val PARTICLES = "がはをにでともへやのねよかなぞぜさ"
 
+    /**
+     * The 未然形 endings a Kansai negation may attach to: the -a column, plus
+     * the voiced and semi-voiced rows.
+     */
+    private const val A_ROW = "あかがさざただなはばぱまやらわ"
+
     private fun guardFor(expression: String, declared: String?): Guard = when (declared) {
+        "negative_stem" -> Guard.NEGATIVE_STEM
+        "not_volitive" -> Guard.NOT_VOLITIVE
+        "clause_final" -> Guard.CLAUSE_FINAL
         "person_suffix" -> Guard.PERSON_SUFFIX
         "sentence_final_do" -> Guard.SENTENCE_FINAL_DO
         "after_n_or_start" -> Guard.AFTER_N_OR_START
