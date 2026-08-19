@@ -1696,8 +1696,19 @@ class ReaderState(
                     // in it, so restoring is only for what the engine returned.
                     val restored = if (known[groupIndex] != null) answer
                     else protectedGroups[groupIndex].restore(answer)
-                    val pieces = snd.komelia.image.BubbleAssembler
-                        .distribute(restored, groupSources[groupIndex])
+                    val pieces = snd.komelia.image.BubbleAssembler.distribute(
+                        restored,
+                        groupSources[groupIndex],
+                        // The list of words a balloon must not end on is
+                        // French. Handing it a German translation would have it
+                        // avoid cuts that are perfectly fine and take worse
+                        // ones instead, so the other targets get no nudging
+                        // rather than the wrong nudging.
+                        avoidEndingOn = if (settings.target ==
+                            snd.komelia.settings.model.TranslationLanguage.FRENCH
+                        ) snd.komelia.image.BubbleAssembler.FRENCH_FUNCTION_WORDS
+                        else emptySet(),
+                    )
                     positions.forEachIndexed { pieceIndex, position ->
                         // Honorifics survive translation, the name in front of
                         // them does not: "MAMA-SAN" came back as "Maman-san".

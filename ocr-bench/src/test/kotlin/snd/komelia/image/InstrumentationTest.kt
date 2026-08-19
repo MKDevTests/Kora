@@ -273,3 +273,72 @@ class OcrRepairTraceTest {
         }
     }
 }
+
+/**
+ * Where one translation gets cut when it goes back onto its balloons.
+ *
+ * Every case here was read off the bench corpus: twenty-four multi-balloon
+ * groups, eleven of them ending a balloon on a word that announces something
+ * and was not there to announce it.
+ */
+class SentenceDistributionTest {
+
+    // The real strings, lettering and all: the cut is chosen from how long each
+    // source balloon is, so a shortened stand-in cuts somewhere else and tests
+    // nothing. Both of these were read out of the bench corpus.
+    private val infoOnHim = listOf(
+        "SINCE I HAVE NO INFO ON HIM...",
+        "..IT'LL BE FUN TO SEE HOW HE GROWS!",
+    )
+    private val infoOnHimFr =
+        "Puisque je n'ai pas d'infos sur lui Ce sera amusant de voir comment il grandit!"
+
+    @Test
+    fun `a cut is nudged off a preposition`() {
+        val pieces = BubbleAssembler.distribute(infoOnHimFr, infoOnHim)
+        assertEquals("Puisque je n'ai pas d'infos…", pieces[0])
+        assertTrue(pieces[1].startsWith("…sur lui"), pieces[1])
+    }
+
+    /** The same call with no list is the old behaviour, and it hangs on "sur". */
+    @Test
+    fun `an empty list disables the nudging entirely`() {
+        val raw = BubbleAssembler.distribute(infoOnHimFr, infoOnHim, avoidEndingOn = emptySet())
+        assertEquals("Puisque je n'ai pas d'infos sur…", raw[0])
+    }
+
+    @Test
+    fun `a cut is nudged off an article`() {
+        val pieces = BubbleAssembler.distribute(
+            "Et quand il s'agit du rythme du jeu Le plus souvent, c'est Haryu qui le dicte.",
+            listOf(
+                "AND WHEN IT COMES TO THE PACE OF THE GAME...",
+                "...MORE OFTEN THAN NOT, HARYU'S THE ONE WHO DICTATES IT.",
+            ),
+        )
+        assertTrue(pieces[0].endsWith("rythme…"), "cut after an article: ${pieces[0]}")
+    }
+
+    @Test
+    fun `a cut already on a real word is left where it was`() {
+        val pieces = BubbleAssembler.distribute(
+            "Brisez le rythme de votre adversaire et définissez le vôtre.",
+            listOf("BREAK YOUR OPPONENT'S RHYTHM...", ".…AND SET YOUR OWN."),
+        )
+        assertEquals("Brisez le rythme de votre adversaire…", pieces[0])
+        assertEquals("…et définissez le vôtre.", pieces[1])
+    }
+
+    /** A run of function words has nowhere better to go; it must not loop or throw. */
+    @Test
+    fun `a sentence of nothing but function words still splits`() {
+        val pieces = BubbleAssembler.distribute("de la le les des du", listOf("AAAA...", "...BBBB"))
+        assertEquals(2, pieces.size)
+        assertTrue(pieces.all { it.isNotBlank() })
+    }
+
+    @Test
+    fun `fewer words than balloons keeps the sentence whole`() {
+        assertEquals(listOf("Oui", ""), BubbleAssembler.distribute("Oui", listOf("AAA...", "...BBB")))
+    }
+}
