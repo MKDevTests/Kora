@@ -5,6 +5,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import snd.komelia.komga.api.KomgaBookApi
@@ -13,6 +15,9 @@ import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komga.client.book.KomgaBookId
 
 private val logger = KotlinLogging.logger {}
+
+/** See [BookImageLoader.downloadLimit] for the measurement behind the number. */
+private const val MAX_CONCURRENT_PAGE_DOWNLOADS = 4
 
 class BookImageLoader(
     private val bookClient: StateFlow<KomgaBookApi>,
@@ -64,8 +69,32 @@ class BookImageLoader(
         }
     }
 
+    /**
+     * How many page downloads may be in flight at once, across every reader.
+     *
+     * Measured on 2026-08-20 against the user's own server: the same
+     * /api/v1/books/ondeck answered curl in 1.6s with the app closed, and took
+     * 23 152, 24 090 and 25 643ms inside the app, twice crossing the 30s socket
+     * timeout. The server is not slow. We fire more than it can answer at once
+     * and then time out waiting for our own queue.
+     *
+     * That is what made one page fail while its neighbour was fine on a healthy
+     * network: nothing is wrong with page P+1, it is simply the request that
+     * was starved this time. A retry button alone would not have fixed it --
+     * the retry would join the same queue.
+     *
+     * Four, the same bound the home shelves, the genre counts and the
+     * next-releases scan already use. It sits under OkHttp's eight per host,
+     * which leaves room for the screen's own API calls instead of letting a
+     * prefetch burst crowd them out.
+     */
+    private val downloadLimit = Semaphore(MAX_CONCURRENT_PAGE_DOWNLOADS)
+
     private suspend fun fetchPage(bookId: KomgaBookId, page: Int): ByteArray {
         localFileApiProvider?.getApiForBook(bookId)?.let { localApi ->
+            // Local files are not a server request and must not take a permit:
+            // holding one here would let an offline book throttle the online
+            // reader for no reason.
             return localApi.getPage(bookId, page)
         }
         if (offlineBookRepository?.find(bookId) != null && offlineBookApi != null) {
@@ -74,10 +103,10 @@ class BookImageLoader(
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 logger.warn(e) { "Local page read failed for $bookId page $page, falling back to network" }
-                bookClient.value.getPage(bookId, page)
+                downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
             }
         }
-        return bookClient.value.getPage(bookId, page)
+        return downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
     }
 
     private suspend fun doLoad(bookId: KomgaBookId, page: Int): ImageSource {

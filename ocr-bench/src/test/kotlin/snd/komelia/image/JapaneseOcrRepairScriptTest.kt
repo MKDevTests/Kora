@@ -51,4 +51,42 @@ class JapaneseOcrRepairScriptTest {
         // 世世俺の前世の妹 — each has the other beside it, so neither fires.
         assertEquals("世世俺の前世の妹", JapaneseOcrRepair.apply("世世俺の前世の妹"))
     }
+
+    @Test
+    fun `the other two chinese forms are put back as well`() {
+        // 统 is simplified-only; 齡 is the traditional form, and the Japanese
+        // kyujitai, so folding it to 齢 cannot change what a work meant.
+        assertEquals("武勇：16統率：42知力359", JapaneseOcrRepair.apply("武勇：16统率：42知力359"))
+        assertEquals("年齢：18", JapaneseOcrRepair.apply("年齡：18"))
+    }
+
+    @Test
+    fun `句 and 自 between two い are 匂`() {
+        assertEquals("いい匂い", JapaneseOcrRepair.apply("いい句い"))
+        assertEquals("いい匂いかする", JapaneseOcrRepair.apply("いい自いかする"))
+    }
+
+    @Test
+    fun `句 keeps its meaning when it is not between two い`() {
+        // Offering someone a verse. Without the leading い this would become
+        // 一匂いかがですか, which is not a sentence.
+        assertEquals("一句いかがですか", JapaneseOcrRepair.apply("一句いかがですか"))
+        assertEquals("俳句", JapaneseOcrRepair.apply("俳句"))
+        assertEquals("自分", JapaneseOcrRepair.apply("自分"))
+    }
+
+    @Test
+    fun `a bracket inside a chapter number is dropped`() {
+        assertEquals("第4話", JapaneseOcrRepair.apply("第()4話"))
+        assertEquals("第3話", JapaneseOcrRepair.apply("第(0)3話"))
+    }
+
+    @Test
+    fun `brackets outside that one shape are left alone`() {
+        assertEquals("第4話", JapaneseOcrRepair.apply("第4話"))
+        // No number, so nothing to rescue.
+        assertEquals("第(略)話", JapaneseOcrRepair.apply("第(略)話"))
+        // A bracket that has nothing to do with a chapter heading.
+        assertEquals("百鬼 光太郎(享年32歳)", JapaneseOcrRepair.apply("百鬼 光太郎(享年32歳)"))
+    }
 }

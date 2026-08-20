@@ -51,3 +51,4 @@ scripts/similar-bench/index_*.json
 __pycache__/
 _bench-en/
 _bench-ja/
+_bench-ja-holdout/

@@ -108,13 +108,25 @@ object JapaneseOcrRepair {
 
     private const val COUNTERS = "丁人本回個度発杯枚匹台冊軒階年月日時分秒歳番件"
 
-    fun apply(text: String): String = repairMarks(repairScript(repairHomoglyphs(text)))
+    fun apply(text: String): String =
+        repairChapter(repairMarks(repairScript(repairHomoglyphs(text))))
 
     /**
-     * Three characters the recogniser reaches for out of the wrong script.
+     * The characters the recogniser reaches for out of the wrong script.
      *
-     * 别 and 龄 are simplified Chinese; Japanese writes 別 and 齢 and has no use
-     * for the simplified forms at all, so they are replaced unconditionally.
+     * 别, 龄 and 统 are simplified Chinese and 齡 is the Chinese traditional
+     * form; Japanese writes 別, 齢 and 統 and has no use for the others at all,
+     * so they are replaced unconditionally. 齡 is the Japanese kyūjitai too, so
+     * folding it to 齢 cannot change a meaning even where a work meant it.
+     *
+     * Since 别 and 龄 shipped this morning they appear ZERO times in 6 899
+     * bubbles — the repair works. 统 and 齡 are what the same scan turned up
+     * next, in 武勇：16统率：42 and 年齡：18, and they are worth 4 bubbles.
+     *
+     * The temptation this table exists to resist: 国 appears 82 times in those
+     * bubbles, 来 63, 学 14. They are ordinary Japanese. An earlier draft of a
+     * "simplified Chinese" list held all three and would have damaged 62 healthy
+     * bubbles to repair 5.
      * They turn up in the stat screens the genre is full of — 年龄:21 性别:女 came
      * back as "Année 龄:21 性别:女 race: personnes" and becomes "Âge: 21 Sexe:
      * Race féminine".
@@ -134,6 +146,13 @@ object JapaneseOcrRepair {
      * Turning the gloss into kana does not delete it, and it does not have to:
      * 世かい世界の危機 gave "une crise dans le monde ou dans le monde", where
      * せかい世界の危機 gives "une crise dans le monde".
+     *
+     * 句 and 自 are read for 匂 in いい匂い, "smells good" — a line scanlations
+     * print constantly. いい句い came back "Bonne parole" and いい自い became
+     * "tu dois être bon avec toi-même". Both い are required, and that guard is
+     * not decoration: 一句いかがですか is a real sentence offering someone a
+     * verse, and there 句 is preceded by 一, so it is left alone. Every one of
+     * the three occurrences in 6 899 bubbles is the いい○い form.
      */
     private fun repairScript(text: String): String {
         if (text.isEmpty()) return text
@@ -148,12 +167,37 @@ object JapaneseOcrRepair {
             when (text[i]) {
                 '别' -> set(i, '別')
                 '龄' -> set(i, '齢')
+                '统' -> set(i, '統')
+                '齡' -> set(i, '齢')
+                '句', '自' -> if (before == 'い' && after == 'い') set(i, '匂')
                 '-' -> if (before?.isKatakana() == true && after?.isKatakana() == true) set(i, 'ー')
                 '世' -> if (before?.isKanji() != true && after?.isKanji() != true) set(i, 'せ')
             }
         }
         return out?.toString() ?: text
     }
+
+    /**
+     * Strips the bracket the recogniser opens inside a chapter number.
+     *
+     * 第4話 is "chapter 4". The detector reads the decorative frame drawn around
+     * the number as brackets and hands over 第()4話 and 第(0)3話, which come back
+     * "(Le quatrième)" and "Le (0) 3" — the number survives, the word chapter
+     * does not.
+     *
+     * Only a bracket wedged between 第 and the digits is removed, and only when
+     * 話 closes the run. A bracket anywhere else in the sentence, or 第 without
+     * a number after it, is left alone: this repair knows one shape and refuses
+     * everything else, which is what keeps it off prose. Three bubbles in 6 899,
+     * and page furniture rather than dialogue — it is here because it costs one
+     * regex, not because it matters.
+     */
+    private fun repairChapter(text: String): String {
+        if (text.length < 4 || !text.contains('第')) return text
+        return CHAPTER.replace(text) { "第${it.groupValues[1]}話" }
+    }
+
+    private val CHAPTER = Regex("""第[(（][^)）]{0,3}[)）](\d+)話""")
 
     /**
      * Rewrites a katakana run to the spelling the word actually has, when the

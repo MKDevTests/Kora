@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import snd.komelia.image.OcrElementBox
 import snd.komelia.image.ReaderImage
 import snd.komelia.image.ReaderImageResult
@@ -34,6 +40,7 @@ fun ReaderImageContent(
     translations: Map<Int, String> = emptyMap(),
     onSelectionChanged: (List<OcrElementBox>) -> Unit = {},
     onAddNote: (text: String, x: Float, y: Float) -> Unit = { _, _, _ -> },
+    onRetry: (() -> Unit)? = null,
 ) {
     when (imageResult) {
         is ReaderImageResult.Success -> ImageContent(
@@ -41,12 +48,10 @@ fun ReaderImageContent(
             ocrResults = ocrResults,
             translations = translations,
             onSelectionChanged = onSelectionChanged,
-            onAddNote = onAddNote
+            onAddNote = onAddNote,
+            onRetry = onRetry,
         )
-        is ReaderImageResult.Error -> Text(
-            "${imageResult.throwable::class.simpleName}: ${imageResult.throwable.message}",
-            color = MaterialTheme.colorScheme.error
-        )
+        is ReaderImageResult.Error -> PageError(imageResult.throwable, onRetry)
 
         null -> Box(
             modifier = Modifier.fillMaxHeight().aspectRatio(0.7f).background(Color.White),
@@ -61,6 +66,48 @@ fun ReaderImageContent(
     }
 }
 
+/**
+ * A page that failed, with the one control that was missing: a way to reload
+ * THIS page.
+ *
+ * Before this, a failed page rendered the exception's class name in red and
+ * nothing else. It could not be retried at all -- the whole book had to be
+ * reopened -- and since the readers cache the failed load itself, reopening was
+ * often the only thing that worked. Which is why page +1 could stay broken
+ * while +2 was fine: not a network oddity, a cached failure with no way out.
+ *
+ * The exception is still shown, under the button and in the body style: it is
+ * what tells a timeout from a 404, and this reader is read by the person who
+ * builds it.
+ */
+@Composable
+private fun PageError(error: Throwable, onRetry: (() -> Unit)?) {
+    Column(
+        modifier = Modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            LocalStrings.current.ui.errorLoadingPage,
+            color = MaterialTheme.colorScheme.error,
+            textAlign = TextAlign.Center,
+        )
+        if (onRetry != null) {
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(onClick = onRetry) {
+                Text(LocalStrings.current.ui.reload)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "${error::class.simpleName}: ${error.message}",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
 @Composable
 private fun ImageContent(
     image: ReaderImage,
@@ -68,6 +115,7 @@ private fun ImageContent(
     translations: Map<Int, String>,
     onSelectionChanged: (List<OcrElementBox>) -> Unit,
     onAddNote: (text: String, x: Float, y: Float) -> Unit,
+    onRetry: (() -> Unit)? = null,
 ) {
     // reimplement collectAsState and call remember with image key,
     // this avoids unnecessary recomposition and flickering caused by attempt to render old value on image change
@@ -83,10 +131,7 @@ private fun ImageContent(
     val error = errorState.value
     val painter = painterState.value
     if (error != null) {
-        Text(
-            "${error::class.simpleName}: ${error.message}",
-            color = MaterialTheme.colorScheme.error
-        )
+        PageError(error, onRetry)
     } else if (painter == null) {
         val density = LocalDensity.current
         val imageDisplaySize = image.displaySize.collectAsState().value

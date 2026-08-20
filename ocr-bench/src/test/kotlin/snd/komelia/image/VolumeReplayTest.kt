@@ -78,16 +78,30 @@ class VolumeReplayTest {
         // table does not fail, it quietly answers nothing, and a bench that
         // measures a glossary which was never loaded reports zero and looks
         // like a finding.
+        // Reset before loading, every time. These are objects and their load()
+        // is a NO-OP once anything is in them, so a sibling test class that left
+        // a two-entry loadForTest table behind makes the line below do nothing
+        // at all -- silently, because a glossary that holds two entries answers
+        // just like one that holds none.
+        //
+        // Measured on 2026-08-19: the same code replayed as part of the full
+        // suite and as `--tests '*VolumeReplayTest*'` differed on four bubbles,
+        // and the full-suite run was the DEGRADED one -- 気持ち悪い came out
+        // キモイ, お前 came out テメェ. Every bench number taken from a full-suite
+        // run before this date is suspect for that reason.
         val japanesePhrases = File("../komelia-ui/src/commonMain/composeResources/files/phrasebook/ja-fr.json")
         assertTrue(japanesePhrases.isFile, "shipped japanese phrase book missing at ${japanesePhrases.absolutePath}")
+        JapanesePhraseBook.resetForTest()
         JapanesePhraseBook.load(Json.decodeFromString<Map<String, String>>(japanesePhrases.readText()))
 
         val katakana = File("../komelia-ui/src/commonMain/composeResources/files/japanese/katakana.json")
         assertTrue(katakana.isFile, "shipped katakana glossary missing at ${katakana.absolutePath}")
+        JapaneseKatakanaGlossary.resetForTest()
         JapaneseKatakanaGlossary.load(katakana.readText())
 
         val kansai = File("../komelia-ui/src/commonMain/composeResources/files/japanese/kansai.json")
         assertTrue(kansai.isFile, "shipped kansai table missing at ${kansai.absolutePath}")
+        JapaneseKansaiNormaliser.resetForTest()
         JapaneseKansaiNormaliser.load(kansai.readText())
 
         dirs.forEach { replay(it) }

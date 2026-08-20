@@ -519,6 +519,23 @@ class PagedReaderState(
         loadSpreadJob = pageLoadScope.launch { loadSpread(page) }
     }
 
+    /**
+     * Reloads one page that failed, without touching the rest of the spread.
+     *
+     * The cache holds the Deferred of the load, and a load that FAILED completed
+     * normally carrying a ReaderImageResult.Error -- it is not cancelled, so the
+     * `!isCancelled` guards hand the same failure back forever. Dropping the
+     * entry is what makes a second attempt possible at all.
+     *
+     * Invalidated by hand rather than automatically on failure: this reader
+     * re-reads the spread on every scale change, and retrying inside the failure
+     * path would answer a struggling server with a request loop.
+     */
+    fun retryPage(page: PageMetadata) {
+        imageCache.invalidate(page.toPageId())
+        loadPage(currentSpreadIndex.value)
+    }
+
     private fun loadPage(spreadIndex: Int) {
         val spreads = pageSpreads.value
         if (spreadIndex !in spreads.indices) return

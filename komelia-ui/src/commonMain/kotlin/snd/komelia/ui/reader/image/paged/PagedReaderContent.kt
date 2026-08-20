@@ -46,6 +46,7 @@ import snd.komelia.settings.model.PagedReadingDirection
 import snd.komelia.settings.model.ReaderTapNavigationMode
 import snd.komelia.settings.model.PagedReadingDirection.LEFT_TO_RIGHT
 import snd.komelia.settings.model.PagedReadingDirection.RIGHT_TO_LEFT
+import snd.komelia.ui.reader.image.PageMetadata
 import snd.komelia.ui.reader.image.ScreenScaleState
 import snd.komelia.ui.reader.image.common.PagedReaderHelpDialog
 import snd.komelia.ui.reader.image.common.ReaderControlsOverlay
@@ -293,7 +294,8 @@ fun BoxScope.PagedReaderContent(
                                             ocrResults = ocr,
                                             translations = if (ocr.isEmpty()) emptyMap() else translations,
                                             onSelectionChanged = { results -> pagedReaderState.readerState.ocrResults.value = results },
-                                            onAddNote = { text, x, y -> onAddNote(text, it.metadata.pageNumber - 1, x, y) }
+                                            onAddNote = { text, x, y -> onAddNote(text, it.metadata.pageNumber - 1, x, y) },
+                                            onRetry = pagedReaderState::retryPage,
                                         )
                                     }
 
@@ -304,7 +306,8 @@ fun BoxScope.PagedReaderContent(
                                         ocrPageId = ocrPageId,
                                         translations = translations,
                                         onSelectionChanged = { results -> pagedReaderState.readerState.ocrResults.value = results },
-                                        onAddNote = { text, page, x, y -> onAddNote(text, page, x, y) }
+                                        onAddNote = { text, page, x, y -> onAddNote(text, page, x, y) },
+                                        onRetry = pagedReaderState::retryPage,
                                     )
                                 }
                                 // Annotation pins overlay
@@ -420,6 +423,7 @@ private fun SinglePageLayout(
     translations: Map<Int, String>,
     onSelectionChanged: (List<snd.komelia.image.OcrElementBox>) -> Unit,
     onAddNote: (text: String, x: Float, y: Float) -> Unit,
+    onRetry: (PageMetadata) -> Unit = {},
 ) {
     Layout(content = {
         ReaderImageContent(
@@ -428,6 +432,7 @@ private fun SinglePageLayout(
             translations = translations,
             onSelectionChanged = onSelectionChanged,
             onAddNote = onAddNote,
+            onRetry = { onRetry(page.metadata) },
         )
     }) { measurable, constraints ->
         val placeable = measurable.first().measure(constraints)
@@ -448,6 +453,7 @@ private fun DoublePageLayout(
     translations: Map<Int, String>,
     onSelectionChanged: (List<snd.komelia.image.OcrElementBox>) -> Unit,
     onAddNote: (text: String, page: Int, x: Float, y: Float) -> Unit,
+    onRetry: (PageMetadata) -> Unit = {},
 ) {
     Layout(content = {
         when (pages.size) {
@@ -460,7 +466,8 @@ private fun DoublePageLayout(
                     ocrResults = ocr,
                     translations = if (ocr.isEmpty()) emptyMap() else translations,
                     onSelectionChanged = onSelectionChanged,
-                    onAddNote = { text, x, y -> onAddNote(text, page.metadata.pageNumber - 1, x, y) }
+                    onAddNote = { text, x, y -> onAddNote(text, page.metadata.pageNumber - 1, x, y) },
+                    onRetry = { onRetry(page.metadata) },
                 )
             }
 
@@ -472,7 +479,8 @@ private fun DoublePageLayout(
                     ocrResults = ocr1,
                     translations = if (ocr1.isEmpty()) emptyMap() else translations,
                     onSelectionChanged = onSelectionChanged,
-                    onAddNote = { text, x, y -> onAddNote(text, page1.metadata.pageNumber - 1, x, y) }
+                    onAddNote = { text, x, y -> onAddNote(text, page1.metadata.pageNumber - 1, x, y) },
+                    onRetry = { onRetry(page1.metadata) },
                 )
 
                 val page2 = pages[1]
@@ -482,7 +490,8 @@ private fun DoublePageLayout(
                     ocrResults = ocr2,
                     translations = if (ocr2.isEmpty()) emptyMap() else translations,
                     onSelectionChanged = onSelectionChanged,
-                    onAddNote = { text, x, y -> onAddNote(text, page2.metadata.pageNumber - 1, x, y) }
+                    onAddNote = { text, x, y -> onAddNote(text, page2.metadata.pageNumber - 1, x, y) },
+                    onRetry = { onRetry(page2.metadata) },
                 )
             }
 

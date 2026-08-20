@@ -213,6 +213,23 @@ class PanelsReaderState(
         this.density = density
     }
 
+    /**
+     * Drops one page's cached load and asks for it again.
+     *
+     * The cache holds the Deferred, and a load that FAILED completed normally
+     * carrying an error result -- not cancelled, so the `!isCancelled` guards in
+     * [getPage], [getImage] and [launchDownload] hand the same failure back for
+     * as long as the entry lives. Dropping it is what allows a second attempt.
+     *
+     * Manual, not automatic on failure: this reader re-asks for the page on
+     * every panel step, so retrying inside the failure path would answer a
+     * struggling server with a request loop.
+     */
+    fun retryPage(page: PageMetadata) {
+        imageCache.invalidate(page.toPageId())
+        launchPageLoad(currentPageIndex.value.page)
+    }
+
     suspend fun getPage(page: PageMetadata): PanelsPage {
         val pageId = page.toPageId()
         val cached = imageCache.get(pageId)

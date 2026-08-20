@@ -6,7 +6,11 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -241,12 +245,41 @@ class HomeViewModel(
     }
 
     /**
+     * One shared in-flight progress refresh. Guarded by [progressRefreshLock]
+     * because the callers sit on different coroutines.
+     */
+    private val progressRefreshLock = Mutex()
+    private var progressRefreshInFlight: Deferred<Boolean>? = null
+
+    /**
      * Re-resolves only the shelves whose content depends on read progress and
      * swaps them in place. Returns true when at least one shelf actually
      * changed, which is what tells [refreshAfterReading] whether it read back
      * stale data.
+     *
+     * Callers that overlap SHARE one refresh instead of each firing their own.
+     * Measured 2026-08-20 on the tablet: leaving the reader triggers both
+     * [refreshAfterReading] (on dispose) and [startKomgaEventsHandler] (Home is
+     * back on screen with progressShelvesDirty set), and the Komga SSE event
+     * lands right after — so the same /api/v1/books/ondeck query went out two
+     * and three times at once, logged as 'On deck' 10105 + 8683ms, then
+     * 7759 + 9262 + 9403ms. The reader's own opening calls queued behind that
+     * (reader.open CRITICAL 12311ms).
      */
     private suspend fun refreshProgressShelves(): Boolean {
+        // !isCompleted, not isActive: a Deferred that already finished with an
+        // exception is neither active nor reusable, and a lazily started one is
+        // not active yet. isCompleted is the only predicate true exactly while
+        // the refresh is still worth joining.
+        val inFlight = progressRefreshLock.withLock {
+            progressRefreshInFlight?.takeIf { !it.isCompleted }
+                ?: screenModelScope.async(start = CoroutineStart.LAZY) { resolveProgressShelves() }
+                    .also { progressRefreshInFlight = it }
+        }
+        return inFlight.await()
+    }
+
+    private suspend fun resolveProgressShelves(): Boolean {
         val current = currentFilters.value
         val targets = current.withIndex().filter { it.value.filter.dependsOnReadProgress() }
         if (targets.isEmpty()) return true
@@ -254,10 +287,14 @@ class HomeViewModel(
         val slots = current.toMutableList()
         val publishLock = Mutex()
         var changed = false
+        // Same bound as the full load(): this fan-out is smaller but it runs
+        // while the reader is opening the next book, so it must not take the
+        // whole connection pool for itself.
+        val shelfLimit = Semaphore(MAX_CONCURRENT_SHELVES)
 
         targets.map { (index, existing) ->
             screenModelScope.async {
-                val fresh = shelfResolver.resolve(existing.filter) ?: return@async
+                val fresh = shelfLimit.withPermit { shelfResolver.resolve(existing.filter) } ?: return@async
                 if (fresh == existing) return@async
                 publishLock.withLock {
                     changed = true
@@ -342,9 +379,23 @@ class HomeViewModel(
             // different threads and would otherwise race on the list.
             val publishLock = Mutex()
 
+            // Four at a time, not all of them at once.
+            //
+            // Measured 2026-08-20 on the user's own server: /api/v1/books/ondeck
+            // answered curl in 1.6s with the app closed, and took 23 152, 24 090
+            // and 25 643ms from inside this fan-out. Twice it went past the 30s
+            // socket timeout and the shelf died with a SocketTimeoutException
+            // after 31 157ms, having received not one byte of response.
+            //
+            // Eleven shelves launched together is eleven queries landing on the
+            // server at once while it is also serving covers; the five that got
+            // answered came back in ~1.5s and the rest waited behind them. Same
+            // bound as the genre counts, the next-releases scan and the
+            // favorites resolver, all added for the same reason.
+            val shelfLimit = Semaphore(MAX_CONCURRENT_SHELVES)
             withForYou.mapIndexed { index, filter ->
                 screenModelScope.async {
-                    val data = fetchFilterData(filter, force) ?: return@async
+                    val data = shelfLimit.withPermit { fetchFilterData(filter, force) } ?: return@async
                     publishLock.withLock {
                         slots[index] = data
                         currentFilters.value = slots.filterNotNull()
@@ -523,6 +574,9 @@ class HomeViewModel(
     }
 
     private companion object {
+        /** Shelves resolved at once. See the fan-out above for the measurement. */
+        const val MAX_CONCURRENT_SHELVES = 4
+
         /** How long the server must stay quiet before a reload is worth doing. */
         val RELOAD_QUIET_PERIOD = 1.5.seconds
 

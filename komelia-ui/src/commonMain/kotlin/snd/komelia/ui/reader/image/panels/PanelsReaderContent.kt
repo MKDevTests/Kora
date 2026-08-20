@@ -208,7 +208,8 @@ fun BoxScope.PanelsReaderContent(
                                         if (panelsPage != null) {
                                             onAddNote(text, panelsPage.metadata.pageNumber - 1, x, y)
                                         }
-                                    }
+                                    },
+                                    onRetry = panelsPage?.let { { panelsReaderState.retryPage(it.metadata) } },
                                 )
                             }
                         }
