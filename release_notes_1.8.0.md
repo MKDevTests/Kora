@@ -219,10 +219,10 @@ un rêve comment il allait.
 **Les crédits restent dans la langue où ils ont été imprimés.** Le
 traducteur démonte une signature : « By Kouji Miura » revenait en « B y
 you ji Miur a ». Un nom est la seule chose qu'un petit modèle n'a aucune
-raison de réécrire, et un ours n'est presque que des noms — 58 bulles
-sur 1 803, soit 3,2%. Rien n'est supprimé : un bloc qui n'atteint jamais
-le traducteur ne reçoit aucun panneau par-dessus, la ligne reste telle
-qu'imprimée. Se tromper ne coûte rien ici, et c'est tout l'intérêt.
+raison de réécrire, et les crédits ne sont presque que des noms — 58
+bulles sur 1 803, soit 3,2%. Rien n'est supprimé : un bloc qui
+n'atteint jamais le traducteur ne reçoit aucun panneau par-dessus, la
+ligne reste telle qu'imprimée. Se tromper ne coûte rien ici, et c'est tout l'intérêt.
 
 **Une phrase partagée par deux bulles est coupée sur un mot qui peut
 porter la coupure.** Sur les vingt-quatre groupes multi-bulles du
