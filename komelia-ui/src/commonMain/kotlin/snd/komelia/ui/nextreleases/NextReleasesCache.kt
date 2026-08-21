@@ -32,7 +32,21 @@ object NextReleasesCache {
     /** In-memory hit — fastest path, cleared on process restart. */
     var releases: List<NextReleasesService.UpcomingRelease>? = null
 
-    /** When the last *successful* scan finished. Null = none this process. */
+    /**
+     * When the last *successful* scan finished.
+     *
+     * Persisted, unlike the process-lifetime var this used to be. Measured on
+     * the tablet 2026-08-21: the calendar holds ~181 tags, the scan is one
+     * count query per tag, and the server answers each in ~3s four at a time
+     * -- over two minutes of a saturated server. A memory-only timestamp meant
+     * paying that on EVERY cold start while the list it produced was already
+     * on disk, and anything the user did meanwhile (opening a series) was
+     * answered by a server busy with our own scan: a book list that curl gets
+     * in 1 154ms took 10 414ms in the app.
+     *
+     * Seeded by [loadPersistedScanTime], which [NextReleasesScanner.primeFromDisk]
+     * calls before the staleness check runs.
+     */
     private var lastScanAt: Instant? = null
 
     /**
@@ -51,6 +65,22 @@ object NextReleasesCache {
 
     private fun cacheDir() = FileKit.filesDir / "next_releases"
     private fun cacheFile() = cacheDir() / "cache.json"
+
+    /**
+     * Kept beside the snapshot rather than inside it: the snapshot's format is
+     * a plain list, and a missing or unreadable stamp must mean "scan now",
+     * which is what the old behaviour was. A format change could not fail that
+     * safely.
+     */
+    private fun scanStampFile() = cacheDir() / "scanned_at.txt"
+
+    /** Seeds [lastScanAt] from disk. No-op once the timestamp is known. */
+    suspend fun loadPersistedScanTime() {
+        if (lastScanAt != null) return
+        lastScanAt = runCatching {
+            Instant.fromEpochMilliseconds(scanStampFile().readBytes().decodeToString().trim().toLong())
+        }.getOrNull()
+    }
 
     /** Reads the disk snapshot (survives process restart). Null if none yet, or unreadable. */
     suspend fun loadPersisted(): List<NextReleasesService.UpcomingRelease>? = runCatching {
@@ -77,7 +107,16 @@ object NextReleasesCache {
      */
     suspend fun update(scan: NextReleasesService.Scan) {
         if (!scan.complete && scan.releases.isEmpty() && !releases.isNullOrEmpty()) return
-        if (scan.complete) lastScanAt = Clock.System.now()
+        if (scan.complete) {
+            val now = Clock.System.now()
+            lastScanAt = now
+            // Best-effort, like the snapshot write below: losing the stamp
+            // costs one extra scan, never a wrong calendar.
+            runCatching {
+                cacheDir().createDirectories()
+                scanStampFile().write(now.toEpochMilliseconds().toString().encodeToByteArray())
+            }
+        }
 
         val fresh = scan.releases
         releases = fresh

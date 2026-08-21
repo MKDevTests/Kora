@@ -63,6 +63,9 @@ object NextReleasesScanner {
 
     /** Seeds from the disk snapshot. Cheap and idempotent. */
     suspend fun primeFromDisk() {
+        // FIRST, and before either early return below: ensureFresh's staleness
+        // check reads this, and both callers await primeFromDisk before it.
+        NextReleasesCache.loadPersistedScanTime()
         if (_releases.value != null) return
         NextReleasesCache.releases?.let { _releases.value = it; return }
         NextReleasesCache.loadPersisted()?.let {
