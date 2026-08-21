@@ -173,7 +173,12 @@ class SeriesViewModel(
         screenModelScope.launch { booksState.initialize() }
         screenModelScope.launch { collectionsState.initialize() }
         screenModelScope.launch { linksState.initialize() }
-        screenModelScope.launch { updateSiblingAvailability() }
+        // One server round-trip whose entire product is whether the ‹ and ›
+        // arrows are enabled. Traced to see what that costs on the critical
+        // path, next to the volumes the user is actually waiting for.
+        screenModelScope.launch {
+            snd.komelia.perf.PerfTrace.measure("series.siblings") { updateSiblingAvailability() }
+        }
         startKomgaEventListener()
 
         reloadJobsFlow.onEach {
@@ -386,7 +391,11 @@ class SeriesViewModel(
     private suspend fun loadSeries() {
         notifications.runCatchingToNotifications {
             mutableState.value = Loading
-            val series = seriesApi.getOneSeries(seriesId)
+            // Everything else on this screen waits on this one: books,
+            // collections and links all start from series.filterNotNull().
+            val series = snd.komelia.perf.PerfTrace.measure("series.getOne") {
+                seriesApi.getOneSeries(seriesId)
+            }
             this.series.value = series.withSortedTags()
             this.library.value = getLibraryOrThrow(series)
 
