@@ -132,6 +132,10 @@ class AndroidAppModule(
         // a page of thumbnails — measured as 20-58s waits, up to socket
         // timeouts, on a server that was idle.
         .dispatcher(Dispatcher().apply { maxRequestsPerHost = 8 })
+        // Reports only calls over two seconds, split into queue / server /
+        // body. See SlowCallListener for why a timing around the suspend call
+        // was not enough.
+        .eventListenerFactory(SlowCallListener)
         .connectTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(0, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS)
