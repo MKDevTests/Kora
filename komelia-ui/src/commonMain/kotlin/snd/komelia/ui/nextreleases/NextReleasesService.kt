@@ -133,48 +133,61 @@ class NextReleasesService(
                 ?: IllegalStateException("tag discovery failed for every library")
         }
         val discoveryComplete = tagResults.none { it.isFailure }
-        val tagsByLibrary = tagResults.mapNotNull { it.getOrNull() }
+        // Kept per library, not flattened: the resolution below asks each
+        // library for its OWN tags in one query, and flattening would lose
+        // which library to ask.
+        val tagsByLibrary = libraries.zip(tagResults).mapNotNull { (library, result) ->
+            result.getOrNull()?.let { library to it }
+        }
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val allParsed = tagsByLibrary.flatten().distinct()
+        val allParsed = tagsByLibrary.flatMap { it.second }.distinct()
             .mapNotNull { tag -> NextReleaseLabels.parseTag(tag)?.let { tag to it } }
         val (candidates, expired) = allParsed.partition { (_, release) -> release.date >= today }
+        val futureTags = candidates.map { it.first }.toSet()
 
-        // One server query per tag, so a well-tagged library used to fire
-        // hundreds of requests at once — which is what made the whole scan time
-        // out (and drained the battery) once the tag count grew. Cap the
-        // in-flight count instead; the scan takes a little longer and survives.
+        // ONE query per library, asking for every one of its future tags at
+        // once, instead of one query per tag.
+        //
+        // Measured on the tablet 2026-08-21, the per-tag version: 179 count
+        // queries, ~3s of server each, four at a time. Nearly five minutes
+        // during which the server answered everything else badly or not at all
+        // -- 18 connection failures, and a book list that curl gets in 1 154ms
+        // took 10 414ms in the app. Worse, five minutes is longer than a
+        // tablet's screen timeout: the device dozed at 00:28 and the pending
+        // requests died on wake with total=1000006ms, so the scan never
+        // finished, was never recorded as done, and started over on the next
+        // launch. It fed itself.
+        //
+        // The reversal that makes one query enough: a series comes back
+        // carrying its own tags, so instead of asking the server which series
+        // holds each tag, we ask once for the series holding any of them and
+        // read the tag off each one locally. A series carrying several
+        // nextrelease tags was queried once per tag before, and is now
+        // returned once.
+        //
+        // `tag` only accepts equality (KomgaSearchCondition.Tag takes an
+        // EqualityNullable), so this cannot be a single "begins with
+        // nextrelease:" query -- hence the anyOf over the known tags, the same
+        // shape the book filter already uses.
         val limit = Semaphore(MAX_CONCURRENT_LOOKUPS)
-
-        // Each lookup reports its own outcome rather than flipping a shared flag,
-        // so no cross-coroutine mutable state is involved.
-        val outcomes: List<Result<UpcomingRelease?>> = candidates.map { (tag, nextRelease) ->
-            async {
+        val outcomes: List<Result<List<UpcomingRelease>>> = tagsByLibrary.mapNotNull { (library, tags) ->
+            val libraryTags = tags.filter { it in futureTags }
+            if (libraryTags.isEmpty()) null
+            else async {
                 limit.withPermit {
                     runCatching {
-                        seriesApi.getSeriesList(
-                            KomgaSeriesSearch(
-                                condition = allOfSeries { tag { isEqualTo(tag) } }.toSeriesCondition()
-                            ),
-                            KomgaPageRequest(pageIndex = 0, size = 1),
-                        )
-                    }.map { page ->
-                        page.content.firstOrNull()?.let { series ->
-                            UpcomingRelease(
-                                seriesId = series.id,
-                                seriesTitle = series.metadata.title,
-                                libraryId = series.libraryId,
-                                volume = nextRelease.volume,
-                                date = nextRelease.date,
-                            )
-                        }
+                        PerfTrace.measure(
+                            label = "nextreleases.library tags=${libraryTags.size}",
+                            count = { it: List<UpcomingRelease> -> it.size },
+                        ) { resolveLibrary(library.id, libraryTags, today) }
                     }
                 }
             }
         }.awaitAll()
 
         Scan(
-            releases = outcomes.mapNotNull { it.getOrNull() }.sortedBy { it.date },
+            releases = outcomes.mapNotNull { it.getOrNull() }.flatten().sortedBy { it.date },
             complete = discoveryComplete && outcomes.none { it.isFailure },
             attempted = outcomes.size,
             resolved = outcomes.count { it.isSuccess },
@@ -182,8 +195,60 @@ class NextReleasesService(
         )
     }
 
+    /**
+     * Every series in [libraryId] carrying one of [tags], turned into the
+     * releases those tags announce.
+     *
+     * Paginated rather than asked for with one large size: a well-tagged
+     * library can hold hundreds of these, and a size chosen large enough to
+     * "never paginate" is the shortcut that made the collections tab
+     * expensive. [PAGE_SIZE] pages are the unit of work; the loop stops on the
+     * page the server marks last.
+     */
+    private suspend fun resolveLibrary(
+        libraryId: KomgaLibraryId,
+        tags: List<String>,
+        today: LocalDate,
+    ): List<UpcomingRelease> {
+        val condition = allOfSeries {
+            library { isEqualTo(libraryId) }
+            anyOf { tags.forEach { tag { isEqualTo(it) } } }
+        }.toSeriesCondition()
+
+        val releases = mutableListOf<UpcomingRelease>()
+        var pageIndex = 0
+        while (true) {
+            val page = seriesApi.getSeriesList(
+                KomgaSeriesSearch(condition = condition),
+                KomgaPageRequest(pageIndex = pageIndex, size = PAGE_SIZE),
+            )
+            page.content.forEach { series ->
+                // The tag is read off the series we already have, not asked for
+                // again. A series announcing two volumes yields two entries.
+                series.metadata.tags
+                    .mapNotNull { tag -> NextReleaseLabels.parseTag(tag) }
+                    .filter { it.date >= today }
+                    .forEach { release ->
+                        releases += UpcomingRelease(
+                            seriesId = series.id,
+                            seriesTitle = series.metadata.title,
+                            libraryId = series.libraryId,
+                            volume = release.volume,
+                            date = release.date,
+                        )
+                    }
+            }
+            if (page.last || page.content.isEmpty()) break
+            pageIndex++
+        }
+        return releases
+    }
+
     private companion object {
         /** In-flight series lookups. Low enough that a big tag set can't stampede Komga. */
         const val MAX_CONCURRENT_LOOKUPS = 4
+
+        /** Series per page when resolving a library's nextrelease tags. */
+        const val PAGE_SIZE = 200
     }
 }
