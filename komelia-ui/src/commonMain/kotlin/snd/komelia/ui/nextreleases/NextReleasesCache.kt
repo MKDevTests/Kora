@@ -74,6 +74,28 @@ object NextReleasesCache {
      */
     private fun scanStampFile() = cacheDir() / "scanned_at.txt"
 
+    /**
+     * Whether a scan did enough work to be worth not repeating for a while.
+     *
+     * NOT [NextReleasesService.Scan.complete]: that demands every lookup
+     * succeed, and the measured run was 178 of 179 -- the single failure being
+     * the server returning 5xx under the load of the scan itself. Stamping only
+     * perfect scans meant never stamping, so the scan re-ran on every cold
+     * start and re-created the conditions for its own failure.
+     *
+     * A scan that resolved almost everything is a good calendar. One that
+     * mostly failed is not, and must be retried rather than trusted for the
+     * next half hour.
+     */
+    private fun NextReleasesService.Scan.worthTrusting(): Boolean {
+        if (complete) return true
+        if (attempted == 0 || releases.isEmpty()) return false
+        return resolved.toDouble() / attempted >= MIN_RESOLVED_RATIO
+    }
+
+    /** 178/179 passes; a scan that lost a tenth of its lookups does not. */
+    private const val MIN_RESOLVED_RATIO = 0.9
+
     /** Seeds [lastScanAt] from disk. No-op once the timestamp is known. */
     suspend fun loadPersistedScanTime() {
         if (lastScanAt != null) return
@@ -107,7 +129,7 @@ object NextReleasesCache {
      */
     suspend fun update(scan: NextReleasesService.Scan) {
         if (!scan.complete && scan.releases.isEmpty() && !releases.isNullOrEmpty()) return
-        if (scan.complete) {
+        if (scan.worthTrusting()) {
             val now = Clock.System.now()
             lastScanAt = now
             // Best-effort, like the snapshot write below: losing the stamp

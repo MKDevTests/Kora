@@ -61,6 +61,22 @@ class NextReleasesService(
         val releases: List<UpcomingRelease>,
         val complete: Boolean,
         /**
+         * How many tag lookups were attempted, and how many answered.
+         *
+         * [complete] demands a clean sweep, which a scan of this size does not
+         * get: measured on the tablet 2026-08-21, 179 lookups ran and 178
+         * answered -- the one failure came from the server starting to return
+         * 5xx under the load of this very scan. Requiring perfection there
+         * means the scan is never recorded as done and re-runs on every launch,
+         * saturating the server again: it feeds itself.
+         *
+         * The ratio lets a caller say "enough of it worked to be worth
+         * keeping" without losing the distinction [complete] exists for.
+         * Free to compute -- both numbers are already in hand.
+         */
+        val attempted: Int = 0,
+        val resolved: Int = 0,
+        /**
          * `nextrelease:*` tags whose date is already past. Collected for free
          * during discovery (no extra server call) so the admin maintenance
          * screen can offer to purge them — the user tags by hand in Komga and
@@ -160,6 +176,8 @@ class NextReleasesService(
         Scan(
             releases = outcomes.mapNotNull { it.getOrNull() }.sortedBy { it.date },
             complete = discoveryComplete && outcomes.none { it.isFailure },
+            attempted = outcomes.size,
+            resolved = outcomes.count { it.isSuccess },
             expiredTags = expired.map { it.first },
         )
     }
