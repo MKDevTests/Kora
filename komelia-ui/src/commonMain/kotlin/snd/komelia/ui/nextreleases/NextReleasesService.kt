@@ -209,6 +209,26 @@ class NextReleasesService(
         libraryId: KomgaLibraryId,
         tags: List<String>,
         today: LocalDate,
+    ): List<UpcomingRelease> =
+        // In chunks, because one query for all of them is a query the server
+        // will not answer. Measured 2026-08-21: this library holds 174 future
+        // tags, and asking for all 174 in a single anyOf timed out at 60s
+        // without a byte of response -- the per-tag storm was replaced by one
+        // query that never returns, which is not an improvement.
+        //
+        // Distinct at the end: a series carrying tags from two different
+        // chunks comes back in both, and each time it yields all of its
+        // releases. UpcomingRelease is a data class, so the duplicates are
+        // equal and collapse.
+        tags.chunked(TAGS_PER_QUERY)
+            .flatMap { chunk -> resolveChunk(libraryId, chunk, today) }
+            .distinct()
+
+    /** One page-walk over the series carrying any of [tags]. */
+    private suspend fun resolveChunk(
+        libraryId: KomgaLibraryId,
+        tags: List<String>,
+        today: LocalDate,
     ): List<UpcomingRelease> {
         val condition = allOfSeries {
             library { isEqualTo(libraryId) }
@@ -250,5 +270,11 @@ class NextReleasesService(
 
         /** Series per page when resolving a library's nextrelease tags. */
         const val PAGE_SIZE = 200
+
+        /**
+         * Tags per query. 174 in one anyOf never answered; this many keeps each
+         * query small while still turning 179 requests into single digits.
+         */
+        const val TAGS_PER_QUERY = 20
     }
 }
