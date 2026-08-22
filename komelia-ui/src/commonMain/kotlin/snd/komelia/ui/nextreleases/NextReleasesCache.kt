@@ -7,7 +7,7 @@ import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
@@ -51,11 +51,25 @@ object NextReleasesCache {
 
     /**
      * How long a successful scan is trusted before a re-scan is worth its cost.
-     * A scan is one Komga query per `nextrelease:` tag; without this the scan
-     * re-ran on every single entry into Home, which is what made the feature
-     * expensive enough to notice in the battery stats.
+     *
+     * Twelve hours, not the thirty minutes this was written with. Thirty was
+     * chosen against repeated entries into Home, when the cost was believed to
+     * be small. It is not: measured on the tablet 2026-08-22, the scan is nine
+     * queries of 25 to 31 SECONDS of server time each -- 174 tags cost about
+     * 230s of Komga whatever the batching, because the cost is in the tag
+     * condition itself.
+     *
+     * At thirty minutes that meant the server was monopolised for four minutes
+     * out of every thirty, and during that window everything else crawled:
+     * GET /api/v1/series/{id} took 19 234ms, a book list 26 822ms, with
+     * queue=1ms on both -- the app was waiting on a server busy with us.
+     *
+     * What this data actually is: a release calendar, hand-tagged in Komga.
+     * It changes when the user tags a new volume, which is a daily event at
+     * most, and the calendar screen still forces a fresh scan on open for
+     * whoever wants one now.
      */
-    private val scanTtl = 30.minutes
+    private val scanTtl = 12.hours
 
     /** True when a fresh scan is worth running (no recent successful one). */
     fun isStale(now: Instant = Clock.System.now()): Boolean {
