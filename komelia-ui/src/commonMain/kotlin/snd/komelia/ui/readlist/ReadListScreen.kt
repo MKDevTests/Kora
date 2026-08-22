@@ -23,6 +23,7 @@ import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.reader.readerScreen
 import snd.komga.client.readlist.KomgaReadListId
+import snd.komelia.ui.pushUnique
 
 class ReadListScreen(val readListId: KomgaReadListId) : ReloadableScreen {
 
@@ -64,7 +65,7 @@ class ReadListScreen(val readListId: KomgaReadListId) : ReloadableScreen {
                             bookMenuActions = vm.bookMenuActions(),
                             onBookClick = { navigator push bookScreen(it, BookSiblingsContext.ReadList(readListId)) },
                             onBookReadClick = { book, markProgress ->
-                                navigator.parent?.push(
+                                navigator.parent?.pushUnique(
                                     readerScreen(
                                         book = book,
                                         markReadProgress = markProgress,

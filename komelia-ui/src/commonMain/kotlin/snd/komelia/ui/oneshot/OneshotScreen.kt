@@ -36,6 +36,7 @@ import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalUseNewLibraryUI
 import snd.komelia.ui.oneshot.immersive.ImmersiveOneshotContent
 import snd.komelia.ui.platform.PlatformType
+import snd.komelia.ui.pushUnique
 
 class OneshotScreen(
     val seriesId: KomgaSeriesId,
@@ -88,10 +89,10 @@ class OneshotScreen(
                 book = vmBook,
                 library = vmLibrary,
                 accentColor = LocalAccentColor.current,
-                onLibraryClick = { navigator.push(LibraryScreen(it.id)) },
+                onLibraryClick = { navigator.pushUnique(LibraryScreen(it.id)) },
                 onBookReadClick = { markReadProgress ->
                     val currentBook = vm.book.value ?: return@ImmersiveOneshotContent
-                    navigator.parent?.push(
+                    navigator.parent?.pushUnique(
                         readerScreen(
                             book = currentBook,
                             markReadProgress = markReadProgress,
@@ -106,10 +107,10 @@ class OneshotScreen(
                 },
                 oneshotMenuActions = vm.bookMenuActions,
                 collections = vm.collectionsState.collections,
-                onCollectionClick = { collection -> navigator.push(CollectionScreen(collection.id)) },
-                onSeriesClick = { navigator.push(seriesScreen(it)) },
+                onCollectionClick = { collection -> navigator.pushUnique(CollectionScreen(collection.id)) },
+                onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
                 readLists = vm.readListsState.readLists,
-                onReadListClick = { navigator.push(ReadListScreen(it.id)) },
+                onReadListClick = { navigator.pushUnique(ReadListScreen(it.id)) },
                 onReadlistBookClick = { book, readList ->
                     navigator push bookScreen(
                         book = book,
@@ -148,9 +149,9 @@ class OneshotScreen(
                     series = series,
                     book = book,
                     library = library,
-                    onLibraryClick = { navigator.push(LibraryScreen(it.id)) },
+                    onLibraryClick = { navigator.pushUnique(LibraryScreen(it.id)) },
                     onBookReadClick = { markReadProgress ->
-                        navigator.parent?.push(
+                        navigator.parent?.pushUnique(
                             readerScreen(
                                 book = book,
                                 markReadProgress = markReadProgress,
@@ -165,11 +166,11 @@ class OneshotScreen(
                     },
                     oneshotMenuActions = vm.bookMenuActions,
                     collections = vm.collectionsState.collections,
-                    onCollectionClick = { collection -> navigator.push(CollectionScreen(collection.id)) },
-                    onSeriesClick = { navigator.push(seriesScreen(it)) },
+                    onCollectionClick = { collection -> navigator.pushUnique(CollectionScreen(collection.id)) },
+                    onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
 
                     readLists = vm.readListsState.readLists,
-                    onReadListClick = { navigator.push(ReadListScreen(it.id)) },
+                    onReadListClick = { navigator.pushUnique(ReadListScreen(it.id)) },
                     onReadlistBookClick = { book, readList ->
                         navigator push bookScreen(
                             book = book,

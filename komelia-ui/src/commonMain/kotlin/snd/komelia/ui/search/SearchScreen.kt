@@ -31,6 +31,7 @@ import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.series.seriesScreen
+import snd.komelia.ui.pushUnique
 
 class SearchScreen(
     private val initialQuery: String?,
@@ -97,13 +98,13 @@ class SearchScreen(
                                             seriesCurrentPage = vm.seriesCurrentPage,
                                             seriesTotalPages = vm.seriesTotalPages,
                                             onSeriesPageChange = vm::onSeriesPageChange,
-                                            onSeriesClick = { navigator.push(seriesScreen(it)) },
+                                            onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
 
                                             bookResults = vm.bookResults,
                                             bookCurrentPage = vm.bookCurrentPage,
                                             bookTotalPages = vm.bookTotalPages,
                                             onBookPageChange = vm::onBookPageChange,
-                                            onBookClick = { navigator.push(bookScreen(it)) },
+                                            onBookClick = { navigator.pushUnique(bookScreen(it)) },
 
                                             authorNames = vm.authorNames,
                                             selectedAuthor = vm.selectedAuthor,
@@ -157,13 +158,13 @@ class SearchScreen(
                             seriesCurrentPage = vm.seriesCurrentPage,
                             seriesTotalPages = vm.seriesTotalPages,
                             onSeriesPageChange = vm::onSeriesPageChange,
-                            onSeriesClick = { navigator.push(seriesScreen(it)) },
+                            onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
 
                             bookResults = vm.bookResults,
                             bookCurrentPage = vm.bookCurrentPage,
                             bookTotalPages = vm.bookTotalPages,
                             onBookPageChange = vm::onBookPageChange,
-                            onBookClick = { navigator.push(bookScreen(it)) },
+                            onBookClick = { navigator.pushUnique(bookScreen(it)) },
 
                             authorNames = vm.authorNames,
                             selectedAuthor = vm.selectedAuthor,
@@ -205,13 +206,13 @@ class SearchScreen(
                                 seriesCurrentPage = vm.seriesCurrentPage,
                                 seriesTotalPages = vm.seriesTotalPages,
                                 onSeriesPageChange = vm::onSeriesPageChange,
-                                onSeriesClick = { navigator.push(seriesScreen(it)) },
+                                onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
 
                                 bookResults = vm.bookResults,
                                 bookCurrentPage = vm.bookCurrentPage,
                                 bookTotalPages = vm.bookTotalPages,
                                 onBookPageChange = vm::onBookPageChange,
-                                onBookClick = { navigator.push(bookScreen(it)) },
+                                onBookClick = { navigator.pushUnique(bookScreen(it)) },
 
                                 authorNames = vm.authorNames,
                                 selectedAuthor = vm.selectedAuthor,

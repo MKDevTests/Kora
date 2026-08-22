@@ -64,6 +64,7 @@ import snd.komelia.ui.series.SeriesScreen
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.pushUnique
 
 private val logger = KotlinLogging.logger {}
 
@@ -125,7 +126,7 @@ class NextReleasesScreen : Screen {
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { navigator.push(MaintenanceScreen()) }) { Text(LocalStrings.current.ui.gRer) }
+                        TextButton(onClick = { navigator.pushUnique(MaintenanceScreen()) }) { Text(LocalStrings.current.ui.gRer) }
                     }
                 }
             }
@@ -198,7 +199,7 @@ class NextReleasesScreen : Screen {
                                     NextReleaseRow(release = release) {
                                         // SeriesScreen resolves the full series (incl. the
                                         // oneshot check + self-redirect) from the id alone.
-                                        navigator.push(SeriesScreen(release.seriesId))
+                                        navigator.pushUnique(SeriesScreen(release.seriesId))
                                     }
                                 }
                             }
@@ -326,7 +327,7 @@ fun NextReleasesHomeCard() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clickable { navigator.push(NextReleasesScreen()) },
+            .clickable { navigator.pushUnique(NextReleasesScreen()) },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,

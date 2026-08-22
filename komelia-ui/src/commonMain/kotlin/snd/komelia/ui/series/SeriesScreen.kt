@@ -39,6 +39,7 @@ import snd.komelia.ui.series.immersive.ImmersiveSeriesContent
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.library.GenreSeriesScreen
 import snd.komelia.ui.library.GenreLabels
+import snd.komelia.ui.pushUnique
 
 fun seriesScreen(series: KomgaSeries): Screen =
     if (series.oneshot) OneshotScreen(series, BookSiblingsContext.Series())
@@ -94,7 +95,7 @@ class SeriesScreen(
         if (platform == PlatformType.MOBILE && useNewUI && series != null) {
             ImmersiveSeriesContent(
                 onGenreClick = { slug ->
-                    navigator.push(
+                    navigator.pushUnique(
                         GenreSeriesScreen(
                             libraryId = series.libraryId,
                             genreTag = GenreLabels.tagOf(slug),
@@ -106,15 +107,15 @@ class SeriesScreen(
                 series = series,
                 library = vm.library.collectAsState().value,
                 accentColor = LocalAccentColor.current,
-                onLibraryClick = { navigator.push(LibraryScreen(it.id)) },
+                onLibraryClick = { navigator.pushUnique(LibraryScreen(it.id)) },
                 seriesMenuActions = vm.seriesMenuActions(),
-                onFilterClick = { filter -> navigator.push(LibraryScreen(series.libraryId, filter)) },
+                onFilterClick = { filter -> navigator.pushUnique(LibraryScreen(series.libraryId, filter)) },
                 currentTab = vm.currentTab,
                 onTabChange = vm::onTabChange,
                 booksState = vm.booksState,
                 onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value), series) },
                 onBookReadClick = { book, markProgress ->
-                    navigator.parent?.push(
+                    navigator.parent?.pushUnique(
                         readerScreen(
                             book = book,
                             markReadProgress = markProgress,
@@ -140,12 +141,12 @@ class SeriesScreen(
                     // twice and crashes. A reading-order graph always contains
                     // the current series, and its box is clickable like any
                     // other.
-                    if (target != seriesId) navigator.push(SeriesScreen(target))
+                    if (target != seriesId) navigator.pushUnique(SeriesScreen(target))
                 },
                 similarState = vm.similarState,
-                onCollectionClick = { navigator.push(CollectionScreen(it.id)) },
+                onCollectionClick = { navigator.pushUnique(CollectionScreen(it.id)) },
                 onSeriesClick = { s ->
-                    navigator.push(
+                    navigator.pushUnique(
                         if (s.oneshot) OneshotScreen(s, BookSiblingsContext.Series())
                         else SeriesScreen(s, vm.currentTab)
                     )
@@ -189,11 +190,11 @@ class SeriesScreen(
                     SeriesContent(
                         series = vm.series.collectAsState().value,
                         library = vm.library.collectAsState().value,
-                        onLibraryClick = { navigator.push(LibraryScreen(it.id)) },
+                        onLibraryClick = { navigator.pushUnique(LibraryScreen(it.id)) },
                         seriesMenuActions = vm.seriesMenuActions(),
                         onFilterClick = { filter ->
                             val series = requireNotNull(vm.series.value)
-                            navigator.push(LibraryScreen(series.libraryId, filter))
+                            navigator.pushUnique(LibraryScreen(series.libraryId, filter))
                         },
 
                         currentTab = vm.currentTab,
@@ -202,7 +203,7 @@ class SeriesScreen(
                         booksState = vm.booksState,
                         onBookClick = { navigator push bookScreen(it, BookSiblingsContext.Series(vm.booksState.filterState.state.value), vm.series.value) },
                         onBookReadClick = { book, markProgress ->
-                            navigator.parent?.push(
+                            navigator.parent?.pushUnique(
                                 readerScreen(
                                     book = book,
                                     markReadProgress = markProgress,
@@ -218,9 +219,9 @@ class SeriesScreen(
                         },
 
                         collectionsState = vm.collectionsState,
-                        onCollectionClick = { collection -> navigator.push(CollectionScreen(collection.id)) },
+                        onCollectionClick = { collection -> navigator.pushUnique(CollectionScreen(collection.id)) },
                         onSeriesClick = { series ->
-                            navigator.push(
+                            navigator.pushUnique(
                                 if (series.oneshot) OneshotScreen(series, BookSiblingsContext.Series())
                                 else SeriesScreen(series, vm.currentTab)
                             )
@@ -232,7 +233,7 @@ class SeriesScreen(
                         // else's library from here would be a different app.
                         onGenreClick = { slug ->
                             val current = vm.series.value
-                            navigator.push(
+                            navigator.pushUnique(
                                 GenreSeriesScreen(
                                     libraryId = current?.libraryId,
                                     genreTag = GenreLabels.tagOf(slug),
@@ -242,7 +243,7 @@ class SeriesScreen(
                         },
                         otherVersions = vm.linksState.otherVersions,
                         onVersionClick = { target ->
-                            if (target != seriesId) navigator.push(SeriesScreen(target))
+                            if (target != seriesId) navigator.pushUnique(SeriesScreen(target))
                         },
                         onRandomSiblingClick = {
                             vm.openRandomSiblingSeries { newSeries ->
