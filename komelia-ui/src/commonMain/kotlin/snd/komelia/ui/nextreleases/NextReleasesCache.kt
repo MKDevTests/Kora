@@ -7,7 +7,7 @@ import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.write
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
@@ -52,10 +52,16 @@ object NextReleasesCache {
     /**
      * How long a successful scan is trusted before a re-scan is worth its cost.
      *
-     * Twelve hours, not the thirty minutes this was written with. Thirty was
-     * chosen against repeated entries into Home, when the cost was believed to
-     * be small. It is not: measured on the tablet 2026-08-22, the scan is nine
-     * queries of 25 to 31 SECONDS of server time each -- 174 tags cost about
+     * Seven days, and the reasoning is the data's, not the code's: this is a
+     * release calendar the user tags by hand in Komga. A volume announced for
+     * next March does not change between Tuesday and Wednesday. The user, who
+     * writes those tags, put it plainly -- once a day at most, probably once a
+     * week.
+     *
+     * Thirty minutes was the original value, chosen against repeated entries
+     * into Home when the cost was believed to be small. It is not: measured
+     * on the tablet 2026-08-22, the scan is nine queries of 25 to 31 SECONDS
+     * of server time each -- 174 tags cost about
      * 230s of Komga whatever the batching, because the cost is in the tag
      * condition itself.
      *
@@ -64,12 +70,10 @@ object NextReleasesCache {
      * GET /api/v1/series/{id} took 19 234ms, a book list 26 822ms, with
      * queue=1ms on both -- the app was waiting on a server busy with us.
      *
-     * What this data actually is: a release calendar, hand-tagged in Komga.
-     * It changes when the user tags a new volume, which is a daily event at
-     * most, and the calendar screen still forces a fresh scan on open for
-     * whoever wants one now.
+     * The calendar screen still forces a fresh scan on open, so wanting one
+     * now costs one tap. Nothing else in the app pays for it.
      */
-    private val scanTtl = 12.hours
+    private val scanTtl = 7.days
 
     /** True when a fresh scan is worth running (no recent successful one). */
     fun isStale(now: Instant = Clock.System.now()): Boolean {
