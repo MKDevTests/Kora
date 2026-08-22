@@ -136,6 +136,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
+import snd.komelia.ui.pushUnique
 
 class LibraryScreen(
     val libraryId: KomgaLibraryId? = null,
@@ -289,7 +290,7 @@ class LibraryScreen(
                                     onForYouClick = vm::toForYouTab,
                                     randomSeriesEnabled = vm.seriesTabState.totalSeriesCount > 0,
                                     onRandomSeriesClick = {
-                                        vm.seriesTabState.openRandomSeries { navigator.push(seriesScreen(it)) }
+                                        vm.seriesTabState.openRandomSeries { navigator.pushUnique(seriesScreen(it)) }
                                     },
                                     contentPadding = PaddingValues(horizontal = gridPadding)
                                 )
@@ -297,9 +298,9 @@ class LibraryScreen(
                                     ContinueReadingSection(
                                         books = vm.keepReadingBooks,
                                         bookMenuActions = vm.seriesTabState.bookMenuActions(),
-                                        onBookClick = { navigator.push(bookScreen(it)) },
+                                        onBookClick = { navigator.pushUnique(bookScreen(it)) },
                                         onBookReadClick = { book, mark ->
-                                            navigator.push(
+                                            navigator.pushUnique(
                                                 readerScreen(
                                                     book = book,
                                                     markReadProgress = mark,
@@ -335,7 +336,7 @@ class LibraryScreen(
                             GENRE -> GenreTab(vm.genreTabState, beforeContent)
                             FOR_YOU -> ForYouContent(
                                 state = vm.forYouTabState,
-                                onSeriesClick = { navigator.push(seriesScreen(it)) },
+                                onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
                                 beforeContent = beforeContent,
                             )
                         }
@@ -366,7 +367,7 @@ class LibraryScreen(
                                         bookApi = vm.bookApi,
                                         libraryId = libraryId,
                                         onOpenBook = { book ->
-                                            navigator.parent?.push(
+                                            navigator.parent?.pushUnique(
                                                 readerScreen(
                                                     book = book,
                                                     markReadProgress = true,
@@ -465,7 +466,7 @@ class LibraryScreen(
                     seriesTotalCount = seriesTabState.totalSeriesCount,
                     onSeriesClick = {
                         seriesTabState.registerSeriesListContext(it)
-                        navigator.push(seriesScreen(it))
+                        navigator.pushUnique(seriesScreen(it))
                     },
 
                     editMode = seriesTabState.isInEditMode.collectAsState().value,
@@ -622,7 +623,7 @@ class LibraryScreen(
                         minSize = appearance.minSize,
                         overriddenSlugs = genreTabState.overriddenSlugs,
                         onGenreClick = { tile ->
-                            navigator.push(GenreSeriesScreen(libraryId, tile.tag, tile.label))
+                            navigator.pushUnique(GenreSeriesScreen(libraryId, tile.tag, tile.label))
                         },
                         onChooseCover = { coverPickFor = it },
                         onRename = { renameFor = it },

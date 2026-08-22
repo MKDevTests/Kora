@@ -60,6 +60,7 @@ import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.reader.readerScreen
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.library.KomgaLibraryId
+import snd.komelia.ui.pushUnique
 
 class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScreen {
 
@@ -139,7 +140,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     bookMenuActions = vm.bookMenuActions(),
                                     onBookClick = { navigator push bookScreen(it) },
                                     onBookReadClick = { book, markProgress ->
-                                        navigator.parent?.push(
+                                        navigator.parent?.pushUnique(
                                             readerScreen(
                                                 book = book,
                                                 markReadProgress = markProgress,
@@ -158,7 +159,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                         // actions; the generic shelf detail is a
                                         // read-only "top N" view. Send the user to
                                         // the full one.
-                                        navigator.push(
+                                        navigator.pushUnique(
                                             if (shelf is SeriesHomeScreenFilter.Favorites) FavoritesScreen()
                                             else ShelfDetailScreen(shelf)
                                         )
@@ -194,7 +195,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                         // immediately to the right of Edit on the same
                         // horizontal line as the floating nav island.
                         val openContinueBook: (snd.komelia.komga.api.model.KomeliaBook) -> Unit = { book ->
-                            navigator.parent?.push(
+                            navigator.parent?.pushUnique(
                                 readerScreen(
                                     book = book,
                                     markReadProgress = true,

@@ -423,7 +423,7 @@ private fun MainContent(
                     localFileApiProvider?.processedBooksFlow?.collect { book ->
                         snapshotFlow { canProceed }.filter { it }.first()
                         navigator.popUntilRoot()
-                        navigator.push(
+                        navigator.pushUnique(
                             readerScreen(
                                 book = book,
                                 markReadProgress = true,
@@ -440,7 +440,7 @@ private fun MainContent(
                     widgetBookToOpenFlow?.collect { book ->
                         snapshotFlow { canProceed }.filter { it }.first()
                         navigator.popUntilRoot()
-                        navigator.push(
+                        navigator.pushUnique(
                             readerScreen(
                                 book = book,
                                 markReadProgress = true,

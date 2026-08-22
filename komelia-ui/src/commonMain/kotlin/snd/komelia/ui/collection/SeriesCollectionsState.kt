@@ -68,13 +68,25 @@ class SeriesCollectionsState(
         notifications.runCatchingToNotifications {
             mutableState.value = LoadState.Loading
             val series = series.filterNotNull().first()
-            val collections = seriesApi.getAllCollectionsBySeries(series.id)
+            // Two traces, not one: the cheap call is the only part the closed
+            // tab needs (it decides whether the tab is shown at all), and the
+            // members fan-out below is what a series screen pays for a tab
+            // nobody opened. Measuring them together would hide that.
+            val collections = snd.komelia.perf.PerfTrace.measure(
+                label = "series.collections.list",
+                count = { it: List<KomgaCollection> -> it.size },
+            ) { seriesApi.getAllCollectionsBySeries(series.id) }
 
-            this.collections = collections.associateWith { collection ->
-                collectionApi.getSeriesForCollection(
-                    id = collection.id,
-                    pageRequest = KomgaPageRequest(size = 500)
-                ).content
+            this.collections = snd.komelia.perf.PerfTrace.measure(
+                label = "series.collections.members n=${collections.size}",
+                count = { it: Map<KomgaCollection, List<KomgaSeries>> -> it.values.sumOf { s -> s.size } },
+            ) {
+                collections.associateWith { collection ->
+                    collectionApi.getSeriesForCollection(
+                        id = collection.id,
+                        pageRequest = KomgaPageRequest(size = 500)
+                    ).content
+                }
             }
             mutableState.value = LoadState.Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }

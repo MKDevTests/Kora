@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.pushUnique
 
 /**
  * Compact reading stats summary, embedded near the top of the Home screen.
@@ -74,7 +75,7 @@ fun HomeStatsCard() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clickable { navigator.push(ReadingStatsScreen()) },
+            .clickable { navigator.pushUnique(ReadingStatsScreen()) },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,

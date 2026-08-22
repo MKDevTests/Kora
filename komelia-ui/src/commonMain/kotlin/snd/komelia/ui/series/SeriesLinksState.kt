@@ -162,7 +162,9 @@ class SeriesLinksState(
 
     suspend fun initialize() {
         if (mutableState.value != LoadState.Uninitialized) return
-        load()
+        // The cache paint was already traced; this is the part that talks to
+        // the server -- one getOneSeries per linked id, four at a time.
+        snd.komelia.perf.PerfTrace.measure("series.links") { load() }
         // Refresh whenever any link changes (this series or any other).
         SeriesLinksChanges.changes.onEach { load() }.launchIn(screenModelScope)
     }

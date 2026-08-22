@@ -53,6 +53,7 @@ import snd.komelia.ui.platform.ScreenPullToRefreshBox
 import snd.komelia.ui.reader.readerScreen
 import snd.komelia.ui.series.seriesScreen
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.pushUnique
 
 /** How many items a shelf shows once opened full-screen, versus the ~20 that fit
  *  in the Home carousel. Deliberately a single fixed page: the shelves are
@@ -123,7 +124,7 @@ class ShelfDetailScreen(private val filter: HomeScreenFilter) : Screen {
                     when (val data = vm.data) {
                         is SeriesFilterData -> SeriesLazyCardGrid(
                             series = data.series,
-                            onSeriesClick = { navigator.push(seriesScreen(it)) },
+                            onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
                             seriesMenuActions = vm.seriesMenuActions(),
                             totalPages = 1,
                             currentPage = 1,
@@ -138,9 +139,9 @@ class ShelfDetailScreen(private val filter: HomeScreenFilter) : Screen {
                             header()
                             BookLazyCardGrid(
                                 books = data.books,
-                                onBookClick = { navigator.push(bookScreen(it)) },
+                                onBookClick = { navigator.pushUnique(bookScreen(it)) },
                                 onBookReadClick = { book, markProgress ->
-                                    navigator.parent?.push(
+                                    navigator.parent?.pushUnique(
                                         readerScreen(
                                             book = book,
                                             markReadProgress = markProgress,

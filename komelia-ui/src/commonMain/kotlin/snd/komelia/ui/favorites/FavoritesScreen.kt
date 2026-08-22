@@ -59,6 +59,7 @@ import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.pushUnique
 
 /**
  * The virtual cross-library "Favorites" library: the series the user marked as
@@ -134,7 +135,7 @@ class FavoritesScreen : Screen {
                 else -> SeriesLazyCardGrid(
                     series = vm.series,
                     downloadedSeriesIds = vm.downloadedSeriesIds,
-                    onSeriesClick = { navigator.push(seriesScreen(it)) },
+                    onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
                     seriesMenuActions = vm.seriesMenuActions(),
                     totalPages = 1,
                     currentPage = 1,

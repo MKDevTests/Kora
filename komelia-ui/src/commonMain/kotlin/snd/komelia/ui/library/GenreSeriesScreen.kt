@@ -33,6 +33,7 @@ import snd.komelia.ui.series.list.SeriesListContent
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.library.KomgaLibraryId
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.pushUnique
 
 /**
  * A genre's series, with the full library list UI (letters, read/unread and all
@@ -109,7 +110,7 @@ class GenreSeriesScreen(
                     seriesTotalCount = vm.totalSeriesCount,
                     onSeriesClick = {
                         vm.registerSeriesListContext(it)
-                        navigator.push(seriesScreen(it))
+                        navigator.pushUnique(seriesScreen(it))
                     },
                     editMode = vm.isInEditMode.collectAsState().value,
                     onEditModeChange = vm::onEditModeChange,

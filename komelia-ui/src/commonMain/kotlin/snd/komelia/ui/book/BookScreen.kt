@@ -35,6 +35,7 @@ import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalUseNewLibraryUI
 import snd.komelia.ui.book.immersive.ImmersiveBookContent
 import snd.komelia.ui.platform.PlatformType
+import snd.komelia.ui.pushUnique
 
 fun bookScreen(
     book: KomeliaBook,
@@ -99,7 +100,7 @@ class BookScreen(
             ImmersiveBookContent(
                 onGenreClick = { slug ->
                     val libraryId = vm.book.value?.libraryId
-                    navigator.push(
+                    navigator.pushUnique(
                         snd.komelia.ui.library.GenreSeriesScreen(
                             libraryId = libraryId,
                             genreTag = snd.komelia.ui.library.GenreLabels.tagOf(slug),
@@ -112,11 +113,11 @@ class BookScreen(
                 siblingBooks = siblings,
                 library = vm.library,
                 accentColor = LocalAccentColor.current,
-                onLibraryClick = { navigator.push(LibraryScreen(it.id)) },
+                onLibraryClick = { navigator.pushUnique(LibraryScreen(it.id)) },
                 bookMenuActions = vm.bookMenuActions,
                 onBackClick = { onBackPress(navigator, book.seriesId) },
                 onReadBook = { selectedBook, markReadProgress ->
-                    navigator.parent?.push(
+                    navigator.parent?.pushUnique(
                         readerScreen(
                             book = selectedBook,
                             markReadProgress = markReadProgress,
@@ -132,12 +133,12 @@ class BookScreen(
                 },
                 onDownload = vm::onBookDownload,
                 onFilterClick = { filter ->
-                    navigator.push(LibraryScreen(book.libraryId, filter))
+                    navigator.pushUnique(LibraryScreen(book.libraryId, filter))
                 },
                 readLists = vm.readListsState.readLists,
-                onReadListClick = { navigator.push(ReadListScreen(it.id)) },
+                onReadListClick = { navigator.pushUnique(ReadListScreen(it.id)) },
                 onReadListBookPress = { listBook, readList ->
-                    if (listBook.id != book.id) navigator.push(
+                    if (listBook.id != book.id) navigator.pushUnique(
                         bookScreen(
                             book = listBook,
                             bookSiblingsContext = BookSiblingsContext.ReadList(readList.id)
@@ -145,7 +146,7 @@ class BookScreen(
                     )
                 },
                 cardWidth = vm.cardWidth.collectAsState().value,
-                onSeriesClick = { seriesId -> navigator.push(SeriesScreen(seriesId)) },
+                onSeriesClick = { seriesId -> navigator.pushUnique(SeriesScreen(seriesId)) },
                 publisher = vm.publisher.collectAsState().value,
                 onBookChange = vm::setCurrentBook,
                 initiallyExpanded = vm.isExpanded,
@@ -165,7 +166,7 @@ class BookScreen(
             BookScreenContent(
                 onGenreClick = { slug ->
                     val libraryId = vm.book.value?.libraryId
-                    navigator.push(
+                    navigator.pushUnique(
                         snd.komelia.ui.library.GenreSeriesScreen(
                             libraryId = libraryId,
                             genreTag = snd.komelia.ui.library.GenreLabels.tagOf(slug),
@@ -178,7 +179,7 @@ class BookScreen(
                 book = book,
                 bookMenuActions = vm.bookMenuActions,
                 onBookReadPress = { markReadProgress ->
-                    navigator.parent?.push(
+                    navigator.parent?.pushUnique(
                         if (book != null) readerScreen(
                             book = book,
                             bookSiblingsContext = bookSiblingsContext,
@@ -206,18 +207,18 @@ class BookScreen(
                 onBookDownloadDelete = vm::onBookDownloadDelete,
 
                 readLists = vm.readListsState.readLists,
-                onReadListClick = { navigator.push(ReadListScreen(it.id)) },
+                onReadListClick = { navigator.pushUnique(ReadListScreen(it.id)) },
                 onReadListBookPress = { book, readList ->
-                    if (book.id != bookId) navigator.push(
+                    if (book.id != bookId) navigator.pushUnique(
                         bookScreen(
                             book = book,
                             bookSiblingsContext = BookSiblingsContext.ReadList(readList.id)
                         )
                     )
                 },
-                onParentSeriesPress = { book?.seriesId?.let { seriesId -> navigator.push(SeriesScreen(seriesId)) } },
+                onParentSeriesPress = { book?.seriesId?.let { seriesId -> navigator.pushUnique(SeriesScreen(seriesId)) } },
                 onFilterClick = { filter ->
-                    navigator.push(LibraryScreen(requireNotNull(book?.libraryId), filter))
+                    navigator.pushUnique(LibraryScreen(requireNotNull(book?.libraryId), filter))
                 },
                 cardWidth = vm.cardWidth.collectAsState().value,
             )
