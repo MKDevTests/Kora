@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent as AndroidKeyEvent
-import android.webkit.WebView
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -81,7 +80,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(null)
-        WebView.setWebContentsDebuggingEnabled(false)
         FileKit.init(this)
         mainActivity.value = this
 
