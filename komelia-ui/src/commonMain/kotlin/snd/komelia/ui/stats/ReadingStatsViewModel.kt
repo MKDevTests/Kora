@@ -35,6 +35,10 @@ class ReadingStatsViewModel(
         mutableState.value = LoadState.Loading
         try {
             val stats = service.compute()
+            // Opening this screen IS the way to ask for fresh numbers, so it
+            // always recomputes -- and hands the result to the home card, which
+            // otherwise waits out its own memo.
+            snd.komelia.ui.stats.ReadingStatsCache.put(stats)
             mutableState.value = LoadState.Success(stats)
         } catch (t: Throwable) {
             logger.error(t) { "ReadingStatsService.compute failed" }

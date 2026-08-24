@@ -164,6 +164,11 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                             else ShelfDetailScreen(shelf)
                                         )
                                     },
+                                    // The statistics card is accessory: it waits
+                                    // for the shelves rather than competing with
+                                    // them. `state` is the when subject here, so
+                                    // this is the shelves' own load state.
+                                    homeReady = state is LoadState.Success,
                                 )
 
                         }

@@ -43,7 +43,7 @@ import snd.komelia.ui.pushUnique
  * Tapping the card pushes the full [ReadingStatsScreen].
  */
 @Composable
-fun HomeStatsCard() {
+fun HomeStatsCard(homeReady: Boolean = true) {
     val mainVm = LocalMainScreenViewModel.current
     // The Home card only checks the master switch — even when the user
     // hasn't opted into the bottom-nav shortcut, the Home card is a
@@ -57,9 +57,25 @@ fun HomeStatsCard() {
     // Screen.Content(), and this composable is nested under HomeContent.
     // `remember` keeps the service instance stable across recompositions.
     val service = remember { factory.createReadingStatsService() }
-    var stats by remember { mutableStateOf<ReadingStats?>(null) }
-    LaunchedEffect(Unit) {
-        runCatching { service.compute() }.getOrNull()?.let { stats = it }
+    // Paint whatever was computed earlier in the session, immediately.
+    var stats by remember { mutableStateOf(ReadingStatsCache.peek()) }
+    // Then, and only then, consider recomputing. Two gates, both measured:
+    //
+    //  - homeReady: the card waits for the shelves. Its three API calls used to
+    //    race them for the same server, and its ten SQL steps ran across the
+    //    2.66 s in which the home screen paints. Nothing here is urgent enough
+    //    to be in that window.
+    //  - the cache: at most one compute per session (see ReadingStatsCache).
+    //
+    // Recomposition-safe: LaunchedEffect keys on homeReady, so this runs once
+    // when the shelves land, not on every frame.
+    LaunchedEffect(homeReady) {
+        if (!homeReady) return@LaunchedEffect
+        if (ReadingStatsCache.isFresh()) return@LaunchedEffect
+        runCatching { service.compute() }.getOrNull()?.let {
+            ReadingStatsCache.put(it)
+            stats = it
+        }
     }
 
     val navigator = LocalNavigator.currentOrThrow

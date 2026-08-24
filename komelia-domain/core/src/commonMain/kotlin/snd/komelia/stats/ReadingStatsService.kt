@@ -50,31 +50,43 @@ class ReadingStatsService(
     private val clock: Clock = Clock.System,
 ) {
 
-    suspend fun compute(): ReadingStats {
+    /**
+     * Thirteen steps, every one of them awaited before the next starts. Measured
+     * on the tablet, the ten SQL steps alone spanned 2.66 s of the window in
+     * which the home screen paints, on a connection pool of size one — and the
+     * three API steps compete with the shelves for the same server.
+     *
+     * Each step is timed separately as `stats.*` so "the stats card is slow"
+     * can be answered with "this one is", rather than by guessing. One trace
+     * per card load, which is the granularity PerfTrace is for.
+     */
+    suspend fun compute(): ReadingStats = snd.komelia.perf.PerfTrace.measure("stats.total") {
         val now = clock.now()
         val api = komgaApi.value
 
-        val booksLast7 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days)
-        val booksLast30 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days)
-        val pagesLast7 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days)
-        val pagesLast30 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days)
+        val booksLast7 = trace("stats.booksLast7") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days) }
+        val booksLast30 = trace("stats.booksLast30") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days) }
+        val pagesLast7 = trace("stats.pagesLast7") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days) }
+        val pagesLast30 = trace("stats.pagesLast30") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days) }
         // Lifetime = pages from COMPLETED events still in the local log +
         // pages carried over from older events trimmed by past backup
         // exports (LIFETIME_CARRYOVER sentinel rows). Without the carryover
         // term the total would silently reset after a 365-day cliff.
-        val pagesLifetime = readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED) +
-            readingEvents.sumPagesLifetimeCarryover()
-        val streak = computeStreak(now)
-        val monthly = computeMonthlyHistory(now)
-        val daily30 = computeDailyHistory(now, days = 30)
-        val daily7 = computeDailyHistory(now, days = 7)
+        val pagesLifetime = trace("stats.pagesLifetime") {
+            readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED) +
+                readingEvents.sumPagesLifetimeCarryover()
+        }
+        val streak = trace("stats.streak") { computeStreak(now) }
+        val monthly = trace("stats.monthly") { computeMonthlyHistory(now) }
+        val daily30 = trace("stats.daily30") { computeDailyHistory(now, days = 30) }
+        val daily7 = trace("stats.daily7") { computeDailyHistory(now, days = 7) }
 
-        val lifetimeBooks = fetchLifetimeBooksFinished(api)
-        val lifetimeSeries = fetchLifetimeSeriesFinished(api)
+        val lifetimeBooks = trace("stats.api.lifetimeBooks") { fetchLifetimeBooksFinished(api) }
+        val lifetimeSeries = trace("stats.api.lifetimeSeries") { fetchLifetimeSeriesFinished(api) }
         val librariesExplored = fetchLibrariesCount()
-        val recent = fetchRecentSeries(api)
+        val recent = trace("stats.api.recentSeries") { fetchRecentSeries(api) }
 
-        return ReadingStats(
+        ReadingStats(
             booksFinishedLast7Days = booksLast7,
             booksFinishedLast30Days = booksLast30,
             streakDays = streak,
@@ -90,6 +102,9 @@ class ReadingStatsService(
             recentSeries = recent,
         )
     }
+
+    private suspend inline fun <T> trace(label: String, crossinline block: suspend () -> T): T =
+        snd.komelia.perf.PerfTrace.measure(label) { block() }
 
     // ---------------------------------------------------------------- streak
 
