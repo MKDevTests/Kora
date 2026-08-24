@@ -25,10 +25,15 @@ private val logger = KotlinLogging.logger("KoraHttp")
  *   server  request sent -> response headers   the server thinking
  *   body    headers -> call end                download and parse
  *
- * Only calls over [SLOW_MILLIS] are logged. Per-request logging is what
- * produced a 43MB log the last time, so the quiet case stays quiet.
+ * Only calls over [SLOW_MILLIS] are logged.
+ *
+ * AUDIT BUILD: the threshold is 0, so every request is reported. Covers in
+ * particular have never been visible at all, and a screen's true request count
+ * cannot be counted from a log that hides the fast ones. Per-request logging is
+ * what produced a 43MB log once; that was a whole reading session, not the few
+ * minutes an audit run lasts. Put this back to 2_000 before shipping.
  */
-private const val SLOW_MILLIS = 2_000L
+private const val SLOW_MILLIS = 0L
 
 class SlowCallListener : EventListener() {
 

@@ -100,7 +100,14 @@ class TtsuReaderState(
 
             if (book.value == null) book.value = bookApi.getOne(bookId.value)
             coroutineScope.launch {
-                runCatching { epubLoadTask.complete(generateEpubHtml(bookId.value)) }
+                // AUDIT: the epub path had no timing at all. This builds the
+                // whole document before the webview sees anything, so it is
+                // the wait the reader actually shows.
+                runCatching {
+                    epubLoadTask.complete(
+                        snd.komelia.perf.PerfTrace.measure("epub.ttsu.generate") { generateEpubHtml(bookId.value) }
+                    )
+                }
                     .onFailure {
                         logger.catching(it)
                         webview.value?.close()
