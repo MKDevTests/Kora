@@ -124,6 +124,8 @@ class AndroidAppModule(
     private val databases = KomeliaDatabase(context.filesDir.absolutePath.toString(), serverId)
 
     private val okHttpLogger = KotlinLogging.logger("http.logging")
+    private val requestBudget = RequestBudgetInterceptor.readLimit(context.filesDir)
+        .also { logger.info { "request budget = $it concurrent queries" } }
     private val okHttpClientWithoutCache: OkHttpClient = OkHttpClient.Builder()
         // OkHttp's default is five requests per host, and every cover shares
         // this client with every API call. With covers now capped at four in
@@ -136,6 +138,12 @@ class AndroidAppModule(
         // body. See SlowCallListener for why a timing around the suspend call
         // was not enough.
         .eventListenerFactory(SlowCallListener)
+        // One global ceiling on concurrent *query* requests, above the 21
+        // uncoordinated per-feature semaphores. Whitelist only, so images and
+        // streams never wait behind a shelf. See RequestBudgetInterceptor for
+        // the measurement that motivates it and for how to change the ceiling
+        // without rebuilding.
+        .addInterceptor(RequestBudgetInterceptor(requestBudget))
         .connectTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(0, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS)
