@@ -120,8 +120,19 @@ class DefaultBackupService(
             // doesn't lose the inherited carryover).
             val recent = mutableListOf<ReadingEvent>()
             var carryover: Long = 0
+            // The books baseline is a count of books, not a number of pages, and
+            // it carries its own instant. It travels in its own two fields —
+            // never through `recent` (where a re-import would resurrect it as an
+            // ordinary event) and never through `carryover` (where a book count
+            // would be added to a page total once it aged past the window).
+            var booksBaseline: ReadingEvent? = null
             for (event in allEvents) {
                 when {
+                    event.type == ReadingEvent.Type.LIFETIME_BOOKS_BASELINE -> {
+                        val known = booksBaseline
+                        if (known == null || event.timestamp > known.timestamp) booksBaseline = event
+                    }
+
                     event.type == ReadingEvent.Type.LIFETIME_CARRYOVER ->
                         carryover += (event.pageCount ?: 0).toLong()
                     event.timestamp.toEpochMilliseconds() >= cutoffMs ->
@@ -134,6 +145,8 @@ class DefaultBackupService(
                 seriesRatings = ratingsByUser[uid].orEmpty().map { it.toRatingExport() },
                 readingEvents = recent.map { it.toReadingEventExport() },
                 pagesReadLifetimeCarryover = carryover,
+                lifetimeBooksBaseline = booksBaseline?.pageCount ?: 0,
+                lifetimeBooksBaselineAt = booksBaseline?.timestamp?.toEpochMilliseconds() ?: 0,
             )
         }
 
@@ -528,6 +541,18 @@ class DefaultBackupService(
                     // carryover so the lifetime pages-read total includes
                     // events that were too old to ship in this bundle.
                     readingEvents.upsertLifetimeCarryover(sectionUid, section.pagesReadLifetimeCarryover)
+                    // Same idea for the books baseline: restore the server's
+                    // last count with the instant it was taken, so the lifetime
+                    // figure is right on the first launch after a restore
+                    // instead of waiting on a full server count. Absent from
+                    // pre-1.8.3 bundles, where both fields read 0.
+                    if (section.lifetimeBooksBaseline > 0 && section.lifetimeBooksBaselineAt > 0) {
+                        readingEvents.upsertLifetimeBooksBaseline(
+                            count = section.lifetimeBooksBaseline,
+                            at = Instant.fromEpochMilliseconds(section.lifetimeBooksBaselineAt),
+                            userId = sectionUid,
+                        )
+                    }
                     val who = if (isOwn) "your data" else "data for ${userIdStr.shortIdHint()}"
                     restored.add("User section ($who, ${ratings.size} ratings + ${events.size} events)")
                     val dropped = (section.seriesRatings.size - ratings.size) +

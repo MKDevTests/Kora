@@ -37,5 +37,22 @@ data class ReadingEvent(
          * `COMPLETED`), included only in the lifetime pages sum.
          */
         LIFETIME_CARRYOVER,
+
+        /**
+         * Sentinel row carrying the server's count of READ books at the moment
+         * it was last asked for, plus the moment itself (v1.8.3+). One per
+         * user: `bookId = "_booksbaseline_<userId>"`, `timestamp = when the
+         * count was taken`, `pageCount = the count`.
+         *
+         * Exists because asking Komga was measured at 5558 and 7474 ms — 80 to
+         * 89% of the whole statistics card — for a number that changes by one
+         * when you finish a book. The lifetime figure is now this baseline plus
+         * the COMPLETED events recorded since its timestamp, which is exact,
+         * and the server is asked again only when the baseline goes stale.
+         *
+         * Excluded from every time-windowed and per-type query (they filter on
+         * COMPLETED), like [LIFETIME_CARRYOVER].
+         */
+        LIFETIME_BOOKS_BASELINE,
     }
 }

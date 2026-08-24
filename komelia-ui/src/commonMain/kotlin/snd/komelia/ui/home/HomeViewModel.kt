@@ -139,6 +139,16 @@ class HomeViewModel(
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
 
+    /**
+     * True once EVERY shelf has answered, as opposed to [state], which turns
+     * Success on the FIRST one so the spinner clears early (see the note at
+     * that assignment). Accessory work that must not compete with the shelves
+     * waits on this — the reading statistics card, which fires three API calls
+     * of its own. Gating that card on [state] was measured firing at 5.9 s on a
+     * cold start whose last shelf only landed at 12.4 s.
+     */
+    val shelvesSettled = MutableStateFlow(false)
+
     // Multi-selection across the Home series shelves (long-press -> Select).
     val isInEditMode = MutableStateFlow(false)
     val selectedSeries = MutableStateFlow<List<KomgaSeries>>(emptyList())
@@ -411,6 +421,7 @@ class HomeViewModel(
             currentFilters.value = fresh
 
             mutableState.value = LoadState.Success(Unit)
+            shelvesSettled.value = true
             // Fire-and-forget: the disk write must never delay the screen.
             screenModelScope.launch { HomeShelfCache.save(fresh) }
         }.onFailure { mutableState.value = LoadState.Error(it) }

@@ -19,6 +19,7 @@ import snd.komelia.links.SeriesRelationType
 import snd.komelia.ratings.SeriesRating
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.reader.SeriesReaderOverridesRepository
+import snd.komelia.stats.LifetimeBooksBaseline
 import snd.komelia.stats.ReadingEvent
 import snd.komelia.stats.ReadingEventsRepository
 import snd.komga.client.book.KomgaBookId
@@ -99,6 +100,15 @@ class BackupRoundTripTest {
             byUser[uid] = mutableListOf(
                 ReadingEvent(KomgaBookId("b1"), ReadingEvent.Type.COMPLETED, Clock.System.now(), 120),
                 ReadingEvent(KomgaBookId("b2"), ReadingEvent.Type.COMPLETED, Clock.System.now(), 88),
+                // The books baseline sentinel: it must come back out of the
+                // round trip as a baseline, not as an ordinary event and not
+                // folded into the pages carryover.
+                ReadingEvent(
+                    KomgaBookId("_booksbaseline_user-1"),
+                    ReadingEvent.Type.LIFETIME_BOOKS_BASELINE,
+                    Instant.fromEpochMilliseconds(1_700_000_900_000),
+                    417,
+                ),
             )
         }
         val libFilters = FakeLibFiltersRepo().apply { map[KomgaLibraryId("lib1")] = """{"sort":"name"}""" }
@@ -120,6 +130,12 @@ class BackupRoundTripTest {
         val s1 = parseJson.decodeFromString(BackupBundle.serializer(), export1).sections
         val s2 = parseJson.decodeFromString(BackupBundle.serializer(), export2).sections
         assertEquals(s1, s2, "export -> import -> export changed the backup payload")
+
+        val restored = s2.userSections?.get("user-1")
+        assertEquals(417, restored?.lifetimeBooksBaseline, "books baseline lost in the round trip")
+        assertEquals(1_700_000_900_000, restored?.lifetimeBooksBaselineAt)
+        assertEquals(0L, restored?.pagesReadLifetimeCarryover, "the baseline leaked into the pages carryover")
+        assertEquals(2, restored?.readingEvents?.size, "the baseline leaked into the event list")
     }
 
     @Test
@@ -229,6 +245,20 @@ private class FakeEventsRepo : ReadingEventsRepository {
         val list = byUser.getOrPut(userId) { mutableListOf() }
         list.dropSentinel()
         list += ReadingEvent(carryoverBook, ReadingEvent.Type.LIFETIME_CARRYOVER, Instant.fromEpochMilliseconds(0), pages.toInt())
+    }
+
+    override suspend fun getLifetimeBooksBaseline(): LifetimeBooksBaseline? =
+        byUser.values.flatten()
+            .lastOrNull { it.type == ReadingEvent.Type.LIFETIME_BOOKS_BASELINE }
+            ?.let { LifetimeBooksBaseline(it.pageCount ?: 0, it.timestamp) }
+
+    override suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId?) {
+        val owner = userId ?: return
+        val baselineBook = KomgaBookId("_booksbaseline_${owner.value}")
+        val list = byUser.getOrPut(owner) { mutableListOf() }
+        list.removeAll { it.type == ReadingEvent.Type.LIFETIME_BOOKS_BASELINE && it.bookId == baselineBook }
+        if (count <= 0) return
+        list += ReadingEvent(baselineBook, ReadingEvent.Type.LIFETIME_BOOKS_BASELINE, at, count)
     }
 
     override suspend fun backfillNullUserIds(userId: KomgaUserId): Int = 0

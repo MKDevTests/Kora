@@ -17,6 +17,7 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.tables.ReadingEventsTable
 import snd.komelia.stats.ReadingEvent
+import snd.komelia.stats.LifetimeBooksBaseline
 import snd.komelia.stats.ReadingEventsRepository
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.user.KomgaUserId
@@ -85,11 +86,12 @@ class ExposedReadingEventsRepository(
                     val key: KomgaUserId? = userIdValue?.let { KomgaUserId(it) }
                     key to ReadingEvent(
                         bookId = KomgaBookId(row[ReadingEventsTable.bookId]),
-                        type = ReadingEvent.Type.valueOf(row[ReadingEventsTable.eventType]),
+                        type = readType(row[ReadingEventsTable.eventType]) ?: return@map null,
                         timestamp = Instant.fromEpochMilliseconds(row[ReadingEventsTable.timestamp]),
                         pageCount = row[ReadingEventsTable.pageCount],
                     )
                 }
+                .filterNotNull()
                 .groupBy({ it.first }, { it.second })
         }
     }
@@ -255,9 +257,64 @@ class ExposedReadingEventsRepository(
         }
     }
 
+    override suspend fun getLifetimeBooksBaseline(): LifetimeBooksBaseline? {
+        val userId = currentUserId.value ?: return null
+        val rowId = booksBaselineBookId(userId)
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .where {
+                    ReadingEventsTable.bookId.eq(rowId)
+                        .and(ReadingEventsTable.eventType.eq(ReadingEvent.Type.LIFETIME_BOOKS_BASELINE.name))
+                }
+                .firstOrNull()
+                ?.let { row ->
+                    LifetimeBooksBaseline(
+                        count = row[ReadingEventsTable.pageCount] ?: 0,
+                        takenAt = Instant.fromEpochMilliseconds(row[ReadingEventsTable.timestamp]),
+                    )
+                }
+        }
+    }
+
+    override suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId?) {
+        val owner = userId ?: currentUserId.value ?: return
+        val rowId = booksBaselineBookId(owner)
+        transaction {
+            ReadingEventsTable.upsert {
+                it[ReadingEventsTable.bookId] = rowId
+                it[ReadingEventsTable.eventType] = ReadingEvent.Type.LIFETIME_BOOKS_BASELINE.name
+                it[ReadingEventsTable.timestamp] = at.toEpochMilliseconds()
+                it[ReadingEventsTable.pageCount] = count.coerceAtLeast(0)
+                it[ReadingEventsTable.komgaUserId] = owner.value
+            }
+        }
+    }
+
+    /**
+     * Reads a stored event type, or null when the string names nothing this
+     * build knows.
+     *
+     * The column holds `Type.name`, so a row written by a newer Kora — one that
+     * has a type this build predates — would otherwise throw
+     * IllegalArgumentException out of `valueOf` and take the whole listing with
+     * it. Skipping the row loses one event; throwing loses the backup.
+     */
+    private fun readType(stored: String): ReadingEvent.Type? =
+        ReadingEvent.Type.entries.firstOrNull { it.name == stored }
+
     override suspend fun clear(type: ReadingEvent.Type) {
         transaction {
             ReadingEventsTable.deleteWhere { eventType eq type.name }
         }
+    }
+
+    companion object {
+        /**
+         * Sentinel row uniqueness, same trick as the carryover row: the book id
+         * encodes the user, so the (book_id, event_type) primary key yields one
+         * baseline per user without changing the key shape.
+         */
+        internal fun booksBaselineBookId(userId: KomgaUserId) = "_booksbaseline_${userId.value}"
     }
 }

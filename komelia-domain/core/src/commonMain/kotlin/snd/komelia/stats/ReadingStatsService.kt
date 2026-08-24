@@ -19,6 +19,9 @@ import kotlin.time.Instant
 
 private val logger = KotlinLogging.logger {}
 
+/** How long a server-provided count of finished books is trusted before re-asking. */
+private val BOOKS_BASELINE_TTL = 7.days
+
 /**
  * Computes a [ReadingStats] snapshot by combining:
  *  - **Lifetime / aggregate** metrics via Komga API (single requests with
@@ -81,7 +84,7 @@ class ReadingStatsService(
         val daily30 = trace("stats.daily30") { computeDailyHistory(now, days = 30) }
         val daily7 = trace("stats.daily7") { computeDailyHistory(now, days = 7) }
 
-        val lifetimeBooks = trace("stats.api.lifetimeBooks") { fetchLifetimeBooksFinished(api) }
+        val lifetimeBooks = trace("stats.lifetimeBooks") { lifetimeBooksFinished(api, now) }
         val lifetimeSeries = trace("stats.api.lifetimeSeries") { fetchLifetimeSeriesFinished(api) }
         val librariesExplored = fetchLibrariesCount()
         val recent = trace("stats.api.recentSeries") { fetchRecentSeries(api) }
@@ -185,6 +188,54 @@ class ReadingStatsService(
     }
 
     // --------------------------------------------------------- lifetime API
+
+    /**
+     * How many books this account has ever finished.
+     *
+     * Asking Komga is the honest answer and the expensive one: it is a count
+     * over every book on the server, and it was measured at 5558 and 7474 ms —
+     * 80 to 89% of the entire statistics card, for a number that changes by one
+     * when you finish a volume.
+     *
+     * So the server is asked at most once per [BOOKS_BASELINE_TTL]. The answer
+     * is stored with the moment it was given, and between two askings the total
+     * is that baseline plus the COMPLETED events Kora has recorded since. Those
+     * events are exactly the books you finished in Kora, so a volume closed a
+     * minute ago is counted a minute ago — the number is live, not stale, and
+     * this path costs one indexed local query instead of a full server count.
+     *
+     * What it cannot see is a book marked read somewhere else — the Komga web
+     * UI, another client — since the last baseline. That drift is bounded by
+     * the TTL, and corrects itself the next time the baseline is refreshed.
+     *
+     * A COMPLETED event landing in the very millisecond the baseline was taken
+     * would be counted twice ([ReadingEventsRepository.countSince] is
+     * inclusive). One millisecond wide, worth one book, self-correcting at the
+     * next refresh: left alone rather than papered over.
+     */
+    private suspend fun lifetimeBooksFinished(api: KomgaApi, now: Instant): Int {
+        val baseline = runCatching { readingEvents.getLifetimeBooksBaseline() }
+            .onFailure { logger.warn(it) { "reading the lifetime books baseline failed" } }
+            .getOrNull()
+
+        suspend fun fromBaseline(known: LifetimeBooksBaseline): Int =
+            known.count + runCatching {
+                readingEvents.countSince(ReadingEvent.Type.COMPLETED, known.takenAt)
+            }.getOrDefault(0)
+
+        if (baseline != null && now - baseline.takenAt < BOOKS_BASELINE_TTL) {
+            return fromBaseline(baseline)
+        }
+
+        val fromServer = trace("stats.api.lifetimeBooks") { fetchLifetimeBooksFinished(api) }
+        // 0 is also what the fetch returns when it fails. A stale baseline beats
+        // showing zero to someone who has finished hundreds of books.
+        if (fromServer <= 0) return baseline?.let { fromBaseline(it) } ?: 0
+
+        runCatching { readingEvents.upsertLifetimeBooksBaseline(fromServer, now) }
+            .onFailure { logger.warn(it) { "storing the lifetime books baseline failed" } }
+        return fromServer
+    }
 
     private suspend fun fetchLifetimeBooksFinished(api: KomgaApi): Int =
         runCatching {

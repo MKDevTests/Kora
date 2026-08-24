@@ -166,9 +166,12 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     },
                                     // The statistics card is accessory: it waits
                                     // for the shelves rather than competing with
-                                    // them. `state` is the when subject here, so
-                                    // this is the shelves' own load state.
-                                    homeReady = state is LoadState.Success,
+                                    // them. NOT `state`, which turns Success on
+                                    // the first shelf to answer -- measured
+                                    // firing at 5.9 s on a cold start whose last
+                                    // shelf landed at 12.4 s, so the card's three
+                                    // API calls raced them anyway.
+                                    homeReady = vm.shelvesSettled.collectAsState().value,
                                 )
 
                         }
