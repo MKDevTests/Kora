@@ -74,10 +74,17 @@ measuring first.
 
 ## One number for next time
 
-**1.48 seconds pass before a cold start sends its first request.** No
-server, no cap, no connection touches that: it is local startup. The first
-shelf with anything in it appears at 3.62 s, so nearly half of that wait is
-already over before the network is involved at all.
+**Three seconds pass before a cold start sends its first request** — 3.19,
+3.06 and 3.08 s over three runs. No server, no cap, no connection touches
+that: it is local startup. The first shelf with anything in it lands at 5.2
+to 7.3 s, so more than half of that wait is over before the network is
+involved at all.
+
+Nearly a second of it has a name. `MainActivity.onCreate` calls
+`WebView.setWebContentsDebuggingEnabled(false)`, and that one static call
+loads the whole Chromium provider — at 0.95 s on every run, to the
+millisecond — on a launch that opens the home screen and may never touch an
+EPUB.
 
 That is the better thing left to chase, and it will be measured before
 anything is changed.
@@ -166,11 +173,17 @@ exactement à ça que sert de mesurer d'abord.
 
 ## Un chiffre pour la prochaine fois
 
-**1,48 seconde s'écoule avant qu'un démarrage à froid n'envoie sa première
-requête.** Aucun serveur, aucun plafond, aucune connexion n'y touche : c'est
-du démarrage local. La première étagère non vide apparaît à 3,62 s, donc
-près de la moitié de cette attente est déjà passée avant que le réseau ne
-soit impliqué.
+**Trois secondes s'écoulent avant qu'un démarrage à froid n'envoie sa
+première requête** — 3,19, 3,06 et 3,08 s sur trois passages. Aucun serveur,
+aucun plafond, aucune connexion n'y touche : c'est du démarrage local. La
+première étagère non vide arrive entre 5,2 et 7,3 s, donc plus de la moitié
+de cette attente est passée avant que le réseau ne soit impliqué.
+
+Près d'une seconde a un nom. `MainActivity.onCreate` appelle
+`WebView.setWebContentsDebuggingEnabled(false)`, et cet unique appel statique
+charge tout le fournisseur Chromium — à 0,95 s à chaque passage, à la
+milliseconde près — sur un lancement qui ouvre l'accueil et ne touchera
+peut-être jamais un EPUB.
 
 C'est le meilleur reste à gratter, et il sera mesuré avant que quoi que ce
 soit ne soit changé.
