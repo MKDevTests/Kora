@@ -147,6 +147,7 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                 )
                 AndroidView(
                     factory = { ctx ->
+                        snd.webview.disableWebContentsDebuggingOnce()
                         EpubView(context = ctx, activity = activity, shouldApplyInsetsPadding = false).also { view ->
                             epub3State?.onEpubViewCreated(view)
                         }

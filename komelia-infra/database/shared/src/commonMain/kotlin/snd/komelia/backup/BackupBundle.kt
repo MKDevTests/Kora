@@ -135,4 +135,20 @@ data class UserSection(
      */
     @SerialName("pages_read_lifetime_carryover")
     val pagesReadLifetimeCarryover: Long = 0,
+    /**
+     * The count of finished books Komga last reported for this user, and the
+     * epoch-millis instant it reported it (v1.8.3+). Restored as a sentinel
+     * `LIFETIME_BOOKS_BASELINE` event.
+     *
+     * It travels with the backup because it is not derivable from anything
+     * else in the bundle: the per-book history here is Kora's own, and covers
+     * only what was read in Kora, whereas this number counts everything the
+     * server considers read. Without it a restored install shows a lifetime
+     * total of whatever it can recount, then waits on a full server count.
+     * Zero means "no baseline" — older bundles simply lack the fields.
+     */
+    @SerialName("lifetime_books_baseline")
+    val lifetimeBooksBaseline: Int = 0,
+    @SerialName("lifetime_books_baseline_at")
+    val lifetimeBooksBaselineAt: Long = 0,
 )

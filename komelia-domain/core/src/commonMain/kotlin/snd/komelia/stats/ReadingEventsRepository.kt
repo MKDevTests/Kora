@@ -1,6 +1,7 @@
 package snd.komelia.stats
 
 import snd.komga.client.book.KomgaBookId
+import snd.komga.client.user.KomgaUserId
 import kotlin.time.Instant
 
 /**
@@ -104,6 +105,20 @@ interface ReadingEventsRepository {
     suspend fun sumPagesLifetimeCarryover(): Long
 
     /**
+     * The stored server count of READ books and when it was taken, or null when
+     * this user has never had one. See
+     * [ReadingEvent.Type.LIFETIME_BOOKS_BASELINE].
+     */
+    suspend fun getLifetimeBooksBaseline(): LifetimeBooksBaseline?
+
+    /**
+     * Replaces a baseline row. [userId] null means whoever is signed in now —
+     * the normal case; an import passes it explicitly so a shadow-restore tags
+     * the row with the user the backup came from.
+     */
+    suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId? = null)
+
+    /**
      * Upsert this user's [ReadingEvent.Type.LIFETIME_CARRYOVER] sentinel row.
      * Called from the backup importer; also used internally by the exporter
      * to re-roll the carryover after trimming the current event log.
@@ -114,3 +129,9 @@ interface ReadingEventsRepository {
         pages: Long,
     )
 }
+
+/** A count of READ books as the server reported it, and when it said so. */
+data class LifetimeBooksBaseline(
+    val count: Int,
+    val takenAt: Instant,
+)

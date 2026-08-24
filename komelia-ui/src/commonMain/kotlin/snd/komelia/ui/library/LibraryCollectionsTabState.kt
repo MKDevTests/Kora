@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaCollectionsApi
 import snd.komelia.ui.LoadState
@@ -65,15 +66,28 @@ class LibraryCollectionsTabState(
         if (collectionId in progressByCollection || collectionId in progressInFlight) return
         progressInFlight += collectionId
         screenModelScope.launch {
+            val key = LibraryProgressCache.collectionKey(collectionId)
             try {
-                val series = collectionApi.getSeriesForCollection(
-                    collectionId,
-                    pageRequest = KomgaPageRequest(unpaged = true),
-                ).content
-                val total = series.sumOf { it.booksCount }
-                if (total > 0) {
-                    val read = series.sumOf { it.booksReadCount }
-                    progressByCollection[collectionId] = read.toFloat() / total.toFloat()
+                LibraryProgressCache.get(key)?.let {
+                    progressByCollection[collectionId] = it
+                    return@launch
+                }
+                // Bounded: this fetch is the whole membership of the collection,
+                // and a screenful of tiles firing it at once was measured queuing
+                // for up to 5717 ms and starving the rest of the screen.
+                LibraryProgressCache.gate.withPermit {
+                    if (collectionId in progressByCollection) return@withPermit
+                    val series = collectionApi.getSeriesForCollection(
+                        collectionId,
+                        pageRequest = KomgaPageRequest(unpaged = true),
+                    ).content
+                    val total = series.sumOf { it.booksCount }
+                    if (total > 0) {
+                        val read = series.sumOf { it.booksReadCount }
+                        val ratio = read.toFloat() / total.toFloat()
+                        progressByCollection[collectionId] = ratio
+                        LibraryProgressCache.put(key, ratio)
+                    }
                 }
             } catch (_: Exception) {
                 // Silent fail
@@ -125,7 +139,15 @@ class LibraryCollectionsTabState(
     }
 
     fun reload() {
-        screenModelScope.launch { loadCollections(1) }
+        screenModelScope.launch {
+            // An explicit refresh is the deliberate way to ask for exact progress
+            // bars, so it is the one place the memo is dropped. SSE-driven
+            // reloads deliberately keep it: a collection event fires often and
+            // would otherwise make every visit pay full price again.
+            LibraryProgressCache.clearCollections()
+            progressByCollection.clear()
+            loadCollections(1)
+        }
     }
 
     fun onCollectionDelete(collectionId: KomgaCollectionId) {

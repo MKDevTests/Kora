@@ -19,6 +19,9 @@ import kotlin.time.Instant
 
 private val logger = KotlinLogging.logger {}
 
+/** How long a server-provided count of finished books is trusted before re-asking. */
+private val BOOKS_BASELINE_TTL = 7.days
+
 /**
  * Computes a [ReadingStats] snapshot by combining:
  *  - **Lifetime / aggregate** metrics via Komga API (single requests with
@@ -50,31 +53,43 @@ class ReadingStatsService(
     private val clock: Clock = Clock.System,
 ) {
 
-    suspend fun compute(): ReadingStats {
+    /**
+     * Thirteen steps, every one of them awaited before the next starts. Measured
+     * on the tablet, the ten SQL steps alone spanned 2.66 s of the window in
+     * which the home screen paints, on a connection pool of size one — and the
+     * three API steps compete with the shelves for the same server.
+     *
+     * Each step is timed separately as `stats.*` so "the stats card is slow"
+     * can be answered with "this one is", rather than by guessing. One trace
+     * per card load, which is the granularity PerfTrace is for.
+     */
+    suspend fun compute(): ReadingStats = snd.komelia.perf.PerfTrace.measure("stats.total") {
         val now = clock.now()
         val api = komgaApi.value
 
-        val booksLast7 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days)
-        val booksLast30 = readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days)
-        val pagesLast7 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days)
-        val pagesLast30 = readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days)
+        val booksLast7 = trace("stats.booksLast7") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days) }
+        val booksLast30 = trace("stats.booksLast30") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days) }
+        val pagesLast7 = trace("stats.pagesLast7") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days) }
+        val pagesLast30 = trace("stats.pagesLast30") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days) }
         // Lifetime = pages from COMPLETED events still in the local log +
         // pages carried over from older events trimmed by past backup
         // exports (LIFETIME_CARRYOVER sentinel rows). Without the carryover
         // term the total would silently reset after a 365-day cliff.
-        val pagesLifetime = readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED) +
-            readingEvents.sumPagesLifetimeCarryover()
-        val streak = computeStreak(now)
-        val monthly = computeMonthlyHistory(now)
-        val daily30 = computeDailyHistory(now, days = 30)
-        val daily7 = computeDailyHistory(now, days = 7)
+        val pagesLifetime = trace("stats.pagesLifetime") {
+            readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED) +
+                readingEvents.sumPagesLifetimeCarryover()
+        }
+        val streak = trace("stats.streak") { computeStreak(now) }
+        val monthly = trace("stats.monthly") { computeMonthlyHistory(now) }
+        val daily30 = trace("stats.daily30") { computeDailyHistory(now, days = 30) }
+        val daily7 = trace("stats.daily7") { computeDailyHistory(now, days = 7) }
 
-        val lifetimeBooks = fetchLifetimeBooksFinished(api)
-        val lifetimeSeries = fetchLifetimeSeriesFinished(api)
+        val lifetimeBooks = trace("stats.lifetimeBooks") { lifetimeBooksFinished(api, now) }
+        val lifetimeSeries = trace("stats.api.lifetimeSeries") { fetchLifetimeSeriesFinished(api) }
         val librariesExplored = fetchLibrariesCount()
-        val recent = fetchRecentSeries(api)
+        val recent = trace("stats.api.recentSeries") { fetchRecentSeries(api) }
 
-        return ReadingStats(
+        ReadingStats(
             booksFinishedLast7Days = booksLast7,
             booksFinishedLast30Days = booksLast30,
             streakDays = streak,
@@ -90,6 +105,9 @@ class ReadingStatsService(
             recentSeries = recent,
         )
     }
+
+    private suspend inline fun <T> trace(label: String, crossinline block: suspend () -> T): T =
+        snd.komelia.perf.PerfTrace.measure(label) { block() }
 
     // ---------------------------------------------------------------- streak
 
@@ -170,6 +188,54 @@ class ReadingStatsService(
     }
 
     // --------------------------------------------------------- lifetime API
+
+    /**
+     * How many books this account has ever finished.
+     *
+     * Asking Komga is the honest answer and the expensive one: it is a count
+     * over every book on the server, and it was measured at 5558 and 7474 ms —
+     * 80 to 89% of the entire statistics card, for a number that changes by one
+     * when you finish a volume.
+     *
+     * So the server is asked at most once per [BOOKS_BASELINE_TTL]. The answer
+     * is stored with the moment it was given, and between two askings the total
+     * is that baseline plus the COMPLETED events Kora has recorded since. Those
+     * events are exactly the books you finished in Kora, so a volume closed a
+     * minute ago is counted a minute ago — the number is live, not stale, and
+     * this path costs one indexed local query instead of a full server count.
+     *
+     * What it cannot see is a book marked read somewhere else — the Komga web
+     * UI, another client — since the last baseline. That drift is bounded by
+     * the TTL, and corrects itself the next time the baseline is refreshed.
+     *
+     * A COMPLETED event landing in the very millisecond the baseline was taken
+     * would be counted twice ([ReadingEventsRepository.countSince] is
+     * inclusive). One millisecond wide, worth one book, self-correcting at the
+     * next refresh: left alone rather than papered over.
+     */
+    private suspend fun lifetimeBooksFinished(api: KomgaApi, now: Instant): Int {
+        val baseline = runCatching { readingEvents.getLifetimeBooksBaseline() }
+            .onFailure { logger.warn(it) { "reading the lifetime books baseline failed" } }
+            .getOrNull()
+
+        suspend fun fromBaseline(known: LifetimeBooksBaseline): Int =
+            known.count + runCatching {
+                readingEvents.countSince(ReadingEvent.Type.COMPLETED, known.takenAt)
+            }.getOrDefault(0)
+
+        if (baseline != null && now - baseline.takenAt < BOOKS_BASELINE_TTL) {
+            return fromBaseline(baseline)
+        }
+
+        val fromServer = trace("stats.api.lifetimeBooks") { fetchLifetimeBooksFinished(api) }
+        // 0 is also what the fetch returns when it fails. A stale baseline beats
+        // showing zero to someone who has finished hundreds of books.
+        if (fromServer <= 0) return baseline?.let { fromBaseline(it) } ?: 0
+
+        runCatching { readingEvents.upsertLifetimeBooksBaseline(fromServer, now) }
+            .onFailure { logger.warn(it) { "storing the lifetime books baseline failed" } }
+        return fromServer
+    }
 
     private suspend fun fetchLifetimeBooksFinished(api: KomgaApi): Int =
         runCatching {

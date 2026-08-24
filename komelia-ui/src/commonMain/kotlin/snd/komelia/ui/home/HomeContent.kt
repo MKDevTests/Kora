@@ -81,6 +81,8 @@ fun HomeContent(
     selectedSeries: List<KomgaSeries> = emptyList(),
     onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
     onShelfClick: (HomeScreenFilter) -> Unit = {},
+    /** True once the shelves have loaded. Gates the accessory statistics card. */
+    homeReady: Boolean = true,
 ) {
     val gridState = rememberLazyGridState()
     val columnState = rememberLazyListState()
@@ -106,7 +108,7 @@ fun HomeContent(
             topContent = {
                 Column {
                     HomeHeaderSection()
-                    snd.komelia.ui.stats.HomeStatsCard()
+                    snd.komelia.ui.stats.HomeStatsCard(homeReady = homeReady)
                     snd.komelia.ui.nextreleases.NextReleasesHomeCard()
                     Toolbar(
                         filters = filters,
