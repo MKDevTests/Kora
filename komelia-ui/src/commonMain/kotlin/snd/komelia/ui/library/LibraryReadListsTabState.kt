@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withPermit
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaReadListApi
 import snd.komelia.ui.LoadState
@@ -64,14 +65,27 @@ class LibraryReadListsTabState(
         if (readListId in progressByReadList || readListId in progressInFlight) return
         progressInFlight += readListId
         screenModelScope.launch {
+            val key = LibraryProgressCache.readListKey(readListId)
             try {
-                val books = readListApi.getBooksForReadList(
-                    readListId,
-                    pageRequest = KomgaPageRequest(unpaged = true),
-                ).content
-                if (books.isNotEmpty()) {
-                    val read = books.count { it.readProgress?.completed == true }
-                    progressByReadList[readListId] = read.toFloat() / books.size.toFloat()
+                LibraryProgressCache.get(key)?.let {
+                    progressByReadList[readListId] = it
+                    return@launch
+                }
+                // Every book of the list, unpaged — the worst request either tab
+                // makes. Nine tiles at once were measured at 15284 ms, 12433 of
+                // them spent waiting for a connection slot.
+                LibraryProgressCache.gate.withPermit {
+                    if (readListId in progressByReadList) return@withPermit
+                    val books = readListApi.getBooksForReadList(
+                        readListId,
+                        pageRequest = KomgaPageRequest(unpaged = true),
+                    ).content
+                    if (books.isNotEmpty()) {
+                        val read = books.count { it.readProgress?.completed == true }
+                        val ratio = read.toFloat() / books.size.toFloat()
+                        progressByReadList[readListId] = ratio
+                        LibraryProgressCache.put(key, ratio)
+                    }
                 }
             } catch (_: Exception) {
                 // Silent fail — no progress bar shown for this card
@@ -120,7 +134,13 @@ class LibraryReadListsTabState(
     }
 
     fun reload() {
-        screenModelScope.launch { loadReadLists(1) }
+        screenModelScope.launch {
+            // Same rule as the Collections tab: an explicit refresh is the one
+            // thing that drops the memo, SSE-driven reloads keep it.
+            LibraryProgressCache.clear()
+            progressByReadList.clear()
+            loadReadLists(1)
+        }
     }
 
     fun onReadListDelete(readListId: KomgaReadListId) {
