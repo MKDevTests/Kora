@@ -137,7 +137,7 @@ class LibraryReadListsTabState(
         screenModelScope.launch {
             // Same rule as the Collections tab: an explicit refresh is the one
             // thing that drops the memo, SSE-driven reloads keep it.
-            LibraryProgressCache.clear()
+            LibraryProgressCache.clearReadLists()
             progressByReadList.clear()
             loadReadLists(1)
         }

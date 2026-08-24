@@ -144,7 +144,7 @@ class LibraryCollectionsTabState(
             // bars, so it is the one place the memo is dropped. SSE-driven
             // reloads deliberately keep it: a collection event fires often and
             // would otherwise make every visit pay full price again.
-            LibraryProgressCache.clear()
+            LibraryProgressCache.clearCollections()
             progressByCollection.clear()
             loadCollections(1)
         }

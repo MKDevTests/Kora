@@ -68,8 +68,11 @@ object LibraryProgressCache {
     private val lock = Mutex()
     private var entries: MutableMap<String, Entry>? = null
 
-    fun collectionKey(id: KomgaCollectionId) = "c:${id.value}"
-    fun readListKey(id: KomgaReadListId) = "r:${id.value}"
+    private const val COLLECTION_PREFIX = "c:"
+    private const val READ_LIST_PREFIX = "r:"
+
+    fun collectionKey(id: KomgaCollectionId) = "$COLLECTION_PREFIX${id.value}"
+    fun readListKey(id: KomgaReadListId) = "$READ_LIST_PREFIX${id.value}"
 
     /** The memoed ratio, or null when absent or older than [TTL]. */
     suspend fun get(key: String): Float? {
@@ -90,10 +93,25 @@ object LibraryProgressCache {
         write(snapshot)
     }
 
-    /** Drops every memo. Called by an explicit refresh, never by an SSE event. */
-    suspend fun clear() {
-        lock.withLock { loaded().clear() }
-        write(emptyList())
+    /**
+     * Drops the memos for one tab. Called by an explicit refresh, never by an
+     * SSE event.
+     *
+     * Scoped per tab on purpose: refreshing Collections used to wipe the Read
+     * Lists bars too, so the next visit there re-paid a cost the user never
+     * asked to refresh.
+     */
+    suspend fun clearCollections() = clearPrefix(COLLECTION_PREFIX)
+
+    suspend fun clearReadLists() = clearPrefix(READ_LIST_PREFIX)
+
+    private suspend fun clearPrefix(prefix: String) {
+        val snapshot = lock.withLock {
+            val map = loaded()
+            map.keys.filter { it.startsWith(prefix) }.forEach { map.remove(it) }
+            map.values.toList()
+        }
+        write(snapshot)
     }
 
     private suspend fun loaded(): MutableMap<String, Entry> {
