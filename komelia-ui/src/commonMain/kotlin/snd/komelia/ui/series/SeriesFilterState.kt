@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -29,6 +31,7 @@ import snd.komelia.ui.series.SeriesFilterState.TagInclusionMode
 import snd.komga.client.book.KomgaReadStatus
 import snd.komga.client.common.KomgaAuthor
 import snd.komga.client.library.KomgaLibrary
+import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.KomgaSearchCondition
 import snd.komga.client.search.SeriesConditionBuilder
 import snd.komga.client.series.KomgaSeriesStatus
@@ -224,9 +227,32 @@ class SeriesFilterState(
     var languagesOptions by mutableStateOf<List<String>>(emptyList())
         private set
 
+    /** Library the options currently in memory belong to, or the sentinel below. */
+    private var optionsLoadedFor: KomgaLibraryId? = null
+    private var optionsLoaded = false
+    private val optionsLock = Mutex()
+
+    /**
+     * Fills the dropdowns of the filter panel. Six referential lookups, ~4 s of
+     * server on a real library, and every one of them is only ever read by the
+     * panel — so this is called by [SeriesFilterContent] when the panel first
+     * composes, never by the screen that owns the grid. Firing it eagerly cost
+     * the grid twice: once for the six requests themselves, and once more
+     * because they were competing for the connection pool with the three
+     * queries that actually paint something (measured queue up to 1058 ms).
+     *
+     * Idempotent, and keyed on the library: switching library invalidates the
+     * options, calling it again on the same one is free.
+     */
     suspend fun initialize() {
+        val libraryId = library.value?.id
+        optionsLock.withLock {
+            if (optionsLoaded && optionsLoadedFor == libraryId) return
+            optionsLoaded = true
+            optionsLoadedFor = libraryId
+        }
         appNotifications.runCatchingToNotifications {
-            val libraryIds = library.value?.id?.let { listOf(it) }.orEmpty()
+            val libraryIds = libraryId?.let { listOf(it) }.orEmpty()
             // Independent referential lookups — fetch them concurrently instead
             // of one round-trip after another (six in series was a big chunk of
             // the latency when this ran on the critical path).
@@ -249,6 +275,9 @@ class SeriesFilterState(
                 publishersOptions = publishers.await()
                 languagesOptions = languages.await()
             }
+        }.onFailure {
+            // Let the next open retry instead of leaving the panel empty forever.
+            optionsLoaded = false
         }
     }
 

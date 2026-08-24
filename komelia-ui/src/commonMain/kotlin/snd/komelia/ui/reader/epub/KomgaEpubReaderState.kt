@@ -73,7 +73,9 @@ class KomgaEpubReaderState(
         state.value = LoadState.Loading
         notifications.runCatchingToNotifications {
             Res.getUri("files/komga.html")
-            if (book.value == null) book.value = bookApi.getOne(bookId.value)
+            // AUDIT: no timing existed on this path either.
+            if (book.value == null) book.value =
+                snd.komelia.perf.PerfTrace.measure("epub.komga.getOne") { bookApi.getOne(bookId.value) }
             state.value = LoadState.Success(Unit)
         }.onFailure {
             state.value = LoadState.Error(it)

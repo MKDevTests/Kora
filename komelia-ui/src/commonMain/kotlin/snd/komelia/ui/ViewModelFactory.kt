@@ -626,6 +626,7 @@ class ViewModelFactory(
         return snd.komelia.stats.ReadingStatsService(
             readingEvents = appRepositories.readingEventsRepository,
             komgaApi = dependencies.komgaApi,
+            libraries = dependencies.komgaSharedState.libraries,
         )
     }
 

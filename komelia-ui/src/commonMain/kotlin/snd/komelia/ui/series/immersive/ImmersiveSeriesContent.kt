@@ -567,6 +567,8 @@ fun ImmersiveSeriesContent(
                     )
 
                     ImmersiveTab.COLLECTIONS -> item(span = { GridItemSpan(maxLineSpan) }) {
+                        // The members are fetched here, not on screen load.
+                        LaunchedEffect(collectionsState) { collectionsState.ensureMembersLoaded() }
                         SeriesCollectionsContent(
                             collections = collectionsState.collections,
                             onCollectionClick = onCollectionClick,

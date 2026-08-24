@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import snd.komelia.AppNotifications
 import snd.komelia.komga.api.KomgaCollectionsApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -68,28 +70,53 @@ class SeriesCollectionsState(
         notifications.runCatchingToNotifications {
             mutableState.value = LoadState.Loading
             val series = series.filterNotNull().first()
-            // Two traces, not one: the cheap call is the only part the closed
-            // tab needs (it decides whether the tab is shown at all), and the
-            // members fan-out below is what a series screen pays for a tab
-            // nobody opened. Measuring them together would hide that.
+            // Only the cheap call runs here. It is the one the closed tab needs:
+            // it decides whether the tab is shown at all. The members are the
+            // expensive half — measured at 1764 ms for 270 series downloaded on
+            // a screen where the tab was never opened — so they wait for
+            // [ensureMembersLoaded].
             val collections = snd.komelia.perf.PerfTrace.measure(
                 label = "series.collections.list",
                 count = { it: List<KomgaCollection> -> it.size },
             ) { seriesApi.getAllCollectionsBySeries(series.id) }
 
-            this.collections = snd.komelia.perf.PerfTrace.measure(
-                label = "series.collections.members n=${collections.size}",
-                count = { it: Map<KomgaCollection, List<KomgaSeries>> -> it.values.sumOf { s -> s.size } },
-            ) {
-                collections.associateWith { collection ->
-                    collectionApi.getSeriesForCollection(
-                        id = collection.id,
-                        pageRequest = KomgaPageRequest(size = 500)
-                    ).content
-                }
-            }
+            membersLoadedFor = null
+            this.collections = collections.associateWith { emptyList() }
             mutableState.value = LoadState.Success(Unit)
         }.onFailure { mutableState.value = LoadState.Error(it) }
+    }
+
+    /** Collections whose members are in [collections], or null when none are. */
+    private var membersLoadedFor: Set<KomgaCollection>? = null
+    private val membersLock = Mutex()
+
+    /**
+     * Fills in the series of each collection. Called when the Collections tab
+     * actually becomes visible — never on screen load, where it was the single
+     * most expensive request of the series screen.
+     *
+     * Idempotent; a reload of the collection list resets it.
+     */
+    suspend fun ensureMembersLoaded() {
+        val wanted = collections.keys
+        if (wanted.isEmpty()) return
+        membersLock.withLock {
+            if (membersLoadedFor == wanted) return
+            notifications.runCatchingToNotifications {
+                collections = snd.komelia.perf.PerfTrace.measure(
+                    label = "series.collections.members n=${wanted.size}",
+                    count = { it: Map<KomgaCollection, List<KomgaSeries>> -> it.values.sumOf { s -> s.size } },
+                ) {
+                    wanted.associateWith { collection ->
+                        collectionApi.getSeriesForCollection(
+                            id = collection.id,
+                            pageRequest = KomgaPageRequest(size = 500)
+                        ).content
+                    }
+                }
+                membersLoadedFor = wanted
+            }
+        }
     }
 
     private suspend fun startKomgaEventListener() {

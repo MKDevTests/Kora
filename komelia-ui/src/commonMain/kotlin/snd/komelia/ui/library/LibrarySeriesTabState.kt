@@ -258,14 +258,14 @@ class LibrarySeriesTabState(
 
             chapterSeriesFilter = settingsRepository.getChapterSeriesFilter().first()
             pageLoadSize.value = settingsRepository.getSeriesPageLoadSize().first()
-            // Paint the cached first page instantly, then load. The grid must not
-            // wait on the filter panel's referential data (genres / tags /
-            // publishers / languages / …): those six lookups are only needed when
-            // the filter panel is opened, so they run in the background here. This
-            // was the dominant per-library-switch latency.
+            // Paint the cached first page instantly, then load. The filter
+            // panel's six referential lookups are NOT started here — not even in
+            // the background. Measured on the library screen: they made the open
+            // eleven requests instead of three, and the three that actually paint
+            // something waited behind them (queue up to 1058 ms). The panel calls
+            // initialize() itself when it first composes.
             showCachedFirstPageIfAny()
             loadSeriesPage(1)
-            screenModelScope.launch { filterState.initialize() }
 
             settingsRepository.getSeriesPageLoadSize()
                 .onEach {

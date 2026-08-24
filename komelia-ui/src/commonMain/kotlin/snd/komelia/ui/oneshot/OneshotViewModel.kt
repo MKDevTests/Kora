@@ -108,6 +108,9 @@ class OneshotViewModel(
 
         startKomgaEventListener()
         collectionsState.initialize()
+        // A oneshot renders its collections inline, with no tab to open, so it
+        // still needs the members up front. The series screen does not.
+        screenModelScope.launch { collectionsState.ensureMembersLoaded() }
         readListsState.initialize()
 
         reloadFlow.onEach {
