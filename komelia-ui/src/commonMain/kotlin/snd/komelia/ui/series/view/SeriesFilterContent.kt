@@ -84,6 +84,10 @@ fun SeriesFilterContent(
             else -> 250.dp
         }
     }
+    // The panel owns its referential data: six lookups, ~4 s of server, and
+    // nothing outside this composable ever reads them. Idempotent per library.
+    LaunchedEffect(filterState) { filterState.initialize() }
+
     val currentFilter = filterState.state.collectAsState().value
 
     Column(

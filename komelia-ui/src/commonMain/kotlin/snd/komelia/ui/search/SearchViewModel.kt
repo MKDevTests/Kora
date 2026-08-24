@@ -328,8 +328,19 @@ class SearchViewModel(
             authorNames = emptyList()
             return
         }
+        // Nothing typed = no author search. Without a search term /authors is a
+        // full dump of the library's authors, one unpaged request per role:
+        // measured at 1321 + 2031 + 766 ms on an idle server and 5345 + 5968 +
+        // 748 ms on a busy one, replayed on every library-chip change, to fill
+        // an Authors tab that an empty query has nothing to say about. With a
+        // term it is filtered server-side and cheap, which is the only case
+        // this list is read in.
+        if (query.isBlank()) {
+            authorNames = emptyList()
+            return
+        }
         appNotifications.runCatchingToNotifications {
-            val search = query.ifBlank { null }
+            val search = query
             // The library chip scopes the series and book tabs; it scopes this
             // one too. /authors filters server-side, so it costs nothing.
             val libraryIds = listOfNotNull(selectedLibraryId)

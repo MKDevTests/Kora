@@ -2,6 +2,7 @@ package snd.komelia.stats
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.flow.StateFlow
+import snd.komga.client.library.KomgaLibrary
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import snd.komelia.komga.api.KomgaApi
@@ -40,6 +41,12 @@ private val logger = KotlinLogging.logger {}
 class ReadingStatsService(
     private val readingEvents: ReadingEventsRepository,
     private val komgaApi: StateFlow<KomgaApi>,
+    /**
+     * The library list the session already holds. Read from here rather than
+     * asked for again: the stats card was the second `GET /api/v1/libraries` of
+     * every cold start, for a number the app had in memory.
+     */
+    private val libraries: StateFlow<List<KomgaLibrary>>,
     private val clock: Clock = Clock.System,
 ) {
 
@@ -64,7 +71,7 @@ class ReadingStatsService(
 
         val lifetimeBooks = fetchLifetimeBooksFinished(api)
         val lifetimeSeries = fetchLifetimeSeriesFinished(api)
-        val librariesExplored = fetchLibrariesCount(api)
+        val librariesExplored = fetchLibrariesCount()
         val recent = fetchRecentSeries(api)
 
         return ReadingStats(
@@ -195,12 +202,7 @@ class ReadingStatsService(
      * `librariesExplored` on [ReadingStats] for UI consumers that
      * want a quick scope count.
      */
-    private suspend fun fetchLibrariesCount(api: KomgaApi): Int =
-        runCatching {
-            api.libraryApi.getLibraries().size
-        }.onFailure {
-            logger.warn(it) { "fetchLibrariesCount failed" }
-        }.getOrDefault(0)
+    private fun fetchLibrariesCount(): Int = libraries.value.size
 
     // ---------------------------------------------------------- recent series
 

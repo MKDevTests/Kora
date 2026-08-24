@@ -381,6 +381,13 @@ class PagedReaderState(
     fun nextPage() {
         readerState.navigationHistory.dismissBackButton()
         val spreads = pageSpreads.value
+        // AUDIT — remove with the SlowCallListener probe. A reader stuck on the
+        // "no previous book" page ignored 44 taps and swipes in both directions;
+        // static reading could not say which of these branches (or none) ran.
+        logger.info {
+            "READERNAV next spreads=${spreads.size} requested=$requestedSpreadIndex " +
+                "transition=${transitionPage.value?.let { it::class.simpleName }}"
+        }
         if (spreads.isEmpty()) return
 
         val currentSpreadIndex = requestedSpreadIndex.coerceIn(spreads.indices)
@@ -433,6 +440,11 @@ class PagedReaderState(
     fun previousPage() {
         readerState.navigationHistory.dismissBackButton()
         val spreads = pageSpreads.value
+        // AUDIT — see nextPage().
+        logger.info {
+            "READERNAV prev spreads=${spreads.size} requested=$requestedSpreadIndex " +
+                "transition=${transitionPage.value?.let { it::class.simpleName }}"
+        }
         if (spreads.isEmpty()) return
 
         val currentSpreadIndex = requestedSpreadIndex.coerceIn(spreads.indices)

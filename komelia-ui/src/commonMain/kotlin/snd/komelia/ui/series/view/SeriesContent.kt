@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -212,6 +213,8 @@ fun SeriesContent(
                         )
 
                         SeriesTab.COLLECTIONS -> item(span = { GridItemSpan(maxLineSpan) }) {
+                            // The members are fetched here, not on screen load.
+                            LaunchedEffect(collectionsState) { collectionsState.ensureMembersLoaded() }
                             SeriesCollectionsContent(
                                 collections = collectionsState.collections,
                                 onCollectionClick = onCollectionClick,
