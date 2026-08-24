@@ -52,3 +52,8 @@ __pycache__/
 _bench-en/
 _bench-ja/
 _bench-ja-holdout/
+
+# Working notes and audits — deliberately kept out of the repository.
+# One stray `git add docs` put all ten of them into a commit once; this is
+# the guard so it cannot happen again.
+docs/
