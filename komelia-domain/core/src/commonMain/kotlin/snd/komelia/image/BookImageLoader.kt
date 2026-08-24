@@ -37,16 +37,9 @@ class BookImageLoader(
         halfTag: String? = null,
     ): ReaderImageResult {
         return try {
-            // AUDIT: plain page loading has never been timed. reader.page.total
-            // exists but sits inside the translation scan, so it measures the
-            // OCR path and says nothing about simply turning a page. Split in
-            // two because the network half and the decode half have different
-            // fixes.
-            val source = snd.komelia.perf.PerfTrace.measure("image.page.fetch") { doLoad(bookId, page) }
+            val source = doLoad(bookId, page)
             ReaderImageResult.Success(
-                snd.komelia.perf.PerfTrace.measure("image.page.decode") {
-                    readerImageFactory.getImage(source, ReaderImage.PageId(bookId.value, page, halfTag))
-                }
+                readerImageFactory.getImage(source, ReaderImage.PageId(bookId.value, page, halfTag))
             )
         } catch (e: Throwable) {
             currentCoroutineContext().ensureActive()
