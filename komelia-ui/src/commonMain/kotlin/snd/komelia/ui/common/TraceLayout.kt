@@ -14,9 +14,13 @@ import snd.komelia.perf.PerfSection
  * one number cannot distinguish "laying out three rows of cards is slow" from
  * "painting them is slow", and those have opposite fixes.
  *
- * Composition is deliberately not traced here: it happens in an earlier frame
- * phase, and the atrace capture already showed that phase costing 31.9 ms
- * against 976.7 ms for traversal. Whatever is expensive is not composition.
+ * Composition is not traced here, and the first capture made with these spans
+ * showed why that is not the same as composition being cheap. The recompose
+ * phase costs 35 ms against 1041 ms for traversal, which looks conclusive and
+ * is not: a lazy layout subcomposes its items *inside its own measure pass*, so
+ * 517 of the 979 ms spent in measureAndLayout turned out to be Compose
+ * recomposing and applying card content. The framework's own `Compose:recompose`
+ * spans show it, nested under these ones. Read the two together.
  *
  * **Free when nothing is being traced.** With no capture running this returns
  * the receiver untouched — no layout node, no draw wrapper, no allocation.
