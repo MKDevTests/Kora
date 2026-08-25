@@ -74,6 +74,14 @@ private object LibraryCountsCache {
     fun put(libraryId: String, counts: Counts) {
         byLibrary[libraryId] = counts
     }
+
+    /** Libraries whose counts were fetched from the server during this run. */
+    private val askedThisRun = mutableSetOf<String>()
+    fun markAsked(libraryId: String) {
+        askedThisRun += libraryId
+    }
+
+    fun alreadyAsked(libraryId: String): Boolean = libraryId in askedThisRun
 }
 
 /**
@@ -288,6 +296,23 @@ class LibraryViewModel(
             }
         }
 
+        // Two of the three counts cost a server round-trip each — measured at
+        // 353-1060 ms for the collections and 350-1026 ms for the read lists,
+        // paid again on every single entry into the library. They are worth
+        // paying once per app run and no more, because of what they are used
+        // for: everywhere but the genre header they are read as `> 0`, to
+        // decide whether a tab exists. A count moving from 4 to 5 changes
+        // nothing on screen.
+        //
+        // The exception is a count sitting at zero, which is exactly the case
+        // where a chip could newly appear, so those are always re-asked.
+        // Genres are deliberately not part of this: since the count is stored
+        // with the index they cost 8-18 ms, and staying exact is free.
+        val skipServerCounts = libraryKey != null &&
+            LibraryCountsCache.alreadyAsked(libraryKey) &&
+            collectionsCount > 0 &&
+            readListsCount > 0
+
         // Let the grid have the connections first. Timed on its own so the two
         // questions stay separate: how long we held the refresh back
         // (library.counts.deferred) and how long it then took (library.counts).
@@ -301,7 +326,7 @@ class LibraryViewModel(
         // Never on a library whose counts are unknown: there the chips have
         // nothing to show, and waiting would leave them empty rather than merely
         // slightly stale.
-        if (deferUntilGridReady && chipsHaveValues) {
+        if (deferUntilGridReady && chipsHaveValues && !skipServerCounts) {
             snd.komelia.perf.PerfTrace.measure("library.counts.deferred") {
                 val gridIsLoading = kotlinx.coroutines.withTimeoutOrNull(GRID_START_WAIT_MS) {
                     seriesTabState.state.first { it !is Uninitialized }
@@ -333,12 +358,14 @@ class LibraryViewModel(
             snd.komelia.perf.PerfTrace.measure("library.counts") {
                 coroutineScope {
                     val collectionsDeferred = async {
-                        snd.komelia.perf.PerfTrace.measure("library.counts.collections") {
+                        if (skipServerCounts) collectionsCount
+                        else snd.komelia.perf.PerfTrace.measure("library.counts.collections") {
                             collectionApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
                         }
                     }
                     val readListsDeferred = async {
-                        snd.komelia.perf.PerfTrace.measure("library.counts.readlists") {
+                        if (skipServerCounts) readListsCount
+                        else snd.komelia.perf.PerfTrace.measure("library.counts.readlists") {
                             readListsApi.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
                         }
                     }
@@ -352,6 +379,7 @@ class LibraryViewModel(
             }
 
             libraryKey?.let {
+                if (!skipServerCounts) LibraryCountsCache.markAsked(it)
                 LibraryCountsCache.put(it, LibraryCountsCache.Counts(collectionsCount, readListsCount, genresCount))
                 libraryCountsRepository.put(
                     it,

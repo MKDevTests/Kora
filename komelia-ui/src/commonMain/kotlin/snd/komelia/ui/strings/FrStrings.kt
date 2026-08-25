@@ -876,6 +876,7 @@ val FrStrings = AppStrings(
         "rapidocrModel" to "Modèle RapidOCR",
         "rapidocrModels" to "Modèles RapidOCR",
         "rate" to "Noter",
+        "reAnalyseAllLibraries" to "Réanalyser toutes les bibliothèques",
         "reAnalyseLibrary" to "Réanalyser la bibliothèque",
         "reDownloadModel" to "Retélécharger le modèle",
         "reDownloadModels" to "Retélécharger les modèles",

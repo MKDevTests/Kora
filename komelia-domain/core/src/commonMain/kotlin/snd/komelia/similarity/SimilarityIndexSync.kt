@@ -6,9 +6,12 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.sse.KomgaEvent
@@ -27,9 +30,10 @@ private val logger = KotlinLogging.logger {}
  *
  * Three rules keep this from becoming a burst of traffic:
  *
- *  - **Only libraries that already have an index are followed.** Indexing a
- *    library the user never opened would be doing work nobody asked for, on
- *    someone else's connection.
+ *  - **Only libraries that already have an index are followed** by the event
+ *    path. Creating one from a change event would turn a single import into a
+ *    full library crawl. Libraries that have no index at all are handled once,
+ *    up front, by [bootstrapMissingIndexes].
  *  - **Events are batched.** A scan emits one event per series; reacting to
  *    each would mean hundreds of requests. Ids pile up for [QUIET_PERIOD] after
  *    the last one, then go out together.
@@ -65,6 +69,59 @@ class SimilarityIndexSync(
                     else -> {}
                 }
             }
+        }
+    }
+
+    /**
+     * Builds an index for every library that has none, once per app run.
+     *
+     * The index is what "Similar series", "For you" and the library genre
+     * count read from, and until now it only existed for a library the user
+     * had opened one of those tabs in. On this install that meant one library
+     * out of six: the other five silently had no suggestions at all, and their
+     * genre count fell back to downloading every tag of the library on each
+     * visit — measured between 127 ms and 1026 ms, per visit, forever.
+     *
+     * This deliberately reverses the older rule that an index should never be
+     * created unprompted. What made that rule right was the fear of a long
+     * crawl on someone else's server; the crawl was then measured, on the real
+     * one: **11 951 series across six libraries in 67 seconds**, because the
+     * builder pages 100 series per request. That is a one-off cost, and the
+     * event sync keeps them current afterwards, so nobody pays it twice.
+     *
+     * Sequential on purpose. [SimilarityIndexBuilder] already runs four page
+     * requests at a time inside one library; letting several libraries do that
+     * at once is exactly the unbounded burst the rest of this file avoids.
+     *
+     * A library that fails is simply left without an index and tried again on
+     * the next run — the alternative, remembering the failure, would make a
+     * transient network error permanent.
+     */
+    fun bootstrapMissingIndexes(libraries: StateFlow<List<KomgaLibrary>>) {
+        scope.launch {
+            // The list is empty until the server session is up; waiting for it
+            // also means never crawling while logged out.
+            val known = libraries.first { it.isNotEmpty() }
+
+            // Stay out of the way of the screen the user is actually looking
+            // at. Measured on this install, the home screen finishes its own
+            // network refresh within 6 s of launch and a library switch settles
+            // in about 2 s, so by 30 s nothing the user is waiting on is still
+            // in flight.
+            delay(BOOTSTRAP_DELAY_MILLIS)
+
+            val missing = known.filter { repository.stateOf(it.id.value) == null }
+            if (missing.isEmpty()) return@launch
+            logger.info { "Similarity index: building ${missing.size} missing librar(y/ies)" }
+            missing.forEach { library ->
+                currentCoroutineContext().ensureActive()
+                runCatching { builder.build(library.id) }
+                    .onFailure {
+                        currentCoroutineContext().ensureActive()
+                        logger.warn(it) { "Similarity index bootstrap failed for ${library.id.value}" }
+                    }
+            }
+            onIndexChanged()
         }
     }
 
@@ -153,5 +210,8 @@ class SimilarityIndexSync(
 
         /** Past this, paging the library costs fewer requests than one-by-one. */
         const val FULL_REBUILD_THRESHOLD = 50
+
+        /** Long enough for the first screen to have finished its own requests. */
+        const val BOOTSTRAP_DELAY_MILLIS = 30_000L
     }
 }
