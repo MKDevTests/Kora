@@ -757,6 +757,7 @@ class UiStrings(private val values: Map<String, String>) {
     val rapidocrModel: String get() = at("rapidocrModel")
     val rapidocrModels: String get() = at("rapidocrModels")
     val rate: String get() = at("rate")
+    val reAnalyseAllLibraries: String get() = at("reAnalyseAllLibraries")
     val reAnalyseLibrary: String get() = at("reAnalyseLibrary")
     val reDownloadModel: String get() = at("reDownloadModel")
     val reDownloadModels: String get() = at("reDownloadModels")

@@ -345,13 +345,20 @@ abstract class AppModule(
 
         // The term index used to be a snapshot: built once, then stale until
         // someone pressed "Re-analyse library". It now follows the server.
-        snd.komelia.similarity.SimilarityIndexSync(
+        val similarityIndexSync = snd.komelia.similarity.SimilarityIndexSync(
             events = komgaEvents.events,
             repository = appRepositories.similarityIndexRepository,
             builder = similarityIndexBuilder,
             scope = initScope,
             onIndexChanged = { snd.komelia.ui.suggestions.invalidateForYouCache() },
-        ).start()
+        )
+        similarityIndexSync.start()
+        // Libraries that have no index at all are not reachable by the event
+        // path above — it only follows what already exists. Without this, a
+        // library the user never opened a suggestions tab in stays unindexed
+        // for good, and its genre count keeps being fetched from the server on
+        // every visit.
+        similarityIndexSync.bootstrapMissingIndexes(komgaSharedState.libraries)
 
         val readerImageFactory = createReaderImageFactory(
             imageDecoder = imageDecoder,

@@ -864,6 +864,7 @@ val EnStrings = AppStrings(
         "rapidocrModel" to "RapidOCR Model",
         "rapidocrModels" to "RapidOCR Models",
         "rate" to "Rate",
+        "reAnalyseAllLibraries" to "Re-analyse all libraries",
         "reAnalyseLibrary" to "Re-analyse library",
         "reDownloadModel" to "Re-download Model",
         "reDownloadModels" to "Re-download Models",

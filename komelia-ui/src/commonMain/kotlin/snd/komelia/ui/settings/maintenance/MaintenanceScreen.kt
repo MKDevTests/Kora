@@ -90,7 +90,11 @@ class MaintenanceScreen : Screen {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            LocalStrings.current.ui.reAnalyseLibrary,
+                            // Not reAnalyseLibrary: that one belongs to the
+                            // Similar tab, which really does rebuild the one
+                            // library it is sitting in. This button loops over
+                            // every library and said otherwise.
+                            LocalStrings.current.ui.reAnalyseAllLibraries,
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
@@ -102,7 +106,7 @@ class MaintenanceScreen : Screen {
                     val progress = vm.reindexProgress
                     if (progress == null) {
                         TextButton(onClick = vm::reindexAllLibraries) {
-                            Text(LocalStrings.current.ui.reAnalyseLibrary)
+                            Text(LocalStrings.current.ui.reAnalyseAllLibraries)
                         }
                     } else {
                         Text(progress, style = MaterialTheme.typography.bodyMedium)
