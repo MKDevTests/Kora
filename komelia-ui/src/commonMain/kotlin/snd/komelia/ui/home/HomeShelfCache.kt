@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonElement
 import snd.komelia.ui.common.encodeNullReadingDirectionAsBlank
 import snd.komelia.ui.common.komgaCacheJson
 import snd.komelia.perf.PerfTrace
+import snd.komelia.ui.common.onDisk
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.SeriesHomeScreenFilter
@@ -63,21 +64,25 @@ object HomeShelfCache {
 
     /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun save(data: List<HomeFilterData>) {
-        runCatching {
-            cacheDir().createDirectories()
-            val shelves = data.map { d ->
-                when (d) {
-                    is SeriesFilterData -> PersistedShelf(shelfKey(d.filter), series = d.series)
-                    is BookFilterData -> PersistedShelf(shelfKey(d.filter), books = d.books)
-                }
+        PerfTrace.measure("home.cacheSave") {
+            onDisk {
+                runCatching {
+                    cacheDir().createDirectories()
+                    val shelves = data.map { d ->
+                        when (d) {
+                            is SeriesFilterData -> PersistedShelf(shelfKey(d.filter), series = d.series)
+                            is BookFilterData -> PersistedShelf(shelfKey(d.filter), books = d.books)
+                        }
+                    }
+                    // See encodeNullReadingDirectionAsBlank: a null readingDirection is
+                    // written by komga-client in a form it cannot read back.
+                    val tree = json.encodeToJsonElement(ListSerializer(PersistedShelf.serializer()), shelves)
+                        .encodeNullReadingDirectionAsBlank()
+                    val encoded = json.encodeToString(JsonElement.serializer(), tree)
+                    cacheFile().write(encoded.encodeToByteArray())
+                }.onFailure { logger.warn(it) { "Home shelf snapshot write failed; next cold start will hit the network" } }
             }
-            // See encodeNullReadingDirectionAsBlank: a null readingDirection is
-            // written by komga-client in a form it cannot read back.
-            val tree = json.encodeToJsonElement(ListSerializer(PersistedShelf.serializer()), shelves)
-                .encodeNullReadingDirectionAsBlank()
-            val encoded = json.encodeToString(JsonElement.serializer(), tree)
-            cacheFile().write(encoded.encodeToByteArray())
-        }.onFailure { logger.warn(it) { "Home shelf snapshot write failed; next cold start will hit the network" } }
+        }
     }
 
     /**

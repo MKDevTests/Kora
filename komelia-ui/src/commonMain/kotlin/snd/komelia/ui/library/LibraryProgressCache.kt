@@ -3,6 +3,7 @@ package snd.komelia.ui.library
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.createDirectories
+import snd.komelia.ui.common.onDisk
 import io.github.vinceglb.filekit.div
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.readBytes
@@ -132,11 +133,13 @@ object LibraryProgressCache {
     }
 
     private suspend fun write(snapshot: List<Entry>) {
-        runCatching {
-            cacheDir().createDirectories()
-            val encoded = json.encodeToString(ListSerializer(Entry.serializer()), snapshot)
-            cacheFile().write(encoded.encodeToByteArray())
-        }.onFailure { logger.warn(it) { "Collection progress memo write failed; the bars will be refetched" } }
+        onDisk {
+            runCatching {
+                cacheDir().createDirectories()
+                val encoded = json.encodeToString(ListSerializer(Entry.serializer()), snapshot)
+                cacheFile().write(encoded.encodeToByteArray())
+            }.onFailure { logger.warn(it) { "Collection progress memo write failed; the bars will be refetched" } }
+        }
     }
 
     @Serializable

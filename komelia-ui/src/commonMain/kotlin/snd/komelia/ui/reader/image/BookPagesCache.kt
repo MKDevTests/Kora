@@ -3,6 +3,7 @@ package snd.komelia.ui.reader.image
 import androidx.compose.ui.unit.IntSize
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.createDirectories
+import snd.komelia.ui.common.onDisk
 import io.github.vinceglb.filekit.div
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.readBytes
@@ -37,7 +38,7 @@ object BookPagesCache {
 
     /** Cached page list for this exact file version, or null. */
     suspend fun get(bookId: KomgaBookId, fileHash: String): List<PageMetadata>? {
-        memory[bookId.value]?.let { if (it.fileHash == fileHash) return it.pages else return null }
+        memory[bookId.value]?.let { return if (it.fileHash == fileHash) it.pages else null }
         val persisted = runCatching {
             json.decodeFromString(
                 PersistedPages.serializer(),
@@ -59,15 +60,17 @@ object BookPagesCache {
     /** Stores in memory and best-effort on disk. */
     suspend fun put(bookId: KomgaBookId, fileHash: String, pages: List<PageMetadata>) {
         memory[bookId.value] = Entry(fileHash, pages)
-        runCatching {
-            cacheDir().createDirectories()
-            val persisted = PersistedPages(
-                fileHash = fileHash,
-                pages = pages.map { PersistedPage(it.pageNumber, it.size?.width, it.size?.height) },
-            )
-            cacheFile(bookId.value).write(
-                json.encodeToString(PersistedPages.serializer(), persisted).encodeToByteArray()
-            )
+        onDisk {
+            runCatching {
+                cacheDir().createDirectories()
+                val persisted = PersistedPages(
+                    fileHash = fileHash,
+                    pages = pages.map { PersistedPage(it.pageNumber, it.size?.width, it.size?.height) },
+                )
+                cacheFile(bookId.value).write(
+                    json.encodeToString(PersistedPages.serializer(), persisted).encodeToByteArray()
+                )
+            }
         }
     }
 }
