@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import snd.komelia.homefilters.SeriesHomeScreenFilter
 import snd.komelia.ui.favorites.FavoritesScreen
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -219,7 +220,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                 fab.value = this@HomeScreen to {
                                     FloatingFAB(
                                         icon = Icons.Rounded.Edit,
-                                        onClick = { navigator.replaceAll(FilterEditScreen(vm.currentFilters.value)) },
+                                        onClick = { navigator.openFilterEditOnce(vm.currentFilters.value) },
                                         accentColor = accentColor,
                                     )
                                 }
@@ -250,7 +251,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     .padding(bottom = 16.dp + extraBottomPadding, end = 16.dp)
                             ) {
                                 FloatingActionButton(
-                                    onClick = { navigator.replaceAll(FilterEditScreen(vm.currentFilters.value)) },
+                                    onClick = { navigator.openFilterEditOnce(vm.currentFilters.value) },
                                     containerColor = accentColor ?: MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = if (accentColor != null) {
                                         if (accentColor.luminance() > 0.5f) Color.Black else Color.White
@@ -275,4 +276,18 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
             }
         }
     }
+}
+
+/**
+ * Opens the home-shelf editor, and does nothing if it is already open.
+ *
+ * The edit button lives in a global floating-action-button slot that
+ * HomeScreen only releases on dispose, i.e. after the transition. Until then
+ * the button is still on screen and still takes taps, so a double tap used to
+ * start the editor twice. [FilterEditScreen] now carries a unique key so that
+ * can no longer crash, but starting it twice is pointless work either way.
+ */
+private fun Navigator.openFilterEditOnce(filters: List<HomeFilterData>) {
+    if (lastItem is FilterEditScreen) return
+    replaceAll(FilterEditScreen(filters))
 }
