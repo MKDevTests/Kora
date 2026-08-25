@@ -6,6 +6,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.core.screen.ScreenKey
+import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
@@ -22,6 +24,29 @@ class FilterEditScreen(
     @Transient
     private val homeFilters: List<HomeFilterData>? = null
 ) : Screen {
+
+    /**
+     * Unique per instance, because two instances can legitimately be alive at
+     * the same time and Voyager's default key cannot tell them apart.
+     *
+     * The edit button is a floating action button hoisted out of HomeScreen
+     * into a global slot, and that slot is only cleared by HomeScreen's
+     * onDispose — which runs *after* the navigation transition. So the button
+     * stays on screen and stays clickable while the transition is running, and
+     * a second tap builds a second FilterEditScreen while the first is still
+     * composed. Both then land in the same SaveableStateProvider under the
+     * default key `snd.komelia.ui.home.edit.FilterEditScreen:screen`, and it
+     * throws "Key ... was used multiple times" — a hard crash, reported from
+     * the tablet on 2026-08-25 while re-enabling home shelves.
+     *
+     * The tap is also guarded at the source (see HomeScreen), but the guard is
+     * a race and this is not: no two instances can ever collide again.
+     *
+     * Every other Screen in the app overrides `key`; this one was the
+     * exception. Losing state restoration across process death costs nothing
+     * here — `homeFilters` is @Transient, so it was never restorable anyway.
+     */
+    override val key: ScreenKey = uniqueScreenKey
 
     @Composable
     override fun Content() {

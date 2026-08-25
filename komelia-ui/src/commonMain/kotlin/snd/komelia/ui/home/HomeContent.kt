@@ -57,6 +57,7 @@ import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.LocalUseNewLibraryUI
 import snd.komelia.ui.LocalUseNewLibraryUI2
+import snd.komelia.ui.common.traceLayout
 import snd.komelia.ui.common.cards.BookImageCard
 import snd.komelia.ui.common.components.AppFilterChipDefaults
 import snd.komelia.ui.common.cards.SeriesImageCard
@@ -313,9 +314,16 @@ private fun DisplayContent(
                 }
                 if (!isEmpty) {
                     item {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // Traced so a system trace can split the first frame's
+                        // one opaque draw slice into per-shelf work. Free, and
+                        // absent from the tree, when nothing is capturing.
+                        Column(
+                            modifier = Modifier.traceLayout("home.shelf"),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
                             SectionHeader(shelfLabel(data.filter.label, shelfStrings), onClick = { onShelfClick(data.filter) })
                             SectionRow(
+                                modifier = Modifier.traceLayout("home.shelfRow"),
                                 data = data,
                                 cardWidth = cardWidth,
                                 onSeriesClick = onSeriesClick,
@@ -426,6 +434,7 @@ private fun GridSectionHeader(label: String, onClick: () -> Unit) {
 
 @Composable
 private fun SectionRow(
+    modifier: Modifier = Modifier,
     data: HomeFilterData,
     cardWidth: Dp,
     onSeriesClick: (KomgaSeries) -> Unit,
@@ -437,6 +446,7 @@ private fun SectionRow(
     onSeriesSelect: ((KomgaSeries) -> Unit)? = null,
 ) {
     LazyRow(
+        modifier = modifier,
         contentPadding = PaddingValues(horizontal = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
@@ -448,7 +458,7 @@ private fun SectionRow(
                     onBookReadClick = { onBookReadClick(book, it) },
                     bookMenuActions = bookMenuActions,
                     showSeriesTitle = true,
-                    modifier = Modifier.width(cardWidth),
+                    modifier = Modifier.width(cardWidth).traceLayout("home.card"),
                 )
             }
 
@@ -463,7 +473,7 @@ private fun SectionRow(
                     isSelected = selectedSeries.any { it.id == series.id },
                     onSeriesSelect = onSeriesSelect?.let { { it(series) } },
                     seriesMenuActions = seriesMenuActions,
-                    modifier = Modifier.width(cardWidth),
+                    modifier = Modifier.width(cardWidth).traceLayout("home.card"),
                 )
             }
         }

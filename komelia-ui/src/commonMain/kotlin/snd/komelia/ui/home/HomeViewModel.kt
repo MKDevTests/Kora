@@ -405,6 +405,27 @@ class HomeViewModel(
             val shelfLimit = Semaphore(MAX_CONCURRENT_SHELVES)
             withForYou.mapIndexed { index, filter ->
                 screenModelScope.async {
+                    // A disabled shelf is never rendered (HomeScreen filters on
+                    // `enabled`), so fetching it buys nothing. Measured on the
+                    // tablet with one shelf enabled out of nine: eight
+                    // `home.shelf` traces, twenty items each — seven Komga
+                    // round-trips for shelves nobody can see, competing with
+                    // the one that is on screen.
+                    //
+                    // The slot still has to be filled, and that is the whole
+                    // subtlety: `currentFilters` seeds the shelf editor, and it
+                    // is built from the non-null slots. Leaving this one null
+                    // would delete the shelf from the editor and wipe it on the
+                    // next save — the trap the comment above `withForYou`
+                    // describes. So a disabled shelf keeps whatever it already
+                    // had (the disk snapshot, so re-enabling paints instantly)
+                    // and falls back to an empty shelf only when it has nothing.
+                    if (!filter.enabled) {
+                        publishLock.withLock {
+                            if (slots[index] == null) slots[index] = emptyShelf(filter)
+                        }
+                        return@async
+                    }
                     val data = shelfLimit.withPermit { fetchFilterData(filter, force) } ?: return@async
                     publishLock.withLock {
                         slots[index] = data
@@ -460,6 +481,18 @@ class HomeViewModel(
 
         currentFilters.value = data
         mutableState.value = LoadState.Success(Unit)
+    }
+
+    /**
+     * A placeholder for a shelf that is switched off: it keeps the filter
+     * visible to the shelf editor without a single request behind it.
+     *
+     * Empty, so the render-time filter would drop it anyway, and so
+     * [HomeShelfCache] never writes fabricated content over a real snapshot.
+     */
+    private fun emptyShelf(filter: HomeScreenFilter): HomeFilterData = when (filter) {
+        is SeriesHomeScreenFilter -> SeriesFilterData(emptyList(), filter)
+        is BooksHomeScreenFilter -> BookFilterData(emptyList(), filter)
     }
 
     private suspend fun fetchFilterData(filter: HomeScreenFilter, force: Boolean): HomeFilterData? {
