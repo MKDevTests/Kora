@@ -17,7 +17,7 @@ data class AppVersion(
 ) : Comparable<AppVersion> {
 
     companion object {
-        val current = AppVersion(1, 8, 3)
+        val current = AppVersion(1, 8, 4)
 
         fun fromString(value: String): AppVersion =
             fromStringOrNull(value) ?: error("Can't parse version number")
