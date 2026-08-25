@@ -22,6 +22,15 @@ import snd.komelia.perf.PerfSection
  * recomposing and applying card content. The framework's own `Compose:recompose`
  * spans show it, nested under these ones. Read the two together.
  *
+ * **Do not put this on a lazy item.** It returns fresh `layout`/`drawWithContent`
+ * lambdas on every call, so the Modifier it produces never compares equal to the
+ * previous one and the composable receiving it can never be skipped. Placed on
+ * the home cards it made all 20 of them recompose on a state change they were
+ * meant to ignore, and the resulting 59 ms looked exactly like an app defect —
+ * it was this file. Checking that the instrumentation left the total runtime
+ * alone (1934 ms against 1916 ms) did not catch it: it does not change how long
+ * the work takes, it changes what Compose skips. Trace containers, not items.
+ *
  * **Free when nothing is being traced.** With no capture running this returns
  * the receiver untouched — no layout node, no draw wrapper, no allocation.
  * That is not an optimisation, it is the condition for this being shippable at

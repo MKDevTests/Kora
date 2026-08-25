@@ -34,6 +34,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.time.TimeSource
 import snd.komelia.AppNotifications
+import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilterRepository
@@ -159,6 +160,10 @@ class HomeViewModel(
     suspend fun initialize() {
         if (state.value !is Uninitialized) return
 
+        // Marker, not a duration: the interesting number is how long the app
+        // spent getting here from launch, and only logcat's own timestamps can
+        // say that. Home paints nothing before this line runs.
+        logger.info { "KoraPerf home.initialize entered" }
         load()
         startKomgaEventListener()
 
@@ -346,7 +351,9 @@ class HomeViewModel(
             // Ensure a Favorites shelf is present so it shows up + is editable
             // (reorder/disable) like any other; the user can disable it but it is
             // re-added if missing. Once the editor saves, the persisted copy wins.
-            val persisted = filterRepository.getFilters().first()
+            val persisted = PerfTrace.measure("home.filters", { it.size }) {
+                filterRepository.getFilters().first()
+            }
             val withFavorites =
                 if (persisted.any { it is SeriesHomeScreenFilter.Favorites }) persisted
                 else listOf(
@@ -366,7 +373,7 @@ class HomeViewModel(
             // Every shelf costs a server round-trip and the awaitAll below waits on
             // the slowest, so without this a cold start stares at an empty screen
             // for the full duration (measured: 7.3s for 11 shelves).
-            if (!force) paintPersistedShelves(withForYou)
+            if (!force) PerfTrace.measure("home.cachePaint") { paintPersistedShelves(withForYou) }
             // Only spin when there was nothing to paint — otherwise the refresh
             // stays silent behind the snapshot instead of blanking it.
             if (state.value !is LoadState.Success) mutableState.value = LoadState.Loading
@@ -455,12 +462,38 @@ class HomeViewModel(
      * load right after is what reconciles everything.
      */
     private suspend fun paintPersistedShelves(filters: List<HomeScreenFilter>) {
-        if (state.value is LoadState.Success) return
-        val cached = HomeShelfCache.load() ?: return
+        if (state.value is LoadState.Success) {
+            logger.info { "home.cachePaint skipped: already loaded" }
+            return
+        }
+        val cached = HomeShelfCache.load()
+        if (cached == null) {
+            logger.info { "home.cachePaint skipped: no snapshot on disk" }
+            return
+        }
         val data = filters.mapNotNull { filter ->
             cached[HomeShelfCache.shelfKey(filter)]?.let { HomeShelfCache.toFilterData(it, filter) }
         }
-        if (data.isEmpty()) return
+        if (data.isEmpty()) {
+            // Which side of the mismatch is wrong matters, and only the two key
+            // lists say. A snapshot that loads fine but pairs with nothing is
+            // indistinguishable, from the outside, from a slow server: the
+            // screen just stays empty until the network answers.
+            logger.info {
+                "home.cachePaint skipped: 0 of ${filters.size} filters matched the snapshot; " +
+                    "filters=${filters.map { HomeShelfCache.shelfKey(it) }} snapshot=${cached.keys}"
+            }
+            return
+        }
+        // Item count, not just shelf count: nine shelves holding nothing would paint
+        // an empty Home and look exactly like a snapshot that never loaded.
+        val items = data.sumOf { d ->
+            when (d) {
+                is BookFilterData -> d.books.size
+                is SeriesFilterData -> d.series.size
+            }
+        }
+        logger.info { "home.cachePaint painting ${data.size} of ${filters.size} shelves from disk ($items items)" }
 
         // Seed the random-shelf cache with the picks we just painted. Without
         // this, the fresh load starting right after finds an empty (process-new)
