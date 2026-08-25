@@ -131,7 +131,17 @@ class SimilarityIndexSync(
             repository.putState(
                 previous.copy(
                     builtAt = Clock.System.now(),
-                    seriesCount = repository.entriesOf(libraryId.value).size,
+                    // A COUNT, not every row: this only ever needed the size.
+                    seriesCount = repository.countOf(libraryId.value),
+                    // Deliberately carried over rather than recomputed. An
+                    // incremental sync touches a handful of series, so the
+                    // genre count can only move when one of them introduces or
+                    // retires a slug the library had nowhere else — and the
+                    // cost of noticing is a full re-read of the index, which is
+                    // exactly what this field exists to avoid. The next full
+                    // build corrects it; being off by one genre in a chip in
+                    // the meantime changes nothing the user can see.
+                    genreCount = previous.genreCount,
                 )
             )
         }

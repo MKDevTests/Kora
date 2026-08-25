@@ -366,20 +366,45 @@ class LibraryViewModel(
     /**
      * How many genres the library holds.
      *
-     * Read from the local term index when it exists: the index already stores
-     * each series' `kora:genre:*` terms, so this is a SQLite read instead of
-     * downloading every tag of the library — 3482 of them on the manga one, to
-     * end up with a number under thirty. The server is asked only when the
-     * library was never indexed.
+     * Three sources, cheapest first.
+     *
+     * The stored count (V100) is one indexed row: the index builder computes it
+     * while it already holds every term in memory. Before that column existed
+     * this method read EVERY indexed series of the library and JSON-decoded its
+     * term blob — thousands of decodes to produce a number under thirty, and
+     * 775 ms of it measured on the manga library, paid again on every library
+     * switch. It never showed up as a freeze because the chips are painted from
+     * [LibraryCountsCache] first; it was simply thrown-away work, and the
+     * allocation churn is not free on a tablet this app has already been
+     * memory-killed on.
+     *
+     * The full index read stays as the fallback for a library indexed by an
+     * older build, and its result is written back so it happens once.
+     *
+     * The server is asked only when the library was never indexed at all —
+     * there it downloads every tag of the library, 3482 of them on the manga
+     * one.
      */
     private suspend fun countGenres(): Int {
         val key = libraryId?.value
         if (key != null) {
+            val stored = snd.komelia.perf.PerfTrace.measure(
+                label = "library.counts.genres.stored",
+                // 1 = the fast path held, 0 = it fell through to the index.
+                count = { it: Int? -> if (it == null) 0 else 1 },
+            ) {
+                similarityIndexRepository.stateOf(key)?.genreCount
+            }
+            if (stored != null) return stored
+
             val indexed = snd.komelia.perf.PerfTrace.measure("library.counts.genres.local") {
                 similarityIndexRepository.entriesOf(key)
             }
             if (indexed.isNotEmpty()) {
-                return indexed.flatMap { it.terms.genres }.distinct().size
+                val counted = indexed.flatMapTo(HashSet()) { it.terms.genres }.size
+                // So this library pays the full read once, not every visit.
+                similarityIndexRepository.putGenreCount(key, counted)
+                return counted
             }
         }
         return snd.komelia.perf.PerfTrace.measure(

@@ -5,7 +5,9 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchUpsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.JsonDbDefault
@@ -65,6 +67,21 @@ class ExposedSimilarityIndexRepository(
         }
     }
 
+    override suspend fun seriesIdsOf(libraryId: String): List<String> = transaction {
+        SeriesSimilarityIndexTable
+            .select(SeriesSimilarityIndexTable.seriesId)
+            .where { SeriesSimilarityIndexTable.libraryId eq libraryId }
+            .map { it[SeriesSimilarityIndexTable.seriesId] }
+    }
+
+    override suspend fun countOf(libraryId: String): Int = transaction {
+        SeriesSimilarityIndexTable
+            .select(SeriesSimilarityIndexTable.seriesId)
+            .where { SeriesSimilarityIndexTable.libraryId eq libraryId }
+            .count()
+            .toInt()
+    }
+
     override suspend fun upsertAll(entries: List<SimilarityIndexEntry>) {
         if (entries.isEmpty()) return
         // Epoch millis rather than ISO text, like the other local timestamps here:
@@ -112,6 +129,7 @@ class ExposedSimilarityIndexRepository(
                             .toLongOrNull()
                             ?.let { Instant.fromEpochMilliseconds(it) },
                         seriesCount = row[SeriesSimilarityIndexStateTable.seriesCount],
+                        genreCount = row[SeriesSimilarityIndexStateTable.genreCount],
                     )
                 }
         }
@@ -124,6 +142,17 @@ class ExposedSimilarityIndexRepository(
                 it[SeriesSimilarityIndexStateTable.builtAt] =
                     state.builtAt?.toEpochMilliseconds()?.toString() ?: ""
                 it[SeriesSimilarityIndexStateTable.seriesCount] = state.seriesCount
+                it[SeriesSimilarityIndexStateTable.genreCount] = state.genreCount
+            }
+        }
+    }
+
+    override suspend fun putGenreCount(libraryId: String, count: Int) {
+        transaction {
+            SeriesSimilarityIndexStateTable.update(
+                where = { SeriesSimilarityIndexStateTable.libraryId eq libraryId }
+            ) {
+                it[SeriesSimilarityIndexStateTable.genreCount] = count
             }
         }
     }

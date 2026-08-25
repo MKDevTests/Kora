@@ -24,6 +24,12 @@ data class SimilarityIndexState(
     val libraryId: String,
     val builtAt: Instant?,
     val seriesCount: Int,
+    /**
+     * Distinct genre slugs of the library, or null when no build has recorded
+     * one yet (V100). Null is not zero: a library really holding no genre must
+     * not be re-counted the slow way on every visit.
+     */
+    val genreCount: Int? = null,
 )
 
 /**
@@ -41,6 +47,18 @@ interface SimilarityIndexRepository {
     /** Every indexed series of [libraryId]. The scorer's whole input. */
     suspend fun entriesOf(libraryId: String): List<SimilarityIndexEntry>
 
+    /**
+     * Ids only, for callers that compare membership rather than read terms.
+     *
+     * [entriesOf] JSON-decodes one term blob per series; a sweep that just
+     * wants to know which ids are on disk was paying thousands of decodes for
+     * nothing.
+     */
+    suspend fun seriesIdsOf(libraryId: String): List<String>
+
+    /** How many series [libraryId] has indexed, without loading any of them. */
+    suspend fun countOf(libraryId: String): Int
+
     /** One series, by id — a primary-key read, unlike [entriesOf]. */
     suspend fun entryOf(seriesId: String): SimilarityIndexEntry?
 
@@ -56,6 +74,16 @@ interface SimilarityIndexRepository {
     suspend fun stateOf(libraryId: String): SimilarityIndexState?
 
     suspend fun putState(state: SimilarityIndexState)
+
+    /**
+     * Records [count] as the library's genre count without touching the rest
+     * of its state. Used to fill in the blank left by an index built before
+     * V100, so the expensive count happens once instead of on every visit.
+     *
+     * A no-op when the library has no state row: there is nothing to describe
+     * yet, and the next build will write the count itself.
+     */
+    suspend fun putGenreCount(libraryId: String, count: Int)
 }
 
 /** Index rows as the engine consumes them. */

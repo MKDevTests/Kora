@@ -30,5 +30,16 @@ object SeriesSimilarityIndexStateTable : Table("SeriesSimilarityIndexState") {
     val builtAt = text("built_at")
     val seriesCount = integer("series_count")
 
+    /**
+     * Distinct `kora:genre:*` slugs of the library (V100), computed by the
+     * builder while it already holds every term in memory.
+     *
+     * Nullable on purpose: NULL is "no build has recorded it yet", which is a
+     * different thing from a library that really has no genre. Reading it as 0
+     * would send every genre-less library back to decoding its whole index on
+     * each library switch — the 775 ms this column exists to remove.
+     */
+    val genreCount = integer("genre_count").nullable()
+
     override val primaryKey = PrimaryKey(libraryId)
 }
