@@ -37,6 +37,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import snd.komelia.ui.common.encodeNullReadingDirectionAsBlank
 import snd.komelia.ui.common.komgaCacheJson
+import snd.komelia.ui.common.onDisk
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaBookApi
@@ -148,22 +149,24 @@ private object LibrarySeriesPageCache {
 
     /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun persist(key: String, snapshot: Snapshot) {
-        runCatching {
-            cacheDir().createDirectories()
-            val p = PersistedGrid(
-                series = snapshot.series,
-                downloadedSeriesIds = snapshot.downloadedSeriesIds.map { it.value },
-                totalSeriesPages = snapshot.totalSeriesPages,
-                totalSeriesCount = snapshot.totalSeriesCount,
-                filterSignature = snapshot.filterSignature,
-            )
-            // See encodeNullReadingDirectionAsBlank: a null readingDirection is
-            // written by komga-client in a form it cannot read back.
-            val tree = gridJson.encodeToJsonElement(PersistedGrid.serializer(), p)
-                .encodeNullReadingDirectionAsBlank()
-            val encoded = gridJson.encodeToString(JsonElement.serializer(), tree)
-            cacheFile(key).write(encoded.encodeToByteArray())
-        }.onFailure { logger.warn(it) { "Library grid snapshot write failed for $key; next cold start will hit the network" } }
+        onDisk {
+            runCatching {
+                cacheDir().createDirectories()
+                val p = PersistedGrid(
+                    series = snapshot.series,
+                    downloadedSeriesIds = snapshot.downloadedSeriesIds.map { it.value },
+                    totalSeriesPages = snapshot.totalSeriesPages,
+                    totalSeriesCount = snapshot.totalSeriesCount,
+                    filterSignature = snapshot.filterSignature,
+                )
+                // See encodeNullReadingDirectionAsBlank: a null readingDirection is
+                // written by komga-client in a form it cannot read back.
+                val tree = gridJson.encodeToJsonElement(PersistedGrid.serializer(), p)
+                    .encodeNullReadingDirectionAsBlank()
+                val encoded = gridJson.encodeToString(JsonElement.serializer(), tree)
+                cacheFile(key).write(encoded.encodeToByteArray())
+            }.onFailure { logger.warn(it) { "Library grid snapshot write failed for $key; next cold start will hit the network" } }
+        }
     }
 }
 

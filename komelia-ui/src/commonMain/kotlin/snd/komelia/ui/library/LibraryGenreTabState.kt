@@ -22,6 +22,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.createDirectories
+import snd.komelia.ui.common.onDisk
 import io.github.vinceglb.filekit.div
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
@@ -376,15 +377,17 @@ class LibraryGenreTabState(
         }
     }
 
-    private suspend fun saveCoverBytes(key: String, bytes: ByteArray): String? = runCatching {
-        val safe = key.replace(Regex("[^A-Za-z0-9_-]"), "_")
-        val dir = FileKit.filesDir / "genre_covers"
-        dir.createDirectories()
-        // Hash in the filename so a new image gets a new path (fresh Coil cache key).
-        val dest = dir / "${safe}_${bytes.contentHashCode()}.img"
-        dest.write(bytes)
-        dest.path
-    }.getOrNull()
+    private suspend fun saveCoverBytes(key: String, bytes: ByteArray): String? = onDisk {
+        runCatching {
+            val safe = key.replace(Regex("[^A-Za-z0-9_-]"), "_")
+            val dir = FileKit.filesDir / "genre_covers"
+            dir.createDirectories()
+            // Hash in the filename so a new image gets a new path (fresh Coil cache key).
+            val dest = dir / "${safe}_${bytes.contentHashCode()}.img"
+            dest.write(bytes)
+            dest.path
+        }.getOrNull()
+    }
 
     fun setLabel(slug: String, label: String) {
         screenModelScope.launch {
@@ -442,14 +445,16 @@ class LibraryGenreTabState(
 
     /** Persist the resolved catalog so it survives a process restart. */
     private suspend fun persistCatalog(libraryKey: String, tiles: List<GenreTile>) {
-        runCatching {
-            (FileKit.filesDir / "genre_catalog").createDirectories()
-            val snapshots = tiles.map {
-                GenreTileSnapshot(it.tag, it.slug, it.label, it.count, it.coverSeriesId?.value, it.coverLocalPath)
+        onDisk {
+            runCatching {
+                (FileKit.filesDir / "genre_catalog").createDirectories()
+                val snapshots = tiles.map {
+                    GenreTileSnapshot(it.tag, it.slug, it.label, it.count, it.coverSeriesId?.value, it.coverLocalPath)
+                }
+                catalogFile(libraryKey).write(
+                    Json.encodeToString(ListSerializer(GenreTileSnapshot.serializer()), snapshots).encodeToByteArray()
+                )
             }
-            catalogFile(libraryKey).write(
-                Json.encodeToString(ListSerializer(GenreTileSnapshot.serializer()), snapshots).encodeToByteArray()
-            )
         }
     }
 
