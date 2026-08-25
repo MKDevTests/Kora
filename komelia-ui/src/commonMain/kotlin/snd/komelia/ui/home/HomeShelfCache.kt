@@ -12,6 +12,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonElement
 import snd.komelia.ui.common.encodeNullReadingDirectionAsBlank
 import snd.komelia.ui.common.komgaCacheJson
+import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.SeriesHomeScreenFilter
@@ -52,11 +53,13 @@ object HomeShelfCache {
      * A miss is never fatal, but it MUST be visible: a silently disabled cache is
      * indistinguishable from a slow server.
      */
-    suspend fun load(): Map<String, PersistedShelf>? = runCatching {
-        val bytes = cacheFile().readBytes()
-        json.decodeFromString(ListSerializer(PersistedShelf.serializer()), bytes.decodeToString())
-            .associateBy { it.key }
-    }.onFailure { logger.warn(it) { "Home shelf snapshot unreadable; falling back to a network load" } }.getOrNull()
+    suspend fun load(): Map<String, PersistedShelf>? = PerfTrace.measure("home.cacheLoad", { it?.size }) {
+        runCatching {
+            val bytes = cacheFile().readBytes()
+            json.decodeFromString(ListSerializer(PersistedShelf.serializer()), bytes.decodeToString())
+                .associateBy { it.key }
+        }.onFailure { logger.warn(it) { "Home shelf snapshot unreadable; falling back to a network load" } }.getOrNull()
+    }
 
     /** Best-effort write — logged loudly, because a silent failure costs every cold start. */
     suspend fun save(data: List<HomeFilterData>) {

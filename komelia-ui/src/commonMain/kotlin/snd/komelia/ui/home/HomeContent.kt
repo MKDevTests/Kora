@@ -458,7 +458,7 @@ private fun SectionRow(
                     onBookReadClick = { onBookReadClick(book, it) },
                     bookMenuActions = bookMenuActions,
                     showSeriesTitle = true,
-                    modifier = Modifier.width(cardWidth).traceLayout("home.card"),
+                    modifier = Modifier.width(cardWidth),
                 )
             }
 
@@ -473,7 +473,7 @@ private fun SectionRow(
                     isSelected = selectedSeries.any { it.id == series.id },
                     onSeriesSelect = onSeriesSelect?.let { { it(series) } },
                     seriesMenuActions = seriesMenuActions,
-                    modifier = Modifier.width(cardWidth).traceLayout("home.card"),
+                    modifier = Modifier.width(cardWidth),
                 )
             }
         }

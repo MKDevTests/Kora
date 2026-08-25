@@ -334,20 +334,25 @@ fun CardTextBackground(modifier: Modifier = Modifier) {
     }
 }
 
+// Hoisted out of composition. Both brushes are constant — their colors come from
+// nothing but literals — yet they were rebuilt on every card composition, so a home
+// screen showing 20 cards allocated 40 gradients per pass for nothing.
+//
+// Worth knowing what this bought: 1.5 ms out of the 704 ms those 20 cards cost on a
+// cold start, measured with a system trace. It is kept because it is free and
+// correct, not because it made anything faster. The card's real cost is node
+// insertion and measurement, and no micro-fix inside the card moves that.
+private val topGradientBrush = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent))
+private val bottomGradientBrush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))
+
 @Composable
 fun CardTopGradient() {
-    Box(
-        Modifier.fillMaxWidth().height(40.dp)
-            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent)))
-    )
+    Box(Modifier.fillMaxWidth().height(40.dp).background(topGradientBrush))
 }
 
 @Composable
 fun CardBottomGradient(modifier: Modifier = Modifier) {
-    Box(
-        modifier.fillMaxWidth().height(80.dp)
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))))
-    )
+    Box(modifier.fillMaxWidth().height(80.dp).background(bottomGradientBrush))
 }
 
 @Composable
