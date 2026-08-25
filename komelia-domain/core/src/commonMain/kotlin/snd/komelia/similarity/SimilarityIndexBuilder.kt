@@ -99,8 +99,9 @@ class SimilarityIndexBuilder(
         // Series deleted on the server (or moved to another library) would
         // otherwise linger and keep being suggested.
         val indexed = entries.mapTo(HashSet(entries.size)) { it.seriesId }
-        val stale = repository.entriesOf(libraryId.value)
-            .map { it.seriesId }
+        // Ids, not entries: this compares membership and never looks at a term,
+        // so decoding one JSON blob per indexed series was pure waste.
+        val stale = repository.seriesIdsOf(libraryId.value)
             .filterNot { it in indexed }
         repository.deleteSeries(stale)
 
@@ -108,6 +109,10 @@ class SimilarityIndexBuilder(
             libraryId = libraryId.value,
             builtAt = Clock.System.now(),
             seriesCount = entries.size,
+            // Free here — every term is already in memory — and it saves the
+            // library chips from re-reading the whole index to find this one
+            // number on each library switch.
+            genreCount = entries.flatMapTo(HashSet()) { it.terms.genres }.size,
         )
         repository.putState(state)
         logger.info { "Similarity index built for ${libraryId.value}: ${entries.size} series, ${stale.size} dropped" }
