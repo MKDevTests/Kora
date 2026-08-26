@@ -122,6 +122,7 @@ import snd.komelia.ui.book.bookScreen
 import snd.komelia.ui.reader.readerScreen
 import snd.komelia.ui.common.cards.BookImageCard
 import snd.komelia.ui.common.menus.BookMenuActions
+import snd.komelia.ui.series.activeFilters
 import snd.komelia.ui.series.list.SeriesListContent
 import snd.komelia.ui.series.seriesScreen
 import snd.komelia.komga.api.model.KomeliaBook
@@ -246,7 +247,14 @@ class LibraryScreen(
                         )
                     }
 
-                    val showContinueReading = vm.showContinueReading.collectAsState().value
+                    // "Continue reading" ignores the filter — it is the library's
+                    // in-progress books, whole. On a screen opened from an author
+                    // chip that reads as a contradiction: the grid holds the one
+                    // series by that author, and right above it sits a shelf of
+                    // unrelated books. Hiding the chip as well as the row, so the
+                    // toggle does not offer to bring the contradiction back.
+                    val showContinueReading =
+                        seriesFilter == null && vm.showContinueReading.collectAsState().value
                     val newUI2BeforeContent = @Composable {
                         val gridPadding = if (useNewUI2) 10.dp else 20.dp
                         val density = LocalDensity.current
@@ -282,6 +290,7 @@ class LibraryScreen(
                                     readListsCount = vm.readListsCount,
                                     genresCount = vm.genresCount,
                                     showContinueReading = showContinueReading,
+                                    showReadingChip = seriesFilter == null,
                                     onReadingClick = vm::toggleContinueReading,
                                     onBrowseClick = vm::toBrowseTab,
                                     onCollectionsClick = vm::toCollectionsTab,
@@ -432,10 +441,20 @@ class LibraryScreen(
             onDispose { seriesTabState.stopKomgaEventHandler() }
         }
 
-        val currentLetter = seriesTabState.filterState.state.collectAsState().value.letterFilter
+        val currentFilter = seriesTabState.filterState.state.collectAsState().value
+        val currentLetter = currentFilter.letterFilter
+        val activeFilters = currentFilter.activeFilters()
         val combinedBeforeContent: @Composable () -> Unit = {
             Column {
                 beforeContent()
+                // Above the letters rather than below: these say what the grid
+                // already is, the letters offer to narrow it further.
+                ActiveFilterChipsRow(
+                    filters = activeFilters,
+                    onRemove = seriesTabState.filterState::remove,
+                    onClearAll = seriesTabState.filterState::reset,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                )
                 LetterFilterBar(
                     selected = currentLetter,
                     onLetterClick = seriesTabState.filterState::onLetterFilterChange,
@@ -790,6 +809,9 @@ private fun LibraryTabChips(
     readListsCount: Int,
     genresCount: Int = 0,
     showContinueReading: Boolean,
+    // False on a chip-scoped library, where the shelf this toggles is not
+    // filtered and would contradict the grid below it.
+    showReadingChip: Boolean = true,
     onReadingClick: () -> Unit,
     onBrowseClick: () -> Unit,
     onCollectionsClick: () -> Unit,
@@ -868,15 +890,17 @@ private fun LibraryTabChips(
             }
         }
 
-        item {
-            FilterChip(
-                selected = showContinueReading,
-                onClick = onReadingClick,
-                label = { Text(LocalStrings.current.ui.reading) },
-                colors = chipColors,
-                shape = AppFilterChipDefaults.shape(),
-                border = AppFilterChipDefaults.filterChipBorder(showContinueReading),
-            )
+        if (showReadingChip) {
+            item {
+                FilterChip(
+                    selected = showContinueReading,
+                    onClick = onReadingClick,
+                    label = { Text(LocalStrings.current.ui.reading) },
+                    colors = chipColors,
+                    shape = AppFilterChipDefaults.shape(),
+                    border = AppFilterChipDefaults.filterChipBorder(showContinueReading),
+                )
+            }
         }
 
         if (currentTab == SERIES) {
