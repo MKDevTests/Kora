@@ -18,6 +18,9 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.until
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlinx.serialization.json.Json
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
@@ -311,6 +314,19 @@ class SeriesFilterState(
     private val optionsLock = Mutex()
 
     /**
+     * True while the six referential lookups are in flight.
+     *
+     * The panel draws its dropdowns whether or not their options have arrived,
+     * so without this an unfinished load looks exactly like a filter that has
+     * been removed. Measured on a genre drill-down: the lookups sat 7.5 to
+     * 7.9 s in the connection queue behind the genre's own grid query (which
+     * the server took 14 s to answer), and for all that time Language,
+     * Publisher, Authors, Release date and Age rating opened onto nothing.
+     */
+    var optionsLoading by mutableStateOf(false)
+        private set
+
+    /**
      * Fills the dropdowns of the filter panel. Six referential lookups, ~4 s of
      * server on a real library, and every one of them is only ever read by the
      * panel — so this is called by [SeriesFilterContent] when the panel first
@@ -329,6 +345,17 @@ class SeriesFilterState(
             optionsLoaded = true
             optionsLoadedFor = libraryId
         }
+
+        // Every screen used to pay these six lookups from scratch, including
+        // one opened on a library whose panel had just loaded them. Sharing
+        // them across screens is what makes a genre drill-down's panel usable
+        // immediately instead of after the server has worked through the queue.
+        ReferentialOptionsCache.get(libraryId)?.let { cached ->
+            apply(cached)
+            return
+        }
+
+        optionsLoading = true
         appNotifications.runCatchingToNotifications {
             val libraryIds = libraryId?.let { listOf(it) }.orEmpty()
             // Independent referential lookups — fetch them concurrently instead
@@ -352,11 +379,32 @@ class SeriesFilterState(
                 ageRatingsOptions = ageRatings.await()
                 publishersOptions = publishers.await()
                 languagesOptions = languages.await()
+                ReferentialOptionsCache.put(
+                    libraryId,
+                    ReferentialOptions(
+                        genres = genresOptions,
+                        tags = tagOptions,
+                        releaseDates = releaseDateOptions,
+                        ageRatings = ageRatingsOptions,
+                        publishers = publishersOptions,
+                        languages = languagesOptions,
+                    ),
+                )
             }
         }.onFailure {
             // Let the next open retry instead of leaving the panel empty forever.
             optionsLoaded = false
         }
+        optionsLoading = false
+    }
+
+    private fun apply(options: ReferentialOptions) {
+        genresOptions = options.genres
+        tagOptions = options.tags
+        releaseDateOptions = options.releaseDates
+        ageRatingsOptions = options.ageRatings
+        publishersOptions = options.publishers
+        languagesOptions = options.languages
     }
 
     fun applyFilter(filter: SeriesScreenFilter) {
@@ -741,5 +789,56 @@ class SeriesFilterState(
 
     enum class TagExclusionMode : ScreenSerializable {
         EXCLUDE_IF_ANY_MATCH, EXCLUDE_IF_ALL_MATCH
+    }
+}
+
+/** The six referential lists a filter panel offers, for one library. */
+internal data class ReferentialOptions(
+    val genres: List<String>,
+    val tags: List<String>,
+    val releaseDates: List<String>,
+    val ageRatings: List<String>,
+    val publishers: List<String>,
+    val languages: List<String>,
+)
+
+/**
+ * Referential lists shared by every filter panel of the same library.
+ *
+ * These six lookups cost about 450 ms of server each and describe the library,
+ * not the screen — the library tab, a genre drill-down and the all-libraries
+ * view asking the same server for the same answers was pure repetition. Worse,
+ * they are not on the critical path, so they queue behind whatever grid the
+ * screen is loading: measured at 7.5-7.9 s of queue on a genre whose own query
+ * took the server 14 s, with every dropdown empty until they landed.
+ *
+ * Entries expire after [TTL] rather than living for the process. The library
+ * genuinely changes — a scan adds a publisher, a language — and a filter that
+ * cannot offer a value that exists is a bug the user cannot work around
+ * without restarting the app. Ten minutes keeps a browsing session free while
+ * bounding how stale the lists can get.
+ */
+private object ReferentialOptionsCache {
+    private val TTL = 10.minutes
+    private const val ALL_LIBRARIES = "__all__"
+
+    private data class Entry(val options: ReferentialOptions, val storedAt: TimeMark)
+
+    private val byLibrary = mutableMapOf<String, Entry>()
+    private val lock = Mutex()
+
+    suspend fun get(libraryId: KomgaLibraryId?): ReferentialOptions? = lock.withLock {
+        val key = libraryId?.value ?: ALL_LIBRARIES
+        val entry = byLibrary[key] ?: return null
+        if (entry.storedAt.elapsedNow() > TTL) {
+            byLibrary.remove(key)
+            return null
+        }
+        entry.options
+    }
+
+    suspend fun put(libraryId: KomgaLibraryId?, options: ReferentialOptions) = lock.withLock {
+        byLibrary[libraryId?.value ?: ALL_LIBRARIES] =
+            Entry(options, TimeSource.Monotonic.markNow())
     }
 }

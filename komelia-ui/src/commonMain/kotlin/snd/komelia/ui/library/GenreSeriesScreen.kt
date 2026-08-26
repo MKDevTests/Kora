@@ -117,6 +117,10 @@ class GenreSeriesScreen(
                     selectedSeries = vm.selectedSeries,
                     onSeriesSelect = vm::onSeriesSelect,
                     filterState = vm.filterState,
+                    // Never passed here, so the panel silently lost its
+                    // chapter-series checkbox on this screen alone.
+                    chapterSeriesFilter = vm.chapterSeriesFilter,
+                    onChapterSeriesFilterCycle = vm::onChapterSeriesFilterCycle,
                     currentPage = vm.currentSeriesPage,
                     totalPages = vm.totalSeriesPages,
                     pageSize = vm.pageLoadSize.collectAsState().value,
