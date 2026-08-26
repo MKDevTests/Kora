@@ -110,6 +110,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V98__rapid_ocr_v6_1_url.sql",
         "V99__translation_glossary.sql",
         "V100__similarity_genre_count.sql",
+        "V101__saved_series_filters.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

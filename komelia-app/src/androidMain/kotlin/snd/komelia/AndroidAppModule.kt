@@ -268,6 +268,7 @@ class AndroidAppModule(
                 )
             },
             librarySeriesFiltersRepository = snd.komelia.db.libraryfilters.ExposedLibrarySeriesFiltersRepository(databases.app),
+            savedSeriesFilterRepository = snd.komelia.db.savedfilters.ExposedSavedSeriesFilterRepository(databases.app),
             transcriptionSettingsRepository = ExposedTranscriptionSettingsRepository(databases.app).let { repository ->
                 TranscriptionSettingsRepositoryWrapper(
                     SettingsStateWrapper(
@@ -567,6 +568,7 @@ class AndroidAppModule(
             transcription = (repositories.transcriptionSettingsRepository as TranscriptionSettingsRepositoryWrapper).wrapper,
             homeFilters = (repositories.homeScreenFilterRepository as HomeScreenFilterRepositoryWrapper).wrapper,
             librarySeriesFilters = repositories.librarySeriesFiltersRepository,
+            savedSeriesFilters = repositories.savedSeriesFilterRepository,
             seriesReaderOverrides = repositories.seriesReaderOverridesRepository,
             seriesRatings = repositories.seriesRatingsRepository,
             readingEvents = repositories.readingEventsRepository,

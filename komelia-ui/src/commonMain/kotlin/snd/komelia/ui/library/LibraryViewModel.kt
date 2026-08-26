@@ -120,6 +120,7 @@ class LibraryViewModel(
     private val libraryId: KomgaLibraryId?,
     private val settingsRepository: CommonSettingsRepository,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
+    private val savedSeriesFilterRepository: snd.komelia.savedfilters.SavedSeriesFilterRepository,
     private val similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     private val libraryCountsRepository: snd.komelia.library.LibraryCountsRepository,
     private val keepReadingRepository: snd.komelia.library.KeepReadingRepository,
@@ -163,6 +164,7 @@ class LibraryViewModel(
         libraryId = libraryId,
         taskEmitter = taskEmitter,
         librarySeriesFiltersRepository = librarySeriesFiltersRepository,
+        savedSeriesFilterRepository = savedSeriesFilterRepository,
         seriesRatingsRepository = seriesRatingsRepository,
     )
     val collectionsTabState = LibraryCollectionsTabState(

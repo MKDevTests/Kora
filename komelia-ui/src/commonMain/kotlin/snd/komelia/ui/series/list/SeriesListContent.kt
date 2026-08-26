@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.FilterListOff
+import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -71,6 +72,7 @@ import snd.komelia.ui.platform.WindowSizeClass.MEDIUM
 import snd.komelia.ui.platform.cursorForHand
 import snd.komelia.ui.series.SeriesFilterState
 import snd.komelia.ui.LocalTransparentNavBarPadding
+import snd.komelia.ui.series.view.SaveSearchDialog
 import snd.komelia.ui.series.view.SeriesFilterContent
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
@@ -105,6 +107,7 @@ fun SeriesListContent(
     val useNewLibraryUI = LocalUseNewLibraryUI.current
     val strings = LocalStrings.current.seriesFilter
     var showFilters by remember { mutableStateOf(false) }
+    var showSaveSearchDialog by remember { mutableStateOf(false) }
     val accentColor = LocalAccentColor.current
     val fabContainerColor = accentColor ?: MaterialTheme.colorScheme.primaryContainer
     val fabContentColor = if (accentColor != null) {
@@ -148,6 +151,10 @@ fun SeriesListContent(
             }
         }
 
+        if (filterState != null && showSaveSearchDialog) {
+            SaveSearchDialog(filterState, onDismissRequest = { showSaveSearchDialog = false })
+        }
+
         // Filter bottom sheet
         if (filterState != null && showFilters) {
             ModalBottomSheet(
@@ -176,6 +183,19 @@ fun SeriesListContent(
                         .windowInsetsPadding(WindowInsets.navigationBars),
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
                 ) {
+                    // Only offered once the filter says something. Saving the
+                    // default filter would create an entry that changes nothing
+                    // when applied, and the genre drill-down cannot save at all
+                    // — the genre it is scoped to lives outside the filter, so
+                    // the entry would come back missing what its name promised.
+                    if (filterState.savingEnabled && filterState.isChanged) {
+                        ExtendedFloatingActionButton(
+                            onClick = { showSaveSearchDialog = true },
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            icon = { Icon(Icons.Rounded.BookmarkBorder, null) },
+                            text = { Text(LocalStrings.current.ui.saveSearch) },
+                        )
+                    }
                     ExtendedFloatingActionButton(
                         onClick = filterState::reset,
                         containerColor = if (filterState.isChanged)

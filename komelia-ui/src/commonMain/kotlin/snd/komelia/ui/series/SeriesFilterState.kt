@@ -17,9 +17,14 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.until
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.serialization.json.Json
 import snd.komelia.AppNotifications
 import snd.komelia.hidden.HIDDEN_TAG
 import snd.komelia.komga.api.KomgaReferentialApi
+import snd.komelia.savedfilters.SavedSeriesFilter
+import snd.komelia.savedfilters.SavedSeriesFilterRepository
+import snd.komelia.ui.library.SeriesFilterDto
 import snd.komelia.ui.library.LibrarySeriesTabState.SeriesSort
 import snd.komelia.ui.library.SeriesScreenFilter
 import snd.komelia.ui.platform.ScreenSerializable
@@ -35,6 +40,8 @@ import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.search.KomgaSearchCondition
 import snd.komga.client.search.SeriesConditionBuilder
 import snd.komga.client.series.KomgaSeriesStatus
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * One criterion currently narrowing a series list, in the form the chips row
@@ -258,6 +265,24 @@ class SeriesFilterState(
     private val library: StateFlow<KomgaLibrary?>,
     private val referentialApi: KomgaReferentialApi,
     private val appNotifications: AppNotifications,
+    private val savedFilterRepository: SavedSeriesFilterRepository? = null,
+    /**
+     * Bucket the named searches belong to: the library's id, or
+     * [SavedSeriesFilterRepository.ALL_LIBRARIES_KEY] for the library-less view.
+     *
+     * Taken from the screen rather than read off [library] because that flow
+     * starts null and fills in later — a save landing in the wrong bucket
+     * because the library had not arrived yet would be invisible until the
+     * user wondered where their search went.
+     */
+    private val savedFilterLibraryKey: String? = null,
+    /**
+     * False on the genre drill-down. What that screen narrows is a genre held
+     * outside [SeriesFilter], so a search saved there would come back missing
+     * the one criterion its name promised. Applying an existing search is
+     * still fine, hence a flag rather than a null repository.
+     */
+    val savingEnabled: Boolean = true,
 ) {
 
     private val mutableFilterState = MutableStateFlow(SeriesFilter(sortOrder = defaultSort))
@@ -351,6 +376,83 @@ class SeriesFilterState(
     fun restore(filter: SeriesFilter) {
         mutableFilterState.value = filter
         checkIfAllDefault()
+    }
+
+    // ---- Named searches ----------------------------------------------------
+
+    /** The current library's saved searches, in the user's order. */
+    var savedFilters by mutableStateOf<List<SavedSeriesFilter>>(emptyList())
+        private set
+
+    /** True once [loadSavedFilters] has run, so the panel can tell empty from unread. */
+    var savedFiltersLoaded by mutableStateOf(false)
+        private set
+
+    private val savedFilterJson = Json { ignoreUnknownKeys = true }
+
+    suspend fun loadSavedFilters() {
+        val repository = savedFilterRepository ?: return
+        val key = savedFilterLibraryKey ?: return
+        runCatching { repository.getAll(key) }
+            .onSuccess { savedFilters = it }
+            .onFailure { logger.warn(it) { "Saved searches unreadable for $key" } }
+        savedFiltersLoaded = true
+    }
+
+    /**
+     * Saves the current filter under [name], replacing any search of that name
+     * in this library.
+     *
+     * Replacing rather than duplicating is why the id is derived from the name:
+     * "save" on a name already in the list is how you correct a search you got
+     * slightly wrong, and a second entry with the same label would be worse
+     * than useless.
+     *
+     * The letter filter is deliberately dropped. It is a browsing aid, not part
+     * of a search: saved along, "French, complete" picked while the letter bar
+     * sat on A would silently also mean "starting with A", with nothing in the
+     * name to say so.
+     */
+    suspend fun saveCurrentFilterAs(name: String) {
+        val repository = savedFilterRepository ?: return
+        val key = savedFilterLibraryKey ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+
+        val payload = SeriesFilterDto.from(state.value.copy(letterFilter = null))
+        val existing = savedFilters.firstOrNull { it.name.equals(trimmed, ignoreCase = true) }
+        val entry = SavedSeriesFilter(
+            id = "$key|${trimmed.lowercase()}",
+            libraryId = key,
+            name = trimmed,
+            position = existing?.position ?: savedFilters.size,
+            filterJson = savedFilterJson.encodeToString(payload),
+        )
+        appNotifications.runCatchingToNotifications { repository.put(entry) }
+            .onSuccess { loadSavedFilters() }
+    }
+
+    suspend fun deleteSavedFilter(saved: SavedSeriesFilter) {
+        val repository = savedFilterRepository ?: return
+        appNotifications.runCatchingToNotifications { repository.delete(saved.id) }
+            .onSuccess { loadSavedFilters() }
+    }
+
+    /**
+     * Applies a saved search, keeping the letter currently selected.
+     *
+     * The letter is not part of the search (see [saveCurrentFilterAs]), so
+     * clearing it here would make picking a search silently widen the grid back
+     * to the whole alphabet.
+     */
+    fun applySavedFilter(saved: SavedSeriesFilter) {
+        val decoded = runCatching {
+            savedFilterJson.decodeFromString<SeriesFilterDto>(saved.filterJson).toDomain()
+        }.getOrElse {
+            logger.warn(it) { "Saved search '${saved.name}' unreadable" }
+            return
+        }
+        restore(decoded.copy(letterFilter = state.value.letterFilter))
     }
 
     fun onSortOrderChange(sortOrder: SeriesSort) {

@@ -145,6 +145,7 @@ class ViewModelFactory(
             settingsRepository = appRepositories.settingsRepository,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
+            savedSeriesFilterRepository = appRepositories.savedSeriesFilterRepository,
             similarityIndexRepository = appRepositories.similarityIndexRepository,
             similarityIndexBuilder = dependencies.similarityIndexBuilder,
             seriesRatingsRepository = appRepositories.seriesRatingsRepository,
@@ -167,6 +168,7 @@ class ViewModelFactory(
             libraryId = libraryId,
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             librarySeriesFiltersRepository = appRepositories.librarySeriesFiltersRepository,
+            savedSeriesFilterRepository = appRepositories.savedSeriesFilterRepository,
             seriesRatingsRepository = appRepositories.seriesRatingsRepository,
             baseTagFilter = genreTag,
         )

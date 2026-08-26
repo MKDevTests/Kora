@@ -95,6 +95,11 @@ fun SeriesFilterContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
+        // Above the criteria, not among them: picking a saved search replaces
+        // every field below at once, so it belongs before them, not in the row
+        // where each control changes one thing.
+        SavedSearchesDropdown(filterState, Modifier.align(Alignment.Start))
+
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(spacing),
             verticalArrangement = Arrangement.Center,
