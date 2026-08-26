@@ -208,6 +208,7 @@ class DesktopAppModule(
                 )
             },
             librarySeriesFiltersRepository = snd.komelia.db.libraryfilters.ExposedLibrarySeriesFiltersRepository(databases.app),
+            savedSeriesFilterRepository = snd.komelia.db.savedfilters.ExposedSavedSeriesFilterRepository(databases.app),
             transcriptionSettingsRepository = ExposedTranscriptionSettingsRepository(databases.app).let { repository ->
                 TranscriptionSettingsRepositoryWrapper(
                     SettingsStateWrapper(

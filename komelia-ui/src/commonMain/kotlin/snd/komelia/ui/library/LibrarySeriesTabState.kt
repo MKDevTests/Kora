@@ -191,6 +191,7 @@ class LibrarySeriesTabState(
     private val taskEmitter: OfflineTaskEmitter,
     private val librarySeriesFiltersRepository: snd.komelia.libraryfilters.LibrarySeriesFiltersRepository,
     private val seriesRatingsRepository: snd.komelia.ratings.SeriesRatingsRepository,
+    savedSeriesFilterRepository: snd.komelia.savedfilters.SavedSeriesFilterRepository? = null,
     private val baseTagFilter: String? = null,
 ) : StateScreenModel<LoadState<Unit>>(LoadState.Uninitialized) {
     /** Same resolver Favorites and the reading list use — see [loadRatedSeries]. */
@@ -232,6 +233,13 @@ class LibrarySeriesTabState(
         library = library,
         referentialApi = referentialApi,
         appNotifications = notifications,
+        savedFilterRepository = savedSeriesFilterRepository,
+        // The library-less "all libraries" view has no id, and it is where a
+        // broad search is the most useful — so it gets its own bucket rather
+        // than having the feature quietly switched off.
+        savedFilterLibraryKey = libraryId?.value
+            ?: snd.komelia.savedfilters.SavedSeriesFilterRepository.ALL_LIBRARIES_KEY,
+        savingEnabled = baseTagFilter == null,
     )
 
     /**

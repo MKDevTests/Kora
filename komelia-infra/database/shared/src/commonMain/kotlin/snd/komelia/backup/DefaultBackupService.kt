@@ -10,6 +10,8 @@ import snd.komelia.db.SettingsStateWrapper
 import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
+import snd.komelia.savedfilters.SavedSeriesFilter
+import snd.komelia.savedfilters.SavedSeriesFilterRepository
 import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.links.SeriesRelationEdge
 import snd.komelia.links.SeriesRelationType
@@ -55,6 +57,7 @@ class DefaultBackupService(
     private val transcription: SettingsStateWrapper<TranscriptionSettings>,
     private val homeFilters: SettingsStateWrapper<List<HomeScreenFilter>>,
     private val librarySeriesFilters: LibrarySeriesFiltersRepository,
+    private val savedSeriesFilters: SavedSeriesFilterRepository,
     private val seriesReaderOverrides: SeriesReaderOverridesRepository,
     private val seriesRatings: SeriesRatingsRepository,
     private val readingEvents: ReadingEventsRepository,
@@ -89,6 +92,9 @@ class DefaultBackupService(
         val trans = transcription.state.value
         val home = homeFilters.state.value
         val libFilters = librarySeriesFilters.getAll().mapKeys { (id, _) -> id.value }
+        val savedFilters = savedSeriesFilters.getAll().map {
+            SavedFilterExport(it.id, it.libraryId, it.name, it.position, it.filterJson)
+        }
         val seriesOverrides = seriesReaderOverrides.getAll().mapKeys { (id, _) -> id.value }
         val versionsMap = seriesLinks.getAllVersions().mapKeys { (id, _) -> id.value }
         val relationsList = seriesLinks.getAllRelations().map {
@@ -171,6 +177,7 @@ class DefaultBackupService(
                 transcriptionSettings = trans,
                 homeScreenFilters = home,
                 librarySeriesFilters = libFilters,
+                savedSeriesFilters = savedFilters,
                 seriesReaderOverrides = seriesOverrides,
                 seriesRatings = legacyRatings,
                 userSections = userSections,
@@ -287,6 +294,12 @@ class DefaultBackupService(
             plans += SectionPlan(
                 "Library filters", SectionAction.REPLACE,
                 currentCount = librarySeriesFilters.getAll().size, incomingCount = it.size,
+            )
+        }
+        s.savedSeriesFilters?.let {
+            plans += SectionPlan(
+                "Saved searches", SectionAction.REPLACE,
+                currentCount = savedSeriesFilters.getAll().size, incomingCount = it.size,
             )
         }
         s.seriesReaderOverrides?.let {
@@ -475,6 +488,24 @@ class DefaultBackupService(
                 }
                 restored.add("Library filters (${incoming.size} entries)")
             }.onFailure { return ImportResult.Failure("Failed to restore Library filters: ${it.message}") }
+        }
+
+        sections.savedSeriesFilters?.let { incoming ->
+            runCatching {
+                savedSeriesFilters.deleteAll()
+                for (entry in incoming) {
+                    savedSeriesFilters.put(
+                        SavedSeriesFilter(
+                            id = entry.id,
+                            libraryId = entry.libraryId,
+                            name = entry.name,
+                            position = entry.position,
+                            filterJson = entry.filterJson,
+                        )
+                    )
+                }
+                restored.add("Saved searches (${incoming.size} entries)")
+            }.onFailure { return ImportResult.Failure("Failed to restore Saved searches: ${it.message}") }
         }
 
         sections.seriesReaderOverrides?.let { incoming ->

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -95,6 +96,19 @@ fun SeriesFilterContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
+        // Half the dropdowns below are filled by the server, and the panel
+        // draws them either way — so an unfinished load is indistinguishable
+        // from a filter that was taken away. Two pixels of movement say which
+        // it is, without hiding controls that already work.
+        if (filterState.optionsLoading) {
+            LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp))
+        }
+
+        // Above the criteria, not among them: picking a saved search replaces
+        // every field below at once, so it belongs before them, not in the row
+        // where each control changes one thing.
+        SavedSearchesDropdown(filterState, Modifier.align(Alignment.Start))
+
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(spacing),
             verticalArrangement = Arrangement.Center,

@@ -49,6 +49,11 @@ data class BackupSections(
     @SerialName("transcription_settings") val transcriptionSettings: TranscriptionSettings? = null,
     @SerialName("home_screen_filters") val homeScreenFilters: List<HomeScreenFilter>? = null,
     @SerialName("library_series_filters") val librarySeriesFilters: Map<String, String>? = null,
+    /**
+     * Named searches. A list, not a map: they are ordered, and several
+     * libraries can hold a search under the same name.
+     */
+    @SerialName("saved_series_filters") val savedSeriesFilters: List<SavedFilterExport>? = null,
     @SerialName("series_reader_overrides") val seriesReaderOverrides: Map<String, String>? = null,
     /**
      * Legacy v1 location for ratings. Still written by v1.0.10+ exports
@@ -151,4 +156,14 @@ data class UserSection(
     val lifetimeBooksBaseline: Int = 0,
     @SerialName("lifetime_books_baseline_at")
     val lifetimeBooksBaselineAt: Long = 0,
+)
+
+/** One named search, as stored in a backup bundle. */
+@Serializable
+data class SavedFilterExport(
+    val id: String,
+    @SerialName("library_id") val libraryId: String,
+    val name: String,
+    val position: Int,
+    @SerialName("filter_json") val filterJson: String,
 )

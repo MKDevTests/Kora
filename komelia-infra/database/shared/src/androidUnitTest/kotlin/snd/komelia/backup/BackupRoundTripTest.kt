@@ -80,6 +80,7 @@ class BackupRoundTripTest {
         transcription = SettingsStateWrapper(TranscriptionSettings()) {},
         homeFilters = SettingsStateWrapper<List<HomeScreenFilter>>(emptyList()) {},
         librarySeriesFilters = libFilters,
+        savedSeriesFilters = FakeSavedFiltersRepo(),
         seriesReaderOverrides = overrides,
         seriesRatings = ratings,
         readingEvents = events,
@@ -323,4 +324,21 @@ private class FakeLinksRepo : SeriesLinksRepository {
     override suspend fun relationsOf(seriesId: KomgaSeriesId): List<SeriesRelation> = error("unused")
     override suspend fun linkRelation(from: KomgaSeriesId, to: KomgaSeriesId, type: SeriesRelationType) = error("unused")
     override suspend fun unlinkRelation(a: KomgaSeriesId, b: KomgaSeriesId) = error("unused")
+}
+
+/**
+ * In-memory stand-in so the round-trip test covers the saved-search section
+ * without a database. Empty by default: the section is optional in the bundle,
+ * and the test asserts export→import→export stability, not content.
+ */
+private class FakeSavedFiltersRepo : snd.komelia.savedfilters.SavedSeriesFilterRepository {
+    private val entries = mutableListOf<snd.komelia.savedfilters.SavedSeriesFilter>()
+    override suspend fun getAll(libraryId: String) = entries.filter { it.libraryId == libraryId }
+    override suspend fun put(filter: snd.komelia.savedfilters.SavedSeriesFilter) {
+        entries.removeAll { it.id == filter.id }
+        entries.add(filter)
+    }
+    override suspend fun delete(id: String) { entries.removeAll { it.id == id } }
+    override suspend fun getAll() = entries.toList()
+    override suspend fun deleteAll() { entries.clear() }
 }
