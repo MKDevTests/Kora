@@ -38,6 +38,7 @@ import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilterRepository
+import snd.komelia.homefilters.dependsOnReadProgress
 import snd.komelia.homefilters.SeriesHomeScreenFilter
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.KomgaSeriesApi
@@ -296,7 +297,18 @@ class HomeViewModel(
 
     private suspend fun resolveProgressShelves(): Boolean {
         val current = currentFilters.value
-        val targets = current.withIndex().filter { it.value.filter.dependsOnReadProgress() }
+        // Randomly-sorted shelves are left out even when their condition reads
+        // progress. This path calls the resolver directly, bypassing
+        // RandomShelfCache, so refreshing one re-rolls its picks — the shelf
+        // would shuffle itself under the user on every page turn, and pull ~20
+        // covers that were never on screen. They stay on the full reload, which
+        // is where a re-roll is expected.
+        val targets = current.withIndex().filter {
+            it.value.filter.dependsOnReadProgress() && it.value.filter.randomShelfCacheKey() == null
+        }
+        // Nothing to re-query means nothing to wait for: returning true here is
+        // not a claim that something changed, it tells refreshAfterReading not
+        // to retry a second time for shelves that would not have moved either.
         if (targets.isEmpty()) return true
 
         val slots = current.toMutableList()
@@ -326,20 +338,6 @@ class HomeViewModel(
             screenModelScope.launch { HomeShelfCache.save(snapshot) }
         }
         return changed
-    }
-
-    /**
-     * Shelves built from read progress. "Keep reading" is [BooksHomeScreenFilter.OnDeck].
-     * Custom shelves are deliberately excluded: detecting a readStatus condition
-     * inside an arbitrary search tree is fragile, and they are still covered by
-     * the full reload the SSE listener triggers.
-     */
-    private fun HomeScreenFilter.dependsOnReadProgress(): Boolean = when (this) {
-        is BooksHomeScreenFilter.OnDeck,
-        is BooksHomeScreenFilter.ForgottenBooks,
-        is SeriesHomeScreenFilter.AlmostFinished -> true
-
-        else -> false
     }
 
     private suspend fun load(force: Boolean = false) {
