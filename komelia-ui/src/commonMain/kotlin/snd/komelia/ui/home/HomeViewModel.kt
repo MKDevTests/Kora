@@ -9,6 +9,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
@@ -292,7 +293,24 @@ class HomeViewModel(
                 ?: screenModelScope.async(start = CoroutineStart.LAZY) { resolveProgressShelves() }
                     .also { progressRefreshInFlight = it }
         }
-        return inFlight.await()
+        // The last net. Every caller of this method is a bare
+        // screenModelScope.launch { }, so anything that escapes here reaches
+        // the app's uncaught-exception handler and takes the process down —
+        // unlike load(), which has sat inside runCatchingToNotifications from
+        // the start. The per-shelf catch below is what normally holds; this
+        // covers whatever it doesn't.
+        //
+        // false, not true: the data did not arrive, so refreshAfterReading's
+        // single retry is exactly right for a blip. On a real outage it costs
+        // one more request, 1.5s later, and then stops.
+        return try {
+            inFlight.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.warn(e) { "home progress refresh failed" }
+            false
+        }
     }
 
     private suspend fun resolveProgressShelves(): Boolean {
@@ -321,7 +339,26 @@ class HomeViewModel(
 
         targets.map { (index, existing) ->
             screenModelScope.async {
-                val fresh = shelfLimit.withPermit { shelfResolver.resolve(existing.filter) } ?: return@async
+                // A shelf that fails keeps whatever it was already showing.
+                //
+                // Measured on the tablet, 2026-08-30 23:06:43: the Wi-Fi
+                // dropped mid-session and every request in flight aborted at
+                // once — the reader's own progression PUT included. The shelf
+                // queries threw SocketException, nothing caught it, and the
+                // app died on the crash screen. A network blip must cost a
+                // stale row, not the session.
+                //
+                // Cancellation is rethrown: leaving the screen mid-refresh has
+                // to keep cancelling, and swallowing it here would leave the
+                // coroutine finishing work for a screen that is gone.
+                val fresh = try {
+                    shelfLimit.withPermit { shelfResolver.resolve(existing.filter) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    logger.warn(e) { "progress refresh failed for shelf '${existing.filter.label}'; keeping the previous content" }
+                    null
+                } ?: return@async
                 if (fresh == existing) return@async
                 publishLock.withLock {
                     changed = true
