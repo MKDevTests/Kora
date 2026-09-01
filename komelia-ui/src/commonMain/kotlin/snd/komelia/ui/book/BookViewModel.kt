@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,6 +129,42 @@ class BookViewModel(
             loadBook()
             loadLibrary()
             readListsState.reload()
+        }
+    }
+
+    /**
+     * Re-reads the book on the way out of the reader, silently.
+     *
+     * Not [reload]: that one flips the screen to Loading and would blank a page
+     * the user is already looking at. Here the book is on screen and correct
+     * apart from its progress, so the new copy simply replaces the old one.
+     *
+     * The 600ms is the same race Home pays: the reader flushes its final read
+     * progress fire-and-forget on dispose, so asking immediately can read back
+     * the value from before the session.
+     */
+    fun refreshAfterReading() {
+        screenModelScope.launch {
+            delay(600)
+            runCatching { bookApi.getOne(currentBookId.value) }
+                .onSuccess { fresh ->
+                    book.value = fresh
+                    // And in the siblings, which is what the immersive layout
+                    // actually renders: once its pager has settled it draws
+                    // siblingBooks[page], not this `book`. Updating only `book`
+                    // left the pages-remaining chip and the last-read date
+                    // showing the values from before the session — measured on
+                    // the tablet 2026-09-01, page 118 of 177 written and the
+                    // screen still saying 61 pages left.
+                    //
+                    // One element swapped rather than a re-query: the siblings
+                    // are a page of the series and only the book just read
+                    // changed.
+                    siblingBooks.value = siblingBooks.value.map {
+                        if (it.id == fresh.id) fresh else it
+                    }
+                    loadLibrary()
+                }
         }
     }
 

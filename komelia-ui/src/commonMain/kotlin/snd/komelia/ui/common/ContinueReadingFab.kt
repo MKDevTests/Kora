@@ -10,6 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import snd.komelia.progress.ReadProgressChanges
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komga.client.book.KomgaBookSearch
@@ -49,13 +52,15 @@ fun ContinueReadingFab(
 ) {
     var lastBook by remember(libraryId) { mutableStateOf<KomeliaBook?>(null) }
 
-    LaunchedEffect(libraryId) {
-        // The DSL field for "filter by library" is `library`, not
-        // `libraryId` — and naming the local same as the DSL field
-        // would shadow it. Capture the scope arg under a different
-        // name to keep the DSL block readable.
-        val scopeLibrary = libraryId
-        lastBook = runCatching {
+    // The DSL field for "filter by library" is `library`, not `libraryId`
+    // — and naming the local same as the DSL field would shadow it. Capture
+    // the scope arg under a different name to keep the DSL block readable.
+    val scopeLibrary = libraryId
+    // Result, not a nullable: getOrNull() would collapse "the server says you
+    // have finished everything" and "the request failed" into the same answer,
+    // and those want opposite handling — clear the button, or keep what it had.
+    val fetchLastBook: suspend () -> Result<KomeliaBook?> = {
+        runCatching {
             val condition = allOfBooks {
                 readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
                 if (scopeLibrary != null) {
@@ -69,7 +74,24 @@ fun ContinueReadingFab(
                     size = 1,
                 ),
             ).content.firstOrNull()
-        }.getOrNull()
+        }
+    }
+
+    LaunchedEffect(libraryId) {
+        fetchLastBook().onSuccess { lastBook = it }
+
+        // Then follow read progress. This asked once and never again, so the
+        // most prominent button in the app could offer a volume the user had
+        // since finished — it kept the answer from whenever the screen was
+        // first composed.
+        //
+        // collectLatest + delay is the debounce: the reader writes progress on
+        // every page, so a reading session ends in a burst of signals and one
+        // query is the right cost for all of them.
+        ReadProgressChanges.changes.collectLatest {
+            delay(1_000)
+            fetchLastBook().onSuccess { lastBook = it }
+        }
     }
 
     val book = lastBook ?: return

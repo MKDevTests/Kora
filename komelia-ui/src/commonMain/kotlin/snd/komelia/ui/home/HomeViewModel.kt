@@ -34,6 +34,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.time.TimeSource
+import snd.komelia.AppForegroundState
 import snd.komelia.AppNotifications
 import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
@@ -139,6 +140,13 @@ class HomeViewModel(
     /** When the last reload finished, for the staleness escape hatch below. */
     private var lastReloadMark: TimeSource.Monotonic.ValueTimeMark? = null
 
+    /**
+     * When [structuralReloadPending] was raised, so a reload that the initial
+     * load already covered can be skipped. See the listener's placement in
+     * [initialize].
+     */
+    private var structuralPendingSince: TimeSource.Monotonic.ValueTimeMark? = null
+
     val currentFilters = MutableStateFlow(emptyList<HomeFilterData>())
     val activeFilterNumber = MutableStateFlow(0)
 
@@ -166,8 +174,17 @@ class HomeViewModel(
         // spent getting here from launch, and only logcat's own timestamps can
         // say that. Home paints nothing before this line runs.
         logger.info { "KoraPerf home.initialize entered" }
-        load()
+        // Subscribe BEFORE the load, not after. komgaEvents is a replay-less
+        // SharedFlow, so every event that landed while the initial load was
+        // running used to be dropped on the floor — measured 2026-09-01, a
+        // BookChanged arrived 4.4s into a 9s load and was never seen. On a slow
+        // server that blind window is the first ten seconds of every launch.
+        //
+        // It does not cost an extra reload: the collector below compares when
+        // the flag was raised against when the last full load finished, and an
+        // event the load already covered is dropped there.
         startKomgaEventListener()
+        load()
 
         // Local progress writes, straight from our own book API — see
         // [ReadProgressChanges]. No reload is kicked off here: Home is off
@@ -177,6 +194,29 @@ class HomeViewModel(
         // the search, or the widget, with the SSE stream down or slow.
         ReadProgressChanges.changes.onEach { progressShelvesDirty.value = true }
             .launchIn(screenModelScope)
+
+        // Coming back to the front. The SSE session is torn down after a minute
+        // in the background and komgaEvents has no replay, so everything that
+        // happened on the server while the app was away is gone — a book read
+        // on another device, a scan that finished. Home stays composed across a
+        // background/foreground cycle, so startKomgaEventsHandler does not run
+        // again and nothing else would notice.
+        //
+        // Which refresh depends on how long we were away: progress shelves for
+        // a short absence, everything past [FOREGROUND_FULL_RELOAD_AFTER],
+        // where a scan has had time to change what the shelves contain.
+        var leftForegroundAt: TimeSource.Monotonic.ValueTimeMark? = null
+        AppForegroundState.isForeground.drop(1).onEach { foreground ->
+            if (!foreground) {
+                leftForegroundAt = TimeSource.Monotonic.markNow()
+                return@onEach
+            }
+            if (state.value !is LoadState.Success) return@onEach
+            val away = leftForegroundAt?.elapsedNow()
+            leftForegroundAt = null
+            if (away != null && away >= FOREGROUND_FULL_RELOAD_AFTER) load()
+            else refreshProgressShelves()
+        }.launchIn(screenModelScope)
 
         // The Favorites shelf reads the favorite ids at resolve time, so it used
         // to depend on the global screen-reload that favoriting broadcast. That
@@ -214,8 +254,20 @@ class HomeViewModel(
                 // reader exit — the SSE event lands right after it and would
                 // re-query every shelf a second time.
                 val structural = structuralReloadPending.value
+                val raisedAt = structuralPendingSince
                 structuralReloadPending.value = false
-                if (structural) load() else refreshProgressShelves()
+                structuralPendingSince = null
+                // An event that predates the last completed full load asks for
+                // data that load already fetched. Re-querying eight shelves for
+                // it is the whole cost of subscribing early, and this is what
+                // removes it.
+                val alreadyCovered = structural && raisedAt != null &&
+                    lastReloadMark?.let { it > raisedAt } == true
+                when {
+                    alreadyCovered -> logger.info { "structural reload skipped: covered by the load that just finished" }
+                    structural -> load()
+                    else -> refreshProgressShelves()
+                }
 
                 progressShelvesDirty.value = false
                 lastReloadMark = TimeSource.Monotonic.markNow()
@@ -485,6 +537,10 @@ class HomeViewModel(
 
             mutableState.value = LoadState.Success(Unit)
             shelvesSettled.value = true
+            // Every completed load counts as a reload, including the initial
+            // one: the collector's staleness hatch and its already-covered test
+            // both read this, and before this line only the collector set it.
+            lastReloadMark = TimeSource.Monotonic.markNow()
             // Fire-and-forget: the disk write must never delay the screen.
             screenModelScope.launch { HomeShelfCache.save(fresh) }
         }.onFailure { mutableState.value = LoadState.Error(it) }
@@ -672,6 +728,7 @@ class HomeViewModel(
 
                 is BookEvent,
                 is SeriesEvent -> {
+                    if (structuralPendingSince == null) structuralPendingSince = TimeSource.Monotonic.markNow()
                     structuralReloadPending.value = true
                     reloadJobsFlow.tryEmit(Unit)
                 }
@@ -697,5 +754,13 @@ class HomeViewModel(
          * silence. Keeps the screen alive during a scan that never goes quiet.
          */
         val RELOAD_MAX_STALENESS = 30.seconds
+
+        /**
+         * Away longer than this and coming back re-queries every shelf rather
+         * than just the progress ones. Chosen to sit past the one-minute
+         * background grace after which the SSE session is dropped, so it covers
+         * exactly the absences during which events could have been missed.
+         */
+        val FOREGROUND_FULL_RELOAD_AFTER = 5.minutes
     }
 }
