@@ -1,13 +1,17 @@
 package snd.komelia.ui.library
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +33,7 @@ import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.ScreenPullToRefreshBox
+import snd.komelia.ui.series.activeFilters
 import snd.komelia.ui.series.list.SeriesListContent
 import snd.komelia.ui.series.seriesScreen
 import snd.komga.client.library.KomgaLibraryId
@@ -65,7 +70,9 @@ class GenreSeriesScreen(
         val statusBarHeight = LocalRawStatusBarHeight.current
 
         ScreenPullToRefreshBox(screenState = vm.state, onRefresh = vm::reload) {
-            val currentLetter = vm.filterState.state.collectAsState().value.letterFilter
+            val currentFilter = vm.filterState.state.collectAsState().value
+            val currentLetter = currentFilter.letterFilter
+            val activeFilters = currentFilter.activeFilters()
             val beforeContent: @Composable () -> Unit = {
                 Column(Modifier.fillMaxWidth().padding(top = statusBarHeight)) {
                     Row(
@@ -90,10 +97,25 @@ class GenreSeriesScreen(
                             }
                         }
                     }
+                    // The same two rows the library's series tab has. Without
+                    // them this screen showed no sign that a filter existed at
+                    // all: the only affordance was a floating icon, and a query
+                    // that takes ten seconds looked like a tap that did nothing.
+                    ActiveFilterChipsRow(
+                        filters = activeFilters,
+                        onRemove = vm.filterState::remove,
+                        onClearAll = vm.filterState::reset,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    )
                     LetterFilterBar(
                         selected = currentLetter,
                         onLetterClick = vm.filterState::onLetterFilterChange,
                     )
+                    if (vm.isRefreshing) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
+                    } else {
+                        Spacer(Modifier.height(2.dp))
+                    }
                 }
             }
 

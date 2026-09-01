@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,6 +129,28 @@ class BookViewModel(
             loadBook()
             loadLibrary()
             readListsState.reload()
+        }
+    }
+
+    /**
+     * Re-reads the book on the way out of the reader, silently.
+     *
+     * Not [reload]: that one flips the screen to Loading and would blank a page
+     * the user is already looking at. Here the book is on screen and correct
+     * apart from its progress, so the new copy simply replaces the old one.
+     *
+     * The 600ms is the same race Home pays: the reader flushes its final read
+     * progress fire-and-forget on dispose, so asking immediately can read back
+     * the value from before the session.
+     */
+    fun refreshAfterReading() {
+        screenModelScope.launch {
+            delay(600)
+            runCatching { bookApi.getOne(currentBookId.value) }
+                .onSuccess {
+                    book.value = it
+                    loadLibrary()
+                }
         }
     }
 

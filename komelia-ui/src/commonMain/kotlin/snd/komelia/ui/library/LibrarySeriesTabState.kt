@@ -81,11 +81,18 @@ private const val MAX_BARREN_RANDOM_DRAWS = 3
 private const val RANDOM_DRAW_ATTEMPTS = 5
 
 /**
- * Reserved key under which the genre drill-down persists its single,
- * shared-across-all-genres filter + sort, reusing the per-library filters table.
- * It is an opaque sentinel that cannot collide with a real Komga library id.
+ * Key under which a genre drill-down persists its filter + sort, reusing the
+ * per-library filters table. The prefix is an opaque sentinel that cannot
+ * collide with a real Komga library id.
+ *
+ * One entry per library and genre. It used to be a single shared key for every
+ * genre of every library, which meant narrowing Science-fiction to French left
+ * Horror opening already filtered to French — the filter followed you around
+ * and read as a bug. The argument for sharing was disk, and it does not hold:
+ * an entry is a short JSON blob in a table that already carries one per library.
  */
-private val GENRE_FILTER_STORAGE_KEY = KomgaLibraryId("__kora_genre_filter__")
+private fun genreFilterStorageKey(libraryId: KomgaLibraryId?, genreTag: String) =
+    KomgaLibraryId("__kora_genre_filter__${libraryId?.value ?: "all"}|$genreTag")
 
 /**
  * Cache of each library's first series page, keyed by library id (or
@@ -281,7 +288,9 @@ class LibrarySeriesTabState(
             } else {
                 // Genre drill-down restores ONE shared filter (default Title Asc);
                 // the regular series tab restores its per-library filter.
-                val storageKey = if (baseTagFilter != null) GENRE_FILTER_STORAGE_KEY else libraryId
+                val storageKey =
+                    if (baseTagFilter != null) genreFilterStorageKey(libraryId, baseTagFilter)
+                    else libraryId
                 storageKey?.let { key ->
                     runCatching {
                         librarySeriesFiltersRepository.get(key)?.let { json ->
@@ -320,7 +329,7 @@ class LibrarySeriesTabState(
                 // chip-scoped view — see screenFilterApplied.
                 val storageKey = when {
                     screenFilterApplied -> null
-                    baseTagFilter != null -> GENRE_FILTER_STORAGE_KEY
+                    baseTagFilter != null -> genreFilterStorageKey(libraryId, baseTagFilter)
                     else -> libraryId
                 }
                 storageKey?.let { key ->

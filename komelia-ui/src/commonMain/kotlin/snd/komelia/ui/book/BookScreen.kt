@@ -123,10 +123,14 @@ class BookScreen(
                             markReadProgress = markReadProgress,
                             bookSiblingsContext = bookSiblingsContext,
                             series = series,
+                            // Refresh whichever book we came back on. Leaving on
+                            // the SAME book is the normal case and used to do
+                            // nothing at all, so the page kept showing the pages-
+                            // remaining and last-read date from before the session
+                            // until you navigated away and back.
                             onExit = { lastReadBook ->
-                                if (lastReadBook.id != book.id) {
-                                    vm.setCurrentBook(lastReadBook)
-                                }
+                                if (lastReadBook.id != book.id) vm.setCurrentBook(lastReadBook)
+                                else vm.refreshAfterReading()
                             }
                         )
                     )
@@ -185,20 +189,25 @@ class BookScreen(
                             bookSiblingsContext = bookSiblingsContext,
                             markReadProgress = markReadProgress,
                             series = series,
+                            // Refresh whichever book we came back on. Leaving on
+                            // the SAME book is the normal case and used to do
+                            // nothing at all, so the page kept showing the pages-
+                            // remaining and last-read date from before the session
+                            // until you navigated away and back.
                             onExit = { lastReadBook ->
-                                if (lastReadBook.id != book.id) {
-                                    vm.setCurrentBook(lastReadBook)
-                                }
+                                if (lastReadBook.id != book.id) vm.setCurrentBook(lastReadBook)
+                                else vm.refreshAfterReading()
                             }
                         )
                         else ImageReaderScreen(
                             bookId = bookId,
                             bookSiblingsContext = bookSiblingsContext,
                             markReadProgress = markReadProgress,
+                            // initialize() returns early once the screen is
+                            // loaded, so the else branch has to be a real refresh.
                             onExit = { lastReadBook ->
-                                if (lastReadBook.id != bookId) {
-                                    coroutineScope.launch { vm.initialize() }
-                                }
+                                if (lastReadBook.id != bookId) coroutineScope.launch { vm.initialize() }
+                                else vm.refreshAfterReading()
                             }
                         )
                     )
