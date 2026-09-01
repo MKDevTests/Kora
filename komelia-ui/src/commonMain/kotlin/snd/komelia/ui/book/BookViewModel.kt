@@ -147,8 +147,22 @@ class BookViewModel(
         screenModelScope.launch {
             delay(600)
             runCatching { bookApi.getOne(currentBookId.value) }
-                .onSuccess {
-                    book.value = it
+                .onSuccess { fresh ->
+                    book.value = fresh
+                    // And in the siblings, which is what the immersive layout
+                    // actually renders: once its pager has settled it draws
+                    // siblingBooks[page], not this `book`. Updating only `book`
+                    // left the pages-remaining chip and the last-read date
+                    // showing the values from before the session — measured on
+                    // the tablet 2026-09-01, page 118 of 177 written and the
+                    // screen still saying 61 pages left.
+                    //
+                    // One element swapped rather than a re-query: the siblings
+                    // are a page of the series and only the book just read
+                    // changed.
+                    siblingBooks.value = siblingBooks.value.map {
+                        if (it.id == fresh.id) fresh else it
+                    }
                     loadLibrary()
                 }
         }
