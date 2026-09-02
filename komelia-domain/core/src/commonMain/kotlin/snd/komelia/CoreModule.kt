@@ -17,7 +17,6 @@ import snd.komelia.settings.EpubReaderSettingsRepository
 import snd.komelia.settings.ImageReaderSettingsRepository
 import snd.komelia.settings.KomfSettingsRepository
 import snd.komelia.settings.SecretsRepository
-import snd.komelia.settings.TranscriptionSettingsRepository
 import snd.komelia.similarity.SimilarityIndexRepository
 import snd.komelia.similarity.SuggestionFeedbackRepository
 import snd.komelia.stats.ReadingEventsRepository
@@ -35,9 +34,6 @@ data class AppRepositories(
     val settingsRepository: CommonSettingsRepository,
     val epubReaderSettingsRepository: EpubReaderSettingsRepository,
     val epubBookmarkRepository: snd.komelia.bookmarks.EpubBookmarkRepository,
-    val audioPositionRepository: snd.komelia.audiobook.AudioPositionRepository,
-    val audioBookmarkRepository: snd.komelia.audiobook.AudioBookmarkRepository,
-    val audioChapterRepository: snd.komelia.audiobook.AudioChapterRepository,
     val bookAnnotationRepository: snd.komelia.annotations.BookAnnotationRepository,
     val imageReaderSettingsRepository: ImageReaderSettingsRepository,
     val fontsRepository: UserFontsRepository,
@@ -49,7 +45,6 @@ data class AppRepositories(
     val homeScreenFilterRepository: HomeScreenFilterRepository,
     val librarySeriesFiltersRepository: LibrarySeriesFiltersRepository,
     val savedSeriesFilterRepository: SavedSeriesFilterRepository,
-    val transcriptionSettingsRepository: TranscriptionSettingsRepository,
     val seriesReaderOverridesRepository: SeriesReaderOverridesRepository,
     val readingEventsRepository: ReadingEventsRepository,
     val seriesRatingsRepository: SeriesRatingsRepository,

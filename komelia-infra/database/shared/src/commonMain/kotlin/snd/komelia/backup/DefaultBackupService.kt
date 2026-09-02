@@ -7,7 +7,6 @@ import snd.komelia.db.EpubReaderSettings
 import snd.komelia.db.ImageReaderSettings
 import snd.komelia.db.KomfSettings
 import snd.komelia.db.SettingsStateWrapper
-import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
 import snd.komelia.savedfilters.SavedSeriesFilter
@@ -54,7 +53,6 @@ class DefaultBackupService(
     private val imageReader: SettingsStateWrapper<ImageReaderSettings>,
     private val epubReader: SettingsStateWrapper<EpubReaderSettings>,
     private val komf: SettingsStateWrapper<KomfSettings>,
-    private val transcription: SettingsStateWrapper<TranscriptionSettings>,
     private val homeFilters: SettingsStateWrapper<List<HomeScreenFilter>>,
     private val librarySeriesFilters: LibrarySeriesFiltersRepository,
     private val savedSeriesFilters: SavedSeriesFilterRepository,
@@ -89,7 +87,6 @@ class DefaultBackupService(
         val image = imageReader.state.value.copy(ortUpscalerUserModelPath = null)
         val epub = epubReader.state.value
         val komfValue = komf.state.value
-        val trans = transcription.state.value
         val home = homeFilters.state.value
         val libFilters = librarySeriesFilters.getAll().mapKeys { (id, _) -> id.value }
         val savedFilters = savedSeriesFilters.getAll().map {
@@ -174,7 +171,6 @@ class DefaultBackupService(
                 imageReaderSettings = image,
                 epubReaderSettings = epub,
                 komfSettings = komfValue,
-                transcriptionSettings = trans,
                 homeScreenFilters = home,
                 librarySeriesFilters = libFilters,
                 savedSeriesFilters = savedFilters,
@@ -281,7 +277,6 @@ class DefaultBackupService(
         if (s.imageReaderSettings != null) plans += SectionPlan("Image reader settings", SectionAction.REPLACE)
         if (s.epubReaderSettings != null) plans += SectionPlan("EPUB reader settings", SectionAction.REPLACE)
         if (s.komfSettings != null) plans += SectionPlan("Komf settings", SectionAction.REPLACE)
-        if (s.transcriptionSettings != null) plans += SectionPlan("Transcription settings", SectionAction.REPLACE)
 
         // Collection sections: the current set is replaced by the incoming one.
         s.homeScreenFilters?.let {
@@ -464,13 +459,6 @@ class DefaultBackupService(
                 komf.transform { incoming }
                 restored.add("Komf settings")
             }.onFailure { return ImportResult.Failure("Failed to restore Komf settings: ${it.message}") }
-        }
-
-        sections.transcriptionSettings?.let { incoming ->
-            runCatching {
-                transcription.transform { incoming }
-                restored.add("Transcription settings")
-            }.onFailure { return ImportResult.Failure("Failed to restore Transcription settings: ${it.message}") }
         }
 
         sections.homeScreenFilters?.let { incoming ->

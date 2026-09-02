@@ -15,7 +15,6 @@ internal object Namespaces {
     const val DC = "http://purl.org/dc/elements/1.1/"
     const val OPS = "http://www.idpf.org/2007/ops"
     const val XHTML = "http://www.w3.org/1999/xhtml"
-    const val SMIL = "http://www.w3.org/ns/SMIL"
     const val NCX = "http://www.daisy.org/z3986/2005/ncx/"
 }
 

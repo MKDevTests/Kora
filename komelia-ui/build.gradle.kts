@@ -113,13 +113,10 @@ kotlin {
             implementation(projects.komeliaInfra.onnxruntime.jvm)
             implementation(projects.epubReader)
             implementation("androidx.fragment:fragment-ktx:1.8.5")
-            implementation("androidx.media3:media3-common:1.9.0")
-            implementation("androidx.media3:media3-session:1.9.0")
             implementation("org.readium.kotlin-toolkit:readium-shared:3.1.2")
             implementation("org.readium.kotlin-toolkit:readium-navigator:3.1.2")
             implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-core:1.0.19")
             implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-native:1.0.19")
-            implementation(projects.komeliaInfra.audiobookTranscription)
         }
 
         jvmMain.dependencies {

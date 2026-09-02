@@ -58,7 +58,6 @@ object BookService {
         )
 
     private var publications: MutableMap<String, Publication> = mutableMapOf()
-    private var clips: MutableMap<String, List<OverlayPar>> = mutableMapOf()
 
     fun extractArchive(archiveUrl: URL, extractedUrl: URL) {
         ZipFile(archiveUrl.path).use { zip ->
@@ -96,23 +95,6 @@ object BookService {
         val after = (rt.totalMemory() - rt.freeMemory()) / 1_048_576
         android.util.Log.i("epub3-diag", "getPositions END heap=${after}MB delta=${after - before}MB positions=${result.size}")
         return result
-    }
-
-    @OptIn(InternalReadiumApi::class)
-    fun getClip(bookUuid: String, locator: Locator): OverlayPar? {
-        val clips = this.clips[bookUuid] ?: return null
-
-        val fragment = try {
-            locator.locations.fragments.first()
-        } catch (_: Exception) {
-            return null
-        }
-
-        return clips.first { it.locator.href == locator.href && it.fragmentId == fragment }
-    }
-
-    fun getOverlayClips(bookUuid: String): List<OverlayPar> {
-        return this.clips[bookUuid] ?: listOf()
     }
 
     @OptIn(InternalReadiumApi::class)
@@ -172,45 +154,12 @@ object BookService {
         )
     }
 
-    fun getFragments(bookUuid: String, locator: Locator): List<OverlayPar> {
-        val clips = this.clips[bookUuid] ?: return emptyList()
-        return clips.filter { it.locator.href == locator.href }
-    }
-
-    fun getFragment(bookUuid: String, clipUrl: String, position: Double): OverlayPar? {
-        val clips = this.clips[bookUuid] ?: return null
-
-        val clipsInUrl = clips.filter { it.audioResource == clipUrl }
-
-        return searchForClip(clipsInUrl, position)
-    }
-
-    fun getPreviousFragment(bookUuid: String, locator: Locator): OverlayPar? {
-        val currentFragment = locator.locations.fragments.firstOrNull() ?: return null
-        val clips = this.clips[bookUuid] ?: return null
-        val currentIndex =
-            clips.indexOfFirst { it.locator.href == locator.href && it.fragmentId == currentFragment }
-        if (currentIndex == 0) return null
-        val previousIndex = currentIndex.dec()
-        return clips[previousIndex]
-    }
-
-    fun getNextFragment(bookUuid: String, locator: Locator): OverlayPar? {
-        val currentFragment = locator.locations.fragments.firstOrNull() ?: return null
-        val clips = this.clips[bookUuid] ?: return null
-        val currentIndex =
-            clips.indexOfFirst { it.locator.href == locator.href && it.fragmentId == currentFragment }
-        if (currentIndex == 0) return null
-        val nextIndex = currentIndex.inc()
-        return clips[nextIndex]
-    }
-
     fun locateLink(bookUuid: String, link: Link): Locator? {
         val publication = getPublication(bookUuid) ?: return null
         return publication.locatorFromLink(link)
     }
 
-    suspend fun openPublication(bookUuid: String, url: URL, clips: List<OverlayPar>?): Publication {
+    suspend fun openPublication(bookUuid: String, url: URL): Publication {
         if (publications.contains(bookUuid)) {
             return publications[bookUuid]!!
         }
@@ -225,165 +174,15 @@ object BookService {
         val asset = this.retriever.retrieve(container, MediaType.EPUB)
             .getOrElse { throw Exception("Failed to open publication at $url: ${it.message}") }
 
-        val publication =
-            opener.open(asset, allowUserInteraction = false, onCreatePublication = { ->
-                val builder = this
-                runBlocking {
-                    val containerUrl = RelativeUrl("META-INF/container.xml") ?: return@runBlocking
-                    val containerXml =
-                        builder.container.readDecodeXmlOrNull(containerUrl) ?: return@runBlocking
-
-                    val opfPath = containerXml
-                        .getFirst("rootfiles", Namespaces.OPC)
-                        ?.getFirst("rootfile", Namespaces.OPC)
-                        ?.getAttr("full-path")
-                        ?: return@runBlocking
-
-                    val opfUrl = Url.fromEpubHref(opfPath) ?: return@runBlocking
-                    val opfXmlDocument =
-                        builder.container.readDecodeXmlOrNull(opfUrl) ?: return@runBlocking
-                    val packageDocument = PackageDocument.parse(opfXmlDocument, opfUrl)
-                        ?: return@runBlocking
-
-                    val manifestItems = packageDocument.manifest
-
-                    @Suppress("UNCHECKED_CAST")
-                    val itemById = manifestItems
-                        .filter { it.id != null }
-                        .associateBy(Item::id) as Map<String, Item>
-                    val readingOrder = builder.manifest.readingOrder.toMutableList()
-
-                    for (manifestItem in manifestItems) {
-                        val mediaOverlayId = manifestItem.mediaOverlay ?: continue
-                        val mediaOverlayHref = itemById[mediaOverlayId]?.href ?: continue
-                        val manifestItemHref = manifestItem.href
-                        val linkIndex =
-                            readingOrder.indexOfFirstWithHref(manifestItemHref) ?: continue
-                        val link = readingOrder[linkIndex]
-                        readingOrder[linkIndex] =
-                            link.addProperties(mapOf("mediaOverlay" to mediaOverlayHref))
-                    }
-
-                    builder.manifest = builder.manifest.copy(
-                        readingOrder = readingOrder
-                    )
-                }
-
-            })
-                .getOrElse { throw Exception("Failed to open publication at $url: ${it.message}") }
+        // No onCreatePublication transformer: the only thing it ever did was
+        // re-parse the OPF to hang a "mediaOverlay" property on each reading
+        // order link, for the read-along player that no longer exists.
+        val publication = opener.open(asset, allowUserInteraction = false)
+            .getOrElse { throw Exception("Failed to open publication at $url: ${it.message}") }
 
         publications[bookUuid] = publication
-        if (clips == null) {
-            makeMediaOverlays(bookUuid, publication)
-        } else {
-            this.clips[bookUuid] = clips
-        }
 
         return publication
     }
 
-    fun buildAudiobookManifest(bookUuid: String): Manifest {
-        val publication = getPublication(bookUuid)
-            ?: throw Exception("Publication for book $bookUuid is unopened.")
-        val bookClips = this.clips[bookUuid]
-            ?: throw Exception("Book $bookUuid has no media overlays")
-
-        val clipsByHref = bookClips.groupBy { it.locator.href }
-
-        fun buildAudiobookTocLink(link: Link): Link? {
-            val children = link.children.mapNotNull { buildAudiobookTocLink(it) }
-            val fallbackLink = children.firstOrNull()?.let {
-                Link(
-                    href = it.href,
-                    mediaType = it.mediaType,
-                    title = link.title,
-                    duration = 0.0,
-                    children = children
-                )
-            }
-
-            val tocLocator = locateLink(bookUuid, link) ?: return fallbackLink
-            val tocProgression = tocLocator.locations.progression ?: return fallbackLink
-            val plainLink = publication.linkWithHref(tocLocator.href) ?: return fallbackLink
-            val chapterClips = clipsByHref[plainLink.url()] ?: return fallbackLink
-            val clip =
-                searchForClipByProgression(chapterClips, tocProgression) ?: return fallbackLink
-
-            val clipResource =
-                publication.resources.first { it.href.toString() == clip.audioResource }
-
-            val linkUrl = RelativeUrl("${clipResource.href}#t=${clip.start}")
-                ?: return fallbackLink
-
-            return Link(
-                href = Href(linkUrl),
-                mediaType = clipResource.mediaType,
-                title = link.title,
-                children = children
-            )
-        }
-
-        val clips = emptyMap<String, Double>().toMutableMap()
-
-        for (clip in bookClips) {
-            val audioResource = clip.audioResource
-            val duration = clips.getOrDefault(clip.audioResource, 0.0)
-            val end = clip.end
-            val start = clip.start
-            clips[audioResource] = duration + end - start
-        }
-
-        return Manifest(
-            metadata = publication.metadata,
-            tableOfContents = publication.tableOfContents.mapNotNull { buildAudiobookTocLink(it) },
-            readingOrder = clips.entries.mapNotNull {
-                publication.linkWithHref(
-                    Url.fromEpubHref(it.key)!!
-                )?.copy(duration = it.value)
-            }
-        )
-    }
-
-    @OptIn(InternalReadiumApi::class)
-    private suspend fun makeMediaOverlays(bookUuid: String, publication: Publication) {
-        val bookClips: MutableList<OverlayPar> = mutableListOf()
-
-        val mediaOverlayLinks = publication.resources.filter { it.mediaType == MediaType.SMIL }
-
-        for (link in mediaOverlayLinks) {
-            val smilResource = publication.get(link)
-            try {
-                val smilXml =
-                    smilResource?.readDecodeOrNull { Try.success(it.decodeXml()) }?.getOrNull()
-                        ?: continue
-                val mediaOverlays = SmilParser.parse(publication, smilXml, link) ?: continue
-                bookClips.addAll(mediaOverlays.clips())
-            } finally {
-                smilResource?.close()
-            }
-        }
-
-        this.clips[bookUuid] = bookClips
-    }
-}
-
-fun searchForClipByProgression(clips: List<OverlayPar>, progression: Double): OverlayPar? {
-    var startIndex = 0
-    var endIndex = clips.size - 1
-    while (startIndex <= endIndex) {
-        val midIndex = (startIndex + endIndex) / 2
-        val midItem = clips[midIndex]
-        val prevIndex = midIndex.dec()
-        val prevItem = if (prevIndex < 0) null else clips[prevIndex]
-        if (progression > (midItem.locator.locations.progression ?: 0.0)) {
-            startIndex = midIndex + 1
-            continue
-        }
-        if (prevItem != null && progression < (prevItem.locator.locations.progression ?: 0.0)) {
-            endIndex = midIndex - 1
-            continue
-        }
-        return midItem
-    }
-    return null
 }

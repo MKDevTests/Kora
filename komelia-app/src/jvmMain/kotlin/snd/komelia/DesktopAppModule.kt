@@ -52,12 +52,10 @@ import snd.komelia.db.repository.KomfSettingsRepositoryWrapper
 import snd.komelia.db.repository.OfflineSettingsRepositoryWrapper
 import snd.komelia.db.repository.ReaderSettingsRepositoryWrapper
 import snd.komelia.db.repository.SettingsRepositoryWrapper
-import snd.komelia.db.repository.TranscriptionSettingsRepositoryWrapper
 import snd.komelia.db.settings.ExposedEpubReaderSettingsRepository
 import snd.komelia.db.settings.ExposedImageReaderSettingsRepository
 import snd.komelia.db.settings.ExposedKomfSettingsRepository
 import snd.komelia.db.settings.ExposedSettingsRepository
-import snd.komelia.db.settings.ExposedTranscriptionSettingsRepository
 import snd.komelia.homefilters.homeScreenDefaultFilters
 import snd.komelia.http.komeliaUserAgent
 import snd.komelia.image.DesktopOnnxRuntimeUpscaler
@@ -94,7 +92,6 @@ import snd.komelia.updates.DesktopOnnxRuntimeInstaller
 import snd.komelia.updates.OnnxModelDownloader
 import snd.komelia.updates.RapidOcrModelDownloader
 import snd.komelia.updates.UpdateClient
-import snd.komelia.updates.WhisperModelDownloader
 import snd.komga.client.KomgaClientFactory
 import snd.komga.client.user.KomgaUser
 import snd.webview.WebviewSharedLibraries
@@ -174,9 +171,6 @@ class DesktopAppModule(
                 )
             },
             epubBookmarkRepository = snd.komelia.db.bookmarks.ExposedEpubBookmarkRepository(databases.app),
-            audioPositionRepository = snd.komelia.db.audiobook.ExposedAudioPositionRepository(databases.app),
-            audioBookmarkRepository = snd.komelia.db.audiobook.ExposedAudioBookmarkRepository(databases.app),
-            audioChapterRepository = snd.komelia.db.audiobook.ExposedAudioChapterRepository(databases.app),
             bookAnnotationRepository = snd.komelia.db.annotations.ExposedBookAnnotationRepository(databases.app),
             imageReaderSettingsRepository = ExposedImageReaderSettingsRepository(databases.app).let { repository ->
                 ReaderSettingsRepositoryWrapper(
@@ -209,14 +203,6 @@ class DesktopAppModule(
             },
             librarySeriesFiltersRepository = snd.komelia.db.libraryfilters.ExposedLibrarySeriesFiltersRepository(databases.app),
             savedSeriesFilterRepository = snd.komelia.db.savedfilters.ExposedSavedSeriesFilterRepository(databases.app),
-            transcriptionSettingsRepository = ExposedTranscriptionSettingsRepository(databases.app).let { repository ->
-                TranscriptionSettingsRepositoryWrapper(
-                    SettingsStateWrapper(
-                        settings = repository.get() ?: snd.komelia.db.TranscriptionSettings(),
-                        saveSettings = repository::save
-                    )
-                )
-            },
             seriesReaderOverridesRepository = snd.komelia.db.reader.ExposedSeriesReaderOverridesRepository(databases.app),
             readingEventsRepository = snd.komelia.db.stats.ExposedReadingEventsRepository(databases.app, currentUserId),
             seriesRatingsRepository = snd.komelia.db.ratings.ExposedSeriesRatingsRepository(databases.app, currentUserId),
@@ -327,7 +313,6 @@ class DesktopAppModule(
     override fun createOnnxModelDownloader(updateClient: UpdateClient) =
         DesktopOnnxModelDownloader(updateClient, appNotifications)
 
-    override fun createWhisperModelDownloader(updateClient: UpdateClient): WhisperModelDownloader? = null
 
     override fun createRapidOcrModelDownloader(updateClient: UpdateClient): RapidOcrModelDownloader? = null
 

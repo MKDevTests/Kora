@@ -78,13 +78,6 @@ import snd.komelia.ui.common.immersive.extractDominantColor
 import snd.komelia.ui.platform.BackPressHandler
 import snd.komelia.ui.platform.PlatformType.MOBILE
 import snd.komelia.ui.reader.ReaderTopBar
-import snd.komelia.audiobook.AudioBookmark
-import snd.komelia.audiobook.AudioChapterEntry
-import snd.komelia.audiobook.AudioFolderTrack
-import snd.komelia.ui.reader.epub.audio.AudiobookFolderController
-import snd.komelia.ui.reader.epub.audio.AudioFullScreenPlayer
-import snd.komelia.ui.reader.epub.audio.AudioMiniPlayer
-import snd.komelia.ui.reader.epub.audio.AudioTrackListDialog
 import snd.komelia.ui.LocalStrings
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -101,8 +94,6 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
     val themeBgColor = Color(settings.theme.background)
 
     val coroutineScope = rememberCoroutineScope()
-    val playerTransitionState = remember { SeekableTransitionState(false) }
-    val playerTransition = rememberTransition(playerTransitionState, label = "audio-player")
 
     val theme = LocalTheme.current
     val readerHazeState = if (theme.transparentBars) rememberHazeState() else null
@@ -173,58 +164,7 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                 val bookmarks by epub3State.bookmarks.collectAsState()
                 val toc by epub3State.tableOfContents.collectAsState()
                 val positions by epub3State.positions.collectAsState()
-                val controller by epub3State.mediaOverlayController.collectAsState()
                 val currentLocator by epub3State.currentLocator.collectAsState()
-
-                val folderController = controller as? AudiobookFolderController
-                val audioTracks by (folderController?.tracks ?: MutableStateFlow(emptyList<AudioFolderTrack>())).collectAsState()
-                val audioBookmarks by (folderController?.audioBookmarks ?: MutableStateFlow(emptyList<AudioBookmark>())).collectAsState()
-                val currentAudioTrackIndex by (folderController?.currentTrackIndex ?: MutableStateFlow(0)).collectAsState()
-                val isAudioBookmarked by (folderController?.isCurrentPositionBookmarked ?: MutableStateFlow(false)).collectAsState()
-                val audioChapters by (folderController?.chapters ?: MutableStateFlow(emptyList<AudioChapterEntry>())).collectAsState()
-                val currentChapterIndex by (folderController?.currentChapterIndex ?: MutableStateFlow(0)).collectAsState()
-                var showAudioTrackDialog by remember { mutableStateOf(false) }
-
-                val transcriptSegments by (folderController?.liveTranscriptSegments ?: flowOf(emptyList()))
-                    .collectAsState(initial = emptyList())
-                val transcriptState by (folderController?.transcriptState ?: flowOf(null))
-                    .collectAsState(initial = null)
-                var isTranscribing by remember { mutableStateOf(false) }
-                val transcriptSnackbarState = remember { SnackbarHostState() }
-
-                val recordAudioLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestPermission()
-                ) { granted ->
-                    if (granted) {
-                        isTranscribing = true
-                        controller?.startTranscription()
-                    } else {
-                        coroutineScope.launch {
-                            transcriptSnackbarState.showSnackbar("Microphone permission is required for live transcription")
-                        }
-                    }
-                }
-
-                val onTranscriptToggle: () -> Unit = {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                        coroutineScope.launch {
-                            transcriptSnackbarState.showSnackbar("Live transcription requires Android 12 or later")
-                        }
-                    } else if (isTranscribing) {
-                        isTranscribing = false
-                        controller?.stopTranscription()
-                    } else {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            activity, Manifest.permission.RECORD_AUDIO
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (hasPermission) {
-                            isTranscribing = true
-                            controller?.startTranscription()
-                        } else {
-                            recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    }
-                }
 
                 val dateTimeText by produceState("") {
                     while (true) {
@@ -237,32 +177,18 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                 }
                 val overlayColor = Color(settings.theme.foreground).copy(alpha = 0.45f)
 
-                val chapterTitle = remember(currentLocator, toc, currentAudioTrackIndex, audioTracks, audioChapters, currentChapterIndex) {
-                    if (audioTracks.isNotEmpty()) {
-                        audioChapters.getOrNull(currentChapterIndex)?.title
-                            ?: audioTracks.getOrNull(currentAudioTrackIndex)?.title
-                            ?: ""
-                    } else {
-                        currentLocator?.let { loc ->
-                            loc.title
-                                ?: findTocLink(toc, loc.href)?.title
-                                ?: loc.href.toString()
-                                    .substringAfterLast('/').substringBeforeLast('.')
-                                    .replace('-', ' ').replace('_', ' ')
-                        } ?: ""
-                    }
+                val chapterTitle = remember(currentLocator, toc) {
+                    currentLocator?.let { loc ->
+                        loc.title
+                            ?: findTocLink(toc, loc.href)?.title
+                            ?: loc.href.toString()
+                                .substringAfterLast('/').substringBeforeLast('.')
+                                .replace('-', ' ').replace('_', ' ')
+                    } ?: ""
                 }
 
                 val density = LocalDensity.current
                 var cardHeightPx by remember { mutableStateOf(0) }
-                val audioPlayerBottomPadding by animateDpAsState(
-                    targetValue = if (showControls && positions.isNotEmpty()) {
-                        with(density) { cardHeightPx.toDp() } + 10.dp
-                    } else {
-                        10.dp
-                    },
-                    label = "AudioPlayerBottomPadding"
-                )
 
 
                 if (showControls) {
@@ -323,112 +249,6 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                                 onChapterClick = { epub3State.openContentDialog(0) },
                                 onBookmarkToggle = { epub3State.toggleBookmark(it) },
                             )
-                        }
-                    }
-                }
-
-                // SharedTransitionLayout fills the full screen so shared elements have the full
-                // coordinate space to fly between the mini-player pill and the full-screen sheet.
-                controller?.let { ctrl ->
-                    val book by epub3State.book.collectAsState()
-
-                    val bookId by epub3State.bookId.collectAsState()
-                    val coverRequest = remember(bookId) { BookDefaultThumbnailRequest(bookId) }
-                    val coverPainter = rememberAsyncImagePainter(model = coverRequest)
-                    var dominantColor by remember(bookId) { mutableStateOf<Color?>(null) }
-                    LaunchedEffect(bookId) { dominantColor = extractDominantColor(coverPainter) }
-
-                    val immersiveEnabled = LocalImmersiveColorEnabled.current
-                    val immersiveAlpha = LocalImmersiveColorAlpha.current
-                    val surface = MaterialTheme.colorScheme.surface
-                    val playerBackgroundColor = remember(dominantColor, immersiveEnabled, immersiveAlpha) {
-                        if (immersiveEnabled && dominantColor != null)
-                            dominantColor!!.copy(alpha = immersiveAlpha).compositeOver(surface)
-                        else surface
-                    }
-
-                    val isBookmarked = remember(currentLocator, bookmarks) { epub3State.isBookmarked(currentLocator) }
-
-                    SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            // Mini player at bottom — fades out as shared elements morph upward
-                            playerTransition.AnimatedVisibility(
-                                visible = { !it },
-                                enter = fadeIn(tween(300)),
-                                exit = fadeOut(tween(200)),
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .then(if (useNewUI2) Modifier.fillMaxWidth().padding(horizontal = 16.dp) else Modifier.padding(horizontal = 2.dp))
-                                    .padding(bottom = audioPlayerBottomPadding),
-                            ) {
-                                AudioMiniPlayer(
-                                    controller = ctrl,
-                                    bookId = epub3State.bookId.value,
-                                    bookTitle = book?.metadata?.title ?: "",
-                                    chapterTitle = chapterTitle,
-                                    backgroundColor = playerBackgroundColor,
-                                    onCoverClick = { coroutineScope.launch { playerTransitionState.animateTo(true) } },
-                                    sharedTransitionScope = this@SharedTransitionLayout,
-                                    animatedVisibilityScope = this,
-                                    useNewUI2 = useNewUI2,
-                                )
-                            }
-
-                            // Full-screen player — sharedBounds on its Surface drives the animation
-                            playerTransition.AnimatedVisibility(
-                                visible = { it },
-                                enter = EnterTransition.None,
-                                exit = fadeOut(tween(500)),
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                AudioFullScreenPlayer(
-                                    controller = ctrl,
-                                    bookId = epub3State.bookId.value,
-                                    bookTitle = book?.metadata?.title ?: "",
-                                    chapterTitle = chapterTitle,
-                                    backgroundColor = playerBackgroundColor,
-                                    positions = positions,
-                                    currentLocator = currentLocator,
-                                    onNavigateToPosition = epub3State::navigateToPosition,
-                                    onDismiss = { coroutineScope.launch { playerTransitionState.animateTo(false) } },
-                                    onDrag = { fraction ->
-                                        coroutineScope.launch { playerTransitionState.seekTo(fraction, targetState = false) }
-                                    },
-                                    onDragEnd = { fraction ->
-                                        coroutineScope.launch {
-                                            if (fraction > 0.15f) playerTransitionState.animateTo(false)
-                                            else playerTransitionState.animateTo(true)
-                                        }
-                                    },
-                                    onChapterClick = {
-                                        if (audioTracks.isNotEmpty()) showAudioTrackDialog = true
-                                        else epub3State.openContentDialog(0)
-                                    },
-                                    isBookmarked = isBookmarked,
-                                    onBookmarkToggle = { currentLocator?.let { epub3State.toggleBookmark(it) } },
-                                    audioTracks = audioTracks,
-                                    audioBookmarks = audioBookmarks,
-                                    isAudioBookmarked = isAudioBookmarked,
-                                    onAudioBookmarkToggle = {
-                                        folderController?.toggleAudioBookmark(
-                                            audioTracks.getOrNull(currentAudioTrackIndex)?.title ?: ""
-                                        )
-                                    },
-                                    currentAudioTrackIndex = currentAudioTrackIndex,
-                                    onSeekToTrackPosition = { trackIndex, positionSeconds ->
-                                        folderController?.seekToTrackPosition(trackIndex, positionSeconds)
-                                    },
-                                    playbackSpeed = settings.playbackSpeed,
-                                    onSpeedChange = { epub3State.updateSettings(settings.copy(playbackSpeed = it)) },
-                                    transcriptState = transcriptState,
-                                    transcriptSegments = transcriptSegments,
-                                    onTranscriptToggle = onTranscriptToggle,
-                                    isTranscribing = isTranscribing,
-                                    sharedTransitionScope = this@SharedTransitionLayout,
-                                    animatedVisibilityScope = this,
-                                    modifier = Modifier.fillMaxSize().align(Alignment.BottomCenter),
-                                )
-                            }
                         }
                     }
                 }
@@ -660,30 +480,9 @@ actual fun Epub3ReaderContent(state: EpubReaderState) {
                     )
                 }
 
-                // Audio track list dialog (folder audiobook mode)
-                if (showAudioTrackDialog && folderController != null) {
-                    AudioTrackListDialog(
-                        chapters = audioChapters,
-                        bookmarks = audioBookmarks,
-                        currentChapterIndex = currentChapterIndex,
-                        onChapterClick = { index -> folderController.seekToChapter(index) },
-                        onBookmarkClick = { bookmark ->
-                            folderController.seekToTrackPosition(bookmark.trackIndex, bookmark.positionSeconds)
-                        },
-                        onDeleteBookmark = { bookmark ->
-                            folderController.deleteAudioBookmark(bookmark.id)
-                        },
-                        onDismiss = { showAudioTrackDialog = false },
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
-                }
             }
         }
     }
 
-    BackPressHandler {
-        if (playerTransitionState.currentState || playerTransitionState.targetState) {
-            coroutineScope.launch { playerTransitionState.animateTo(false) }
-        } else state.onBackButtonPress()
-    }
+    BackPressHandler { state.onBackButtonPress() }
 }

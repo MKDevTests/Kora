@@ -10,30 +10,13 @@ data class SyncBlob(
     @SerialName("v") val version: Int = 1,
     @SerialName("b") val bookmarks: List<CompactBookmark> = emptyList(),
     @SerialName("a") val annotations: List<CompactAnnotation> = emptyList(),
-    @SerialName("au") val audioBookmarks: List<CompactAudioBookmark> = emptyList(),
-    @SerialName("ap") val audioPosition: CompactAudioPosition? = null,
     @SerialName("m") val lastModified: Long = 0
-)
-
-@Serializable
-data class CompactAudioPosition(
-    @SerialName("t") val track: Int,
-    @SerialName("p") val pos: Double,
-    @SerialName("s") val savedAt: Long
 )
 
 @Serializable
 data class CompactBookmark(
     @SerialName("i") val id: String,
     @SerialName("l") val locatorJson: String,
-    @SerialName("c") val createdAt: Long
-)
-
-@Serializable
-data class CompactAudioBookmark(
-    @SerialName("i") val id: String,
-    @SerialName("t") val track: Int,
-    @SerialName("p") val pos: Double,
     @SerialName("c") val createdAt: Long
 )
 
@@ -75,19 +58,9 @@ class ReaderSyncService {
      * @param localLastSyncTime The timestamp of the remote blob when this device last synced.
      */
     fun merge(local: SyncBlob, remote: SyncBlob, localLastSyncTime: Long): SyncBlob {
-        val mergedAudioPosition = when {
-            local.audioPosition != null && remote.audioPosition != null ->
-                if (local.audioPosition.savedAt >= remote.audioPosition.savedAt) local.audioPosition else remote.audioPosition
-            local.audioPosition != null -> local.audioPosition
-            remote.audioPosition != null -> remote.audioPosition
-            else -> null
-        }
-
         return SyncBlob(
             bookmarks = mergeItems(local.bookmarks, remote.bookmarks, localLastSyncTime, remote.lastModified) { it.id to it.createdAt },
             annotations = mergeItems(local.annotations, remote.annotations, localLastSyncTime, remote.lastModified) { it.id to it.updatedAt },
-            audioBookmarks = mergeItems(local.audioBookmarks, remote.audioBookmarks, localLastSyncTime, remote.lastModified) { it.id to it.createdAt },
-            audioPosition = mergedAudioPosition,
             lastModified = maxOf(local.lastModified, remote.lastModified)
         )
     }

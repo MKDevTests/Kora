@@ -37,10 +37,7 @@ import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.ManagedKomgaEvents
 import snd.komelia.sync.CompactAnnotation
-import snd.komelia.sync.CompactAudioBookmark
 import snd.komelia.sync.CompactBookmark
-import snd.komelia.sync.CompactAudioPosition
-import snd.komelia.audiobook.AudioPosition
 import snd.komelia.sync.ReaderSyncService
 import snd.komelia.sync.SyncBlob
 import snd.komga.client.book.R2Device
@@ -57,7 +54,6 @@ import snd.komelia.settings.model.minutesUntilNextTransition
 import snd.komelia.annotations.AnnotationLocation
 import snd.komelia.annotations.BookAnnotation
 import snd.komelia.bookmarks.EpubBookmark
-import snd.komelia.audiobook.AudioBookmark
 import snd.komelia.ui.platform.imageExtension
 import snd.komelia.ui.platform.sanitizeFilename
 import snd.komelia.ui.platform.saveImageToDownloads
@@ -145,8 +141,6 @@ class ReaderState(
     private val colorCorrectionRepository: BookColorCorrectionRepository,
     private val bookAnnotationRepository: snd.komelia.annotations.BookAnnotationRepository,
     private val epubBookmarkRepository: snd.komelia.bookmarks.EpubBookmarkRepository,
-    private val audioBookmarkRepository: snd.komelia.audiobook.AudioBookmarkRepository,
-    private val audioPositionRepository: snd.komelia.audiobook.AudioPositionRepository,
     private val readerSyncService: ReaderSyncService,
     private val komgaEvents: ManagedKomgaEvents,
     val pageChangeFlow: SharedFlow<Unit>,
@@ -2126,8 +2120,6 @@ class ReaderState(
         val remoteSyncBlob = readerSyncService.decode(r2Prog?.locator?.koboSpan)
         val localBookmarks = epubBookmarkRepository.getBookmarks(currentBook.id).first()
         val localAnnotations = bookAnnotationRepository.getAnnotations(currentBook.id).first()
-        val localAudioBookmarks = audioBookmarkRepository.getBookmarks(currentBook.id).first()
-        val localAudioPosition = audioPositionRepository.getPosition(currentBook.id)
 
         val currentLocalBlob = readerSyncService.decode(currentSyncBlob.value)
         val localLastSyncTime = currentLocalBlob?.lastModified ?: 0L
@@ -2150,12 +2142,6 @@ class ReaderState(
                     updatedAt = it.updatedAt,
                 )
             },
-            audioBookmarks = localAudioBookmarks.map {
-                CompactAudioBookmark(it.id, it.trackIndex, it.positionSeconds, it.createdAt)
-            },
-            audioPosition = localAudioPosition?.let {
-                CompactAudioPosition(it.trackIndex, it.positionSeconds, it.savedAt)
-            },
             lastModified = localLastSyncTime
         )
 
@@ -2164,17 +2150,6 @@ class ReaderState(
         } else localSyncBlob
 
         // Update local repositories with merged data
-        val mergedAudioPos = merged.audioPosition
-        if (mergedAudioPos != null && (localAudioPosition == null || mergedAudioPos.savedAt > localAudioPosition.savedAt)) {
-            audioPositionRepository.savePosition(
-                AudioPosition(
-                    bookId = currentBook.id,
-                    trackIndex = mergedAudioPos.track,
-                    positionSeconds = mergedAudioPos.pos,
-                    savedAt = mergedAudioPos.savedAt
-                )
-            )
-        }
         merged.bookmarks.forEach { compact ->
             if (localBookmarks.none { it.id == compact.id }) {
                 epubBookmarkRepository.saveBookmark(
@@ -2223,21 +2198,6 @@ class ReaderState(
                 )
             }
         }
-        merged.audioBookmarks.forEach { compact ->
-            if (localAudioBookmarks.none { it.id == compact.id }) {
-                audioBookmarkRepository.saveBookmark(
-                    AudioBookmark(
-                        id = compact.id,
-                        bookId = currentBook.id,
-                        trackIndex = compact.track,
-                        positionSeconds = compact.pos,
-                        trackTitle = "",
-                        createdAt = compact.createdAt
-                    )
-                )
-            }
-        }
-
         // Handle local deletions
         localBookmarks.forEach { local ->
             if (merged.bookmarks.none { it.id == local.id }) {
@@ -2249,12 +2209,6 @@ class ReaderState(
                 bookAnnotationRepository.deleteAnnotation(local.id)
             }
         }
-        localAudioBookmarks.forEach { local ->
-            if (merged.audioBookmarks.none { it.id == local.id }) {
-                audioBookmarkRepository.deleteBookmark(local.id)
-            }
-        }
-
         currentSyncBlob.value = readerSyncService.encode(merged)
     }
 
@@ -2271,8 +2225,6 @@ class ReaderState(
         val snapshotPage = readProgressPage.value.coerceIn(1, snapshotTotalPages)
         val bookmarks = epubBookmarkRepository.getBookmarks(currentBook.id).first()
         val annotations = bookAnnotationRepository.getAnnotations(currentBook.id).first()
-        val audioBookmarks = audioBookmarkRepository.getBookmarks(currentBook.id).first()
-        val audioPosition = audioPositionRepository.getPosition(currentBook.id)
 
         val syncBlob = SyncBlob(
             bookmarks = bookmarks.map {
@@ -2291,12 +2243,6 @@ class ReaderState(
                     createdAt = it.createdAt,
                     updatedAt = it.updatedAt,
                 )
-            },
-            audioBookmarks = audioBookmarks.map {
-                CompactAudioBookmark(it.id, it.trackIndex, it.positionSeconds, it.createdAt)
-            },
-            audioPosition = audioPosition?.let {
-                CompactAudioPosition(it.trackIndex, it.positionSeconds, it.savedAt)
             },
             lastModified = Clock.System.now().toEpochMilliseconds()
         )
