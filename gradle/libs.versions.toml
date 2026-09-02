@@ -1,5 +1,5 @@
 [versions]
-app-version = "1.8.10"
+app-version = "1.8.11"
 agp = "8.13.2"
 android-compileSdk = "36"
 # 28, not 26, since v1.4.7: translate-kit's Bergamot engine uses glob() and
