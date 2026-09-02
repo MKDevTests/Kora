@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import snd.komelia.image.ReduceKernel
 import snd.komelia.image.UpsamplingMode
 import snd.komelia.image.UpscaleMode
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.ContinuousReadingDirection
 import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.NcnnUpscalerSettings
@@ -79,6 +80,12 @@ data class ImageReaderSettings(
      * default — detection is heuristic and adds per-page work.
      */
     val invertSpeechBubbles: Boolean = false,
+    /**
+     * Reader night mode: a warm tint over the page to cut the blue a white
+     * manga page throws at you in the dark. Image reader only — the app
+     * chrome is already dark and the epub reader has its own themes.
+     */
+    val nightMode: NightModeSettings = NightModeSettings(),
     /**
      * Minimal-UI-while-reading toggle (v1.0.11). When true, the reader's
      * "hidden controls" state is replaced by a slim bottom strip showing

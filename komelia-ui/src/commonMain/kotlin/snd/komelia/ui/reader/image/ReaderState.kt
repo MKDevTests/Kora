@@ -19,7 +19,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -44,6 +49,11 @@ import snd.komga.client.book.R2Locator
 import snd.komga.client.book.R2Progression
 import snd.komga.client.sse.KomgaEvent
 import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import snd.komelia.settings.model.NightModeSettings
+import snd.komelia.settings.model.isActiveAt
+import snd.komelia.settings.model.minutesUntilNextTransition
 import snd.komelia.annotations.AnnotationLocation
 import snd.komelia.annotations.BookAnnotation
 import snd.komelia.bookmarks.EpubBookmark
@@ -198,6 +208,17 @@ class ReaderState(
     val imageStretchToFit = MutableStateFlow(true)
     val cropBorders = MutableStateFlow(false)
     val invertSpeechBubbles = MutableStateFlow(false)
+    val nightMode = MutableStateFlow(NightModeSettings())
+
+    /**
+     * Whether the warm tint should be painted right now: the settings plus,
+     * when a schedule is on, the clock.
+     *
+     * Kept separate from [nightMode] because the UI needs both — the settings
+     * to draw the switches, this to decide whether to tint — and because the
+     * clock half has to be recomputed over time. See [watchNightModeSchedule].
+     */
+    val nightModeActive = MutableStateFlow(false)
     val webtoonSmartScroll = MutableStateFlow(true)
     val loadThumbnailPreviews = MutableStateFlow(true)
     val showCarousel = MutableStateFlow(false)
@@ -353,6 +374,8 @@ class ReaderState(
         imageStretchToFit.value = readerSettingsRepository.getStretchToFit().first()
         cropBorders.value = readerSettingsRepository.getCropBorders().first()
         invertSpeechBubbles.value = readerSettingsRepository.getInvertSpeechBubbles().first()
+        nightMode.value = readerSettingsRepository.getNightMode().first()
+        watchNightModeSchedule()
         webtoonSmartScroll.value = readerSettingsRepository.getWebtoonSmartScroll().first()
         loadThumbnailPreviews.value = readerSettingsRepository.getLoadThumbnailPreviews().first()
         flashOnPageChange.value = readerSettingsRepository.getFlashOnPageChange().first()
@@ -946,6 +969,43 @@ class ReaderState(
         // The pipeline's BubbleInvertStep observes the repository flow, so the
         // write is what actually re-runs processing on the visible pages.
         stateScope.launch { readerSettingsRepository.putInvertSpeechBubbles(invert) }
+    }
+
+    fun onNightModeChange(settings: NightModeSettings) {
+        nightMode.value = settings
+        stateScope.launch { readerSettingsRepository.putNightMode(settings) }
+    }
+
+    /**
+     * Keeps [nightModeActive] true for exactly the scheduled range.
+     *
+     * It sleeps until the next switch-over rather than polling: a range that
+     * runs 22:00 to 07:00 changes state twice a day, and a once-a-minute
+     * comparison would be 1440 wake-ups to catch those two. The sleep is
+     * capped at an hour so that changing the system clock or the time zone
+     * mid-book resynchronises on its own instead of firing at the wrong
+     * moment on a stale eight-hour timer.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun watchNightModeSchedule() {
+        nightMode.flatMapLatest { settings ->
+            flow {
+                while (true) {
+                    val now = Clock.System.now()
+                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                    val minuteOfDay = now.hour * 60 + now.minute
+                    emit(settings.isActiveAt(minuteOfDay))
+                    val untilTransition = settings.minutesUntilNextTransition(minuteOfDay)
+                    if (untilTransition == null) break
+                    val sleepMinutes = minOf(untilTransition, 60)
+                    // +1s so we land past the boundary minute, not on it.
+                    delay(sleepMinutes * 60_000L + 1_000L)
+                }
+            }
+        }
+            .distinctUntilChanged()
+            .onEach { nightModeActive.value = it }
+            .launchIn(stateScope)
     }
 
     fun onWebtoonSmartScrollChange(enabled: Boolean) {

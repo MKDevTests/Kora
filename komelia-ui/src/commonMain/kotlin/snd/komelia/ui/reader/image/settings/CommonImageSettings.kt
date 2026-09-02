@@ -22,15 +22,32 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.LocalWindowHeight
+import snd.komelia.ui.LocalWindowWidth
+import snd.komelia.ui.platform.WindowSizeClass
 import snd.komelia.ui.common.components.AppSliderDefaults
 import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.common.components.accentInputChipColors
@@ -54,6 +71,9 @@ fun CommonImageSettings(
 
     isColorCorrectionsActive: Boolean,
     onColorCorrectionClick: () -> Unit,
+
+    nightMode: NightModeSettings,
+    onNightModeChange: (NightModeSettings) -> Unit,
 
     flashEnabled: Boolean,
     onFlashEnabledChange: (Boolean) -> Unit,
@@ -136,7 +156,72 @@ fun CommonImageSettings(
             }
         }
 
+        SwitchWithLabel(
+            checked = nightMode.enabled,
+            onCheckedChange = { onNightModeChange(nightMode.copy(enabled = it)) },
+            label = { Text(LocalStrings.current.ui.nightMode) },
+            supportingText = { Text(LocalStrings.current.ui.nightModeWarmTintOnPages) },
+            contentPadding = PaddingValues(horizontal = 10.dp)
+        )
+        AnimatedVisibility(nightMode.enabled) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier.padding(start = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.width(100.dp)) {
+                        Text(
+                            LocalStrings.current.ui.nightModeIntensity,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Text(
+                            "${(nightMode.intensity * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                    Slider(
+                        value = nightMode.intensity,
+                        onValueChange = { onNightModeChange(nightMode.copy(intensity = it)) },
+                        steps = 9,
+                        valueRange = 0f..1f,
+                        colors = AppSliderDefaults.colors(accentColor = accentColor)
+                    )
+                }
 
+                SwitchWithLabel(
+                    checked = nightMode.scheduleEnabled,
+                    onCheckedChange = { onNightModeChange(nightMode.copy(scheduleEnabled = it)) },
+                    label = { Text(LocalStrings.current.ui.nightModeSchedule) },
+                    contentPadding = PaddingValues(horizontal = 0.dp)
+                )
+                AnimatedVisibility(nightMode.scheduleEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        // FlowRow, not Row: on a phone the two fields plus
+                        // their labels do not fit side by side, and wrapping
+                        // beats clipping the second one off the screen.
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            TimeOfDayField(
+                                label = LocalStrings.current.ui.nightModeFrom,
+                                minuteOfDay = nightMode.startMinute,
+                                onMinuteOfDayChange = {
+                                    onNightModeChange(nightMode.copy(startMinute = it))
+                                },
+                            )
+                            TimeOfDayField(
+                                label = LocalStrings.current.ui.nightModeTo,
+                                minuteOfDay = nightMode.endMinute,
+                                onMinuteOfDayChange = {
+                                    onNightModeChange(nightMode.copy(endMinute = it))
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         if (platform != PlatformType.DESKTOP) {
             SwitchWithLabel(
@@ -212,4 +297,87 @@ fun CommonImageSettings(
             }
         }
     }
+}
+
+/**
+ * One end of the night-mode schedule: the time as a tappable field that opens
+ * the platform time picker.
+ *
+ * This replaced a pair of sliders that moved in quarter hours. A slider is 96
+ * indistinguishable stops under a thumb; the picker lets you aim at an hour,
+ * or type it. Snapping to quarter hours went with the sliders — it only ever
+ * existed to make them usable, and a dial that accepts 22:07 while the field
+ * reads 22:00 is worse than no constraint at all.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimeOfDayField(
+    label: String,
+    minuteOfDay: Int,
+    onMinuteOfDayChange: (Int) -> Unit,
+) {
+    var editing by remember { mutableStateOf(false) }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        OutlinedButton(onClick = { editing = true }) {
+            Text(formatMinuteOfDay(minuteOfDay), style = MaterialTheme.typography.titleMedium)
+        }
+    }
+
+    if (editing) {
+        val state = rememberTimePickerState(
+            initialHour = minuteOfDay / 60,
+            initialMinute = minuteOfDay % 60,
+            is24Hour = true,
+        )
+        // The dial needs about 256dp square plus the dialog's own padding. That
+        // fits a tablet and not a phone, and on a phone in landscape it does
+        // not fit vertically either — so a small screen opens on the keyboard
+        // variant, which is two text fields and always fits. The toggle is
+        // there in both cases; this only picks what you see first.
+        val narrow = LocalWindowWidth.current == WindowSizeClass.COMPACT ||
+            LocalWindowHeight.current == WindowSizeClass.COMPACT
+        var keyboard by remember(narrow) { mutableStateOf(narrow) }
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text(label) },
+            text = {
+                Column {
+                    if (keyboard) TimeInput(state) else TimePicker(state)
+                }
+            },
+            dismissButton = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { keyboard = !keyboard }) {
+                        Icon(
+                            imageVector = if (keyboard) Icons.Default.Schedule
+                            else Icons.Default.Keyboard,
+                            contentDescription = null,
+                        )
+                    }
+                    TextButton(onClick = { editing = false }) {
+                        Text(LocalStrings.current.ui.cancel)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onMinuteOfDayChange(state.hour * 60 + state.minute)
+                    editing = false
+                }) { Text(LocalStrings.current.ui.ok) }
+            },
+        )
+    }
+}
+
+private fun formatMinuteOfDay(minuteOfDay: Int): String {
+    val hours = minuteOfDay / 60
+    val minutes = minuteOfDay % 60
+    return "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 }

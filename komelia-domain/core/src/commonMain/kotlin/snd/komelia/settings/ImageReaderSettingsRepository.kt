@@ -8,6 +8,7 @@ import snd.komelia.image.UpscaleMode
 import snd.komelia.settings.model.ContinuousReadingDirection
 import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.NcnnUpscalerSettings
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.OcrSettings
 import snd.komelia.settings.model.PageDisplayLayout
 import snd.komelia.settings.model.PagedReadingDirection
@@ -148,6 +149,13 @@ interface ImageReaderSettingsRepository {
      */
     fun getInvertSpeechBubbles(): Flow<Boolean>
     suspend fun putInvertSpeechBubbles(enabled: Boolean)
+
+    /**
+     * Reader night mode: warm tint over the page, image reader only.
+     * See [snd.komelia.settings.model.NightModeSettings].
+     */
+    fun getNightMode(): Flow<NightModeSettings>
+    suspend fun putNightMode(settings: NightModeSettings)
 
     /**
      * Image reader minimal-UI-while-reading toggle (v1.0.11). When true,

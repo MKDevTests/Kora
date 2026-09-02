@@ -163,7 +163,17 @@ fun ReaderContent(
         }
     }
 
-    CompositionLocalProvider(LocalHazeState provides readerHazeState) {
+    // Night mode: the warm tint reaches the page through a composition local
+    // instead of a parameter, because ReaderImageContent is called from seven
+    // places that have no other use for it. Null = off.
+    val nightModeSettings by commonReaderState.nightMode.collectAsState()
+    val nightModeActive by commonReaderState.nightModeActive.collectAsState()
+    val nightModeIntensity = if (nightModeActive) nightModeSettings.intensity else null
+
+    CompositionLocalProvider(
+        LocalHazeState provides readerHazeState,
+        LocalReaderNightModeIntensity provides nightModeIntensity,
+    ) {
         Box(
             Modifier
                 .fillMaxSize()

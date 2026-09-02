@@ -16,6 +16,7 @@ import snd.komelia.image.UpscaleMode
 import snd.komelia.settings.model.ContinuousReadingDirection
 import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.NcnnEngine
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.NcnnUpscalerSettings
 import snd.komelia.settings.model.OcrEngine
 import snd.komelia.settings.model.OcrLanguage
@@ -117,6 +118,13 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                         continuousReaderTapToZoom = it[ImageReaderSettingsTable.continuousReaderTapToZoom],
                         keepProgressBarVisibleWhileReading = it[ImageReaderSettingsTable.keepProgressBarVisibleWhileReading],
                         invertSpeechBubbles = it[ImageReaderSettingsTable.invertSpeechBubbles],
+                        nightMode = NightModeSettings(
+                            enabled = it[ImageReaderSettingsTable.nightModeEnabled],
+                            intensity = it[ImageReaderSettingsTable.nightModeIntensity],
+                            scheduleEnabled = it[ImageReaderSettingsTable.nightModeScheduleEnabled],
+                            startMinute = it[ImageReaderSettingsTable.nightModeStartMinute],
+                            endMinute = it[ImageReaderSettingsTable.nightModeEndMinute],
+                        ),
                     )
                 }
         }
@@ -187,6 +195,11 @@ class ExposedImageReaderSettingsRepository(database: Database) : ExposedReposito
                 it[continuousReaderTapToZoom] = settings.continuousReaderTapToZoom
                 it[keepProgressBarVisibleWhileReading] = settings.keepProgressBarVisibleWhileReading
                 it[invertSpeechBubbles] = settings.invertSpeechBubbles
+                it[nightModeEnabled] = settings.nightMode.enabled
+                it[nightModeIntensity] = settings.nightMode.intensity
+                it[nightModeScheduleEnabled] = settings.nightMode.scheduleEnabled
+                it[nightModeStartMinute] = settings.nightMode.startMinute
+                it[nightModeEndMinute] = settings.nightMode.endMinute
             }
         }
     }

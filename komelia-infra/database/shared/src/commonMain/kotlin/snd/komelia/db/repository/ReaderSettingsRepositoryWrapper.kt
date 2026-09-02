@@ -8,6 +8,7 @@ import snd.komelia.image.ReduceKernel
 import snd.komelia.image.UpsamplingMode
 import snd.komelia.image.UpscaleMode
 import snd.komelia.settings.ImageReaderSettingsRepository
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.ContinuousReadingDirection
 import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.NcnnUpscalerSettings
@@ -341,6 +342,14 @@ class ReaderSettingsRepositoryWrapper(
 
     override suspend fun putInvertSpeechBubbles(enabled: Boolean) {
         wrapper.transform { it.copy(invertSpeechBubbles = enabled) }
+    }
+
+    override fun getNightMode(): Flow<NightModeSettings> {
+        return wrapper.mapState { it.nightMode }
+    }
+
+    override suspend fun putNightMode(settings: NightModeSettings) {
+        wrapper.transform { it.copy(nightMode = settings) }
     }
 
     override fun getContinuousReaderTapToZoom(): Flow<Boolean> {
