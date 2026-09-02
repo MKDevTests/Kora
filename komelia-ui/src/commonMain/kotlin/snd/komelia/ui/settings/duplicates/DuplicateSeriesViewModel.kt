@@ -26,10 +26,10 @@ private val logger = KotlinLogging.logger {}
  * Measured on the real catalogue: drawing all 230 groups at once froze the main
  * thread for about six seconds ("Skipped 356 frames"), because the settings
  * container is a plain scrolling Column — every row is composed, none is lazy.
- * Fifty rows of text compose without a dropped frame, and five taps reach the
- * end of the worst list this catalogue produces.
+ * Thirty cards compose in a fraction of that, and with the filter above them a
+ * long scroll is no longer how this screen is used.
  */
-private const val PAGE_SIZE = 50
+private const val PAGE_SIZE = 30
 
 /** One series inside an expanded group, with what tells it from its twin. */
 data class DuplicateDetail(
@@ -51,6 +51,13 @@ data class DuplicateRow(
     val key: String = group.members.joinToString("|") { it.seriesId }
 }
 
+/** A library and how many groups it holds, for the filter row. */
+data class DuplicateLibraryFacet(
+    val libraryId: String,
+    val name: String,
+    val count: Int,
+)
+
 /**
  * Finds series filed twice inside the same library.
  *
@@ -68,11 +75,34 @@ class DuplicateSeriesViewModel(
 
     var scanning by mutableStateOf(false)
         private set
+    var ignoredCount by mutableStateOf(0)
+        private set
+
+    /** Everything the sweep found, before the filter row narrows it. */
+    private var allLikely: List<DuplicateRow> = emptyList()
+    private var allUnsure: List<DuplicateRow> = emptyList()
+
     var likely by mutableStateOf<List<DuplicateRow>>(emptyList())
         private set
     var unsure by mutableStateOf<List<DuplicateRow>>(emptyList())
         private set
-    var ignoredCount by mutableStateOf(0)
+
+    /** How many groups the sweep found, whatever the filter shows. */
+    var totalGroups by mutableStateOf(0)
+        private set
+
+    /** How many series those groups hold — the number worth acting on. */
+    var totalSeries by mutableStateOf(0)
+        private set
+
+    var query by mutableStateOf("")
+        private set
+
+    /** Null means every library. */
+    var selectedLibrary by mutableStateOf<String?>(null)
+        private set
+
+    var libraryFacets by mutableStateOf<List<DuplicateLibraryFacet>>(emptyList())
         private set
 
     /**
@@ -115,6 +145,18 @@ class DuplicateSeriesViewModel(
         visibleCount += PAGE_SIZE
     }
 
+    fun onQueryChange(value: String) {
+        query = value
+        visibleCount = PAGE_SIZE
+        applyFilter()
+    }
+
+    fun onLibrarySelected(libraryId: String?) {
+        selectedLibrary = libraryId
+        visibleCount = PAGE_SIZE
+        applyFilter()
+    }
+
     private suspend fun scan() {
         if (scanning) return
         scanning = true
@@ -133,15 +175,43 @@ class DuplicateSeriesViewModel(
                 group = group,
                 libraryName = libraryNames[group.libraryId] ?: group.libraryId,
             )
-            likely = groups.filter { it.likely }.map(::row)
-            unsure = groups.filterNot { it.likely }.map(::row)
+            allLikely = groups.filter { it.likely }.map(::row)
+            allUnsure = groups.filterNot { it.likely }.map(::row)
             visibleCount = PAGE_SIZE
+            refreshTotals()
+            applyFilter()
         } catch (e: Exception) {
             logger.catching(e)
             notifications.addErrorNotification(e)
         } finally {
             scanning = false
         }
+    }
+
+    private fun refreshTotals() {
+        val all = allLikely + allUnsure
+        totalGroups = all.size
+        totalSeries = all.sumOf { it.group.members.size }
+        // Facets come from the groups, not from the library list: a library with
+        // nothing to fix has no chip, so the row says where the work actually is.
+        libraryFacets = all
+            .groupBy { it.group.libraryId }
+            .map { (id, rows) -> DuplicateLibraryFacet(id, rows.first().libraryName, rows.size) }
+            .sortedByDescending { it.count }
+    }
+
+    private fun applyFilter() {
+        val needle = query.trim()
+        fun keep(row: DuplicateRow): Boolean {
+            if (selectedLibrary != null && row.group.libraryId != selectedLibrary) return false
+            if (needle.isEmpty()) return true
+            // Every member's title, not just the group's: pass B groups titles
+            // that differ, and searching "Attaque des Titans" must find a group
+            // the sweep happened to name "L'attaque des Titans".
+            return row.group.members.any { it.title.contains(needle, ignoreCase = true) }
+        }
+        likely = allLikely.filter(::keep)
+        unsure = allUnsure.filter(::keep)
     }
 
     /**
@@ -161,9 +231,11 @@ class DuplicateSeriesViewModel(
                         ignoreRepository.ignore(duplicatePairKey(ids[i], ids[j]))
                     }
                 }
-                likely = likely.filterNot { it.key == row.key }
-                unsure = unsure.filterNot { it.key == row.key }
+                allLikely = allLikely.filterNot { it.key == row.key }
+                allUnsure = allUnsure.filterNot { it.key == row.key }
                 ignoredCount = ignoreRepository.ignoredPairs().size
+                refreshTotals()
+                applyFilter()
             } catch (e: Exception) {
                 logger.catching(e)
                 notifications.addErrorNotification(e)
@@ -218,7 +290,8 @@ class DuplicateSeriesViewModel(
     }
 
     private fun update(key: String, transform: (DuplicateRow) -> DuplicateRow) {
-        likely = likely.map { if (it.key == key) transform(it) else it }
-        unsure = unsure.map { if (it.key == key) transform(it) else it }
+        allLikely = allLikely.map { if (it.key == key) transform(it) else it }
+        allUnsure = allUnsure.map { if (it.key == key) transform(it) else it }
+        applyFilter()
     }
 }
