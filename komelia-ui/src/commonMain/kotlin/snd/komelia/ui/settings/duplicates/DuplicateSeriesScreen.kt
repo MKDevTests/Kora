@@ -82,14 +82,24 @@ class DuplicateSeriesScreen : Screen {
 
                 SummaryBanner(vm)
 
-                // While the index has no language for some rows, the finder
-                // cannot apply the language rule to them, so two editions of one
-                // work can still be listed as a duplicate. Better said out loud
-                // than silently wrong.
+                // Two different problems wearing the same symptom. No language
+                // anywhere means the index predates V104 and a rebuild fixes it;
+                // some missing means those series carry none on the server, and
+                // telling the admin to rebuild would send them somewhere that
+                // cannot help. Either way the language rule is not applied to
+                // those pairs, so two editions of one work can still be listed.
                 if (vm.seriesWithoutLanguage > 0) {
                     Notice(
-                        text = "${vm.seriesWithoutLanguage} ${strings.duplicateSeriesNoLanguage}",
-                        color = MaterialTheme.colorScheme.error,
+                        text = if (vm.languageIndexed) {
+                            "${vm.seriesWithoutLanguage} ${strings.duplicateSeriesNoLanguage}"
+                        } else {
+                            strings.duplicateSeriesLanguageMissing
+                        },
+                        color = if (vm.languageIndexed) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
                         icon = Icons.Default.Warning,
                     )
                 }
