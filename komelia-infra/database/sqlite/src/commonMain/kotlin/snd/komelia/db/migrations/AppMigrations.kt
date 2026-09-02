@@ -112,6 +112,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V100__similarity_genre_count.sql",
         "V101__saved_series_filters.sql",
         "V102__reader_night_mode.sql",
+        "V103__duplicate_ignored.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

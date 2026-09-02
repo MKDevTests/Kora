@@ -269,6 +269,7 @@ class AndroidAppModule(
             similarityIndexRepository = snd.komelia.db.similarity.ExposedSimilarityIndexRepository(databases.app),
             readingOrderRepository = snd.komelia.db.readingorder.ExposedReadingOrderRepository(databases.app),
             suggestionFeedbackRepository = snd.komelia.db.similarity.ExposedSuggestionFeedbackRepository(databases.app),
+            duplicateIgnoreRepository = snd.komelia.db.duplicates.ExposedDuplicateIgnoreRepository(databases.app),
             libraryCountsRepository = snd.komelia.db.library.ExposedLibraryCountsRepository(databases.app),
             keepReadingRepository = snd.komelia.db.library.ExposedKeepReadingRepository(databases.app),
             seriesLinksCacheRepository = snd.komelia.db.library.ExposedSeriesLinksCacheRepository(databases.app),

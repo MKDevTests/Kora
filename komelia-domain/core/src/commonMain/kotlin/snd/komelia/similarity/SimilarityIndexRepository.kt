@@ -16,6 +16,20 @@ data class SimilarityIndexEntry(
 )
 
 /**
+ * A row's identity, without its terms.
+ *
+ * The duplicate finder compares titles and reads nothing else, and
+ * [SimilarityIndexRepository.entriesOf] would JSON-decode one term blob per
+ * series to hand it data it never opens — twelve thousand decodes for a sweep
+ * that otherwise costs a tenth of a second.
+ */
+data class SimilarityIndexTitle(
+    val seriesId: String,
+    val libraryId: String,
+    val titleSort: String,
+)
+
+/**
  * Per-library build state. Kept separate from the rows so "is this library
  * indexed, and how stale is it" is one cheap read instead of a count over
  * several thousand rows — the question every screen opening asks.
@@ -55,6 +69,14 @@ interface SimilarityIndexRepository {
      * nothing.
      */
     suspend fun seriesIdsOf(libraryId: String): List<String>
+
+    /**
+     * Every indexed series of every library, identity only.
+     *
+     * Deliberately not per-library: the duplicate sweep wants the whole
+     * catalogue and one query beats six.
+     */
+    suspend fun allTitles(): List<SimilarityIndexTitle>
 
     /** How many series [libraryId] has indexed, without loading any of them. */
     suspend fun countOf(libraryId: String): Int
