@@ -61,6 +61,7 @@ import snd.komelia.ui.settings.users.UsersScreen
 import snd.komf.api.MediaServer.KOMGA
 import snd.komga.client.user.KomgaUser
 import snd.webview.webviewIsAvailable
+import snd.komelia.chapters.normalizeForMatch
 import snd.komelia.ui.LocalStrings
 
 private data class NavEntry(
@@ -400,7 +401,12 @@ private fun FilteredSettingsGroup(
     entries: List<NavEntry>,
     query: String,
 ) {
-    val visible = entries.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
+    // Both sides folded, not just lowercased. Fourteen of this menu's
+    // thirty-seven labels carry an accent — "Séries masquées", "Boîte à outils
+    // Komga", "Général" — and a soft keyboard does not put one there by
+    // accident, so "serie" found nothing at all.
+    val needle = normalizeForMatch(query)
+    val visible = entries.filter { needle.isEmpty() || normalizeForMatch(it.label).contains(needle) }
     if (visible.isEmpty()) return
 
     SettingsGroup(title = title) {
