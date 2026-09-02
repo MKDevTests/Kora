@@ -42,10 +42,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.accentFilterChipColors
 import snd.komelia.ui.common.images.SeriesThumbnail
 import snd.komelia.ui.series.SeriesScreen
+import snd.komelia.ui.platform.WindowSizeClass
 import snd.komelia.ui.settings.SettingsScreenContainer
 import snd.komga.client.series.KomgaSeriesId
 
@@ -266,8 +268,13 @@ private fun GroupCard(vm: DuplicateSeriesViewModel, row: DuplicateRow) {
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            // Actions beside the title on anything wider than a phone. Stacked
+            // under it, each card grew a third line and the list dropped from
+            // twelve visible groups to six — on a tablet that is a lot of
+            // scrolling bought with empty space.
+            val narrow = LocalWindowWidth.current == WindowSizeClass.COMPACT
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = row.group.title,
@@ -276,38 +283,24 @@ private fun GroupCard(vm: DuplicateSeriesViewModel, row: DuplicateRow) {
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = row.libraryName,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                // The count is a badge, not a "· 2" tacked onto the library
-                // name: it is the one number that says how big the problem is.
-                CountBadge(row.group.members.size)
-            }
-
-            // Actions on their own line, left-aligned under the title. On a
-            // tablet the old layout left half the width empty between the title
-            // and two buttons pinned to the far edge.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 2.dp),
-            ) {
-                TextButton(onClick = { vm.onToggleDetails(row) }, enabled = !row.loadingDetails) {
-                    when {
-                        row.loadingDetails -> CircularProgressIndicator(Modifier.width(16.dp).height(16.dp))
-                        expanded -> Icon(Icons.Default.ExpandLess, contentDescription = null, modifier = Modifier.width(18.dp))
-                        else -> Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.width(18.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = row.libraryName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // The count is a badge, not a "· 2" tacked onto the
+                        // library name: it is the one number that says how big
+                        // the problem is.
+                        CountBadge(row.group.members.size)
                     }
-                    Text(strings.duplicateSeriesDetails, Modifier.padding(start = 6.dp))
                 }
-                TextButton(onClick = { vm.onIgnoreGroup(row) }) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.width(18.dp))
-                    Text(strings.duplicateSeriesNotDuplicates, Modifier.padding(start = 6.dp))
-                }
+                if (!narrow) Actions(vm, row, expanded)
             }
+            if (narrow) Actions(vm, row, expanded)
 
             // Cover, book count, language and publisher together: on the real
             // catalogue that is what settles a group in one look — "7th Garden ·
@@ -343,6 +336,28 @@ private fun GroupCard(vm: DuplicateSeriesViewModel, row: DuplicateRow) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun Actions(vm: DuplicateSeriesViewModel, row: DuplicateRow, expanded: Boolean) {
+    val strings = LocalStrings.current.ui
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(onClick = { vm.onToggleDetails(row) }, enabled = !row.loadingDetails) {
+            when {
+                row.loadingDetails -> CircularProgressIndicator(Modifier.width(16.dp).height(16.dp))
+                expanded -> Icon(Icons.Default.ExpandLess, contentDescription = null, modifier = Modifier.width(18.dp))
+                else -> Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.width(18.dp))
+            }
+            Text(strings.duplicateSeriesDetails, Modifier.padding(start = 6.dp))
+        }
+        TextButton(onClick = { vm.onIgnoreGroup(row) }) {
+            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.width(18.dp))
+            Text(strings.duplicateSeriesNotDuplicates, Modifier.padding(start = 6.dp))
         }
     }
 }

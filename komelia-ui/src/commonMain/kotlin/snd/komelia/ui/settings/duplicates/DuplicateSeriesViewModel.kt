@@ -87,7 +87,15 @@ class DuplicateSeriesViewModel(
     var unsure by mutableStateOf<List<DuplicateRow>>(emptyList())
         private set
 
-    /** How many groups the sweep found, whatever the filter shows. */
+    /**
+     * Groups in the "duplicates" list, whatever the filter shows.
+     *
+     * Deliberately excludes the "to check" ones. Counting both made every
+     * number on the screen disagree with the one below it — the banner said
+     * 233, the section header 230, the Comics chip 69 against a list of 68 —
+     * because those three groups are counted here and shown in their own
+     * section. They have their own header count instead.
+     */
     var totalGroups by mutableStateOf(0)
         private set
 
@@ -189,12 +197,11 @@ class DuplicateSeriesViewModel(
     }
 
     private fun refreshTotals() {
-        val all = allLikely + allUnsure
-        totalGroups = all.size
-        totalSeries = all.sumOf { it.group.members.size }
+        totalGroups = allLikely.size
+        totalSeries = allLikely.sumOf { it.group.members.size }
         // Facets come from the groups, not from the library list: a library with
         // nothing to fix has no chip, so the row says where the work actually is.
-        libraryFacets = all
+        libraryFacets = allLikely
             .groupBy { it.group.libraryId }
             .map { (id, rows) -> DuplicateLibraryFacet(id, rows.first().libraryName, rows.size) }
             .sortedByDescending { it.count }
