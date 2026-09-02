@@ -20,13 +20,12 @@ data class NightModeSettings(
     /** 0f = no tint at all, 1f = the warmest the filter goes. */
     val intensity: Float = 0.5f,
     val scheduleEnabled: Boolean = false,
-    /** Minutes since midnight. The UI moves in steps of 15. */
+    /** Minutes since midnight. */
     val startMinute: Int = 22 * 60,
     val endMinute: Int = 7 * 60,
 ) {
     companion object {
         const val MINUTES_PER_DAY = 24 * 60
-        const val STEP_MINUTES = 15
     }
 }
 

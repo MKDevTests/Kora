@@ -22,6 +22,19 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -180,22 +193,25 @@ fun CommonImageSettings(
                 )
                 AnimatedVisibility(nightMode.scheduleEnabled) {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        TimeOfDaySlider(
-                            label = LocalStrings.current.ui.nightModeFrom,
-                            minuteOfDay = nightMode.startMinute,
-                            onMinuteOfDayChange = {
-                                onNightModeChange(nightMode.copy(startMinute = it))
-                            },
-                            accentColor = accentColor,
-                        )
-                        TimeOfDaySlider(
-                            label = LocalStrings.current.ui.nightModeTo,
-                            minuteOfDay = nightMode.endMinute,
-                            onMinuteOfDayChange = {
-                                onNightModeChange(nightMode.copy(endMinute = it))
-                            },
-                            accentColor = accentColor,
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TimeOfDayField(
+                                label = LocalStrings.current.ui.nightModeFrom,
+                                minuteOfDay = nightMode.startMinute,
+                                onMinuteOfDayChange = {
+                                    onNightModeChange(nightMode.copy(startMinute = it))
+                                },
+                            )
+                            TimeOfDayField(
+                                label = LocalStrings.current.ui.nightModeTo,
+                                minuteOfDay = nightMode.endMinute,
+                                onMinuteOfDayChange = {
+                                    onNightModeChange(nightMode.copy(endMinute = it))
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -278,35 +294,73 @@ fun CommonImageSettings(
 }
 
 /**
- * One end of the night-mode schedule.
+ * One end of the night-mode schedule: the time as a tappable field that opens
+ * the platform time picker.
  *
- * The slider moves in quarter hours — 96 stops across the day — because
- * nobody sets a blue-light filter to start at 22:07, and 1440 stops would be
- * unusable with a thumb.
+ * This replaced a pair of sliders that moved in quarter hours. A slider is 96
+ * indistinguishable stops under a thumb; the picker lets you aim at an hour,
+ * or type it. Snapping to quarter hours went with the sliders — it only ever
+ * existed to make them usable, and a dial that accepts 22:07 while the field
+ * reads 22:00 is worse than no constraint at all.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimeOfDaySlider(
+private fun TimeOfDayField(
     label: String,
     minuteOfDay: Int,
     onMinuteOfDayChange: (Int) -> Unit,
-    accentColor: androidx.compose.ui.graphics.Color?,
 ) {
-    val step = NightModeSettings.STEP_MINUTES
-    val stops = NightModeSettings.MINUTES_PER_DAY / step
+    var editing by remember { mutableStateOf(false) }
+
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.width(100.dp)) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-            Text(formatMinuteOfDay(minuteOfDay), style = MaterialTheme.typography.labelMedium)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        OutlinedButton(onClick = { editing = true }) {
+            Text(formatMinuteOfDay(minuteOfDay), style = MaterialTheme.typography.titleMedium)
         }
-        Slider(
-            value = minuteOfDay.toFloat(),
-            onValueChange = { raw ->
-                val snapped = (raw / step).roundToInt() * step
-                onMinuteOfDayChange(snapped.coerceIn(0, NightModeSettings.MINUTES_PER_DAY - step))
+    }
+
+    if (editing) {
+        val state = rememberTimePickerState(
+            initialHour = minuteOfDay / 60,
+            initialMinute = minuteOfDay % 60,
+            is24Hour = true,
+        )
+        // Dial by default, keyboard for anyone who already knows the time they
+        // want. Both write the same state, so the toggle keeps what was typed.
+        var keyboard by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text(label) },
+            text = {
+                Column {
+                    if (keyboard) TimeInput(state) else TimePicker(state)
+                }
             },
-            steps = stops - 2,
-            valueRange = 0f..(NightModeSettings.MINUTES_PER_DAY - step).toFloat(),
-            colors = AppSliderDefaults.colors(accentColor = accentColor)
+            dismissButton = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { keyboard = !keyboard }) {
+                        Icon(
+                            imageVector = if (keyboard) Icons.Default.Schedule
+                            else Icons.Default.Keyboard,
+                            contentDescription = null,
+                        )
+                    }
+                    TextButton(onClick = { editing = false }) {
+                        Text(LocalStrings.current.ui.cancel)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onMinuteOfDayChange(state.hour * 60 + state.minute)
+                    editing = false
+                }) { Text(LocalStrings.current.ui.ok) }
+            },
         )
     }
 }
