@@ -697,6 +697,7 @@ val FrStrings = AppStrings(
         "duplicateSeriesInvolved" to "séries concernées",
         "duplicateSeriesNoMatch" to "Aucun groupe ne correspond à ce filtre.",
         "duplicateSeriesOpen" to "Ouvrir la série",
+        "duplicateSeriesNoLanguage" to "séries n'ont pas de langue dans l'index : des éditions d'une même œuvre peuvent encore apparaître ici. Reconstruisez l'index depuis Maintenance.",
         "duplicateSeriesScanned" to "séries analysées",
         "duplicateSeriesNotIndexed" to "Non indexées, donc non analysées :",
         "chapterManagementFindMatch" to "Chercher",

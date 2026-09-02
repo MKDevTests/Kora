@@ -13,6 +13,8 @@ data class SimilarityIndexEntry(
     val libraryId: String,
     val titleSort: String,
     val terms: SeriesTerms,
+    /** Lowercased Komga language (V104), null when the row predates it. */
+    val language: String? = null,
 )
 
 /**
@@ -27,6 +29,12 @@ data class SimilarityIndexTitle(
     val seriesId: String,
     val libraryId: String,
     val titleSort: String,
+    /**
+     * Lowercased Komga language, or null when this row was written before V104
+     * added the column. Null is unknown, never "no language" — see
+     * [SeriesSimilarityIndexTable].
+     */
+    val language: String? = null,
 )
 
 /**

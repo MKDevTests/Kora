@@ -69,6 +69,19 @@ data class DuplicateGroup(
 }
 
 /**
+ * Marks a series released chapter by chapter rather than in collected volumes.
+ *
+ * Such a series is never a duplicate of anything, even of another series with
+ * the same marker: the pair is a chapter release and its volumes, or two
+ * chapter feeds of the same work, and both belong to the chapter management
+ * screen rather than here. Measured on the real catalogue, the rule removes
+ * three groups and every one of them was a false positive.
+ */
+private const val CHAPTER_MARKER = "(chap)"
+
+fun isChapterTitle(title: String): Boolean = title.contains(CHAPTER_MARKER, ignoreCase = true)
+
+/**
  * Stable identity of an unordered pair, so the ignore list does not depend on
  * which of the two the sweep happened to visit first.
  */
@@ -89,6 +102,7 @@ fun duplicatePairKey(a: String, b: String): String =
 fun findDuplicateGroups(
     entries: List<SimilarityIndexTitle>,
     ignoredPairs: Set<String> = emptySet(),
+    linkedPairs: Set<String> = emptySet(),
 ): List<DuplicateGroup> {
     if (entries.size < 2) return emptyList()
 
@@ -102,7 +116,7 @@ fun findDuplicateGroups(
 
     entries.forEachIndexed { index, entry ->
         val norm = normalizeForMatch(entry.titleSort)
-        if (norm.isEmpty()) return@forEachIndexed
+        if (norm.isEmpty() || isChapterTitle(entry.titleSort)) return@forEachIndexed
         normalized[index] = norm
         byTitle.getOrPut("${entry.libraryId}\u0000$norm") { mutableListOf() }.add(index)
 
@@ -128,9 +142,9 @@ fun findDuplicateGroups(
             if (bucket.size < 2) continue
             for (i in bucket.indices) {
                 for (j in i + 1 until bucket.size) {
-                    val left = entries[bucket[i]].seriesId
-                    val right = entries[bucket[j]].seriesId
-                    if (duplicatePairKey(left, right) in ignoredPairs) continue
+                    val left = entries[bucket[i]]
+                    val right = entries[bucket[j]]
+                    if (!canBeDuplicates(left, right, ignoredPairs, linkedPairs)) continue
                     val a = find(bucket[i])
                     val b = find(bucket[j])
                     if (a != b) {
@@ -162,4 +176,35 @@ fun findDuplicateGroups(
             )
         }
         .sortedWith(compareByDescending<DuplicateGroup> { it.likely }.thenBy { it.title })
+}
+
+/**
+ * Whether two same-title series can be the same file stored twice.
+ *
+ * Three ways to say no, all of them things the app already knows and the title
+ * alone cannot:
+ *
+ *  - the admin dismissed the pair;
+ *  - the two are already linked — a Chapters/Volumes edge is the case the title
+ *    cannot see, two series named "Chainsaw Man" where one is the chapter
+ *    release, and a Language edge is the language rule written by hand;
+ *  - their languages differ. A French edition and an English one are the same
+ *    work, not the same file, and this catalogue holds several ("7th Garden ·
+ *    FR · Delcourt" against "7th Garden · EN · VIZ Media").
+ *
+ * An unknown language never decides anything: rows written before V104 have
+ * none, and reading that as a mismatch would split every real duplicate until
+ * the index is rebuilt.
+ */
+private fun canBeDuplicates(
+    left: SimilarityIndexTitle,
+    right: SimilarityIndexTitle,
+    ignoredPairs: Set<String>,
+    linkedPairs: Set<String>,
+): Boolean {
+    val key = duplicatePairKey(left.seriesId, right.seriesId)
+    if (key in ignoredPairs || key in linkedPairs) return false
+    val a = left.language
+    val b = right.language
+    return a == null || b == null || a == b
 }

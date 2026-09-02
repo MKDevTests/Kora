@@ -43,6 +43,7 @@ class ExposedSimilarityIndexRepository(
                     libraryId = row[SeriesSimilarityIndexTable.libraryId],
                     titleSort = row[SeriesSimilarityIndexTable.titleSort],
                     terms = terms,
+                    language = row[SeriesSimilarityIndexTable.language],
                 )
             }
     }
@@ -63,6 +64,7 @@ class ExposedSimilarityIndexRepository(
                         libraryId = row[SeriesSimilarityIndexTable.libraryId],
                         titleSort = row[SeriesSimilarityIndexTable.titleSort],
                         terms = terms,
+                        language = row[SeriesSimilarityIndexTable.language],
                     )
                 }
         }
@@ -81,12 +83,14 @@ class ExposedSimilarityIndexRepository(
                 SeriesSimilarityIndexTable.seriesId,
                 SeriesSimilarityIndexTable.libraryId,
                 SeriesSimilarityIndexTable.titleSort,
+                SeriesSimilarityIndexTable.language,
             )
             .map {
                 SimilarityIndexTitle(
                     seriesId = it[SeriesSimilarityIndexTable.seriesId],
                     libraryId = it[SeriesSimilarityIndexTable.libraryId],
                     titleSort = it[SeriesSimilarityIndexTable.titleSort],
+                    language = it[SeriesSimilarityIndexTable.language],
                 )
             }
     }
@@ -113,6 +117,7 @@ class ExposedSimilarityIndexRepository(
                     this[SeriesSimilarityIndexTable.libraryId] = entry.libraryId
                     this[SeriesSimilarityIndexTable.titleSort] = entry.titleSort
                     this[SeriesSimilarityIndexTable.terms] = JsonDbDefault.encodeToString(entry.terms)
+                    this[SeriesSimilarityIndexTable.language] = entry.language
                     this[SeriesSimilarityIndexTable.updatedAt] = now
                 }
             }

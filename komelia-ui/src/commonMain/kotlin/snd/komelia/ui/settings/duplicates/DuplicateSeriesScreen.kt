@@ -82,6 +82,18 @@ class DuplicateSeriesScreen : Screen {
 
                 SummaryBanner(vm)
 
+                // While the index has no language for some rows, the finder
+                // cannot apply the language rule to them, so two editions of one
+                // work can still be listed as a duplicate. Better said out loud
+                // than silently wrong.
+                if (vm.seriesWithoutLanguage > 0) {
+                    Notice(
+                        text = "${vm.seriesWithoutLanguage} ${strings.duplicateSeriesNoLanguage}",
+                        color = MaterialTheme.colorScheme.error,
+                        icon = Icons.Default.Warning,
+                    )
+                }
+
                 if (vm.missingLibraries.isNotEmpty()) {
                     // An unindexed library is absent from the results, which
                     // looks exactly like a library with nothing to fix. Saying

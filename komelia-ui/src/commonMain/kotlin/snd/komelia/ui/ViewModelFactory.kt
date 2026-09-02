@@ -934,6 +934,7 @@ class ViewModelFactory(
             indexRepository = appRepositories.similarityIndexRepository,
             ignoreRepository = appRepositories.duplicateIgnoreRepository,
             seriesApi = komgaApi.seriesApi,
+            linksRepository = appRepositories.seriesLinksRepository,
             libraries = dependencies.komgaSharedState.libraries,
             notifications = dependencies.appNotifications,
         )

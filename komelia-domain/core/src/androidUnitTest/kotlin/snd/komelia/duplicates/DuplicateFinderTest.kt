@@ -12,8 +12,8 @@ import kotlin.test.assertTrue
 class DuplicateFinderTest {
 
     private var next = 0
-    private fun entry(title: String, library: String = "lib1") =
-        SimilarityIndexTitle("s${next++}", library, title)
+    private fun entry(title: String, library: String = "lib1", language: String? = null) =
+        SimilarityIndexTitle("s${next++}", library, title, language)
 
     @Test
     fun `identical titles group`() {
@@ -96,5 +96,69 @@ class DuplicateFinderTest {
     fun `blank titles are ignored`() {
         val groups = findDuplicateGroups(listOf(entry("   "), entry("!!!")))
         assertTrue(groups.isEmpty())
+    }
+
+    @Test
+    fun `different languages are two editions, not a duplicate`() {
+        val groups = findDuplicateGroups(
+            listOf(entry("7th Garden", language = "fr"), entry("7th Garden", language = "en"))
+        )
+        assertTrue(groups.isEmpty())
+    }
+
+    @Test
+    fun `the same language still groups`() {
+        val groups = findDuplicateGroups(
+            listOf(entry("7th Garden", language = "fr"), entry("7th Garden", language = "fr"))
+        )
+        assertEquals(1, groups.size)
+    }
+
+    @Test
+    fun `an unknown language never splits a pair`() {
+        // Rows written before V104 have none; reading that as a mismatch would
+        // empty the screen until the index is rebuilt.
+        val groups = findDuplicateGroups(
+            listOf(entry("7th Garden", language = "fr"), entry("7th Garden", language = null))
+        )
+        assertEquals(1, groups.size)
+    }
+
+    @Test
+    fun `a chapter series is never a duplicate`() {
+        val groups = findDuplicateGroups(
+            listOf(entry("One-Punch Man (Chap)"), entry("One-Punch Man (Chap)"))
+        )
+        assertTrue(groups.isEmpty())
+    }
+
+    @Test
+    fun `a chapter series does not group with its volumes`() {
+        val groups = findDuplicateGroups(listOf(entry("Dead Rock"), entry("Dead Rock (Chap)")))
+        assertTrue(groups.isEmpty())
+    }
+
+    @Test
+    fun `an existing link rules the pair out`() {
+        // "Chainsaw Man" twice, one of them the chapter release: nothing in the
+        // title says so, only the Chapters edge the admin already recorded.
+        val entries = listOf(entry("Chainsaw Man"), entry("Chainsaw Man"))
+        val linked = setOf(duplicatePairKey(entries[0].seriesId, entries[1].seriesId))
+        assertTrue(findDuplicateGroups(entries, linkedPairs = linked).isEmpty())
+    }
+
+    @Test
+    fun `a three-way group survives one member being another language`() {
+        val entries = listOf(
+            entry("Galaxias", language = "fr"),
+            entry("Galaxias", language = "fr"),
+            entry("Galaxias", language = "en"),
+        )
+        val groups = findDuplicateGroups(entries)
+        assertEquals(1, groups.size)
+        assertEquals(
+            setOf(entries[0].seriesId, entries[1].seriesId),
+            groups.single().members.mapTo(mutableSetOf()) { it.seriesId },
+        )
     }
 }

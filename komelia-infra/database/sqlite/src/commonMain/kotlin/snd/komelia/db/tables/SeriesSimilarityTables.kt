@@ -18,6 +18,13 @@ object SeriesSimilarityIndexTable : Table("SeriesSimilarityIndex") {
     val terms = text("terms")
     val updatedAt = text("updated_at")
 
+    /**
+     * Komga's series language, lowercased (V104), or NULL when the row predates
+     * the column. NULL is "unknown", not "none": the duplicate finder must not
+     * read a missing language as a mismatch and split a real duplicate.
+     */
+    val language = text("language").nullable()
+
     override val primaryKey = PrimaryKey(seriesId)
 }
 

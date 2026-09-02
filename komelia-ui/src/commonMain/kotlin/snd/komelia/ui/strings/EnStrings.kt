@@ -685,6 +685,7 @@ val EnStrings = AppStrings(
         "duplicateSeriesInvolved" to "series involved",
         "duplicateSeriesNoMatch" to "No group matches this filter.",
         "duplicateSeriesOpen" to "Open the series",
+        "duplicateSeriesNoLanguage" to "series have no language in the index, so editions of one work can still show up here. Rebuild the index from Maintenance.",
         "duplicateSeriesScanned" to "series scanned",
         "duplicateSeriesNotIndexed" to "Not indexed, therefore not scanned:",
         "chapterManagementFindMatch" to "Find match",

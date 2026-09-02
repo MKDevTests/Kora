@@ -14,6 +14,7 @@ import snd.komelia.duplicates.DuplicateIgnoreRepository
 import snd.komelia.duplicates.duplicatePairKey
 import snd.komelia.duplicates.findDuplicateGroups
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.links.SeriesLinksRepository
 import snd.komelia.similarity.SimilarityIndexRepository
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.series.KomgaSeriesId
@@ -69,6 +70,7 @@ class DuplicateSeriesViewModel(
     private val indexRepository: SimilarityIndexRepository,
     private val ignoreRepository: DuplicateIgnoreRepository,
     private val seriesApi: KomgaSeriesApi,
+    private val linksRepository: SeriesLinksRepository,
     private val libraries: StateFlow<List<KomgaLibrary>>,
     private val notifications: AppNotifications,
 ) : ScreenModel {
@@ -128,6 +130,17 @@ class DuplicateSeriesViewModel(
         private set
 
     /**
+     * Series whose language the index does not hold yet.
+     *
+     * Rows written before V104 have none, and the finder refuses to judge a
+     * pair it cannot compare — so while this is above zero the screen may still
+     * be showing two editions of one work as a duplicate. It says so, and points
+     * at the reindex button rather than quietly under-reporting.
+     */
+    var seriesWithoutLanguage by mutableStateOf(0)
+        private set
+
+    /**
      * Libraries with no index row, by name.
      *
      * Named rather than counted: an unindexed library looks exactly like a
@@ -172,7 +185,13 @@ class DuplicateSeriesViewModel(
             val ignored = ignoreRepository.ignoredPairs()
             ignoredCount = ignored.size
             val titles = indexRepository.allTitles()
-            val groups = findDuplicateGroups(titles, ignored)
+            // Every relation the admin recorded, in one local read. A pair the
+            // two screens already linked — chapters to volumes, or one language
+            // to another — has been ruled on; the finder must not ask again.
+            val linked = linksRepository.getAllRelations()
+                .mapTo(mutableSetOf()) { duplicatePairKey(it.from.value, it.to.value) }
+            val groups = findDuplicateGroups(titles, ignored, linked)
+            seriesWithoutLanguage = titles.count { it.language == null }
 
             val libraryNames = libraries.value.associate { it.id.value to it.name }
             val indexedIds = titles.mapTo(mutableSetOf()) { it.libraryId }
