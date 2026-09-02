@@ -572,6 +572,7 @@ class UiStrings(private val values: Map<String, String>) {
     val duplicateSeriesUnsureHint: String get() = at("duplicateSeriesUnsureHint")
     val duplicateSeriesNotDuplicates: String get() = at("duplicateSeriesNotDuplicates")
     val duplicateSeriesDetails: String get() = at("duplicateSeriesDetails")
+    val duplicateSeriesShowMore: String get() = at("duplicateSeriesShowMore")
     val duplicateSeriesScanned: String get() = at("duplicateSeriesScanned")
     val duplicateSeriesNotIndexed: String get() = at("duplicateSeriesNotIndexed")
     val chapterManagementFindMatch: String get() = at("chapterManagementFindMatch")

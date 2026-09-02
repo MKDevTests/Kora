@@ -34,11 +34,13 @@ import snd.komga.client.series.KomgaSeriesId
 /**
  * Admin-only screen listing series stored twice inside one library.
  *
- * Reads the local similarity index and nothing else — no request leaves the app
- * for the sweep itself. That is deliberate: a duplicate hunt that re-listed
- * every series would be the heaviest screen in Kora, on the same endpoints that
- * already make the genre tab slow. Series details are fetched one group at a
- * time, only when the admin asks for them.
+ * The sweep reads the local similarity index and issues no request. That is
+ * deliberate: a duplicate hunt that re-listed every series would be the heaviest
+ * screen in Kora, on the same endpoints that already make the genre tab slow.
+ *
+ * Nothing on a collapsed row touches the network either — the covers used to sit
+ * there and cost several hundred thumbnail fetches on opening. They now live
+ * inside the details block, which is loaded one group at a time on request.
  */
 class DuplicateSeriesScreen : Screen {
 
@@ -101,15 +103,25 @@ class DuplicateSeriesScreen : Screen {
 
                 if (vm.likely.isNotEmpty()) {
                     SectionHeader("${strings.duplicateSeriesLikely} (${vm.likely.size})")
-                    vm.likely.forEach { row ->
+                    vm.likely.take(vm.visibleCount).forEach { row ->
                         GroupCard(vm, row)
                         HorizontalDivider()
+                    }
+                    // A page at a time. The settings container scrolls a plain
+                    // Column, so every row drawn is a row composed — the whole
+                    // list at once cost six seconds of frozen main thread.
+                    val remaining = vm.likely.size - vm.visibleCount
+                    if (remaining > 0) {
+                        TextButton(onClick = vm::showMore) {
+                            Text("${strings.duplicateSeriesShowMore} ($remaining)")
+                        }
                     }
                 }
 
                 // Kept visible rather than dropped: on the real catalogue these
                 // are collection names filed as titles, but the app cannot prove
-                // that, so it says so instead of deciding for the admin.
+                // that, so it says so instead of deciding for the admin. Never
+                // paginated — there are three of them.
                 if (vm.unsure.isNotEmpty()) {
                     SectionHeader("${strings.duplicateSeriesUnsure} (${vm.unsure.size})")
                     Text(
@@ -166,34 +178,27 @@ private fun GroupCard(vm: DuplicateSeriesViewModel, row: DuplicateRow) {
             }
         }
 
-        Row(
-            modifier = Modifier.padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            row.group.members.forEach { member ->
+        // Cover, book count, language and publisher together: on the real
+        // catalogue that is what settles a group in one look — "7th Garden · 8 ·
+        // FR · Delcourt" against "7th Garden · 8 · EN · VIZ Media" is two
+        // editions, not a duplicate. None of it is in the local index, so this
+        // block is the only part of the screen that goes to the server.
+        row.details.forEach { detail ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 SeriesThumbnail(
-                    seriesId = KomgaSeriesId(member.seriesId),
+                    seriesId = KomgaSeriesId(detail.seriesId),
                     modifier = Modifier.width(44.dp).height(66.dp),
                     contentScale = ContentScale.Crop,
                 )
-            }
-        }
-
-        // Book count, publisher and language are what actually tell two copies
-        // apart, and none of the three is in the local index. So they are
-        // fetched for one group on demand rather than for every series up front.
-        if (row.details.isNotEmpty()) {
-            Column(
-                modifier = Modifier.padding(top = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                row.details.forEach { detail ->
-                    Text(
-                        text = detail,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = detail.line,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

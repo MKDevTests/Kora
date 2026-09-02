@@ -21,13 +21,30 @@ import snd.komga.client.series.KomgaSeriesId
 private val logger = KotlinLogging.logger {}
 
 /**
+ * How many groups are drawn before the "show more" button.
+ *
+ * Measured on the real catalogue: drawing all 230 groups at once froze the main
+ * thread for about six seconds ("Skipped 356 frames"), because the settings
+ * container is a plain scrolling Column — every row is composed, none is lazy.
+ * Fifty rows of text compose without a dropped frame, and five taps reach the
+ * end of the worst list this catalogue produces.
+ */
+private const val PAGE_SIZE = 50
+
+/** One series inside an expanded group, with what tells it from its twin. */
+data class DuplicateDetail(
+    val seriesId: String,
+    val line: String,
+)
+
+/**
  * One group as the screen shows it: the finder's result plus what it takes to
  * draw and act on it.
  */
 data class DuplicateRow(
     val group: DuplicateGroup,
     val libraryName: String,
-    val details: List<String> = emptyList(),
+    val details: List<DuplicateDetail> = emptyList(),
     val loadingDetails: Boolean = false,
 ) {
     /** Stable across rescans, so expanded details survive one. */
@@ -58,6 +75,16 @@ class DuplicateSeriesViewModel(
     var ignoredCount by mutableStateOf(0)
         private set
 
+    /**
+     * How many of [likely] are drawn.
+     *
+     * Held here rather than remembered in the composable: dismissing a group
+     * changes the list, and a screen-local counter keyed on it would snap back
+     * to the first page on every dismissal.
+     */
+    var visibleCount by mutableStateOf(PAGE_SIZE)
+        private set
+
     /** How many series the sweep could actually read. */
     var scannedSeries by mutableStateOf(0)
         private set
@@ -84,6 +111,10 @@ class DuplicateSeriesViewModel(
         screenModelScope.launch { scan() }
     }
 
+    fun showMore() {
+        visibleCount += PAGE_SIZE
+    }
+
     private suspend fun scan() {
         if (scanning) return
         scanning = true
@@ -104,6 +135,7 @@ class DuplicateSeriesViewModel(
             )
             likely = groups.filter { it.likely }.map(::row)
             unsure = groups.filterNot { it.likely }.map(::row)
+            visibleCount = PAGE_SIZE
         } catch (e: Exception) {
             logger.catching(e)
             notifications.addErrorNotification(e)
@@ -165,7 +197,7 @@ class DuplicateSeriesViewModel(
         }
         update(row.key) { it.copy(loadingDetails = true) }
         screenModelScope.launch {
-            val lines = mutableListOf<String>()
+            val lines = mutableListOf<DuplicateDetail>()
             for (member in row.group.members) {
                 val line = try {
                     val series = seriesApi.getOneSeries(KomgaSeriesId(member.seriesId))
@@ -179,7 +211,7 @@ class DuplicateSeriesViewModel(
                     logger.catching(e)
                     "${member.title} — ${e.message}"
                 }
-                lines.add(line)
+                lines.add(DuplicateDetail(member.seriesId, line))
             }
             update(row.key) { it.copy(details = lines, loadingDetails = false) }
         }
