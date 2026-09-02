@@ -45,6 +45,9 @@ import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.LocalWindowHeight
+import snd.komelia.ui.LocalWindowWidth
+import snd.komelia.ui.platform.WindowSizeClass
 import snd.komelia.ui.common.components.AppSliderDefaults
 import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.common.components.accentInputChipColors
@@ -193,9 +196,12 @@ fun CommonImageSettings(
                 )
                 AnimatedVisibility(nightMode.scheduleEnabled) {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Row(
+                        // FlowRow, not Row: on a phone the two fields plus
+                        // their labels do not fit side by side, and wrapping
+                        // beats clipping the second one off the screen.
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             TimeOfDayField(
                                 label = LocalStrings.current.ui.nightModeFrom,
@@ -330,9 +336,14 @@ private fun TimeOfDayField(
             initialMinute = minuteOfDay % 60,
             is24Hour = true,
         )
-        // Dial by default, keyboard for anyone who already knows the time they
-        // want. Both write the same state, so the toggle keeps what was typed.
-        var keyboard by remember { mutableStateOf(false) }
+        // The dial needs about 256dp square plus the dialog's own padding. That
+        // fits a tablet and not a phone, and on a phone in landscape it does
+        // not fit vertically either — so a small screen opens on the keyboard
+        // variant, which is two text fields and always fits. The toggle is
+        // there in both cases; this only picks what you see first.
+        val narrow = LocalWindowWidth.current == WindowSizeClass.COMPACT ||
+            LocalWindowHeight.current == WindowSizeClass.COMPACT
+        var keyboard by remember(narrow) { mutableStateOf(narrow) }
         AlertDialog(
             onDismissRequest = { editing = false },
             title = { Text(label) },
