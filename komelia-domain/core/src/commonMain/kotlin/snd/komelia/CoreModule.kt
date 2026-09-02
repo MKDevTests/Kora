@@ -55,6 +55,8 @@ data class AppRepositories(
     val readingOrderRepository: ReadingOrderRepository,
     /** "Not interested" answers, which also weigh on the taste profile. */
     val suggestionFeedbackRepository: SuggestionFeedbackRepository,
+    /** Series pairs an admin ruled out in the duplicate finder. */
+    val duplicateIgnoreRepository: snd.komelia.duplicates.DuplicateIgnoreRepository,
     /** Remembered tab counts, so a library's chips don't wait on the server. */
     val libraryCountsRepository: snd.komelia.library.LibraryCountsRepository,
     /** Remembered "Keep reading" row, for the same reason. */

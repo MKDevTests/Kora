@@ -13,6 +13,28 @@ data class SimilarityIndexEntry(
     val libraryId: String,
     val titleSort: String,
     val terms: SeriesTerms,
+    /** Lowercased Komga language (V104), null when the row predates it. */
+    val language: String? = null,
+)
+
+/**
+ * A row's identity, without its terms.
+ *
+ * The duplicate finder compares titles and reads nothing else, and
+ * [SimilarityIndexRepository.entriesOf] would JSON-decode one term blob per
+ * series to hand it data it never opens — twelve thousand decodes for a sweep
+ * that otherwise costs a tenth of a second.
+ */
+data class SimilarityIndexTitle(
+    val seriesId: String,
+    val libraryId: String,
+    val titleSort: String,
+    /**
+     * Lowercased Komga language, or null when this row was written before V104
+     * added the column. Null is unknown, never "no language" — see
+     * [SeriesSimilarityIndexTable].
+     */
+    val language: String? = null,
 )
 
 /**
@@ -55,6 +77,14 @@ interface SimilarityIndexRepository {
      * nothing.
      */
     suspend fun seriesIdsOf(libraryId: String): List<String>
+
+    /**
+     * Every indexed series of every library, identity only.
+     *
+     * Deliberately not per-library: the duplicate sweep wants the whole
+     * catalogue and one query beats six.
+     */
+    suspend fun allTitles(): List<SimilarityIndexTitle>
 
     /** How many series [libraryId] has indexed, without loading any of them. */
     suspend fun countOf(libraryId: String): Int

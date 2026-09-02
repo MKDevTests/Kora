@@ -55,6 +55,7 @@ import snd.komelia.ui.series.SeriesViewModel.SeriesTab
 import snd.komelia.ui.settings.account.AccountSettingsViewModel
 import snd.komelia.ui.settings.analysis.MediaAnalysisViewModel
 import snd.komelia.ui.settings.chapters.ChapterManagementViewModel
+import snd.komelia.ui.settings.duplicates.DuplicateSeriesViewModel
 import snd.komelia.ui.settings.announcements.AnnouncementsViewModel
 import snd.komelia.ui.settings.appearance.AppSettingsViewModel
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityViewModel
@@ -922,6 +923,19 @@ class ViewModelFactory(
             linksRepository = appRepositories.seriesLinksRepository,
             settingsRepository = appRepositories.settingsRepository,
             authenticatedUser = dependencies.komgaSharedState.authenticatedUser,
+            notifications = dependencies.appNotifications,
+        )
+    }
+
+    fun getDuplicateSeriesViewModel(): DuplicateSeriesViewModel {
+        return DuplicateSeriesViewModel(
+            // The local term index, not the server: the sweep reads titles that
+            // are already on disk and sends nothing.
+            indexRepository = appRepositories.similarityIndexRepository,
+            ignoreRepository = appRepositories.duplicateIgnoreRepository,
+            seriesApi = komgaApi.seriesApi,
+            linksRepository = appRepositories.seriesLinksRepository,
+            libraries = dependencies.komgaSharedState.libraries,
             notifications = dependencies.appNotifications,
         )
     }

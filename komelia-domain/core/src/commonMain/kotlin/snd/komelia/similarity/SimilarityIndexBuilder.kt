@@ -170,6 +170,9 @@ private fun KomgaSeries.toEntry() = SimilarityIndexEntry(
     libraryId = libraryId.value,
     titleSort = metadata.titleSort,
     terms = toSimilarityTerms(),
+    // Lowercased and blank-to-null so the duplicate finder can compare two of
+    // them without deciding what "fr" against "FR" against "" means.
+    language = metadata.language.trim().lowercase().takeIf { it.isNotEmpty() },
 )
 
 /** 100 is Komga's comfortable page size; larger pages mostly ship more summary. */

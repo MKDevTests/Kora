@@ -17,6 +17,7 @@ import snd.komelia.similarity.SeriesTerms
 import snd.komelia.similarity.SimilarityIndexEntry
 import snd.komelia.similarity.SimilarityIndexRepository
 import snd.komelia.similarity.SimilarityIndexState
+import snd.komelia.similarity.SimilarityIndexTitle
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -42,6 +43,7 @@ class ExposedSimilarityIndexRepository(
                     libraryId = row[SeriesSimilarityIndexTable.libraryId],
                     titleSort = row[SeriesSimilarityIndexTable.titleSort],
                     terms = terms,
+                    language = row[SeriesSimilarityIndexTable.language],
                 )
             }
     }
@@ -62,6 +64,7 @@ class ExposedSimilarityIndexRepository(
                         libraryId = row[SeriesSimilarityIndexTable.libraryId],
                         titleSort = row[SeriesSimilarityIndexTable.titleSort],
                         terms = terms,
+                        language = row[SeriesSimilarityIndexTable.language],
                     )
                 }
         }
@@ -72,6 +75,24 @@ class ExposedSimilarityIndexRepository(
             .select(SeriesSimilarityIndexTable.seriesId)
             .where { SeriesSimilarityIndexTable.libraryId eq libraryId }
             .map { it[SeriesSimilarityIndexTable.seriesId] }
+    }
+
+    override suspend fun allTitles(): List<SimilarityIndexTitle> = transaction {
+        SeriesSimilarityIndexTable
+            .select(
+                SeriesSimilarityIndexTable.seriesId,
+                SeriesSimilarityIndexTable.libraryId,
+                SeriesSimilarityIndexTable.titleSort,
+                SeriesSimilarityIndexTable.language,
+            )
+            .map {
+                SimilarityIndexTitle(
+                    seriesId = it[SeriesSimilarityIndexTable.seriesId],
+                    libraryId = it[SeriesSimilarityIndexTable.libraryId],
+                    titleSort = it[SeriesSimilarityIndexTable.titleSort],
+                    language = it[SeriesSimilarityIndexTable.language],
+                )
+            }
     }
 
     override suspend fun countOf(libraryId: String): Int = transaction {
@@ -96,6 +117,7 @@ class ExposedSimilarityIndexRepository(
                     this[SeriesSimilarityIndexTable.libraryId] = entry.libraryId
                     this[SeriesSimilarityIndexTable.titleSort] = entry.titleSort
                     this[SeriesSimilarityIndexTable.terms] = JsonDbDefault.encodeToString(entry.terms)
+                    this[SeriesSimilarityIndexTable.language] = entry.language
                     this[SeriesSimilarityIndexTable.updatedAt] = now
                 }
             }
