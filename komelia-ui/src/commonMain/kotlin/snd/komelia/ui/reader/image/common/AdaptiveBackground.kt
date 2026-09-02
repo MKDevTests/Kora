@@ -27,10 +27,18 @@ fun AdaptiveBackground(
     content: @Composable () -> Unit
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
-    val topColor = remember(edgeSampling) { edgeSampling?.top?.averageColor?.let { Color(it) } ?: Color.Transparent }
-    val bottomColor = remember(edgeSampling) { edgeSampling?.bottom?.averageColor?.let { Color(it) } ?: Color.Transparent }
-    val leftColor = remember(edgeSampling) { edgeSampling?.left?.averageColor?.let { Color(it) } ?: Color.Transparent }
-    val rightColor = remember(edgeSampling) { edgeSampling?.right?.averageColor?.let { Color(it) } ?: Color.Transparent }
+    // The letterbox colour comes from the image's edge pixels, not from what
+    // is drawn, so the page's night tint has to be applied here too — without
+    // it a warm page sits inside a cold frame.
+    val nightTint = LocalReaderNightModeIntensity.current
+    fun sample(edge: snd.komelia.image.EdgeSample?): Color {
+        val color = edge?.averageColor?.let { Color(it) } ?: return Color.Transparent
+        return nightTint?.let { color.tintedForNightMode(it) } ?: color
+    }
+    val topColor = remember(edgeSampling, nightTint) { sample(edgeSampling?.top) }
+    val bottomColor = remember(edgeSampling, nightTint) { sample(edgeSampling?.bottom) }
+    val leftColor = remember(edgeSampling, nightTint) { sample(edgeSampling?.left) }
+    val rightColor = remember(edgeSampling, nightTint) { sample(edgeSampling?.right) }
 
     val animatedTop by animateColorAsState(targetValue = topColor, animationSpec = tween(durationMillis = 500))
     val animatedBottom by animateColorAsState(targetValue = bottomColor, animationSpec = tween(durationMillis = 500))

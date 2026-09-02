@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalPlatform
@@ -54,6 +55,9 @@ fun CommonImageSettings(
 
     isColorCorrectionsActive: Boolean,
     onColorCorrectionClick: () -> Unit,
+
+    nightMode: NightModeSettings,
+    onNightModeChange: (NightModeSettings) -> Unit,
 
     flashEnabled: Boolean,
     onFlashEnabledChange: (Boolean) -> Unit,
@@ -136,7 +140,66 @@ fun CommonImageSettings(
             }
         }
 
+        SwitchWithLabel(
+            checked = nightMode.enabled,
+            onCheckedChange = { onNightModeChange(nightMode.copy(enabled = it)) },
+            label = { Text(LocalStrings.current.ui.nightMode) },
+            supportingText = { Text(LocalStrings.current.ui.nightModeWarmTintOnPages) },
+            contentPadding = PaddingValues(horizontal = 10.dp)
+        )
+        AnimatedVisibility(nightMode.enabled) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier.padding(start = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.width(100.dp)) {
+                        Text(
+                            LocalStrings.current.ui.nightModeIntensity,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Text(
+                            "${(nightMode.intensity * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                    Slider(
+                        value = nightMode.intensity,
+                        onValueChange = { onNightModeChange(nightMode.copy(intensity = it)) },
+                        steps = 9,
+                        valueRange = 0f..1f,
+                        colors = AppSliderDefaults.colors(accentColor = accentColor)
+                    )
+                }
 
+                SwitchWithLabel(
+                    checked = nightMode.scheduleEnabled,
+                    onCheckedChange = { onNightModeChange(nightMode.copy(scheduleEnabled = it)) },
+                    label = { Text(LocalStrings.current.ui.nightModeSchedule) },
+                    contentPadding = PaddingValues(horizontal = 0.dp)
+                )
+                AnimatedVisibility(nightMode.scheduleEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        TimeOfDaySlider(
+                            label = LocalStrings.current.ui.nightModeFrom,
+                            minuteOfDay = nightMode.startMinute,
+                            onMinuteOfDayChange = {
+                                onNightModeChange(nightMode.copy(startMinute = it))
+                            },
+                            accentColor = accentColor,
+                        )
+                        TimeOfDaySlider(
+                            label = LocalStrings.current.ui.nightModeTo,
+                            minuteOfDay = nightMode.endMinute,
+                            onMinuteOfDayChange = {
+                                onNightModeChange(nightMode.copy(endMinute = it))
+                            },
+                            accentColor = accentColor,
+                        )
+                    }
+                }
+            }
+        }
 
         if (platform != PlatformType.DESKTOP) {
             SwitchWithLabel(
@@ -212,4 +275,44 @@ fun CommonImageSettings(
             }
         }
     }
+}
+
+/**
+ * One end of the night-mode schedule.
+ *
+ * The slider moves in quarter hours — 96 stops across the day — because
+ * nobody sets a blue-light filter to start at 22:07, and 1440 stops would be
+ * unusable with a thumb.
+ */
+@Composable
+private fun TimeOfDaySlider(
+    label: String,
+    minuteOfDay: Int,
+    onMinuteOfDayChange: (Int) -> Unit,
+    accentColor: androidx.compose.ui.graphics.Color?,
+) {
+    val step = NightModeSettings.STEP_MINUTES
+    val stops = NightModeSettings.MINUTES_PER_DAY / step
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.width(100.dp)) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+            Text(formatMinuteOfDay(minuteOfDay), style = MaterialTheme.typography.labelMedium)
+        }
+        Slider(
+            value = minuteOfDay.toFloat(),
+            onValueChange = { raw ->
+                val snapped = (raw / step).roundToInt() * step
+                onMinuteOfDayChange(snapped.coerceIn(0, NightModeSettings.MINUTES_PER_DAY - step))
+            },
+            steps = stops - 2,
+            valueRange = 0f..(NightModeSettings.MINUTES_PER_DAY - step).toFloat(),
+            colors = AppSliderDefaults.colors(accentColor = accentColor)
+        )
+    }
+}
+
+private fun formatMinuteOfDay(minuteOfDay: Int): String {
+    val hours = minuteOfDay / 60
+    val minutes = minuteOfDay % 60
+    return "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 }

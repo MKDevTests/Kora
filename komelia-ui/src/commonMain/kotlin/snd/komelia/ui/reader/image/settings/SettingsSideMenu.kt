@@ -51,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import snd.komelia.image.ReduceKernel
 import snd.komelia.image.UpsamplingMode
 import snd.komelia.komga.api.model.KomeliaBook
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.ContinuousReadingDirection
 import snd.komelia.settings.model.LayoutScaleType
 import snd.komelia.settings.model.ReaderTapNavigationMode
@@ -102,6 +103,8 @@ fun SettingsSideMenuOverlay(
     onCropBordersChange: (Boolean) -> Unit,
     invertSpeechBubbles: Boolean,
     onInvertSpeechBubblesChange: (Boolean) -> Unit,
+    nightMode: NightModeSettings,
+    onNightModeChange: (NightModeSettings) -> Unit,
     webtoonSmartScroll: Boolean,
     onWebtoonSmartScrollChange: (Boolean) -> Unit,
     loadThumbnailPreviews: Boolean,
@@ -255,6 +258,8 @@ fun SettingsSideMenuOverlay(
                         onCropBordersChange = onCropBordersChange,
                         invertSpeechBubbles = invertSpeechBubbles,
                         onInvertSpeechBubblesChange = onInvertSpeechBubblesChange,
+                        nightMode = nightMode,
+                        onNightModeChange = onNightModeChange,
                         webtoonSmartScroll = webtoonSmartScroll,
                         onWebtoonSmartScrollChange = onWebtoonSmartScrollChange,
                         loadThumbnailPreviews = loadThumbnailPreviews,

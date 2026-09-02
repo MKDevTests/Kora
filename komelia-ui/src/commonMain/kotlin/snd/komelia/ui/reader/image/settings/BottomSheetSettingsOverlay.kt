@@ -106,6 +106,7 @@ import snd.komelia.settings.model.PageDisplayLayout
 import snd.komelia.settings.model.OcrSettings
 import snd.komelia.settings.model.PanelsFullPageDisplayMode
 
+import snd.komelia.settings.model.NightModeSettings
 import snd.komelia.settings.model.ReaderFlashColor
 import snd.komelia.settings.model.ReaderType
 import snd.komelia.settings.model.ReaderType.CONTINUOUS
@@ -175,6 +176,8 @@ fun BottomSheetSettingsOverlay(
     onCropBordersChange: (Boolean) -> Unit,
     invertSpeechBubbles: Boolean,
     onInvertSpeechBubblesChange: (Boolean) -> Unit,
+    nightMode: NightModeSettings,
+    onNightModeChange: (NightModeSettings) -> Unit,
     webtoonSmartScroll: Boolean,
     onWebtoonSmartScrollChange: (Boolean) -> Unit,
     loadThumbnailPreviews: Boolean,
@@ -527,6 +530,8 @@ fun BottomSheetSettingsOverlay(
                                 onCropBordersChange = onCropBordersChange,
                                 invertSpeechBubbles = invertSpeechBubbles,
                                 onInvertSpeechBubblesChange = onInvertSpeechBubblesChange,
+                                nightMode = nightMode,
+                                onNightModeChange = onNightModeChange,
                                 webtoonSmartScroll = webtoonSmartScroll,
                                 onWebtoonSmartScrollChange = onWebtoonSmartScrollChange,
                                 loadThumbnailPreviews = loadThumbnailPreviews,
@@ -929,6 +934,8 @@ private fun BottomSheetImageSettings(
     onCropBordersChange: (Boolean) -> Unit,
     invertSpeechBubbles: Boolean,
     onInvertSpeechBubblesChange: (Boolean) -> Unit,
+    nightMode: NightModeSettings,
+    onNightModeChange: (NightModeSettings) -> Unit,
     webtoonSmartScroll: Boolean,
     onWebtoonSmartScrollChange: (Boolean) -> Unit,
     loadThumbnailPreviews: Boolean,
@@ -965,6 +972,8 @@ private fun BottomSheetImageSettings(
             onCropBordersChange = onCropBordersChange,
             invertSpeechBubbles = invertSpeechBubbles,
             onInvertSpeechBubblesChange = onInvertSpeechBubblesChange,
+            nightMode = nightMode,
+            onNightModeChange = onNightModeChange,
             webtoonSmartScroll = webtoonSmartScroll,
             onWebtoonSmartScrollChange = onWebtoonSmartScrollChange,
             loadThumbnailPreviews = loadThumbnailPreviews,

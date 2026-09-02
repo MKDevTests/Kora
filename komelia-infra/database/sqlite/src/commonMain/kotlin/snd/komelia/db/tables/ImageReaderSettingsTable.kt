@@ -78,6 +78,17 @@ object ImageReaderSettingsTable : Table("ImageReaderSettings") {
     val continuousReaderStopAtEnd = bool("continuous_reader_stop_at_end").default(true)
     val continuousReaderTapToZoom = bool("continuous_reader_tap_to_zoom").default(true)
 
+    /**
+     * Reader night mode (v1.9, V102). Warm tint over the page only; the app
+     * chrome is already dark. Minutes are counted from midnight, and an end
+     * before the start means the range crosses midnight.
+     */
+    val nightModeEnabled = bool("night_mode_enabled").default(false)
+    val nightModeIntensity = float("night_mode_intensity").default(0.5f)
+    val nightModeScheduleEnabled = bool("night_mode_schedule_enabled").default(false)
+    val nightModeStartMinute = integer("night_mode_start_minute").default(22 * 60)
+    val nightModeEndMinute = integer("night_mode_end_minute").default(7 * 60)
+
     /** Minimal-UI-while-reading toggle (v1.0.11). See V67 migration. */
     val keepProgressBarVisibleWhileReading =
         bool("keep_progress_bar_visible_while_reading").default(false)

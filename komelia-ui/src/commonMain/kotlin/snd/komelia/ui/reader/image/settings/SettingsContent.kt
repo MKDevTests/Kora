@@ -98,6 +98,7 @@ fun BoxScope.SettingsOverlay(
     val stretchToFit = commonReaderState.imageStretchToFit.collectAsState().value
     val cropBorders = commonReaderState.cropBorders.collectAsState().value
     val invertSpeechBubbles = commonReaderState.invertSpeechBubbles.collectAsState().value
+    val nightMode = commonReaderState.nightMode.collectAsState().value
     val webtoonSmartScroll = commonReaderState.webtoonSmartScroll.collectAsState().value
     val loadThumbnailPreviews = commonReaderState.loadThumbnailPreviews.collectAsState().value
     val flashEnabled = commonReaderState.flashOnPageChange.collectAsState().value
@@ -128,6 +129,8 @@ fun BoxScope.SettingsOverlay(
             onCropBordersChange = commonReaderState::onCropBordersChange,
             invertSpeechBubbles = invertSpeechBubbles,
             onInvertSpeechBubblesChange = commonReaderState::onInvertSpeechBubblesChange,
+            nightMode = nightMode,
+            onNightModeChange = commonReaderState::onNightModeChange,
             webtoonSmartScroll = webtoonSmartScroll,
             onWebtoonSmartScrollChange = commonReaderState::onWebtoonSmartScrollChange,
             loadThumbnailPreviews = loadThumbnailPreviews,
@@ -175,6 +178,8 @@ fun BoxScope.SettingsOverlay(
             onCropBordersChange = commonReaderState::onCropBordersChange,
             invertSpeechBubbles = invertSpeechBubbles,
             onInvertSpeechBubblesChange = commonReaderState::onInvertSpeechBubblesChange,
+            nightMode = nightMode,
+            onNightModeChange = commonReaderState::onNightModeChange,
             webtoonSmartScroll = webtoonSmartScroll,
             onWebtoonSmartScrollChange = commonReaderState::onWebtoonSmartScrollChange,
             loadThumbnailPreviews = loadThumbnailPreviews,

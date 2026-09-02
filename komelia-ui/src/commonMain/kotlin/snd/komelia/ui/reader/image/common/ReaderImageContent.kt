@@ -161,6 +161,8 @@ private fun ImageContent(
             Image(
                 painter = painter,
                 contentDescription = null,
+                colorFilter = LocalReaderNightModeIntensity.current
+                    ?.let { nightModeColorFilter(it) },
             )
 
             if (ocrResults.isNotEmpty()) {
