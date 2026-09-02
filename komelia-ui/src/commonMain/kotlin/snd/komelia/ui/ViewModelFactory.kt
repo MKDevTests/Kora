@@ -59,7 +59,6 @@ import snd.komelia.ui.settings.announcements.AnnouncementsViewModel
 import snd.komelia.ui.settings.appearance.AppSettingsViewModel
 import snd.komelia.ui.settings.authactivity.AuthenticationActivityViewModel
 import snd.komelia.ui.settings.epub.EpubReaderSettingsViewModel
-import snd.komelia.ui.settings.transcription.TranscriptionSettingsViewModel
 import snd.komelia.ui.settings.imagereader.ImageReaderSettingsViewModel
 import snd.komelia.ui.settings.komf.KomfSharedState
 import snd.komelia.ui.settings.komf.general.KomfSettingsViewModel
@@ -363,8 +362,6 @@ class ViewModelFactory(
             colorCorrectionRepository = appRepositories.bookColorCorrectionRepository,
             bookAnnotationRepository = appRepositories.bookAnnotationRepository,
             epubBookmarkRepository = appRepositories.epubBookmarkRepository,
-            audioBookmarkRepository = appRepositories.audioBookmarkRepository,
-            audioPositionRepository = appRepositories.audioPositionRepository,
             readerSyncService = dependencies.readerSyncService,
             komgaEvents = dependencies.komgaEvents,
             onnxRuntime = dependencies.onnxRuntime,
@@ -793,9 +790,6 @@ class ViewModelFactory(
             settingsRepository = appRepositories.settingsRepository,
             epubSettingsRepository = appRepositories.epubReaderSettingsRepository,
             epubBookmarkRepository = appRepositories.epubBookmarkRepository,
-            audioPositionRepository = appRepositories.audioPositionRepository,
-            audioBookmarkRepository = appRepositories.audioBookmarkRepository,
-            audioChapterRepository = appRepositories.audioChapterRepository,
             bookAnnotationRepository = appRepositories.bookAnnotationRepository,
             readerSyncService = dependencies.readerSyncService,
             komgaEvents = dependencies.komgaEvents,
@@ -805,8 +799,6 @@ class ViewModelFactory(
             platformType = platformType,
             platformContext = dependencies.coilContext,
             bookSiblingsContext = bookSiblingsContext,
-            transcriptionSettingsRepository = appRepositories.transcriptionSettingsRepository,
-            whisperModelDownloader = dependencies.whisperModelDownloader,
             onExit = onExit,
         )
     }
@@ -815,13 +807,6 @@ class ViewModelFactory(
         return EpubReaderSettingsViewModel(
             settingsRepository = appRepositories.epubReaderSettingsRepository,
             onEpubCacheClear = dependencies.onEpubCacheClear,
-        )
-    }
-
-    fun getTranscriptionSettingsViewModel(): TranscriptionSettingsViewModel {
-        return TranscriptionSettingsViewModel(
-            settingsRepo = appRepositories.transcriptionSettingsRepository,
-            whisperDownloader = dependencies.whisperModelDownloader,
         )
     }
 

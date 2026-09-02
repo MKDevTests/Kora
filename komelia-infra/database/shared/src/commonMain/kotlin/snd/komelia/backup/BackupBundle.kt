@@ -6,7 +6,6 @@ import snd.komelia.db.AppSettings
 import snd.komelia.db.EpubReaderSettings
 import snd.komelia.db.ImageReaderSettings
 import snd.komelia.db.KomfSettings
-import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 
 /**
@@ -46,7 +45,6 @@ data class BackupSections(
     @SerialName("image_reader_settings") val imageReaderSettings: ImageReaderSettings? = null,
     @SerialName("epub_reader_settings") val epubReaderSettings: EpubReaderSettings? = null,
     @SerialName("komf_settings") val komfSettings: KomfSettings? = null,
-    @SerialName("transcription_settings") val transcriptionSettings: TranscriptionSettings? = null,
     @SerialName("home_screen_filters") val homeScreenFilters: List<HomeScreenFilter>? = null,
     @SerialName("library_series_filters") val librarySeriesFilters: Map<String, String>? = null,
     /**

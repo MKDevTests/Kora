@@ -39,9 +39,6 @@ class EpubReaderViewModel(
     private val settingsRepository: CommonSettingsRepository,
     private val epubSettingsRepository: EpubReaderSettingsRepository,
     private val epubBookmarkRepository: snd.komelia.bookmarks.EpubBookmarkRepository,
-    private val audioPositionRepository: snd.komelia.audiobook.AudioPositionRepository,
-    private val audioBookmarkRepository: snd.komelia.audiobook.AudioBookmarkRepository,
-    private val audioChapterRepository: snd.komelia.audiobook.AudioChapterRepository,
     private val bookAnnotationRepository: snd.komelia.annotations.BookAnnotationRepository,
     private val readerSyncService: ReaderSyncService,
     private val komgaEvents: ManagedKomgaEvents,
@@ -51,8 +48,6 @@ class EpubReaderViewModel(
     private val platformType: PlatformType,
     private val platformContext: PlatformContext,
     private val bookSiblingsContext: BookSiblingsContext,
-    private val transcriptionSettingsRepository: snd.komelia.settings.TranscriptionSettingsRepository,
-    private val whisperModelDownloader: snd.komelia.updates.WhisperModelDownloader?,
     private val onExit: (KomeliaBook) -> Unit,
 ) : StateScreenModel<LoadState<EpubReaderState>>(LoadState.Uninitialized) {
 
@@ -134,9 +129,6 @@ class EpubReaderViewModel(
                             settingsRepository = settingsRepository,
                             epubSettingsRepository = epubSettingsRepository,
                             epubBookmarkRepository = epubBookmarkRepository,
-                            audioPositionRepository = audioPositionRepository,
-                            audioBookmarkRepository = audioBookmarkRepository,
-                            audioChapterRepository = audioChapterRepository,
                             bookAnnotationRepository = bookAnnotationRepository,
                             readerSyncService = readerSyncService,
                             komgaEvents = komgaEvents,
@@ -146,8 +138,6 @@ class EpubReaderViewModel(
                             platformType = platformType,
                             coroutineScope = screenModelScope,
                             bookSiblingsContext = bookSiblingsContext,
-                            transcriptionSettingsRepository = transcriptionSettingsRepository,
-                            whisperModelDownloader = whisperModelDownloader,
                             onExit = onExit,
                         )
                         _pendingReaderState.value = epub3State

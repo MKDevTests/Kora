@@ -42,8 +42,8 @@ class ReadingActivity : FragmentActivity() {
                 )
             }
 
-            // 2. Open publication — auto-parses all SMIL media overlay files
-            BookService.openPublication(bookUuid, extractedDir.toURI().toURL(), clips = null)
+            // 2. Open publication
+            BookService.openPublication(bookUuid, extractedDir.toURI().toURL())
 
             // 3. Restore saved position (null = start of book)
             val savedLocator: Locator? = intent.getStringExtra("locatorJson")
@@ -78,17 +78,6 @@ class ReadingActivity : FragmentActivity() {
 
             findViewById<FrameLayout>(R.id.epub_container).addView(view)
         }
-    }
-
-    /**
-     * Call this (e.g. from an [AudiobookPlayer.Listener]) to highlight the sentence
-     * currently being read aloud and scroll the reader to it.
-     */
-    fun onClipChanged(clip: OverlayPar) {
-        val view = epubView ?: return
-        view.pendingProps.locator = clip.locator
-        view.pendingProps.isPlaying = true
-        view.finalizeProps()
     }
 
     override fun onDestroy() {

@@ -28,9 +28,6 @@ expect fun createEpub3ReaderState(
     settingsRepository: CommonSettingsRepository,
     epubSettingsRepository: EpubReaderSettingsRepository,
     epubBookmarkRepository: snd.komelia.bookmarks.EpubBookmarkRepository,
-    audioPositionRepository: snd.komelia.audiobook.AudioPositionRepository,
-    audioBookmarkRepository: snd.komelia.audiobook.AudioBookmarkRepository,
-    audioChapterRepository: snd.komelia.audiobook.AudioChapterRepository,
     bookAnnotationRepository: snd.komelia.annotations.BookAnnotationRepository,
     readerSyncService: ReaderSyncService,
     komgaEvents: ManagedKomgaEvents,
@@ -40,7 +37,5 @@ expect fun createEpub3ReaderState(
     platformType: PlatformType,
     coroutineScope: CoroutineScope,
     bookSiblingsContext: BookSiblingsContext,
-    transcriptionSettingsRepository: snd.komelia.settings.TranscriptionSettingsRepository,
-    whisperModelDownloader: snd.komelia.updates.WhisperModelDownloader?,
     onExit: (KomeliaBook) -> Unit,
 ): EpubReaderState

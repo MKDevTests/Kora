@@ -9,7 +9,6 @@ import snd.komelia.db.EpubReaderSettings
 import snd.komelia.db.ImageReaderSettings
 import snd.komelia.db.KomfSettings
 import snd.komelia.db.SettingsStateWrapper
-import snd.komelia.db.TranscriptionSettings
 import snd.komelia.homefilters.HomeScreenFilter
 import snd.komelia.libraryfilters.LibrarySeriesFiltersRepository
 import snd.komelia.links.SeriesLinksRepository
@@ -77,7 +76,6 @@ class BackupRoundTripTest {
         imageReader = SettingsStateWrapper(ImageReaderSettings()) {},
         epubReader = SettingsStateWrapper(EpubReaderSettings()) {},
         komf = SettingsStateWrapper(KomfSettings()) {},
-        transcription = SettingsStateWrapper(TranscriptionSettings()) {},
         homeFilters = SettingsStateWrapper<List<HomeScreenFilter>>(emptyList()) {},
         librarySeriesFilters = libFilters,
         savedSeriesFilters = FakeSavedFiltersRepo(),

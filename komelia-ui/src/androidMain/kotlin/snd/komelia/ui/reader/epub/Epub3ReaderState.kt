@@ -6,7 +6,6 @@ import com.storyteller.reader.BookService
 import com.storyteller.reader.CustomFont
 import com.storyteller.reader.EpubView
 import com.storyteller.reader.EpubViewListener
-import com.storyteller.reader.OverlayPar
 import com.storyteller.reader.TapNavigationMode
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.name
@@ -43,9 +42,6 @@ import snd.komelia.ui.MainScreen
 import snd.komelia.ui.book.BookScreen
 import snd.komelia.ui.book.bookScreen
 import snd.komelia.ui.platform.PlatformType
-import snd.komelia.ui.reader.epub.audio.AudiobookFolderController
-import snd.komelia.ui.reader.epub.audio.EpubAudioController
-import snd.komelia.ui.reader.epub.audio.MediaOverlayController
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.book.R2Device
 import snd.komga.client.book.R2Location
@@ -55,15 +51,9 @@ import snd.komga.client.sse.KomgaEvent
 import snd.webview.KomeliaWebview
 import kotlinx.coroutines.flow.first
 import snd.komelia.sync.CompactAnnotation
-import snd.komelia.sync.CompactAudioBookmark
 import snd.komelia.sync.CompactBookmark
-import snd.komelia.sync.CompactAudioPosition
 import snd.komelia.sync.ReaderSyncService
 import snd.komelia.sync.SyncBlob
-import snd.komelia.audiobook.AudioPosition
-import snd.komelia.audiobook.AudioBookmark
-import snd.komelia.audiobook.AudioBookmarkRepository
-import snd.komelia.audiobook.AudioPositionRepository
 import snd.komelia.annotations.BookAnnotation
 import snd.komelia.annotations.AnnotationLocation
 import snd.komelia.annotations.BookAnnotationRepository
@@ -94,15 +84,10 @@ class Epub3ReaderState(
     private val platformType: PlatformType,
     private val coroutineScope: CoroutineScope,
     private val bookSiblingsContext: BookSiblingsContext,
-    private val audioPositionRepository: AudioPositionRepository,
-    private val audioBookmarkRepository: AudioBookmarkRepository,
-    private val audioChapterRepository: snd.komelia.audiobook.AudioChapterRepository,
     private val bookAnnotationRepository: BookAnnotationRepository,
     private val readerSyncService: ReaderSyncService,
     private val komgaEvents: ManagedKomgaEvents,
     private val settingsRepository: snd.komelia.settings.CommonSettingsRepository,
-    private val transcriptionSettingsRepository: snd.komelia.settings.TranscriptionSettingsRepository,
-    private val whisperModelDownloader: snd.komelia.updates.WhisperModelDownloader?,
     override val onExit: (KomeliaBook) -> Unit,
 ) : EpubReaderState {
 
@@ -130,8 +115,6 @@ class Epub3ReaderState(
         val remoteSyncBlob = readerSyncService.decode(r2Prog?.locator?.koboSpan)
         val localBookmarks = epubBookmarkRepository.getBookmarks(bookId.value).first()
         val localAnnotations = bookAnnotationRepository.getAnnotations(bookId.value).first()
-        val localAudioBookmarks = audioBookmarkRepository.getBookmarks(bookId.value).first()
-        val localAudioPosition = audioPositionRepository.getPosition(bookId.value)
 
         val currentLocalBlob = readerSyncService.decode(currentSyncBlob.value)
         val localLastSyncTime = currentLocalBlob?.lastModified ?: 0L
@@ -156,12 +139,6 @@ class Epub3ReaderState(
                     selectedText = (it.location as? AnnotationLocation.EpubLocation)?.selectedText,
                 )
             },
-            audioBookmarks = localAudioBookmarks.map {
-                CompactAudioBookmark(it.id, it.trackIndex, it.positionSeconds, it.createdAt)
-            },
-            audioPosition = localAudioPosition?.let {
-                CompactAudioPosition(it.trackIndex, it.positionSeconds, it.savedAt)
-            },
             lastModified = localLastSyncTime
         )
 
@@ -170,17 +147,6 @@ class Epub3ReaderState(
         } else localSyncBlob
 
         // Update local repositories with merged data
-        val mergedAudioPos = merged.audioPosition
-        if (mergedAudioPos != null && (localAudioPosition == null || mergedAudioPos.savedAt > localAudioPosition.savedAt)) {
-            audioPositionRepository.savePosition(
-                AudioPosition(
-                    bookId = bookId.value,
-                    trackIndex = mergedAudioPos.track,
-                    positionSeconds = mergedAudioPos.pos,
-                    savedAt = mergedAudioPos.savedAt
-                )
-            )
-        }
 
         // Handle additions
         merged.bookmarks.forEach { compact ->
@@ -231,20 +197,6 @@ class Epub3ReaderState(
                 )
             }
         }
-        merged.audioBookmarks.forEach { compact ->
-            if (localAudioBookmarks.none { it.id == compact.id }) {
-                audioBookmarkRepository.saveBookmark(
-                    AudioBookmark(
-                        id = compact.id,
-                        bookId = bookId.value,
-                        trackIndex = compact.track,
-                        positionSeconds = compact.pos,
-                        trackTitle = "",
-                        createdAt = compact.createdAt
-                    )
-                )
-            }
-        }
 
         // Handle local deletions (items present locally but missing in merged blob)
         localBookmarks.forEach { local ->
@@ -257,11 +209,6 @@ class Epub3ReaderState(
                 bookAnnotationRepository.deleteAnnotation(local.id)
             }
         }
-        localAudioBookmarks.forEach { local ->
-            if (merged.audioBookmarks.none { it.id == local.id }) {
-                audioBookmarkRepository.deleteBookmark(local.id)
-            }
-        }
 
         currentSyncBlob.value = readerSyncService.encode(merged)
     }
@@ -269,8 +216,6 @@ class Epub3ReaderState(
     private suspend fun updateCacheAndPush() {
         val bookmarks = epubBookmarkRepository.getBookmarks(bookId.value).first()
         val annotations = bookAnnotationRepository.getAnnotations(bookId.value).first()
-        val audioBookmarks = audioBookmarkRepository.getBookmarks(bookId.value).first()
-        val audioPosition = audioPositionRepository.getPosition(bookId.value)
 
         val syncBlob = SyncBlob(
             bookmarks = bookmarks.map {
@@ -291,12 +236,6 @@ class Epub3ReaderState(
                     updatedAt = it.updatedAt,
                     selectedText = (it.location as? AnnotationLocation.EpubLocation)?.selectedText,
                 )
-            },
-            audioBookmarks = audioBookmarks.map {
-                CompactAudioBookmark(it.id, it.trackIndex, it.positionSeconds, it.createdAt)
-            },
-            audioPosition = audioPosition?.let {
-                CompactAudioPosition(it.trackIndex, it.positionSeconds, it.savedAt)
             },
             lastModified = Clock.System.now().toEpochMilliseconds()
         )
@@ -345,7 +284,6 @@ class Epub3ReaderState(
     val tableOfContents = MutableStateFlow<List<Link>>(emptyList())
     val settings = MutableStateFlow(Epub3NativeSettings())
     val userFonts = MutableStateFlow<List<UserFont>>(emptyList())
-    val mediaOverlayController = MutableStateFlow<EpubAudioController?>(null)
     val positions = MutableStateFlow<List<Locator>>(emptyList())
     val currentLocator = MutableStateFlow<Locator?>(null)
     private var epubView: EpubView? = null
@@ -526,7 +464,6 @@ class Epub3ReaderState(
             "currentLocator_before=${currentLocator.value?.href}"
         }
         epubView?.go(locator)
-        (mediaOverlayController.value as? MediaOverlayController)?.handleUserLocatorChange(locator)
         // onLocatorChange will fire after go() and call handleUserLocatorChange,
         // exactly like swipe navigation — the locator from EpubView has proper
         // position data, not a TOC anchor fragment.
@@ -535,7 +472,6 @@ class Epub3ReaderState(
     fun updateSettings(new: Epub3NativeSettings) {
         settings.value = new
         applySettingsToView(new)
-        mediaOverlayController.value?.applyAudioSettings(new)
         coroutineScope.launch { epubSettingsRepository.putEpub3NativeSettings(new) }
     }
 
@@ -677,7 +613,7 @@ class Epub3ReaderState(
             startStep("Opening")
             val openResult = runCatching {
                 withContext(Dispatchers.IO) {
-                    BookService.openPublication(bookUuid, extractedDir.toURI().toURL(), clips = null)
+                    BookService.openPublication(bookUuid, extractedDir.toURI().toURL())
                 }
             }
 
@@ -686,7 +622,7 @@ class Epub3ReaderState(
                 val retryDir = prepareEpubDirectory(forceRefresh = true)
                 this.extractedDir = retryDir
                 withContext(Dispatchers.IO) {
-                    BookService.openPublication(bookUuid, retryDir.toURI().toURL(), clips = null)
+                    BookService.openPublication(bookUuid, retryDir.toURI().toURL())
                 }
             }
 
@@ -694,7 +630,6 @@ class Epub3ReaderState(
             logger.debug { "[epub3-init] publication opened" }
             tableOfContents.value = BookService.getPublication(bookUuid)?.tableOfContents ?: emptyList()
 
-            val clips: List<OverlayPar> = BookService.getOverlayClips(bookUuid)
 
             startStep("Syncing")
             initialSync()
@@ -724,7 +659,7 @@ class Epub3ReaderState(
             coroutineScope.launch {
                 val rt = Runtime.getRuntime()
                 val pre = (rt.totalMemory() - rt.freeMemory()) / 1_048_576
-                logger.info { "[epub3-diag] getPositions-coroutine START heap=${pre}MB clips=${clips.size}" }
+                logger.info { "[epub3-diag] getPositions-coroutine START heap=${pre}MB" }
                 runCatching { positions.value = BookService.getPositions(bookUuid) }
                     .onFailure { logger.catching(it) }
                 val post = (rt.totalMemory() - rt.freeMemory()) / 1_048_576
@@ -747,56 +682,6 @@ class Epub3ReaderState(
                 }
             }
 
-            if (clips.isNotEmpty()) {
-                coroutineScope.launch {
-                    logger.debug { "[epub3-init] initializing media overlay controller in background (${clips.size} clips)" }
-                    runCatching {
-                        val controller = MediaOverlayController(context, coroutineScope, bookUuid, extractedDir)
-                        controller.initialize(clips, savedLocator)
-                        controller.applyAudioSettings(settings.value)
-                        mediaOverlayController.value = controller
-                        epubView?.let { view ->
-                            (controller as? MediaOverlayController)?.let { smilController ->
-                                smilController.attachView(view)
-                                savedLocator?.let { smilController.handleUserLocatorChange(it) }
-                            }
-                        }
-                        logger.debug { "[epub3-init] media overlay controller ready" }
-                    }.onFailure { e ->
-                        logger.error { "[epub3-init] media overlay controller FAILED: ${e::class.qualifiedName}: ${e.message}\n${e.stackTraceToString()}" }
-                    }
-                }
-            } else {
-                val audioFiles = AudiobookFolderController.detectAudioFiles(extractedDir)
-                logger.info { "[epub3-init] folder detection: found ${audioFiles.size} audio files in $extractedDir" }
-                if (audioFiles.isNotEmpty()) {
-                    coroutineScope.launch {
-                        logger.info { "[epub3-init] audiobook folder controller coroutine START (${audioFiles.size} files)" }
-                        runCatching {
-                            val controller = AudiobookFolderController(
-                                context = context,
-                                coroutineScope = coroutineScope,
-                                bookUuid = bookUuid,
-                                bookId = bookId.value,
-                                extractedDir = extractedDir,
-                                audioPositionRepository = audioPositionRepository,
-                                audioBookmarkRepository = audioBookmarkRepository,
-                                audioChapterRepository = audioChapterRepository,
-                                onBookmarkChange = { coroutineScope.launch { updateCacheAndPush() } },
-                                transcriptionSettingsRepository = transcriptionSettingsRepository,
-                                whisperModelDownloader = whisperModelDownloader,
-                    )
-                    controller.initialize()
-                            logger.info { "[epub3-init] audiobook folder controller initialize() completed" }
-                            controller.applyAudioSettings(settings.value)
-                            mediaOverlayController.value = controller
-                            logger.info { "[epub3-init] audiobook folder controller READY — mediaOverlayController set" }
-                        }.onFailure { e ->
-                            logger.error { "[epub3-init] audiobook folder controller FAILED: ${e::class.qualifiedName}: ${e.message}\n${e.stackTraceToString()}" }
-                        }
-                    }
-                }
-            }
         }.onFailure { e ->
             logger.error { "[epub3-init] FAILED: ${e::class.qualifiedName}: ${e.message}\n${e.stackTraceToString()}" }
             state.value = LoadState.Error(e)
@@ -804,7 +689,7 @@ class Epub3ReaderState(
     }
 
     fun onEpubViewCreated(view: EpubView) {
-        logger.info { "[EPUB-DIAG] [VIEW-READY] SavedLocator: ${savedLocator?.href} | ControllerReady: ${mediaOverlayController.value != null}" }
+        logger.info { "[EPUB-DIAG] [VIEW-READY] SavedLocator: ${savedLocator?.href}" }
         logger.info { "[komelia-epub] INIT: savedLocator=${savedLocator?.href} currentLocator=${currentLocator.value?.href}" }
         view.listener = object : EpubViewListener {
             override fun onRawLocatorChange(locator: Locator) {
@@ -813,7 +698,7 @@ class Epub3ReaderState(
             }
 
             override fun onLocatorChange(locator: Locator) {
-                logger.info { "[EPUB-DIAG] [TEXT-MOVE] NewLocator: ${locator.href}#${locator.locations.fragments.firstOrNull()} | ControllerReady: ${mediaOverlayController.value != null}" }
+                logger.info { "[EPUB-DIAG] [TEXT-MOVE] NewLocator: ${locator.href}#${locator.locations.fragments.firstOrNull()}" }
                 logger.info {
                     "[komelia-epub] LOCATOR-CB: incoming=${locator.href} title=${locator.title} " +
                     "currentLocator=${currentLocator.value?.href}"
@@ -826,7 +711,6 @@ class Epub3ReaderState(
                 // causing isPropLocatorOnPage=false on every reflow and corrupting savedLocator.
                 view.props = view.props?.copy(locator = locator)
                 currentLocator.value = locator
-                (mediaOverlayController.value as? MediaOverlayController)?.handleUserLocatorChange(locator)
                 if (!markReadProgress) return
                 coroutineScope.launch {
                     val r2Prog = R2Progression(
@@ -861,8 +745,6 @@ class Epub3ReaderState(
             }
 
             override fun onDoubleTouch(locator: Locator) {
-                // F2: double-tap → seek audio to that paragraph and play
-                (mediaOverlayController.value as? MediaOverlayController)?.handleDoubleTap(locator)
             }
 
             override fun onSelection(locator: Locator, x: Int, y: Int) {
@@ -908,10 +790,8 @@ class Epub3ReaderState(
         this.epubView = view
         currentLocator.value = savedLocator
         applySettingsToView(settings.value)
-        (mediaOverlayController.value as? MediaOverlayController)?.attachView(view)
         // Pre-seed pendingUserLocator so first play starts from reading position,
         // not from audio track position 0, even if Readium hasn't fired onLocatorChange yet.
-        savedLocator?.let { (mediaOverlayController.value as? MediaOverlayController)?.handleUserLocatorChange(it) }
     }
 
     /** No-op: this reader does not use a WebView. */
@@ -926,13 +806,10 @@ class Epub3ReaderState(
             "currentLocator_before=${currentLocator.value?.href}"
         }
         epubView?.go(locator)
-        (mediaOverlayController.value as? MediaOverlayController)?.handleUserLocatorChange(locator)
     }
 
     override fun closeWebview() {
         this.epubView = null
-        mediaOverlayController.value?.release()
-        mediaOverlayController.value = null
         if (platformType == PlatformType.MOBILE) windowState.setFullscreen(false)
         book.value?.let { onExit(it) }
         navigator.value?.let { nav ->

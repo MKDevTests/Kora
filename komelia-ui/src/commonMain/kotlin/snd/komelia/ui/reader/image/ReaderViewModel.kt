@@ -50,7 +50,6 @@ import snd.komelia.settings.model.ReaderType.PAGED
 import snd.komelia.settings.model.ReaderType.PANELS
 import snd.komelia.ui.BookSiblingsContext
 import snd.komelia.ui.LoadState
-import snd.komelia.audiobook.AudioPositionRepository
 import snd.komelia.ui.reader.image.continuous.ContinuousReaderState
 import snd.komelia.ui.reader.image.paged.PagedReaderState
 import snd.komelia.ui.reader.image.panels.PanelsReaderState
@@ -81,8 +80,6 @@ class ReaderViewModel(
     colorCorrectionRepository: BookColorCorrectionRepository,
     private val bookAnnotationRepository: snd.komelia.annotations.BookAnnotationRepository,
     private val epubBookmarkRepository: snd.komelia.bookmarks.EpubBookmarkRepository,
-    private val audioBookmarkRepository: snd.komelia.audiobook.AudioBookmarkRepository,
-    private val audioPositionRepository: snd.komelia.audiobook.AudioPositionRepository,
     private val readerSyncService: snd.komelia.sync.ReaderSyncService,
     private val komgaEvents: ManagedKomgaEvents,
     private val onnxRuntime: OnnxRuntime?,
@@ -138,8 +135,6 @@ class ReaderViewModel(
         colorCorrectionRepository = colorCorrectionRepository,
         bookAnnotationRepository = bookAnnotationRepository,
         epubBookmarkRepository = epubBookmarkRepository,
-        audioBookmarkRepository = audioBookmarkRepository,
-        audioPositionRepository = audioPositionRepository,
         readerSyncService = readerSyncService,
         komgaEvents = komgaEvents,
         pageChangeFlow = pageChangeFlow,

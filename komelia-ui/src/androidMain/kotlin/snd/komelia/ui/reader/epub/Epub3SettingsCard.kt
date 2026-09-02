@@ -97,7 +97,7 @@ fun Epub3SettingsCard(
     modifier: Modifier = Modifier,
 ) {
     var dragOffsetY by remember { mutableStateOf(0f) }
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 4 })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val coroutineScope = rememberCoroutineScope()
     val theme = snd.komelia.ui.LocalTheme.current
     val surfaceColor = if (theme.type == snd.komelia.ui.Theme.ThemeType.DARK) Color(43, 43, 43)
@@ -164,11 +164,6 @@ fun Epub3SettingsCard(
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                     text = { Text(LocalStrings.current.ui.fontText) },
                 )
-                Tab(
-                    selected = pagerState.currentPage == 3,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
-                    text = { Text(LocalStrings.current.ui.audio) },
-                )
             }
 
             // Tab content — fills remaining height, scrollable within it
@@ -193,7 +188,6 @@ fun Epub3SettingsCard(
                         )
 
                         2 -> FontTextTab(settings, onSettingsChange, accentColor, userFonts, onLoadFont, onDeleteFont)
-                        3 -> AudioTab(settings, onSettingsChange, accentColor)
                     }
                 }
             }
@@ -599,62 +593,6 @@ private fun FontTextTab(
                 checked = settings.respectPublisherColors,
                 onCheckedChange = { onSettingsChange(settings.copy(respectPublisherColors = it)) },
             )
-        }
-    }
-}
-
-@Composable
-private fun AudioTab(
-    settings: Epub3NativeSettings,
-    onSettingsChange: (Epub3NativeSettings) -> Unit,
-    accentColor: Color,
-) {
-    Column {
-        // Playback speed slider
-        SliderRow(
-            label = LocalStrings.current.ui.speed,
-            valueLabel = "${"%.2f".format(settings.playbackSpeed)}×",
-            value = settings.playbackSpeed.toFloat(),
-            onValueChange = { onSettingsChange(settings.copy(playbackSpeed = it.toDouble())) },
-            valueRange = 0.5f..4.0f,
-            accentColor = accentColor,
-        )
-
-        // Auto Rewind toggle
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(LocalStrings.current.ui.autoRewind, style = MaterialTheme.typography.labelLarge)
-            Switch(
-                checked = settings.rewindEnabled,
-                onCheckedChange = { onSettingsChange(settings.copy(rewindEnabled = it)) },
-            )
-        }
-
-        // Conditional rewind sliders
-        AnimatedVisibility(visible = settings.rewindEnabled) {
-            Column {
-                SliderRow(
-                    label = LocalStrings.current.ui.interruption,
-                    valueLabel = "${settings.rewindAfterInterruption.roundToInt()} s",
-                    value = settings.rewindAfterInterruption.toFloat(),
-                    onValueChange = { onSettingsChange(settings.copy(rewindAfterInterruption = it.toDouble())) },
-                    valueRange = 0f..30f,
-                    accentColor = accentColor,
-                )
-                SliderRow(
-                    label = LocalStrings.current.ui.longBreak,
-                    valueLabel = "${settings.rewindAfterBreak.roundToInt()} s",
-                    value = settings.rewindAfterBreak.toFloat(),
-                    onValueChange = { onSettingsChange(settings.copy(rewindAfterBreak = it.toDouble())) },
-                    valueRange = 0f..60f,
-                    accentColor = accentColor,
-                )
-            }
         }
     }
 }

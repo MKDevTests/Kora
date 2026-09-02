@@ -544,12 +544,12 @@ class EpubView(
 
     fun setupUserScript(): EpubView {
         activity.lifecycleScope.launch {
-            val locator = props!!.locator ?: return@launch
-            val fragments =
-                BookService.getFragments(props!!.bookUuid, locator)
-
-            val joinedFragments = fragments.joinToString { "\"${it.fragmentId}\"" }
-            val jsFragmentsArray = "[${joinedFragments}]"
+            props!!.locator ?: return@launch
+            // Always empty: this used to list the SMIL fragment ids of the
+            // current resource so the read-along player could follow them. The
+            // page script still reads storyteller.fragmentIds, so it keeps the
+            // variable rather than the feature.
+            val jsFragmentsArray = "[]"
 
             navigator?.evaluateJavascript(
                 """
@@ -692,10 +692,7 @@ class EpubView(
         if (locator.href != props!!.locator?.href || changingResource) {
             changingResource = false
 
-            val fragments = BookService.getFragments(props!!.bookUuid, locator)
-
-            val joinedFragments = fragments.joinToString { "\"${it.fragmentId}\"" }
-            val jsFragmentsArray = "[${joinedFragments}]"
+            val jsFragmentsArray = "[]"
 
             navigator?.evaluateJavascript(
                 """
