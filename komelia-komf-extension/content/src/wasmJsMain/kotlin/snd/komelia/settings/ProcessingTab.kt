@@ -18,6 +18,7 @@ import snd.komf.api.MediaServer
 
 class ProcessingTab(private val mediaServer: MediaServer) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
         title = "Processing",
         icon = Icons.Default.Memory

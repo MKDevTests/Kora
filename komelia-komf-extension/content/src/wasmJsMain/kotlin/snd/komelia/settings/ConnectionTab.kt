@@ -16,6 +16,7 @@ import snd.komf.api.MediaServer
 
 class ConnectionTab(private val mediaServer: MediaServer) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
         title = "Connection",
         icon = Icons.Default.SettingsEthernet

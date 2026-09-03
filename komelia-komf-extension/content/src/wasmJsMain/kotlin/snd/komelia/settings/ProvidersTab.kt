@@ -17,6 +17,7 @@ import snd.komelia.LocalKomfViewModelFactory
 
 class ProvidersTab : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
         title = "Providers",
         icon = Icons.AutoMirrored.Filled.FormatListBulleted
