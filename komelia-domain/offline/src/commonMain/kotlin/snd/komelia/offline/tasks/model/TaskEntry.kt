@@ -8,6 +8,7 @@ import snd.komelia.offline.tasks.model.TaskEntry.TaskStatus.NEW
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.offline.book.model.DownloadOrigin
 
 const val HIGHEST_PRIORITY = 8
 const val HIGH_PRIORITY = 6
@@ -97,7 +98,17 @@ sealed interface TaskData {
 
     @Serializable
     @SerialName("DownloadBook")
-    data class DownloadBook(val bookId: KomgaBookId) : TaskData {
+    data class DownloadBook(
+        val bookId: KomgaBookId,
+        /**
+         * Defaulted so task rows written before this field existed still
+         * deserialize — and they were all manual, which is what the default
+         * says. Deliberately absent from [uniqueName]: an automatic request
+         * and a manual one for the same book are the same download, and the
+         * unique-work policy should still collapse them into one.
+         */
+        val origin: DownloadOrigin = DownloadOrigin.MANUAL,
+    ) : TaskData {
         override val uniqueName = "DownloadBook_${bookId}"
     }
 

@@ -10,6 +10,7 @@ import snd.komelia.offline.sync.OfflineScannerService
 import snd.komelia.offline.sync.model.DownloadEvent
 import snd.komelia.offline.tasks.OfflineTaskEmitter
 import snd.komga.client.sse.KomgaEvent
+import snd.komelia.offline.sync.DownloadCleaner
 
 data class OfflineDependencies(
     val actions: OfflineActions,
@@ -18,6 +19,7 @@ data class OfflineDependencies(
     val bookDownloadEvents: MutableSharedFlow<DownloadEvent>,
     val downloadService: BookDownloadService,
     val offlineScannerService: OfflineScannerService,
+    val downloadCleaner: DownloadCleaner,
 
     val repositories: OfflineRepositories,
     val fileService: BookContentExtractors,

@@ -22,6 +22,7 @@ import snd.komelia.db.offline.tables.OfflineBookMetadataTable
 import snd.komelia.db.offline.tables.OfflineBookTable
 import snd.komelia.db.offline.tables.OfflineReadProgressTable
 import snd.komelia.formatDecimal
+import snd.komelia.offline.book.model.DownloadOrigin
 import snd.komelia.offline.book.model.OfflineBook
 import snd.komelia.offline.book.repository.OfflineBookRepository
 import snd.komga.client.book.KomgaBookId
@@ -56,6 +57,7 @@ class ExposedOfflineBookRepository(database: Database) : OfflineBookRepository, 
                 it[bookTable.localFileModifiedDate] = book.localFileLastModified.epochSeconds
                 it[bookTable.remoteUnavailable] = book.remoteUnavailable
                 it[bookTable.fileDownloadPath] = book.fileDownloadPath.toString()
+                it[bookTable.downloadOrigin] = book.downloadOrigin.name
             }
         }
     }
@@ -192,6 +194,12 @@ class ExposedOfflineBookRepository(database: Database) : OfflineBookRepository, 
         }
     }
 
+    override suspend fun findAllDownloaded(): List<OfflineBook> {
+        return transaction {
+            bookTable.selectAll().map { it.toModel() }
+        }
+    }
+
     override suspend fun findAll(id: KomgaSeriesId): List<OfflineBook> {
         return transaction {
             bookTable
@@ -245,6 +253,11 @@ class ExposedOfflineBookRepository(database: Database) : OfflineBookRepository, 
             localFileLastModified = Instant.fromEpochSeconds(this[bookTable.localFileModifiedDate]),
             remoteUnavailable = this[bookTable.remoteUnavailable],
             fileDownloadPath = PlatformFile(this[bookTable.fileDownloadPath]),
+            // An unknown value reads as MANUAL rather than throwing: the
+            // cleaner skipping a book is recoverable, a crash on opening the
+            // offline library is not.
+            downloadOrigin = runCatching { DownloadOrigin.valueOf(this[bookTable.downloadOrigin]) }
+                .getOrDefault(DownloadOrigin.MANUAL),
         )
     }
 }

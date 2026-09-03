@@ -33,6 +33,11 @@ class ExposedOfflineSettingsRepository(database: Database) : ExposedRepository(d
                 it[OfflineSettingsTable.downloadDirectory] = settings.downloadDirectory.toString()
                 it[OfflineSettingsTable.readProgressSyncDate] = settings.readProgressSyncDate?.epochSeconds
                 it[OfflineSettingsTable.dataSyncDate] = settings.dataSyncDate?.epochSeconds
+                it[OfflineSettingsTable.downloadWifiOnly] = settings.downloadWifiOnly
+                it[OfflineSettingsTable.downloadWhileChargingOnly] = settings.downloadWhileChargingOnly
+                it[OfflineSettingsTable.downloadStorageLimitMb] = settings.downloadStorageLimitMb
+                it[OfflineSettingsTable.cleanupReadAfterDays] = settings.cleanupReadAfterDays
+                it[OfflineSettingsTable.cleanupIncludeManual] = settings.cleanupIncludeManual
             }
         }
     }
@@ -45,6 +50,11 @@ class ExposedOfflineSettingsRepository(database: Database) : ExposedRepository(d
             downloadDirectory = PlatformFile(this[OfflineSettingsTable.downloadDirectory]),
             readProgressSyncDate = this[OfflineSettingsTable.readProgressSyncDate]?.let { Instant.fromEpochSeconds(it) },
             dataSyncDate = this[OfflineSettingsTable.dataSyncDate]?.let { Instant.fromEpochSeconds(it) },
+            downloadWifiOnly = this[OfflineSettingsTable.downloadWifiOnly],
+            downloadWhileChargingOnly = this[OfflineSettingsTable.downloadWhileChargingOnly],
+            downloadStorageLimitMb = this[OfflineSettingsTable.downloadStorageLimitMb],
+            cleanupReadAfterDays = this[OfflineSettingsTable.cleanupReadAfterDays],
+            cleanupIncludeManual = this[OfflineSettingsTable.cleanupIncludeManual],
         )
     }
 }

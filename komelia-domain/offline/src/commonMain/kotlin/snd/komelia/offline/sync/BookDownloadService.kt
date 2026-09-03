@@ -30,6 +30,7 @@ import snd.komga.client.library.KomgaLibraryClient
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesClient
 import snd.komga.client.user.KomgaUserClient
+import snd.komelia.offline.book.model.DownloadOrigin
 
 
 private val logger = KotlinLogging.logger { }
@@ -52,7 +53,7 @@ class BookDownloadService(
     private val onlineServerUrl: StateFlow<String>,
 ) {
 
-    fun downloadBook(bookId: KomgaBookId): Flow<DownloadEvent> {
+    fun downloadBook(bookId: KomgaBookId, origin: DownloadOrigin): Flow<DownloadEvent> {
         return flow {
             var file: PlatformFile? = null
             val book = bookClient.getOne(bookId)
@@ -72,7 +73,8 @@ class BookDownloadService(
                     book = book,
                     offlinePath = bookFile,
                     userId = offlineUser.id,
-                    localFileModifiedDate = book.fileLastModified
+                    localFileModifiedDate = book.fileLastModified,
+                    downloadOrigin = origin,
                 )
             } catch (e: Exception) {
                 file?.let { deleteFile(it) }

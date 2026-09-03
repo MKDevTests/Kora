@@ -60,6 +60,7 @@ class AndroidOfflineModule(
     ): PlatformDownloadManager {
         return AndroidDownloadManager(
             context = context,
+            settingsRepository = repositories.offlineSettingsRepository,
         )
     }
 }

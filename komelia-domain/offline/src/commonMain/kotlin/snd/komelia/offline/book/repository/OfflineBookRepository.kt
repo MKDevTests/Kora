@@ -22,6 +22,16 @@ interface OfflineBookRepository {
         userId: KomgaUserId,
     ): KomgaBookId?
 
+    /**
+     * Every book held offline.
+     *
+     * Every row in this database is a downloaded book, so there is no filter:
+     * the storage cap and the cleaner both need the whole set, and the set is
+     * small — a book is tens of megabytes, so a four-gigabyte cap holds a few
+     * hundred rows at most.
+     */
+    suspend fun findAllDownloaded(): List<OfflineBook>
+
     suspend fun findAllBySeriesIds(seriesIds: List<KomgaSeriesId>): List<OfflineBook>
     suspend fun findAllIdsBySeriesId(seriesId: KomgaSeriesId): List<KomgaBookId>
     suspend fun findAllIdsByLibraryId(libraryId: KomgaLibraryId): List<KomgaBookId>

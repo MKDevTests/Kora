@@ -20,6 +20,7 @@ object OfflineBookTable : Table("BOOK") {
     val localFileModifiedDate = long("local_file_modified_date")
     val remoteUnavailable = bool("remote_unavailable")
     val fileDownloadPath = text("file_download_path")
+    val downloadOrigin = text("download_origin")
 
     override val primaryKey = PrimaryKey(id)
 

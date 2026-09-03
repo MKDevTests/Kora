@@ -32,6 +32,8 @@ import snd.komelia.ui.settings.offline.downloads.OfflineDownloadsContent
 import snd.komelia.ui.settings.offline.logs.OfflineLogsContent
 import snd.komelia.ui.settings.offline.users.OfflineUserSettingsContent
 import snd.komelia.ui.LocalStrings
+import androidx.compose.material.icons.filled.Tune
+import snd.komelia.ui.settings.offline.policy.DownloadPolicyContent
 
 class OfflineSettingsScreen : Screen {
 
@@ -76,6 +78,17 @@ class OfflineSettingsScreen : Screen {
                     modifier = Modifier.heightIn(min = 40.dp).pointerHoverIcon(PointerIcon.Hand),
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(Icons.Default.Tune, null)
+                        Text(LocalStrings.current.ui.downloadPolicy)
+                    }
+                }
+
+                Tab(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    modifier = Modifier.heightIn(min = 40.dp).pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Default.Cached, null)
                         Text(LocalStrings.current.ui.logs)
                     }
@@ -111,6 +124,25 @@ class OfflineSettingsScreen : Screen {
                 }
 
                 2 -> {
+                    val policy = vm.policyState
+                    DownloadPolicyContent(
+                        wifiOnly = policy.wifiOnly.collectAsState().value,
+                        onWifiOnlyChange = policy::onWifiOnlyChange,
+                        whileChargingOnly = policy.whileChargingOnly.collectAsState().value,
+                        onWhileChargingOnlyChange = policy::onWhileChargingOnlyChange,
+                        storageLimitMb = policy.storageLimitMb.collectAsState().value,
+                        onStorageLimitChange = policy::onStorageLimitChange,
+                        cleanupReadAfterDays = policy.cleanupReadAfterDays.collectAsState().value,
+                        onCleanupReadAfterDaysChange = policy::onCleanupReadAfterDaysChange,
+                        cleanupIncludeManual = policy.cleanupIncludeManual.collectAsState().value,
+                        onCleanupIncludeManualChange = policy::onCleanupIncludeManualChange,
+                        usedBytes = policy.usedBytes.collectAsState().value,
+                        isCleaning = policy.isCleaning.collectAsState().value,
+                        onCleanupNow = policy::onCleanupNow,
+                    )
+                }
+
+                3 -> {
                     val state = vm.logsState
                     OfflineLogsContent(
                         logs = state.logs.collectAsState().value,

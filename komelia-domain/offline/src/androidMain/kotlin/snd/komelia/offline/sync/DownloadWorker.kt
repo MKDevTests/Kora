@@ -32,8 +32,10 @@ import snd.komga.client.book.KomgaBookId
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
+import snd.komelia.offline.book.model.DownloadOrigin
 
 internal const val bookIdDataKey = "bookId"
+internal const val downloadOriginDataKey = "downloadOrigin"
 private val notificationIdCounter = AtomicInteger(1)
 const val downloadChannelId = "downloads_channel"
 private val jobLimit = Semaphore(4)
@@ -66,8 +68,13 @@ class DownloadWorker(
     override suspend fun doWork(): Result {
         val result = jobLimit.withPermit {
             val bookId = inputData.getString(bookIdDataKey)
+            // Work enqueued by an older build has no origin key at all, and a
+            // book fetched by hand is the reading that never deletes anything.
+            val origin = inputData.getString(downloadOriginDataKey)
+                ?.let { runCatching { DownloadOrigin.valueOf(it) }.getOrNull() }
+                ?: DownloadOrigin.MANUAL
             when {
-                bookId != null -> downloadBook(KomgaBookId(bookId))
+                bookId != null -> downloadBook(KomgaBookId(bookId), origin)
                 else -> Result.failure()
             }
         }
@@ -76,11 +83,11 @@ class DownloadWorker(
     }
 
 
-    private suspend fun downloadBook(bookId: KomgaBookId): Result {
+    private suspend fun downloadBook(bookId: KomgaBookId, origin: DownloadOrigin): Result {
         val isSuccess = AtomicBoolean(false)
 
         try {
-            downloadService.downloadBook(bookId)
+            downloadService.downloadBook(bookId, origin)
                 .onEach { sharedEvents.emit(it) }
                 .conflate()
                 .collect {

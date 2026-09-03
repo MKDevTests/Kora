@@ -882,7 +882,8 @@ class ViewModelFactory(
             offlineScannerService = dependencies.offlineDependencies.offlineScannerService,
 
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
-            downloadEvents = dependencies.offlineDependencies.bookDownloadEvents
+            downloadEvents = dependencies.offlineDependencies.bookDownloadEvents,
+            downloadCleaner = dependencies.offlineDependencies.downloadCleaner,
         )
     }
 

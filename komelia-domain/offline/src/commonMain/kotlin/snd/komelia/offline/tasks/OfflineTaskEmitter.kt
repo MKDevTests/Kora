@@ -19,6 +19,7 @@ import snd.komelia.offline.tasks.repository.OfflineTasksRepository
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesId
+import snd.komelia.offline.book.model.DownloadOrigin
 
 class OfflineTaskEmitter(
     private val tasksRepository: OfflineTasksRepository,
@@ -151,11 +152,12 @@ class OfflineTaskEmitter(
     suspend fun downloadBook(
         bookId: KomgaBookId,
         priority: Int = DEFAULT_PRIORITY,
+        origin: DownloadOrigin = DownloadOrigin.MANUAL,
     ) {
         submitTask(
             TaskEntry(
                 priority = priority,
-                task = DownloadBook(bookId),
+                task = DownloadBook(bookId, origin),
             )
         )
     }

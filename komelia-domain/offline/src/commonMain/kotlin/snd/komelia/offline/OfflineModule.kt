@@ -6,10 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -105,6 +107,7 @@ import snd.komga.client.KomgaClientFactory
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
+import snd.komelia.offline.sync.DownloadCleaner
 
 data class OfflineRepositories(
     val mediaServerRepository: OfflineMediaServerRepository,
@@ -254,12 +257,31 @@ abstract class OfflineModule(
             komgaEvents = komgaEvents,
         )
 
+        val downloadCleaner = DownloadCleaner(
+            bookRepository = repositories.bookRepository,
+            readProgressRepository = repositories.readProgressRepository,
+            settingsRepository = repositories.offlineSettingsRepository,
+            taskEmitter = taskEmitter,
+            logJournalRepository = repositories.logJournalRepository,
+            userId = offlineUserId,
+        )
+
+        // A finished download is the only moment the cap can be crossed, so it
+        // is the only moment worth checking. Running the cleaner on a timer
+        // would wake the tablet to look at a number that cannot have moved.
+        moduleScope.launch {
+            bookDownloadEvents
+                .filterIsInstance<DownloadEvent.BookDownloadCompleted>()
+                .collect { downloadCleaner.clean() }
+        }
+
         val taskHandler = TaskHandler(
             actions = actions,
             bookRepository = repositories.bookRepository,
             taskEmitter = taskEmitter,
             downloadManager = downloadManager,
             komgaBookClient = komgaClientFactory.bookClient(),
+            downloadCleaner = downloadCleaner,
         )
         val taskProcessor = TaskProcessor(
             tasksRepository = repositories.tasksRepository,
@@ -314,6 +336,7 @@ abstract class OfflineModule(
             bookDownloadEvents = bookDownloadEvents,
             downloadService = downloadService,
             offlineScannerService = offlineScannerService,
+            downloadCleaner = downloadCleaner,
             repositories = repositories,
             fileService = fileService,
             komgaApi = komgaApi

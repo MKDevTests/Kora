@@ -51,4 +51,44 @@ class OfflineSettingsRepositoryWrapper(
     override suspend fun putDownloadDirectory(path: PlatformFile) {
         wrapper.transform { it.copy(downloadDirectory = path) }
     }
+
+    override fun getDownloadWifiOnly(): Flow<Boolean> {
+        return wrapper.mapState { it.downloadWifiOnly }
+    }
+
+    override suspend fun putDownloadWifiOnly(enabled: Boolean) {
+        wrapper.transform { it.copy(downloadWifiOnly = enabled) }
+    }
+
+    override fun getDownloadWhileChargingOnly(): Flow<Boolean> {
+        return wrapper.mapState { it.downloadWhileChargingOnly }
+    }
+
+    override suspend fun putDownloadWhileChargingOnly(enabled: Boolean) {
+        wrapper.transform { it.copy(downloadWhileChargingOnly = enabled) }
+    }
+
+    override fun getDownloadStorageLimitMb(): Flow<Int> {
+        return wrapper.mapState { it.downloadStorageLimitMb }
+    }
+
+    override suspend fun putDownloadStorageLimitMb(limitMb: Int) {
+        wrapper.transform { it.copy(downloadStorageLimitMb = limitMb) }
+    }
+
+    override fun getCleanupReadAfterDays(): Flow<Int> {
+        return wrapper.mapState { it.cleanupReadAfterDays }
+    }
+
+    override suspend fun putCleanupReadAfterDays(days: Int) {
+        wrapper.transform { it.copy(cleanupReadAfterDays = days) }
+    }
+
+    override fun getCleanupIncludeManual(): Flow<Boolean> {
+        return wrapper.mapState { it.cleanupIncludeManual }
+    }
+
+    override suspend fun putCleanupIncludeManual(enabled: Boolean) {
+        wrapper.transform { it.copy(cleanupIncludeManual = enabled) }
+    }
 }
