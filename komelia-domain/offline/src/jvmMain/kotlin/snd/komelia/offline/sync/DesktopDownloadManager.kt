@@ -14,6 +14,7 @@ import snd.komelia.offline.sync.model.OfflineLogEntry.Companion.logError
 import snd.komelia.offline.sync.model.OfflineLogEntry.Companion.logInfo
 import snd.komelia.offline.sync.repository.LogJournalRepository
 import snd.komga.client.book.KomgaBookId
+import snd.komelia.offline.book.model.DownloadOrigin
 
 private val downloadsSemaphore = Semaphore(4)
 
@@ -30,7 +31,7 @@ class DesktopDownloadManager(
     private val bookJobs = mutableMapOf<KomgaBookId, Job>()
     private val mutex = Mutex()
 
-    override suspend fun launchBookDownload(bookId: KomgaBookId) {
+    override suspend fun launchBookDownload(bookId: KomgaBookId, origin: DownloadOrigin) {
         try {
             mutex.withLock {
                 val existing = bookJobs[bookId]
@@ -39,7 +40,7 @@ class DesktopDownloadManager(
             }
 
             downloadsSemaphore.withPermit {
-                bookDownloadService.downloadBook(bookId).collect {
+                bookDownloadService.downloadBook(bookId, origin).collect {
                     sharedEvents.emit(it)
                     when (it) {
                         is DownloadEvent.BookDownloadProgress -> {}

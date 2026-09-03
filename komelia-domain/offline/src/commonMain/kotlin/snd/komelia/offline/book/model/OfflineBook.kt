@@ -26,6 +26,13 @@ data class OfflineBook(
     val localFileLastModified: Instant,
     val remoteUnavailable: Boolean,
     val fileDownloadPath: PlatformFile,
+
+    /**
+     * Defaults to MANUAL, which is what every book downloaded before this
+     * field existed actually was — and the safe reading for any caller that
+     * has not been taught to say otherwise: the cleaner leaves MANUAL alone.
+     */
+    val downloadOrigin: DownloadOrigin = DownloadOrigin.MANUAL,
 ) {
 
     fun markRemoteUnavailable(): OfflineBook {

@@ -27,6 +27,8 @@ import snd.komelia.offline.tasks.model.TaskEntry
 import snd.komga.client.book.KomgaBookClient
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.search.anyOfBooks
+import snd.komelia.offline.book.model.DownloadOrigin
+import snd.komelia.offline.sync.DownloadCleaner
 
 private val logger = KotlinLogging.logger { }
 
@@ -36,6 +38,7 @@ class TaskHandler(
     private val taskEmitter: OfflineTaskEmitter,
     private val downloadManager: PlatformDownloadManager,
     private val komgaBookClient: KomgaBookClient,
+    private val downloadCleaner: DownloadCleaner,
 ) {
     suspend fun handleTask(entry: TaskEntry) {
         logger.info { "handling task ${entry.task}" }
@@ -75,7 +78,18 @@ class TaskHandler(
             is ScanLibrary -> {}
 
             is DownloadBook -> {
-                downloadManager.launchBookDownload(task.bookId)
+                // The cap holds back the app's own downloads, never the
+                // user's. Asking for a book by hand is an instruction; the
+                // planner fetching one ahead is a guess, and a guess is what
+                // a full disk should refuse. The cleaner runs first so the
+                // cap only blocks when there is genuinely nothing to reclaim.
+                val blocked = task.origin == DownloadOrigin.AUTOMATIC &&
+                        downloadCleaner.clean().isOverLimit
+                if (blocked) {
+                    logger.info { "storage limit reached, skipping automatic download of ${task.bookId}" }
+                } else {
+                    downloadManager.launchBookDownload(task.bookId, task.origin)
+                }
             }
 
             is DownloadSeries -> {

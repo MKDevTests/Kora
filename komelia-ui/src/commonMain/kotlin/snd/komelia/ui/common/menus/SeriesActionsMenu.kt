@@ -68,6 +68,11 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komga.client.series.KomgaSeries
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.LocalAutoDownload
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.CloudQueue
+import androidx.compose.material.icons.rounded.OfflinePin
 
 @Composable
 fun SeriesActionsMenu(
@@ -230,6 +235,46 @@ fun SeriesActionsMenu(
                 },
                 onClick = {
                     favorites.toggle(series.id)
+                    onDismissRequest()
+                }
+            )
+        }
+        // Per-series bound on the automatic downloader. Only offered when the
+        // feature can act on it: three menu entries for a planner that is
+        // switched off would be three entries that do nothing visible.
+        val autoDownload = LocalAutoDownload.current
+        if (autoDownload != null) {
+            val isPinned = series.id.value in autoDownload.pinnedIds.collectAsState().value
+            val isExcluded = series.id.value in autoDownload.excludedIds.collectAsState().value
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isPinned) LocalStrings.current.ui.autoDownloadUnpin
+                        else LocalStrings.current.ui.autoDownloadPin,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = {
+                    Icon(if (isPinned) Icons.Rounded.OfflinePin else Icons.Rounded.CloudDownload, null)
+                },
+                onClick = {
+                    autoDownload.togglePinned(series.id)
+                    onDismissRequest()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isExcluded) LocalStrings.current.ui.autoDownloadUnexclude
+                        else LocalStrings.current.ui.autoDownloadExclude,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = {
+                    Icon(if (isExcluded) Icons.Rounded.CloudQueue else Icons.Rounded.CloudOff, null)
+                },
+                onClick = {
+                    autoDownload.toggleExcluded(series.id)
                     onDismissRequest()
                 }
             )

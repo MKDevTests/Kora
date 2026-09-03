@@ -6,10 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -105,6 +107,10 @@ import snd.komga.client.KomgaClientFactory
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
+import snd.komelia.offline.sync.DownloadCleaner
+import kotlinx.coroutines.delay
+import snd.komelia.offline.sync.AutoDownloadPlanner
+import kotlin.time.Duration.Companion.seconds
 
 data class OfflineRepositories(
     val mediaServerRepository: OfflineMediaServerRepository,
@@ -254,12 +260,48 @@ abstract class OfflineModule(
             komgaEvents = komgaEvents,
         )
 
+        val downloadCleaner = DownloadCleaner(
+            bookRepository = repositories.bookRepository,
+            readProgressRepository = repositories.readProgressRepository,
+            settingsRepository = repositories.offlineSettingsRepository,
+            taskEmitter = taskEmitter,
+            logJournalRepository = repositories.logJournalRepository,
+            userId = offlineUserId,
+        )
+
+        // A finished download is the only moment the cap can be crossed, so it
+        // is the only moment worth checking. Running the cleaner on a timer
+        // would wake the tablet to look at a number that cannot have moved.
+        moduleScope.launch {
+            bookDownloadEvents
+                .filterIsInstance<DownloadEvent.BookDownloadCompleted>()
+                .collect { downloadCleaner.clean() }
+        }
+
+        val autoDownloadPlanner = AutoDownloadPlanner(
+            bookClient = komgaClientFactory.bookClient(),
+            bookRepository = repositories.bookRepository,
+            settingsRepository = repositories.offlineSettingsRepository,
+            taskEmitter = taskEmitter,
+            scope = moduleScope,
+        )
+
+        // A minute after launch, not at launch: the first pass costs a Komga
+        // query per followed series, and cold start is already the slowest
+        // moment of the app. Nothing happens at all unless the user enabled
+        // automatic downloads — the planner checks that first.
+        moduleScope.launch {
+            delay(60.seconds)
+            autoDownloadPlanner.requestRun()
+        }
+
         val taskHandler = TaskHandler(
             actions = actions,
             bookRepository = repositories.bookRepository,
             taskEmitter = taskEmitter,
             downloadManager = downloadManager,
             komgaBookClient = komgaClientFactory.bookClient(),
+            downloadCleaner = downloadCleaner,
         )
         val taskProcessor = TaskProcessor(
             tasksRepository = repositories.tasksRepository,
@@ -314,6 +356,8 @@ abstract class OfflineModule(
             bookDownloadEvents = bookDownloadEvents,
             downloadService = downloadService,
             offlineScannerService = offlineScannerService,
+            downloadCleaner = downloadCleaner,
+            autoDownloadPlanner = autoDownloadPlanner,
             repositories = repositories,
             fileService = fileService,
             komgaApi = komgaApi

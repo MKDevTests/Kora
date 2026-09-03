@@ -33,6 +33,7 @@ import snd.komga.client.book.WPLink
 import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.user.KomgaUserId
 import kotlin.time.Instant
+import snd.komelia.offline.book.model.DownloadOrigin
 
 class BookKomgaImportAction(
     private val bookRepository: OfflineBookRepository,
@@ -52,6 +53,16 @@ class BookKomgaImportAction(
         offlinePath: PlatformFile,
         userId: KomgaUserId?,
         localFileModifiedDate: Instant,
+        /**
+         * Null means "whatever it already was".
+         *
+         * Only a download knows why a book is being fetched. The scanner and
+         * the sync manager re-import books that are already on disk, and if
+         * they passed MANUAL the way a default parameter would, every sync
+         * would quietly promote the app's own downloads to untouchable and
+         * the cleaner would end up with nothing to reclaim.
+         */
+        downloadOrigin: DownloadOrigin? = null,
     ) {
         val event = try {
             transactionTemplate.execute {
@@ -64,7 +75,10 @@ class BookKomgaImportAction(
                     book = book,
                     offlinePath = offlinePath,
                     userId = userId,
-                    fileModifiedDate = localFileModifiedDate
+                    fileModifiedDate = localFileModifiedDate,
+                    downloadOrigin = downloadOrigin
+                        ?: existing?.downloadOrigin
+                        ?: DownloadOrigin.MANUAL,
                 )
                 logJournalRepository.logInfo { "Book updated '${book.metadata.title}'" }
 
@@ -91,8 +105,9 @@ class BookKomgaImportAction(
         offlinePath: PlatformFile,
         userId: KomgaUserId?,
         fileModifiedDate: Instant,
+        downloadOrigin: DownloadOrigin,
     ): OfflineBook {
-        val offlineBook = book.toOfflineBook(offlinePath, fileModifiedDate)
+        val offlineBook = book.toOfflineBook(offlinePath, fileModifiedDate, downloadOrigin)
         val offlineBookMetadata = book.metadata.toOfflineBookMetadata(book.id)
         val offlineMedia = getOfflineMedia(book)
         val offlineBookThumbnail = bookClient.getThumbnails(book.id)
@@ -212,6 +227,7 @@ class BookKomgaImportAction(
     private fun KomgaBook.toOfflineBook(
         downloadPath: PlatformFile,
         localFileModifiedDate: Instant,
+        downloadOrigin: DownloadOrigin,
     ): OfflineBook =
         OfflineBook(
             id = this.id,
@@ -231,5 +247,6 @@ class BookKomgaImportAction(
             localFileLastModified = localFileModifiedDate,
             remoteUnavailable = false,
             fileDownloadPath = downloadPath,
+            downloadOrigin = downloadOrigin,
         )
 }

@@ -19,6 +19,9 @@ import snd.komelia.offline.user.repository.OfflineUserRepository
 import snd.komelia.ui.settings.offline.downloads.OfflineDownloadsState
 import snd.komelia.ui.settings.offline.logs.OfflineLogsState
 import snd.komelia.ui.settings.offline.users.OfflineUsersState
+import snd.komelia.offline.sync.DownloadCleaner
+import snd.komelia.ui.settings.offline.policy.DownloadPolicyState
+import snd.komelia.offline.sync.AutoDownloadPlanner
 
 class OfflineSettingsViewModel(
     private val authState: KomgaAuthenticationState,
@@ -34,6 +37,8 @@ class OfflineSettingsViewModel(
 
     private val taskEmitter: OfflineTaskEmitter,
     private val downloadEvents: SharedFlow<DownloadEvent>,
+    private val downloadCleaner: DownloadCleaner,
+    private val autoDownloadPlanner: AutoDownloadPlanner,
 ) : ScreenModel {
 
     val usersState = OfflineUsersState(
@@ -62,8 +67,18 @@ class OfflineSettingsViewModel(
         coroutineScope = screenModelScope,
     )
 
+    val policyState = DownloadPolicyState(
+        settingsRepository = offlineSettingsRepository,
+        downloadCleaner = downloadCleaner,
+        autoDownloadPlanner = autoDownloadPlanner,
+        authState = authState,
+        appNotifications = appNotifications,
+        coroutineScope = screenModelScope,
+    )
+
     suspend fun initialize(navigator: Navigator) {
         usersState.initialize(navigator)
         logsState.initialize()
+        policyState.initialize()
     }
 }
