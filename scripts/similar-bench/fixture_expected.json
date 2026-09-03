@@ -2,25 +2,25 @@
   "_forYou": [
     {
       "seriesId": "s2",
-      "score": 0.768423109672,
+      "score": 0.774579151693,
       "reasons": [
         "g:aventure",
         "a:kishimoto",
         "g:action",
         "bt:shonen",
-        "t:ninja",
+        "t:ninjas",
         "t:bd",
         "p:kana"
       ],
       "becauseOf": [
         {
           "seriesId": "s1",
-          "share": 0.628599186085,
+          "share": 0.62418705243,
           "reasons": [
             "g:aventure",
             "a:kishimoto",
             "g:action",
-            "t:ninja",
+            "t:ninjas",
             "bt:shonen",
             "t:bd",
             "p:kana"
@@ -28,7 +28,7 @@
         },
         {
           "seriesId": "s5",
-          "share": 0.318394009554,
+          "share": 0.323178197628,
           "reasons": [
             "g:aventure",
             "g:action",
@@ -38,10 +38,10 @@
         },
         {
           "seriesId": "s6",
-          "share": 0.053006804361,
+          "share": 0.052634749942,
           "reasons": [
             "g:action",
-            "t:ninja",
+            "t:ninjas",
             "t:bd",
             "p:kana"
           ]
@@ -50,7 +50,7 @@
     },
     {
       "seriesId": "s3",
-      "score": 0.452932898811,
+      "score": 0.376041824067,
       "reasons": [
         "a:kishimoto",
         "g:action",
@@ -60,7 +60,7 @@
       "becauseOf": [
         {
           "seriesId": "s1",
-          "share": 0.700406964221,
+          "share": 0.697071420902,
           "reasons": [
             "a:kishimoto",
             "g:action",
@@ -70,7 +70,7 @@
         },
         {
           "seriesId": "s5",
-          "share": 0.215536234727,
+          "share": 0.219272081177,
           "reasons": [
             "g:action",
             "t:bd"
@@ -78,7 +78,7 @@
         },
         {
           "seriesId": "s6",
-          "share": 0.084056801052,
+          "share": 0.08365649792,
           "reasons": [
             "g:action",
             "t:bd",
@@ -103,7 +103,7 @@
     },
     {
       "seriesId": "s3",
-      "score": 0.618408682076,
+      "score": 0.511425414964,
       "reasons": [
         "a:kishimoto",
         "g:action",
@@ -112,7 +112,7 @@
     },
     {
       "seriesId": "s5",
-      "score": 0.390623120146,
+      "score": 0.408159956235,
       "reasons": [
         "g:aventure",
         "g:action",
@@ -140,11 +140,18 @@
   "s7": [
     {
       "seriesId": "s8",
-      "score": 0.704003692096,
+      "score": 0.651109984773,
       "reasons": [
         "a:morvan",
         "g:espionnage",
         "p:delcourt"
+      ]
+    },
+    {
+      "seriesId": "s5",
+      "score": 0.123976454531,
+      "reasons": [
+        "t:pirate/s"
       ]
     }
   ]
