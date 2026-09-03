@@ -570,7 +570,10 @@ fun ImmersiveDetailScaffold(
                         .then(uiEnterExitModifier)
                         .offset { IntOffset(
                             x = with(density) { 12.dp.roundToPx() },
-                            y = (collapsedOffsetPx - badgeHeightPx).roundToInt()
+                            // Follow the card, not the resting position: the card
+                            // animates and collapsedOffsetPx does not, so anchoring
+                            // to the latter dropped the badge onto the subtitle.
+                            y = (cardOffsetPx - badgeHeightPx).roundToInt()
                         ) }
                         .graphicsLayer { alpha = (1f - expandFraction * 2f).coerceIn(0f, 1f) }
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
