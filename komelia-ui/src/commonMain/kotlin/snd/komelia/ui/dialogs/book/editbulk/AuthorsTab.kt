@@ -39,8 +39,9 @@ import snd.komelia.ui.LocalStrings
 class AuthorsTab(
     private val vm: BookBulkEditDialogViewModel
 ) : DialogTab {
+    @Composable
     override fun options() = TabItem(
-        title = "AUTHORS",
+        title = LocalStrings.current.ui.authors.uppercase(),
         icon = Icons.Default.People
     )
 

@@ -1,5 +1,6 @@
 package snd.komelia.ui.dialogs.series.edit
 
+import snd.komelia.ui.LocalStrings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.runtime.Composable
@@ -12,8 +13,9 @@ internal class LinksTab(
     private val vm: SeriesEditMetadataState,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "Links",
+        title = LocalStrings.current.ui.links,
         icon = Icons.Default.Link
     )
 

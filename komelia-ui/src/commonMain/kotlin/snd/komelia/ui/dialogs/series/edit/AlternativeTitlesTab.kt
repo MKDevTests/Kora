@@ -31,8 +31,9 @@ internal class AlternativeTitlesTab(
     private val vm: SeriesEditMetadataState,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "ALTERNATE TITLES",
+        title = LocalStrings.current.ui.alternateTitles.uppercase(),
         icon = Icons.Default.Title
     )
 

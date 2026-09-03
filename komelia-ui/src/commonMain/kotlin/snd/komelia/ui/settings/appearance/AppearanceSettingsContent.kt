@@ -276,7 +276,7 @@ fun AppearanceSettingsContent(
             modifier = Modifier.cursorForHand().padding(end = 20.dp),
         )
 
-        Text("Width Gap: ${(cardWidthScale * 100).roundToInt()}%", modifier = Modifier.padding(10.dp))
+        Text("${LocalStrings.current.ui.cardWidthGap}: ${(cardWidthScale * 100).roundToInt()}%", modifier = Modifier.padding(10.dp))
         AppSlider(
             value = cardWidthScale,
             onValueChange = onCardWidthScaleChange,
@@ -285,7 +285,7 @@ fun AppearanceSettingsContent(
             modifier = Modifier.cursorForHand().padding(end = 20.dp),
         )
 
-        Text("Height Gap: ${(cardHeightScale * 100).roundToInt()}%", modifier = Modifier.padding(10.dp))
+        Text("${LocalStrings.current.ui.cardHeightGap}: ${(cardHeightScale * 100).roundToInt()}%", modifier = Modifier.padding(10.dp))
         AppSlider(
             value = cardHeightScale,
             onValueChange = onCardHeightScaleChange,
@@ -294,7 +294,7 @@ fun AppearanceSettingsContent(
             modifier = Modifier.cursorForHand().padding(end = 20.dp),
         )
 
-        Text("Spacing Below: ${(cardSpacingBelow * 100).roundToInt()}%", modifier = Modifier.padding(10.dp))
+        Text("${LocalStrings.current.ui.cardSpacingBelow}: ${(cardSpacingBelow * 100).roundToInt()}%", modifier = Modifier.padding(10.dp))
         AppSlider(
             value = cardSpacingBelow,
             onValueChange = onCardSpacingBelowChange,

@@ -57,8 +57,9 @@ import snd.komelia.ui.LocalStrings
 
 class PosterTab(private val state: PosterEditState) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "POSTER",
+        title = LocalStrings.current.ui.poster.uppercase(),
         icon = Icons.Default.Image,
     )
 

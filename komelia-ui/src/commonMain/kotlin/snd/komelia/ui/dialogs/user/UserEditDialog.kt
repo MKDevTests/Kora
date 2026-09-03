@@ -69,8 +69,9 @@ fun UserEditDialog(
 }
 
 class UserRolesTab(private val vm: UserEditDialogViewModel) : DialogTab {
+    @Composable
     override fun options() = TabItem(
-        title = "Roles",
+        title = LocalStrings.current.ui.roles,
         icon = Icons.Default.RecentActors
     )
 
@@ -115,8 +116,9 @@ class UserRolesTab(private val vm: UserEditDialogViewModel) : DialogTab {
 
 class UserSharedLibrariesTab(private val vm: UserEditDialogViewModel) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "Shared Libraries",
+        title = LocalStrings.current.ui.sharedLibraries,
         icon = Icons.Default.Share
     )
 
@@ -178,8 +180,9 @@ class UserSharedLibrariesTab(private val vm: UserEditDialogViewModel) : DialogTa
 
 class UserContentRestrictionTab(private val vm: UserEditDialogViewModel) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "Content Restriction",
+        title = LocalStrings.current.ui.contentRestriction,
         icon = Icons.Default.LockPerson
     )
 

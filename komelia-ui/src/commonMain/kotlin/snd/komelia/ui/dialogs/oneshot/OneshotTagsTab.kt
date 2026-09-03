@@ -22,8 +22,9 @@ internal class OneshotTagsTab(
     private val bookMetadata: BookEditMetadataState
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "TAGS",
+        title = LocalStrings.current.ui.tags.uppercase(),
         icon = Icons.Default.LocalOffer
     )
 

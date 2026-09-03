@@ -27,8 +27,9 @@ import snd.komelia.ui.LocalStrings
 class TagsTab(
     private val vm: BookBulkEditDialogViewModel
 ) : DialogTab {
+    @Composable
     override fun options() = TabItem(
-        title = "TAGS",
+        title = LocalStrings.current.ui.tags.uppercase(),
         icon = Icons.Default.LocalOffer
     )
 

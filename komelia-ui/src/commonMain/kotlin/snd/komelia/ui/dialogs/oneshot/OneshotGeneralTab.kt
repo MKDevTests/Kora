@@ -27,8 +27,9 @@ class OneshotGeneralTab(
     private val seriesMetadata: SeriesEditMetadataState,
     private val bookMetadata: BookEditMetadataState
 ) : DialogTab {
+    @Composable
     override fun options() = TabItem(
-        title = "GENERAL",
+        title = LocalStrings.current.ui.general.uppercase(),
         icon = Icons.Default.FormatAlignCenter
     )
 
