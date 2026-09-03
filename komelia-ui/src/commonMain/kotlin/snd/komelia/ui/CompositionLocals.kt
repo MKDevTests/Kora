@@ -53,6 +53,7 @@ val LocalReloadEvents = staticCompositionLocalOf<SharedFlow<Unit>> { error("Relo
 val LocalIgnoreList = staticCompositionLocalOf<IgnoreListController?> { null }
 val LocalHiddenAdmin = staticCompositionLocalOf<HiddenAdminController?> { null }
 val LocalFavorites = staticCompositionLocalOf<FavoritesController?> { null }
+val LocalAutoDownload = staticCompositionLocalOf<AutoDownloadController?> { null }
 val LocalPlanned = staticCompositionLocalOf<PlannedController?> { null }
 val LocalBookDownloadEvents =
     staticCompositionLocalOf<SharedFlow<DownloadEvent>?> { error("Book download event flow was not initialized") }

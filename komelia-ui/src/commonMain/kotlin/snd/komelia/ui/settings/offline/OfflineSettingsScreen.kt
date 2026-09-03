@@ -139,6 +139,15 @@ class OfflineSettingsScreen : Screen {
                         usedBytes = policy.usedBytes.collectAsState().value,
                         isCleaning = policy.isCleaning.collectAsState().value,
                         onCleanupNow = policy::onCleanupNow,
+                        autoDownloadEnabled = policy.autoDownloadEnabled.collectAsState().value,
+                        onAutoDownloadEnabledChange = policy::onAutoDownloadEnabledChange,
+                        autoDownloadMaxSeries = policy.autoDownloadMaxSeries.collectAsState().value,
+                        onAutoDownloadMaxSeriesChange = policy::onAutoDownloadMaxSeriesChange,
+                        autoDownloadBooksAhead = policy.autoDownloadBooksAhead.collectAsState().value,
+                        onAutoDownloadBooksAheadChange = policy::onAutoDownloadBooksAheadChange,
+                        libraries = policy.libraries.collectAsState().value,
+                        autoDownloadLibraryIds = policy.autoDownloadLibraryIds.collectAsState().value,
+                        onAutoDownloadLibraryToggle = policy::onAutoDownloadLibraryToggle,
                     )
                 }
 

@@ -8,6 +8,8 @@ import kotlinx.coroutines.launch
 import snd.komelia.AppNotifications
 import snd.komelia.offline.settings.OfflineSettingsRepository
 import snd.komelia.offline.sync.DownloadCleaner
+import snd.komelia.KomgaAuthenticationState
+import snd.komelia.offline.sync.AutoDownloadPlanner
 
 /**
  * The download policy screen's state.
@@ -20,6 +22,8 @@ import snd.komelia.offline.sync.DownloadCleaner
 class DownloadPolicyState(
     private val settingsRepository: OfflineSettingsRepository,
     private val downloadCleaner: DownloadCleaner,
+    private val autoDownloadPlanner: AutoDownloadPlanner,
+    private val authState: KomgaAuthenticationState,
     private val appNotifications: AppNotifications,
     private val coroutineScope: CoroutineScope,
 ) {
@@ -33,6 +37,17 @@ class DownloadPolicyState(
         .stateIn(coroutineScope, SharingStarted.Eagerly, 0)
     val cleanupIncludeManual = settingsRepository.getCleanupIncludeManual()
         .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
+    val autoDownloadEnabled = settingsRepository.getAutoDownloadEnabled()
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+    val autoDownloadMaxSeries = settingsRepository.getAutoDownloadMaxSeries()
+        .stateIn(coroutineScope, SharingStarted.Eagerly, 5)
+    val autoDownloadBooksAhead = settingsRepository.getAutoDownloadBooksAhead()
+        .stateIn(coroutineScope, SharingStarted.Eagerly, 4)
+    val autoDownloadLibraryIds = settingsRepository.getAutoDownloadLibraryIds()
+        .stateIn(coroutineScope, SharingStarted.Eagerly, emptySet())
+
+    val libraries = authState.libraries
 
     val usedBytes = MutableStateFlow(0L)
     val isCleaning = MutableStateFlow(false)
@@ -75,6 +90,31 @@ class DownloadPolicyState(
             } finally {
                 isCleaning.value = false
             }
+        }
+    }
+
+    fun onAutoDownloadEnabledChange(enabled: Boolean) {
+        coroutineScope.launch {
+            settingsRepository.putAutoDownloadEnabled(enabled)
+            // Turning it on is the moment the user expects something to
+            // happen; waiting for the next book to close would look broken.
+            if (enabled) autoDownloadPlanner.requestRun(force = true)
+        }
+    }
+
+    fun onAutoDownloadMaxSeriesChange(count: Int) {
+        coroutineScope.launch { settingsRepository.putAutoDownloadMaxSeries(count) }
+    }
+
+    fun onAutoDownloadBooksAheadChange(count: Int) {
+        coroutineScope.launch { settingsRepository.putAutoDownloadBooksAhead(count) }
+    }
+
+    fun onAutoDownloadLibraryToggle(libraryId: String) {
+        coroutineScope.launch {
+            val current = autoDownloadLibraryIds.value
+            val next = if (libraryId in current) current - libraryId else current + libraryId
+            settingsRepository.putAutoDownloadLibraryIds(next)
         }
     }
 

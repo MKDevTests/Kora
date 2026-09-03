@@ -19,12 +19,20 @@ import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
 import snd.komelia.ui.common.components.SwitchWithLabel
+import snd.komelia.ui.common.components.DropdownMultiChoiceMenu
+import snd.komga.client.library.KomgaLibrary
 
 /** Gigabytes, as the cap is presented. Stored as megabytes. */
 private val storageLimitOptionsGb = listOf(1, 2, 4, 8, 16, 32)
 
 /** 0 is "never" — the age rule off, leaving only the cap. */
 private val cleanupDaysOptions = listOf(0, 7, 14, 30, 90)
+
+/** How many series the planner may follow. Five is the asked-for default. */
+private val maxSeriesOptions = listOf(3, 5, 10, 20)
+
+/** How deep into each one. Four is the asked-for default. */
+private val booksAheadOptions = listOf(1, 2, 3, 4, 6)
 
 @Composable
 fun DownloadPolicyContent(
@@ -41,6 +49,15 @@ fun DownloadPolicyContent(
     usedBytes: Long,
     isCleaning: Boolean,
     onCleanupNow: () -> Unit,
+    autoDownloadEnabled: Boolean,
+    onAutoDownloadEnabledChange: (Boolean) -> Unit,
+    autoDownloadMaxSeries: Int,
+    onAutoDownloadMaxSeriesChange: (Int) -> Unit,
+    autoDownloadBooksAhead: Int,
+    onAutoDownloadBooksAheadChange: (Int) -> Unit,
+    libraries: List<KomgaLibrary>,
+    autoDownloadLibraryIds: Set<String>,
+    onAutoDownloadLibraryToggle: (String) -> Unit,
 ) {
     val strings = LocalStrings.current.ui
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -106,6 +123,56 @@ fun DownloadPolicyContent(
             label = { Text(strings.cleanupIncludeManual) },
             supportingText = { Text(strings.cleanupIncludeManualDescription) },
             modifier = Modifier.fillMaxWidth(),
+        )
+
+        HorizontalDivider()
+
+        SwitchWithLabel(
+            checked = autoDownloadEnabled,
+            onCheckedChange = onAutoDownloadEnabledChange,
+            label = { Text(strings.autoDownload) },
+            supportingText = { Text(strings.autoDownloadDescription) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // The bounds stay visible when the feature is off — they are the
+        // answer to "what will this actually do if I turn it on", and hiding
+        // them behind the switch makes that question unanswerable.
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            DropdownChoiceMenu(
+                selectedOption = LabeledEntry(autoDownloadMaxSeries, autoDownloadMaxSeries.toString()),
+                options = maxSeriesOptions.map { LabeledEntry(it, it.toString()) },
+                onOptionChange = { onAutoDownloadMaxSeriesChange(it.value) },
+                label = { Text(strings.autoDownloadMaxSeries) },
+                inputFieldModifier = Modifier.widthIn(min = 110.dp),
+            )
+            DropdownChoiceMenu(
+                selectedOption = LabeledEntry(autoDownloadBooksAhead, autoDownloadBooksAhead.toString()),
+                options = booksAheadOptions.map { LabeledEntry(it, it.toString()) },
+                onOptionChange = { onAutoDownloadBooksAheadChange(it.value) },
+                label = { Text(strings.autoDownloadBooksAhead) },
+                inputFieldModifier = Modifier.widthIn(min = 110.dp),
+            )
+        }
+        Text(
+            strings.autoDownloadOrder,
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalContentColor.current.copy(alpha = 0.6f),
+        )
+
+        val libraryEntries = libraries.map { LabeledEntry(it.id.value, it.name) }
+        DropdownMultiChoiceMenu(
+            selectedOptions = libraryEntries.filter { it.value in autoDownloadLibraryIds },
+            options = libraryEntries,
+            onOptionSelect = { onAutoDownloadLibraryToggle(it.value) },
+            label = { Text(strings.libraries) },
+            placeholder = strings.allLibraries,
+            inputFieldModifier = Modifier.widthIn(min = 220.dp),
+        )
+        Text(
+            strings.autoDownloadLibrariesDescription,
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalContentColor.current.copy(alpha = 0.6f),
         )
     }
 }

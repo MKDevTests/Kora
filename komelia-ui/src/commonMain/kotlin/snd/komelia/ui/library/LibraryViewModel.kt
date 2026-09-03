@@ -124,6 +124,7 @@ class LibraryViewModel(
     private val similarityIndexRepository: snd.komelia.similarity.SimilarityIndexRepository,
     private val libraryCountsRepository: snd.komelia.library.LibraryCountsRepository,
     private val keepReadingRepository: snd.komelia.library.KeepReadingRepository,
+    private val autoDownloadPlanner: snd.komelia.offline.sync.AutoDownloadPlanner,
     similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder?,
     seriesRatingsRepository: snd.komelia.ratings.SeriesRatingsRepository,
     suggestionFeedbackRepository: snd.komelia.similarity.SuggestionFeedbackRepository,
@@ -503,6 +504,12 @@ class LibraryViewModel(
      */
     fun refreshKeepReading() {
         screenModelScope.launch { loadKeepReadingBooks() }
+        // Coming back from the reader is the one moment the answer to "what
+        // should be ready next" has actually changed. The planner owns its own
+        // scope and its own ten-minute throttle, so this is a nudge, not work
+        // done here — leaving the screen cannot cancel it, and a session that
+        // closes five books in a row still costs one pass.
+        autoDownloadPlanner.requestRun()
     }
 
     fun toggleContinueReading() {

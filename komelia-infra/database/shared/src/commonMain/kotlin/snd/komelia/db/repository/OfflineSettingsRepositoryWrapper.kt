@@ -91,4 +91,52 @@ class OfflineSettingsRepositoryWrapper(
     override suspend fun putCleanupIncludeManual(enabled: Boolean) {
         wrapper.transform { it.copy(cleanupIncludeManual = enabled) }
     }
+
+    override fun getAutoDownloadEnabled(): Flow<Boolean> {
+        return wrapper.mapState { it.autoDownloadEnabled }
+    }
+
+    override suspend fun putAutoDownloadEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(autoDownloadEnabled = enabled) }
+    }
+
+    override fun getAutoDownloadMaxSeries(): Flow<Int> {
+        return wrapper.mapState { it.autoDownloadMaxSeries }
+    }
+
+    override suspend fun putAutoDownloadMaxSeries(count: Int) {
+        wrapper.transform { it.copy(autoDownloadMaxSeries = count) }
+    }
+
+    override fun getAutoDownloadBooksAhead(): Flow<Int> {
+        return wrapper.mapState { it.autoDownloadBooksAhead }
+    }
+
+    override suspend fun putAutoDownloadBooksAhead(count: Int) {
+        wrapper.transform { it.copy(autoDownloadBooksAhead = count) }
+    }
+
+    override fun getAutoDownloadLibraryIds(): Flow<Set<String>> {
+        return wrapper.mapState { it.autoDownloadLibraryIds }
+    }
+
+    override suspend fun putAutoDownloadLibraryIds(ids: Set<String>) {
+        wrapper.transform { it.copy(autoDownloadLibraryIds = ids) }
+    }
+
+    override fun getAutoDownloadPinnedSeriesIds(): Flow<Set<String>> {
+        return wrapper.mapState { it.autoDownloadPinnedSeriesIds }
+    }
+
+    override suspend fun putAutoDownloadPinnedSeriesIds(ids: Set<String>) {
+        wrapper.transform { it.copy(autoDownloadPinnedSeriesIds = ids) }
+    }
+
+    override fun getAutoDownloadExcludedSeriesIds(): Flow<Set<String>> {
+        return wrapper.mapState { it.autoDownloadExcludedSeriesIds }
+    }
+
+    override suspend fun putAutoDownloadExcludedSeriesIds(ids: Set<String>) {
+        wrapper.transform { it.copy(autoDownloadExcludedSeriesIds = ids) }
+    }
 }

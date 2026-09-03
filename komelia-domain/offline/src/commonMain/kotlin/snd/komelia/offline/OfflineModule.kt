@@ -108,6 +108,9 @@ import snd.komga.client.sse.KomgaEvent
 import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
 import snd.komelia.offline.sync.DownloadCleaner
+import kotlinx.coroutines.delay
+import snd.komelia.offline.sync.AutoDownloadPlanner
+import kotlin.time.Duration.Companion.seconds
 
 data class OfflineRepositories(
     val mediaServerRepository: OfflineMediaServerRepository,
@@ -275,6 +278,23 @@ abstract class OfflineModule(
                 .collect { downloadCleaner.clean() }
         }
 
+        val autoDownloadPlanner = AutoDownloadPlanner(
+            bookClient = komgaClientFactory.bookClient(),
+            bookRepository = repositories.bookRepository,
+            settingsRepository = repositories.offlineSettingsRepository,
+            taskEmitter = taskEmitter,
+            scope = moduleScope,
+        )
+
+        // A minute after launch, not at launch: the first pass costs a Komga
+        // query per followed series, and cold start is already the slowest
+        // moment of the app. Nothing happens at all unless the user enabled
+        // automatic downloads — the planner checks that first.
+        moduleScope.launch {
+            delay(60.seconds)
+            autoDownloadPlanner.requestRun()
+        }
+
         val taskHandler = TaskHandler(
             actions = actions,
             bookRepository = repositories.bookRepository,
@@ -337,6 +357,7 @@ abstract class OfflineModule(
             downloadService = downloadService,
             offlineScannerService = offlineScannerService,
             downloadCleaner = downloadCleaner,
+            autoDownloadPlanner = autoDownloadPlanner,
             repositories = repositories,
             fileService = fileService,
             komgaApi = komgaApi

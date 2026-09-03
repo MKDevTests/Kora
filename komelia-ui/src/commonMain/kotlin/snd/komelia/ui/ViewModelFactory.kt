@@ -152,6 +152,7 @@ class ViewModelFactory(
             suggestionFeedbackRepository = appRepositories.suggestionFeedbackRepository,
             libraryCountsRepository = appRepositories.libraryCountsRepository,
             keepReadingRepository = appRepositories.keepReadingRepository,
+            autoDownloadPlanner = dependencies.offlineDependencies.autoDownloadPlanner,
             hiddenSeriesIds = dependencies.hiddenSeriesController?.hiddenIds ?: MutableStateFlow(emptySet()),
         )
     }
@@ -884,6 +885,7 @@ class ViewModelFactory(
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             downloadEvents = dependencies.offlineDependencies.bookDownloadEvents,
             downloadCleaner = dependencies.offlineDependencies.downloadCleaner,
+            autoDownloadPlanner = dependencies.offlineDependencies.autoDownloadPlanner,
         )
     }
 

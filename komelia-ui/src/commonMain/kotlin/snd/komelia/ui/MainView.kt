@@ -270,6 +270,18 @@ fun MainView(
                     scope = ignoreScope,
                 )
             }
+            val autoDownloadController = remember(dependencies, viewModelFactory) {
+                val repo = dependencies.offlineDependencies.repositories.offlineSettingsRepository
+                AutoDownloadController(
+                    pinnedIds = repo.getAutoDownloadPinnedSeriesIds()
+                        .stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
+                    excludedIds = repo.getAutoDownloadExcludedSeriesIds()
+                        .stateIn(ignoreScope, SharingStarted.Eagerly, emptySet()),
+                    settingsRepository = repo,
+                    planner = dependencies.offlineDependencies.autoDownloadPlanner,
+                    scope = ignoreScope,
+                )
+            }
             val plannedController = remember(dependencies, viewModelFactory) {
                 val repo = dependencies.appRepositories.settingsRepository
                 PlannedController(
@@ -296,6 +308,7 @@ fun MainView(
                 LocalIgnoreList provides ignoreController,
                 LocalHiddenAdmin provides hiddenController,
                 LocalFavorites provides favoritesController,
+                LocalAutoDownload provides autoDownloadController,
                 LocalPlanned provides plannedController,
                 LocalBookDownloadEvents provides dependencies.offlineDependencies.bookDownloadEvents,
                 LocalOfflineMode provides dependencies.isOffline,
