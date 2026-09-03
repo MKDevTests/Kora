@@ -517,7 +517,6 @@ hakusensha
 harper_row
 harpercollins
 harvey
-harvey_pekar
 heavy_metal
 heavy_metal_comics
 heavy_metal_magazine
