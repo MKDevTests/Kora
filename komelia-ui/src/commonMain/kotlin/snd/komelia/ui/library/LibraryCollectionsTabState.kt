@@ -50,7 +50,8 @@ class LibraryCollectionsTabState(
         private set
     var currentPage by mutableStateOf(1)
         private set
-    var pageSize by mutableStateOf(50)
+    // A multiple of 60 so a full page fills whole rows on 2 to 6 columns.
+    var pageSize by mutableStateOf(60)
         private set
 
     val searchQuery = MutableStateFlow("")

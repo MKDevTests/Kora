@@ -129,6 +129,7 @@ fun CollectionContent(
             onReorder = onReorder,
             onReorderDragStateChange = onReorderDragStateChange,
 
+            pageSize = pageSize,
             totalPages = totalPages,
             currentPage = currentPage,
             onPageChange = onPageChange,

@@ -137,6 +137,7 @@ fun SeriesListContent(
                 totalPages = totalPages,
                 currentPage = currentPage,
                 onPageChange = onPageChange,
+                pageSize = pageSize,
 
                 beforeContent = {
                     beforeContent?.invoke()

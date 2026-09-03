@@ -39,6 +39,7 @@ import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.ic_view_grid_pl
 import org.jetbrains.compose.resources.painterResource
 import snd.komelia.ui.common.components.LabeledEntry.Companion.intEntry
 import snd.komelia.ui.LocalStrings
+import snd.komelia.grid.pageLoadSizes
 
 @Composable
 fun Pagination(
@@ -153,7 +154,10 @@ fun PageSizeSelectionDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            val options = listOf(20, 50, 100, 200, 500)
+            // Multiples of 60, which divides by 2 through 6 — the column
+            // counts a grid lays out between a phone and a tablet in
+            // landscape. See snd.komelia.grid.pageLoadSizes.
+            val options = pageLoadSizes
             options.forEach { size ->
                 DropdownMenuItem(
                     text = { Text(size.toString()) },

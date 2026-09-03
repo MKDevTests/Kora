@@ -1,7 +1,7 @@
 package snd.komelia.ui.common.itemlist
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,10 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.rememberReorderableLazyGridState
+import snd.komelia.grid.adaptiveColumnCount
+import snd.komelia.grid.completeRowColumnCount
 import snd.komelia.komga.api.model.KomeliaBook
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.common.cards.BookImageCard
@@ -46,6 +49,12 @@ fun BookLazyCardGrid(
     totalPages: Int,
     currentPage: Int,
     onPageChange: (Int) -> Unit,
+    /**
+     * How many books a full page holds, or 0 when the caller shows everything
+     * at once. Used only to keep the last row of a page whole — see
+     * [completeRowColumnCount].
+     */
+    pageSize: Int = 0,
 
     minSize: Dp = 200.dp,
     gridState: LazyGridState = rememberLazyGridState(),
@@ -61,9 +70,22 @@ fun BookLazyCardGrid(
         onReorderDragStateChange(reorderableLazyGridState.isAnyItemDragging)
     }
 
-    Box {
+    BoxWithConstraints {
+        // Column count decided here, not by GridCells.Adaptive: a count that
+        // does not divide the page size ends every full page on a ragged row.
+        val density = LocalDensity.current
+        val columnCount = with(density) {
+            completeRowColumnCount(
+                adaptive = adaptiveColumnCount(
+                    availablePx = (maxWidth - 20.dp).roundToPx(),
+                    minSizePx = minSize.roundToPx(),
+                    spacingPx = 8.dp.roundToPx(),
+                ),
+                pageSize = pageSize,
+            )
+        }
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize),
+            columns = GridCells.Fixed(columnCount),
             state = gridState,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

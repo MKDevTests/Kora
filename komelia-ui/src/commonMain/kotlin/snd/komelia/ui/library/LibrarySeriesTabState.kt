@@ -209,7 +209,9 @@ class LibrarySeriesTabState(
         .stateIn(screenModelScope, SharingStarted.Eagerly, defaultCardWidth.dp)
     private val library: StateFlow<KomgaLibrary?> =
         libraryFlow.stateIn(screenModelScope, SharingStarted.Eagerly, null)
-    val pageLoadSize = MutableStateFlow(50)
+    // Overwritten from settings at init; the default is a multiple of 60 so
+    // the first page already fills whole rows.
+    val pageLoadSize = MutableStateFlow(60)
     var series by mutableStateOf<List<KomgaSeries>>(emptyList())
         private set
     var downloadedSeriesIds by mutableStateOf<Set<KomgaSeriesId>>(emptySet())

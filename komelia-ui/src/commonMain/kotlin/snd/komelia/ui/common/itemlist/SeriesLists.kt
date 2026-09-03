@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -46,6 +47,8 @@ import snd.komelia.ui.common.components.Pagination
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.VerticalScrollbarWithFullSpans
+import snd.komelia.grid.adaptiveColumnCount
+import snd.komelia.grid.completeRowColumnCount
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesId
 import androidx.compose.runtime.derivedStateOf
@@ -74,6 +77,12 @@ fun SeriesLazyCardGrid(
     totalPages: Int,
     currentPage: Int,
     onPageChange: (Int) -> Unit,
+    /**
+     * How many series a full page holds, or 0 when the caller shows everything
+     * at once. Used only to keep the last row of a page whole — see
+     * [completeRowColumnCount].
+     */
+    pageSize: Int = 0,
     minSize: Dp = 200.dp,
     gridState: LazyGridState = rememberLazyGridState(),
 
@@ -124,10 +133,25 @@ fun SeriesLazyCardGrid(
     val horizontalPadding = if (useNewLibraryUI) 10.dp else 20.dp
     val extraBottomPadding = LocalTransparentNavBarPadding.current
     val toolbarPadding = LocalFloatingToolbarPadding.current
-    Box(modifier) {
+    BoxWithConstraints(modifier) {
+        // The column count is computed here rather than left to
+        // GridCells.Adaptive because the grid has to know it before laying out:
+        // a count that does not divide the page size ends every full page on a
+        // ragged row.
+        val density = LocalDensity.current
+        val columnCount = with(density) {
+            completeRowColumnCount(
+                adaptive = adaptiveColumnCount(
+                    availablePx = (maxWidth - horizontalPadding * 2).roundToPx(),
+                    minSizePx = minSize.roundToPx(),
+                    spacingPx = cardSpacing.roundToPx(),
+                ),
+                pageSize = pageSize,
+            )
+        }
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Adaptive(minSize),
+            columns = GridCells.Fixed(columnCount),
             horizontalArrangement = Arrangement.spacedBy(cardSpacing),
             verticalArrangement = Arrangement.spacedBy(cardSpacing),
             contentPadding = PaddingValues(
