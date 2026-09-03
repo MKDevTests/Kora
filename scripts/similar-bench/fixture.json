@@ -1,44 +1,91 @@
 {
-  "_comment": "Cross-check fixture for the Kotlin engine and its Python port. Small on purpose, but it exercises the parts that are easy to get subtly wrong: rarity (action is common, espionnage is rare), the per-author cap (kishimoto carries four series), role weighting (a colorist credit must count less than a writer one), a term carried by EVERY series (bd, which the engine skips outright), and book tags. Regenerate the expected file with: python bench.py emit-expected",
+  "_comment": "Cross-check fixture for the Kotlin engine and its Python port. Small on purpose, but it exercises the parts that are easy to get subtly wrong: rarity (action is common, espionnage is rare), the per-author cap (kishimoto carries four series), role weighting (a colorist credit must count less than a writer one), a term carried by EVERY series (bd, which the engine skips outright), book tags, and the tag fold (ninja / ninjas / ninja/s are ONE term, and so are super-power / super power — s3 and s4 must keep identical scores). Regenerate the expected file with: python bench.py emit-expected",
   "limit": 5,
-  "queries": ["s1", "s7"],
+  "queries": [
+    "s1",
+    "s7"
+  ],
   "_forYouComment": "Taste profile: two liked (one favourite, one 4-star), one disliked at 1 star. The disliked one shares the action genre with the liked ones, so 'action' must survive while what is specific to it goes negative.",
   "forYou": {
     "evidence": [
-      {"seriesId": "s1", "stars": 5},
-      {"seriesId": "s5", "isFavorite": true},
-      {"seriesId": "s6", "read": true},
-      {"seriesId": "s8", "stars": 1}
+      {
+        "seriesId": "s1",
+        "stars": 5
+      },
+      {
+        "seriesId": "s5",
+        "isFavorite": true
+      },
+      {
+        "seriesId": "s6",
+        "read": true
+      },
+      {
+        "seriesId": "s8",
+        "stars": 1
+      }
     ],
-    "exclude": ["s1", "s5", "s6", "s8"]
+    "exclude": [
+      "s1",
+      "s5",
+      "s6",
+      "s8"
+    ]
   },
   "series": [
     {
       "seriesId": "s1",
       "terms": {
-        "a": {"kishimoto": "writer"},
-        "g": ["action", "aventure"],
-        "t": ["bd", "ninja"],
-        "bt": ["shonen"],
+        "a": {
+          "kishimoto": "writer"
+        },
+        "g": [
+          "action",
+          "aventure"
+        ],
+        "t": [
+          "bd",
+          "ninja"
+        ],
+        "bt": [
+          "shonen"
+        ],
         "p": "kana"
       }
     },
     {
       "seriesId": "s2",
       "terms": {
-        "a": {"kishimoto": "writer"},
-        "g": ["action", "aventure"],
-        "t": ["bd", "ninja"],
-        "bt": ["shonen"],
+        "a": {
+          "kishimoto": "writer"
+        },
+        "g": [
+          "action",
+          "aventure"
+        ],
+        "t": [
+          "bd",
+          "ninjas"
+        ],
+        "bt": [
+          "shonen"
+        ],
         "p": "kana"
       }
     },
     {
       "seriesId": "s3",
       "terms": {
-        "a": {"kishimoto": "writer"},
-        "g": ["action"],
-        "t": ["bd"],
+        "a": {
+          "kishimoto": "writer"
+        },
+        "g": [
+          "action"
+        ],
+        "t": [
+          "bd",
+          "super-power"
+        ],
         "bt": [],
         "p": "kana"
       }
@@ -46,9 +93,16 @@
     {
       "seriesId": "s4",
       "terms": {
-        "a": {"kishimoto": "writer"},
-        "g": ["action"],
-        "t": ["bd"],
+        "a": {
+          "kishimoto": "writer"
+        },
+        "g": [
+          "action"
+        ],
+        "t": [
+          "bd",
+          "super power"
+        ],
         "bt": [],
         "p": "kana"
       }
@@ -56,19 +110,37 @@
     {
       "seriesId": "s5",
       "terms": {
-        "a": {"oda": "writer"},
-        "g": ["action", "aventure"],
-        "t": ["bd", "pirates"],
-        "bt": ["shonen"],
+        "a": {
+          "oda": "writer"
+        },
+        "g": [
+          "action",
+          "aventure"
+        ],
+        "t": [
+          "bd",
+          "pirates"
+        ],
+        "bt": [
+          "shonen"
+        ],
         "p": "glenat"
       }
     },
     {
       "seriesId": "s6",
       "terms": {
-        "a": {"toriyama": "writer", "sabat": "colorist"},
-        "g": ["action"],
-        "t": ["bd", "ninja"],
+        "a": {
+          "toriyama": "writer",
+          "sabat": "colorist"
+        },
+        "g": [
+          "action"
+        ],
+        "t": [
+          "bd",
+          "ninja/s"
+        ],
         "bt": [],
         "p": "kana"
       }
@@ -76,9 +148,16 @@
     {
       "seriesId": "s7",
       "terms": {
-        "a": {"morvan": "writer"},
-        "g": ["espionnage"],
-        "t": ["bd"],
+        "a": {
+          "morvan": "writer"
+        },
+        "g": [
+          "espionnage"
+        ],
+        "t": [
+          "bd",
+          "pirate/s"
+        ],
         "bt": [],
         "p": "delcourt"
       }
@@ -86,9 +165,18 @@
     {
       "seriesId": "s8",
       "terms": {
-        "a": {"morvan": "writer", "gess": "penciller"},
-        "g": ["espionnage", "action"],
-        "t": ["bd", "ninja"],
+        "a": {
+          "morvan": "writer",
+          "gess": "penciller"
+        },
+        "g": [
+          "espionnage",
+          "action"
+        ],
+        "t": [
+          "bd",
+          "ninja"
+        ],
         "bt": [],
         "p": "delcourt"
       }

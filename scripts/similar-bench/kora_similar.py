@@ -81,6 +81,40 @@ def fold_term(value: str) -> str:
     return "".join(_FOLD.get(c, c) for c in lower)
 
 
+def fold_tag_term(value: str) -> str:
+    """Mirrors foldTagTerm() in SeriesTerms.kt — read its docstring there.
+
+    `ninja` / `ninjas` / `ninja/s` were three separate terms on 59 series.
+    Explicit ASCII ranges rather than str.isalnum(): the Kotlin side cannot use
+    the same definition, and the fixture test fails on any divergence.
+    """
+    folded = fold_term(value)
+    out: list[str] = []
+    i = 0
+    n = len(folded)
+    while i < n:
+        char = folded[i]
+        nxt = folded[i + 1] if i + 1 < n else None
+        after = folded[i + 2] if i + 2 < n else None
+        if char == "/" and nxt == "s" and (after is None or not ("a" <= after <= "z" or "0" <= after <= "9")):
+            out.append("s")
+            i += 2
+        elif char in " _-":
+            if out and out[-1] != " ":
+                out.append(" ")
+            i += 1
+        else:
+            out.append(char)
+            i += 1
+    collapsed = "".join(out).strip(" ")
+    if len(collapsed) < 2:
+        return collapsed
+    last_word = collapsed[collapsed.rfind(" ") + 1:]
+    if len(last_word) > 3 and last_word.endswith("s") and not last_word.endswith("ss"):
+        return collapsed[:-1]
+    return collapsed
+
+
 @dataclass(frozen=True)
 class Feature:
     family: str
@@ -89,6 +123,9 @@ class Feature:
 
     @property
     def key(self) -> str:
+        # Free-text families only, exactly like Feature.key in SeriesTerms.kt.
+        if self.family in (FAMILY_TAG, FAMILY_BOOK_TAG):
+            return f"{self.family}:{fold_tag_term(self.value)}"
         return f"{self.family}:{fold_term(self.value)}"
 
 
