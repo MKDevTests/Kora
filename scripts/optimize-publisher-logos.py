@@ -59,6 +59,18 @@ def main():
             im.save(buf, "PNG", optimize=True)
             after += buf.tell()
 
+    if apply:
+        # Compose Resources cannot list a directory at runtime, and the
+        # matcher needs to know what is on the shelf before it can fall back
+        # from "Pika" to "pika_dition". So the shelf is written out here.
+        keys = sorted(os.path.splitext(os.path.basename(f))[0]
+                      for f in glob.glob(os.path.join(DIR, "*.png"))
+                      if os.path.getsize(f) > 0)
+        with open(os.path.join(DIR, "_index.txt"), "w",
+                  encoding="utf-8", newline=chr(10)) as fh:
+            fh.write(chr(10).join(keys) + chr(10))
+        print(f"index: {len(keys)} keys")
+
     verb = "applied" if apply else "dry run"
     print(f"{verb}: {resized} resized, {reencoded} re-encoded, {removed} empty removed")
     print(f"{before / 1048576:.2f} MB -> {after / 1048576:.2f} MB "
