@@ -139,16 +139,76 @@ for f in "$VERSIONS_TOML" "$APP_VERSION_KT" "$BUILD_GRADLE_KTS"; do
     [[ -f "$f" ]] || { echo "ERROR: $f not found. Repo layout changed?" >&2; exit 1; }
 done
 
-# ----- rollback helper -----
-# Called on any failure after the version bump. Reverts the working tree
-# and deletes the local tag if we made it.
+# ----- memory guard -----
+# Measured on 2026-09-03: a release died at packageRelease on "Cannot
+# allocate memory" after thirteen minutes. Nothing was wrong with the code —
+# an idle Gradle daemon left over from the day's compiles held 6.5 GB and the
+# Kotlin daemon 2.9 GB, ten of the WSL VM's twelve, and R8 needs most of what
+# remains. The daemons are stopped here rather than trusted to behave: a cold
+# daemon costs under a minute, a release that dies at the packaging step
+# costs thirteen. Deliberately BEFORE the version bump, so a machine that is
+# too loaded to build never leaves a half-finished release behind.
+MIN_AVAILABLE_MB=7000
+
+echo "==> Stopping Gradle daemons so the build starts from a clean heap"
+./gradlew --stop >/dev/null 2>&1 || true
+
+if [[ -r /proc/meminfo ]]; then
+    AVAILABLE_MB="$(awk '/^MemAvailable:/ {print int($2 / 1024)}' /proc/meminfo)"
+    echo "    ${AVAILABLE_MB} MB available"
+    if (( AVAILABLE_MB < MIN_AVAILABLE_MB )); then
+        echo "ERROR: only ${AVAILABLE_MB} MB available; an R8 release build peaks near 9 GB." >&2
+        echo "  'gradlew --stop' does not reap stray worker JVMs. Reset the VM from PowerShell:" >&2
+        echo "    wsl.exe --shutdown" >&2
+        echo "  then re-run this script." >&2
+        exit 1
+    fi
+fi
+
+# ----- rollback on any failed exit -----
+# The bump happens before the build, so every failure between here and the
+# commit leaves the three version files modified. Left behind they block the
+# NEXT run: preflight refuses to release from a dirty tree, so the script
+# deadlocks on its own leftovers until someone reverts by hand. That is
+# exactly what the 2026-09-03 memory failure did.
+#
+# The trap is on EXIT, not ERR, for two reasons. ERR does not fire on an
+# explicit `exit`, and the likeliest failure of all — "signed APK was not
+# produced" — is an explicit exit, so it leaked every time. And EXIT cannot
+# fire while the script keeps running, which is what made the ERR trap
+# dangerous enough to need disarming around the build: it once reverted the
+# bump mid-flight and shipped a stale APK as v1.0.8.
+RELEASE_COMMITTED=0
+
 rollback() {
     local msg="${1:-Aborting}"
     echo "==> $msg — rolling back version bump" >&2
     git checkout -- "$VERSIONS_TOML" "$APP_VERSION_KT" "$BUILD_GRADLE_KTS" 2>/dev/null || true
     git tag -d "$TAG" 2>/dev/null || true
 }
-trap 'rollback "Script failed"' ERR
+
+on_exit() {
+    local rc=$?
+    trap - EXIT
+    if (( rc == 0 )); then
+        exit 0
+    fi
+    if (( RELEASE_COMMITTED == 0 )); then
+        rollback "Script failed (exit $rc)"
+    else
+        # Past the commit there is nothing safe to undo automatically: a hard
+        # reset would discard whatever else happens to be on the branch. Print
+        # the recovery instead of guessing.
+        echo "==> Failed AFTER committing $TAG — nothing was rolled back." >&2
+        echo "    To undo by hand:" >&2
+        echo "      git tag -d $TAG" >&2
+        echo "      git reset --soft HEAD~1" >&2
+        echo "      git checkout -- $VERSIONS_TOML $APP_VERSION_KT $BUILD_GRADLE_KTS" >&2
+        echo "    If the tag reached origin: git push origin :refs/tags/$TAG" >&2
+    fi
+    exit $rc
+}
+trap on_exit EXIT
 
 # ----- bump versions -----
 echo "==> Bumping app version to $VERSION"
@@ -187,17 +247,12 @@ echo "==> Building signed release APK"
 # We don't care about install for the release flow — only that the SIGNED
 # APK ends up on disk. So ignore its exit code and verify the file.
 #
-# `trap ERR` triggers regardless of `set -e` state, so we must disarm it
-# explicitly here — otherwise a transient non-zero command inside the build
-# script kicks off `rollback` while THIS script keeps running, and we end up
-# copying a stale APK from a previous build to kora-<ver>.apk. (This is what
-# burned the v1.0.8 release: shipped versionName=1.0.7 inside kora-1.0.8.apk.)
-trap - ERR
+# Its exit code is captured rather than fatal: what decides the release is
+# whether the signed APK is on disk, checked just below.
 set +e
 ./scripts/build-kora-release.sh
 BUILD_RC=$?
 set -e
-trap 'rollback "Script failed"' ERR
 
 if [[ ! -f "$SIGNED_APK" ]]; then
     echo "ERROR: signed APK was not produced at $SIGNED_APK (build script exit=$BUILD_RC)" >&2
@@ -266,16 +321,15 @@ echo "==> Release APK ready: $RELEASE_APK ($(du -h "$RELEASE_APK" | cut -f1))"
 echo "==> Committing and tagging $TAG"
 git add "$VERSIONS_TOML" "$APP_VERSION_KT" "$BUILD_GRADLE_KTS"
 git commit -m "chore(release): $TAG"
+# Past here the bump is history, not a working-tree edit, so the exit trap
+# stops reverting and starts printing manual recovery.
+RELEASE_COMMITTED=1
 git tag -a "$TAG" -m "Kora $TAG"
 
 # ----- push branch + tag -----
 echo "==> Pushing main and $TAG to origin"
 git push origin main
 git push origin "$TAG"
-
-# Disarm the rollback trap — past the point of clean recovery now (commit
-# and tag are on origin). Subsequent failures must be resolved manually.
-trap - ERR
 
 # ----- create GitHub release -----
 echo "==> Creating GitHub release on MKDevTests/Kora"
