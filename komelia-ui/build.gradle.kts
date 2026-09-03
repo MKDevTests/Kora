@@ -119,6 +119,10 @@ kotlin {
             implementation("com.github.wseemann:FFmpegMediaMetadataRetriever-native:1.0.19")
         }
 
+        androidUnitTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
         jvmMain.dependencies {
             api(compose.desktop.currentOs)
             api(libs.compose.desktop)
