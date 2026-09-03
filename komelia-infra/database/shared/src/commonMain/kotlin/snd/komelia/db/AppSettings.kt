@@ -24,8 +24,9 @@ data class AppSettings(
     val alternateServerUrls: List<String> = emptyList(),
 
     val cardWidth: Int = 170,
-    val seriesPageLoadSize: Int = 20,
-    val bookPageLoadSize: Int = 20,
+    // Multiples of 60 so a full page fills whole rows on 2 to 6 columns.
+    val seriesPageLoadSize: Int = 60,
+    val bookPageLoadSize: Int = 60,
     val bookListLayout: BooksLayout = BooksLayout.GRID,
     val appTheme: AppTheme = AppTheme.DARK_MODERN,
 

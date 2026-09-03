@@ -14,6 +14,7 @@ import snd.komelia.settings.model.StartupScreen
 import snd.komga.client.library.KomgaLibraryId
 import snd.komelia.updates.AppVersion
 import kotlin.time.Instant
+import snd.komelia.grid.snapPageLoadSize
 
 class SettingsRepositoryWrapper(
     val wrapper: SettingsStateWrapper<AppSettings>,
@@ -151,8 +152,12 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(username = username) }
     }
 
+    // Snapped on read, not migrated in place: a size stored before the offered
+    // list changed (50, 20) does not divide any usual column count, so it would
+    // keep drawing a ragged last row on every page until the user happened to
+    // reopen the grid-size menu.
     override fun getSeriesPageLoadSize(): Flow<Int> {
-        return wrapper.state.map { it.seriesPageLoadSize }.distinctUntilChanged()
+        return wrapper.state.map { snapPageLoadSize(it.seriesPageLoadSize) }.distinctUntilChanged()
     }
 
     override suspend fun putSeriesPageLoadSize(size: Int) {
@@ -160,7 +165,7 @@ class SettingsRepositoryWrapper(
     }
 
     override fun getBookPageLoadSize(): Flow<Int> {
-        return wrapper.state.map { it.bookPageLoadSize }.distinctUntilChanged()
+        return wrapper.state.map { snapPageLoadSize(it.bookPageLoadSize) }.distinctUntilChanged()
     }
 
     override suspend fun putBookPageLoadSize(size: Int) {
