@@ -476,34 +476,6 @@ fun ImmersiveDetailScaffold(
                 }
             }
 
-            // Layer 2.5: Publisher hero badge — visible when collapsed, fades with cover
-            if (publisherLogo != null) {
-                val badgeHeight = 40.dp
-                val badgeHeightPx = with(density) { (badgeHeight + 12.dp).toPx() }
-                Box(
-                    modifier = Modifier
-                        .then(uiEnterExitModifier)
-                        .offset { IntOffset(
-                            x = with(density) { 12.dp.roundToPx() },
-                            y = (collapsedOffsetPx - badgeHeightPx).roundToInt()
-                        ) }
-                        .graphicsLayer { alpha = (1f - expandFraction * 2f).coerceIn(0f, 1f) }
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Image(
-                        bitmap = publisherLogo.image,
-                        contentDescription = null,
-                        modifier = Modifier.heightIn(min = 28.dp, max = 40.dp).widthIn(min = 60.dp, max = 120.dp),
-                        contentScale = ContentScale.Fit,
-                        // The pill is black at 60%: near-black line art would be
-                        // invisible on it. See PublisherLogo.
-                        colorFilter = if (publisherLogo.tintOnDarkBackground)
-                            ColorFilter.tint(Color.White) else null,
-                    )
-                }
-            }
-
             // Layer 2.75: Morphing cover overlay (New UI 2 only) — the Card flies from full-screen
             // to the thumbnail position as the card expands. Disappears at expandFraction >= 0.99.
             if (useMorphingCover && expandFraction < 0.99f) {
@@ -582,6 +554,38 @@ fun ImmersiveDetailScaffold(
                     ) {
                         heroTextContent(expandFraction)
                     }
+                }
+            }
+
+            // Layer 2.9: Publisher hero badge — visible when collapsed, fades with the cover.
+            // Drawn after the morphing cover on purpose: that overlay is a
+            // full-screen Card while collapsed, so a badge painted before it was
+            // covered outright. Anyone with "animated immersive cover" on -- the
+            // default in New UI 2 -- never saw a publisher logo here at all.
+            if (publisherLogo != null) {
+                val badgeHeight = 40.dp
+                val badgeHeightPx = with(density) { (badgeHeight + 12.dp).toPx() }
+                Box(
+                    modifier = Modifier
+                        .then(uiEnterExitModifier)
+                        .offset { IntOffset(
+                            x = with(density) { 12.dp.roundToPx() },
+                            y = (collapsedOffsetPx - badgeHeightPx).roundToInt()
+                        ) }
+                        .graphicsLayer { alpha = (1f - expandFraction * 2f).coerceIn(0f, 1f) }
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Image(
+                        bitmap = publisherLogo.image,
+                        contentDescription = null,
+                        modifier = Modifier.heightIn(min = 28.dp, max = 40.dp).widthIn(min = 60.dp, max = 120.dp),
+                        contentScale = ContentScale.Fit,
+                        // The pill is black at 60%: near-black line art would be
+                        // invisible on it. See PublisherLogo.
+                        colorFilter = if (publisherLogo.tintOnDarkBackground)
+                            ColorFilter.tint(Color.White) else null,
+                    )
                 }
             }
 
