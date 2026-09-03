@@ -94,6 +94,7 @@ import snd.komelia.ui.LocalUseFloatingNavigationBar
 import snd.komelia.ui.LocalUseImmersiveMorphingCover
 import snd.komelia.ui.book.BookInfoColumn
 import snd.komelia.ui.common.images.ThumbnailImage
+import snd.komelia.ui.common.immersive.PublisherLogo
 import snd.komelia.ui.common.immersive.ImmersiveDetailFab
 import snd.komelia.ui.common.immersive.ImmersiveDetailScaffold
 import snd.komelia.ui.common.immersive.extractDominantColor
@@ -391,7 +392,7 @@ fun ImmersiveBookContent(
                                 if (publisherLogo != null && expandFraction > 0.01f) {
                                     val logoHeight = thumbnailHeight * 0.25f
                                     Image(
-                                        bitmap = publisherLogo,
+                                        bitmap = publisherLogo.image,
                                         contentDescription = null,
                                         modifier = Modifier
                                             .height(logoHeight)

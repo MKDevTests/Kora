@@ -554,8 +554,10 @@ kaboom
 kadokawa_shoten
 kaiten_books
 kana
+kaze
 kettledrummer_books
 key_publications
+ki_oon
 kill_time_communication
 kissca
 kitchen_sink
@@ -606,7 +608,6 @@ manga_action
 manga_time_kirara_carat
 manga_up
 mangaone
-map_ini
 margaret
 markosia
 marsu_productions
@@ -669,6 +670,7 @@ niconico_seiga
 nihon_bungeisha
 niwango
 no_lands_productions_jpg
+noeve_grafx
 norma
 norma_editorial_jpg
 not_available_comics
@@ -805,6 +807,7 @@ titan_magazines
 tko_studios
 toby_press
 tokyopop
+tonkam
 top_cow
 top_shelf
 top_shelf_productions
@@ -823,6 +826,7 @@ ubisoft_entertainment
 udon
 uncivilized_books
 uncivilized_comics
+urban_comics
 valiant
 valiant_comics
 valiant_entertainment
@@ -863,6 +867,7 @@ wildstorm_signature_series
 win_mill_productions
 wizard
 wizard_comics
+yen_on
 yen_press
 yermo_ediciones
 yermo_ediciones_y_publicaciones

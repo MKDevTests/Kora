@@ -91,6 +91,7 @@ import snd.komelia.ui.collection.SeriesCollectionsContent
 import snd.komelia.ui.common.components.AppFilterChipDefaults
 import coil3.compose.rememberAsyncImagePainter
 import snd.komelia.ui.common.images.ThumbnailImage
+import snd.komelia.ui.common.immersive.PublisherLogo
 import snd.komelia.ui.common.immersive.ImmersiveDetailFab
 import snd.komelia.ui.common.immersive.ImmersiveDetailScaffold
 import snd.komelia.ui.common.immersive.extractDominantColor
@@ -364,7 +365,7 @@ private fun OneshotCardContent(
     book: KomeliaBook,
     library: KomgaLibrary,
     coverData: Any,
-    publisherLogo: androidx.compose.ui.graphics.ImageBitmap?,
+    publisherLogo: PublisherLogo?,
     expandFraction: Float,
     onThumbnailPositioned: (LayoutCoordinates) -> Unit,
     onTextPositioned: (LayoutCoordinates) -> Unit,
@@ -484,7 +485,7 @@ private fun OneshotCardContent(
                 if (publisherLogo != null && expandFraction > 0.01f) {
                     val logoHeight = thumbnailHeight * 0.25f
                     Image(
-                        bitmap = publisherLogo,
+                        bitmap = publisherLogo.image,
                         contentDescription = null,
                         modifier = Modifier
                             .height(logoHeight)

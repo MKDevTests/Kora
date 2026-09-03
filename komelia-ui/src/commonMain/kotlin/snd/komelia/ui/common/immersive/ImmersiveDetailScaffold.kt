@@ -61,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.compositeOver
@@ -132,7 +133,7 @@ fun ImmersiveDetailScaffold(
     immersive: Boolean = false,
     initiallyExpanded: Boolean = false,
     onExpandChange: (Boolean) -> Unit = {},
-    publisherLogo: ImageBitmap? = null,
+    publisherLogo: PublisherLogo? = null,
     topBarContent: @Composable () -> Unit,
     fabContent: @Composable () -> Unit,
     heroTextContent: (@Composable (expandFraction: Float) -> Unit)? = null,
@@ -491,10 +492,14 @@ fun ImmersiveDetailScaffold(
                         .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
                     Image(
-                        bitmap = publisherLogo,
+                        bitmap = publisherLogo.image,
                         contentDescription = null,
                         modifier = Modifier.heightIn(min = 28.dp, max = 40.dp).widthIn(min = 60.dp, max = 120.dp),
-                        contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Fit,
+                        // The pill is black at 60%: near-black line art would be
+                        // invisible on it. See PublisherLogo.
+                        colorFilter = if (publisherLogo.tintOnDarkBackground)
+                            ColorFilter.tint(Color.White) else null,
                     )
                 }
             }

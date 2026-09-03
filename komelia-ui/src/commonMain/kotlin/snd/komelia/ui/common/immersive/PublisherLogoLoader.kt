@@ -101,28 +101,53 @@ fun resolvePublisherLogoKey(publisher: String, index: Set<String>): String? {
     return null
 }
 
+/**
+ * A bundled logo plus whether the dark hero badge has to tint it white.
+ *
+ * 126 of the 884 logos are near-black line art on a transparent ground. The
+ * badge draws them on a black pill at 60% opacity, so they were invisible --
+ * indistinguishable from a publisher with no logo at all. Coloured and opaque
+ * art is not tinted: a red disc reads fine on black, and tinting would flatten
+ * it into a white blob. The decision is made when the pack is built
+ * (scripts/optimize-publisher-logos.py) so nothing has to read pixels here.
+ */
+data class PublisherLogo(
+    val image: ImageBitmap,
+    val tintOnDarkBackground: Boolean,
+)
+
 private const val LOGO_CACHE_SIZE = 24
 
-private val logoCache = LinkedHashMap<String, ImageBitmap?>()
+private val logoCache = LinkedHashMap<String, PublisherLogo?>()
 private val logoCacheMutex = Mutex()
 
 private var packIndex: Set<String>? = null
-private val packIndexMutex = Mutex()
+private var tintList: Set<String>? = null
+private val sidecarMutex = Mutex()
 
 @OptIn(ExperimentalResourceApi::class)
+private suspend fun readKeys(name: String): Set<String> = runCatching {
+    Res.readBytes("files/publishers/$name")
+        .decodeToString().lineSequence()
+        .filter { it.isNotBlank() }.toSet()
+}.getOrElse { emptySet() }
+
 private suspend fun packIndex(): Set<String> {
     packIndex?.let { return it }
-    return packIndexMutex.withLock {
-        packIndex ?: runCatching {
-            Res.readBytes("files/publishers/_index.txt")
-                .decodeToString().lineSequence()
-                .filter { it.isNotBlank() }.toSet()
-        }.getOrElse { emptySet() }.also { packIndex = it }
+    return sidecarMutex.withLock {
+        packIndex ?: readKeys("_index.txt").also { packIndex = it }
+    }
+}
+
+private suspend fun tintList(): Set<String> {
+    tintList?.let { return it }
+    return sidecarMutex.withLock {
+        tintList ?: readKeys("_tint.txt").also { tintList = it }
     }
 }
 
 @OptIn(ExperimentalResourceApi::class)
-private suspend fun loadPublisherLogo(publisher: String): ImageBitmap? {
+private suspend fun loadPublisherLogo(publisher: String): PublisherLogo? {
     logoCacheMutex.withLock {
         if (logoCache.containsKey(publisher)) {
             // Re-insert so eviction is least-recently-used, not insertion order.
@@ -133,24 +158,27 @@ private suspend fun loadPublisherLogo(publisher: String): ImageBitmap? {
     }
 
     val key = resolvePublisherLogoKey(publisher, packIndex())
-    val bitmap = key?.let {
+    val logo = key?.let {
         runCatching {
-            Res.readBytes("files/publishers/$it.png").decodeToImageBitmap()
+            PublisherLogo(
+                image = Res.readBytes("files/publishers/$it.png").decodeToImageBitmap(),
+                tintOnDarkBackground = it in tintList(),
+            )
         }.getOrNull()
     }
 
     logoCacheMutex.withLock {
-        logoCache[publisher] = bitmap
+        logoCache[publisher] = logo
         while (logoCache.size > LOGO_CACHE_SIZE) {
             logoCache.remove(logoCache.keys.first())
         }
     }
-    return bitmap
+    return logo
 }
 
 @Composable
-fun rememberPublisherLogo(publisher: String?): ImageBitmap? {
-    var bitmap by remember(publisher) { mutableStateOf<ImageBitmap?>(null) }
+fun rememberPublisherLogo(publisher: String?): PublisherLogo? {
+    var bitmap by remember(publisher) { mutableStateOf<PublisherLogo?>(null) }
     if (!publisher.isNullOrBlank()) {
         LaunchedEffect(publisher) { bitmap = loadPublisherLogo(publisher) }
     }
