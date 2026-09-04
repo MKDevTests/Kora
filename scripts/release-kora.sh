@@ -153,14 +153,67 @@ MIN_AVAILABLE_MB=7000
 echo "==> Stopping Gradle daemons so the build starts from a clean heap"
 ./gradlew --stop >/dev/null 2>&1 || true
 
+available_mb() { awk '/^MemAvailable:/ {print int($2 / 1024)}' /proc/meminfo; }
+
+# 'gradlew --stop' only asks the build daemons to exit. A worker JVM orphaned by
+# an interrupted build has no daemon left to ask it, and a Kotlin compile daemon
+# outlives the build that spawned it, so both survive --stop holding gigabytes.
+# Reaping them recovers the heap without touching the VM, which is worth trying
+# first: a VM reset kills the shell this script is running in.
+reap_stray_jvms() {
+    local pat reaped=0
+    for pat in         'org.gradle.launcher.daemon.bootstrap.GradleDaemon'         'org.gradle.process.internal.worker.GradleWorkerMain'         'org.jetbrains.kotlin.daemon.KotlinCompileDaemon'
+    do
+        pkill -f "$pat" 2>/dev/null && reaped=1
+    done
+    (( reaped )) && sleep 3
+    return 0
+}
+
+show_memory_hogs() {
+    ps -eo rss=,args= --sort=-rss 2>/dev/null | head -4 |
+        awk '{ rss = $1; $1 = ""; printf "      %5d MB  %.68s\n", rss / 1024, substr($0, 2) }'
+}
+
 if [[ -r /proc/meminfo ]]; then
-    AVAILABLE_MB="$(awk '/^MemAvailable:/ {print int($2 / 1024)}' /proc/meminfo)"
+    AVAILABLE_MB="$(available_mb)"
     echo "    ${AVAILABLE_MB} MB available"
+
     if (( AVAILABLE_MB < MIN_AVAILABLE_MB )); then
+        echo "    Below the ${MIN_AVAILABLE_MB} MB an R8 release build needs. Holding it:"
+        show_memory_hogs
+        ANSWER=""
+        [[ -t 0 ]] && read -r -p "    Kill stray Gradle/Kotlin JVMs and re-measure? [Y/n] " ANSWER || true
+        if [[ ! "$ANSWER" =~ ^[Nn] ]]; then
+            reap_stray_jvms
+            AVAILABLE_MB="$(available_mb)"
+            echo "    ${AVAILABLE_MB} MB available after reaping"
+        fi
+    fi
+
+    if (( AVAILABLE_MB < MIN_AVAILABLE_MB )); then
+        RERUN="./scripts/release-kora.sh"
+        for arg in "$@"; do RERUN+=" $(printf '%q' "$arg")"; done
+
+        echo "    Still short. Only a VM reset frees the rest, and it kills this shell," >&2
+        echo "    so the release cannot continue through it — it has to be re-run after." >&2
+        ANSWER=""
+        [[ -t 0 ]] && read -r -p "    Run 'wsl.exe --shutdown' now? [y/N] " ANSWER || true
+        if [[ "$ANSWER" =~ ^[Yy] ]]; then
+            echo
+            echo "    Re-open WSL and run:"
+            echo "      cd $REPO_ROOT && $RERUN"
+            echo
+            echo "==> Shutting down WSL. This terminal is about to close."
+            sleep 2
+            wsl.exe --shutdown >/dev/null 2>&1 ||                 powershell.exe -NoProfile -Command "wsl.exe --shutdown" >/dev/null 2>&1 || true
+            sleep 60   # unreachable in practice; the VM goes down first
+            exit 1
+        fi
+
         echo "ERROR: only ${AVAILABLE_MB} MB available; an R8 release build peaks near 9 GB." >&2
-        echo "  'gradlew --stop' does not reap stray worker JVMs. Reset the VM from PowerShell:" >&2
-        echo "    wsl.exe --shutdown" >&2
-        echo "  then re-run this script." >&2
+        echo "  Reset the VM from PowerShell:  wsl.exe --shutdown" >&2
+        echo "  then re-run:  cd $REPO_ROOT && $RERUN" >&2
         exit 1
     fi
 fi
