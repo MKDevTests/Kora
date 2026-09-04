@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -267,7 +268,6 @@ fun ImmersiveSeriesContent(
         immersive = true,
         initiallyExpanded = initiallyExpanded,
         onExpandChange = onExpandChange,
-        publisherLogo = publisherLogo,
         thumbnailWidth = gridMinWidth,
         overlayContent = {
             SeriesTabRail(
@@ -482,6 +482,15 @@ fun ImmersiveSeriesContent(
                         if (publisherLogo != null && expandFraction > 0.01f) {                            val logoHeight = thumbnailHeight * 0.25f
                             Image(
                                 bitmap = publisherLogo.image,
+                                        // The card sits on the cover's dominant colour,
+                                        // which is usually dark. Near-black logos would
+                                        // vanish into it exactly as they did on the old
+                                        // badge, so the same list drives the tint here --
+                                        // onSurface rather than white, so it also works
+                                        // on a light theme.
+                                        colorFilter = if (publisherLogo.tintOnDarkBackground)
+                                            ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+                                        else null,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .height(logoHeight)
