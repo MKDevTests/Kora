@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.strings.UiStrings
 import snd.komelia.ui.pushUnique
 
 /**
@@ -117,6 +118,7 @@ fun HomeStatsCard(homeReady: Boolean = true) {
                 )
                 Text(
                     text = buildSummaryLine(
+                        strings = LocalStrings.current.ui,
                         booksThisMonth = current.booksFinishedLast30Days,
                         streak = current.streakDays,
                     ),
@@ -133,16 +135,16 @@ fun HomeStatsCard(homeReady: Boolean = true) {
     }
 }
 
-private fun buildSummaryLine(booksThisMonth: Int, streak: Int): String {
+private fun buildSummaryLine(strings: UiStrings, booksThisMonth: Int, streak: Int): String {
     val books = when (booksThisMonth) {
-        0 -> "No book finished this month"
-        1 -> "1 book this month"
-        else -> "$booksThisMonth books this month"
+        0 -> strings.noBookFinishedThisMonth
+        1 -> strings.oneBookThisMonth
+        else -> strings.booksThisMonth(booksThisMonth)
     }
     val streakSuffix = when {
         streak <= 0 -> ""
-        streak == 1 -> " · 1-day streak"
-        else -> " · $streak-day streak"
+        streak == 1 -> " · " + strings.oneDayStreak
+        else -> " · " + strings.dayStreak(streak)
     }
     return books + streakSuffix
 }

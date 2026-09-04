@@ -20,8 +20,9 @@ internal class MetadataTab(
     private val vm: LibraryEditDialogViewModel,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "METADATA",
+        title = LocalStrings.current.ui.metadata.uppercase(),
         icon = Icons.Default.Book
     )
 

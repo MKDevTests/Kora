@@ -38,8 +38,9 @@ internal class ScannerTab(
     private val vm: LibraryEditDialogViewModel,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "SCANNER",
+        title = LocalStrings.current.ui.scanner.uppercase(),
         icon = Icons.AutoMirrored.Filled.ManageSearch
     )
 

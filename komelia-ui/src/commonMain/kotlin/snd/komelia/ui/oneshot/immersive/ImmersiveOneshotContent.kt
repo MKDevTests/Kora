@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -91,6 +92,7 @@ import snd.komelia.ui.collection.SeriesCollectionsContent
 import snd.komelia.ui.common.components.AppFilterChipDefaults
 import coil3.compose.rememberAsyncImagePainter
 import snd.komelia.ui.common.images.ThumbnailImage
+import snd.komelia.ui.common.immersive.PublisherLogo
 import snd.komelia.ui.common.immersive.ImmersiveDetailFab
 import snd.komelia.ui.common.immersive.ImmersiveDetailScaffold
 import snd.komelia.ui.common.immersive.extractDominantColor
@@ -226,7 +228,6 @@ fun ImmersiveOneshotContent(
             immersive = true,
             initiallyExpanded = initiallyExpanded,
             onExpandChange = onExpandChange,
-            publisherLogo = publisherLogo,
             thumbnailWidth = cardWidth,
             heroTextContent = { expandFraction ->
                 snd.komelia.ui.common.immersive.ImmersiveHeroText(
@@ -364,7 +365,7 @@ private fun OneshotCardContent(
     book: KomeliaBook,
     library: KomgaLibrary,
     coverData: Any,
-    publisherLogo: androidx.compose.ui.graphics.ImageBitmap?,
+    publisherLogo: PublisherLogo?,
     expandFraction: Float,
     onThumbnailPositioned: (LayoutCoordinates) -> Unit,
     onTextPositioned: (LayoutCoordinates) -> Unit,
@@ -484,7 +485,16 @@ private fun OneshotCardContent(
                 if (publisherLogo != null && expandFraction > 0.01f) {
                     val logoHeight = thumbnailHeight * 0.25f
                     Image(
-                        bitmap = publisherLogo,
+                        bitmap = publisherLogo.image,
+                                        // The card sits on the cover's dominant colour,
+                                        // which is usually dark. Near-black logos would
+                                        // vanish into it exactly as they did on the old
+                                        // badge, so the same list drives the tint here --
+                                        // onSurface rather than white, so it also works
+                                        // on a light theme.
+                                        colorFilter = if (publisherLogo.tintOnDarkBackground)
+                                            ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+                                        else null,
                         contentDescription = null,
                         modifier = Modifier
                             .height(logoHeight)

@@ -55,9 +55,10 @@ fun OfflineUserSettingsContent(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
         Column {
-            Text("user: ${currentUser?.email ?: "none"}")
-            Text("status: ${if (isOffline) "offline" else "online"}")
-            Text("server: ${if (currentUser?.id == OfflineUser.ROOT || onlineServerUrl == null) "none" else onlineServerUrl}")
+            val strings = LocalStrings.current.ui
+            Text("${strings.user}: ${currentUser?.email ?: strings.none}")
+            Text("${strings.status}: ${if (isOffline) strings.offline else strings.online}")
+            Text("${strings.server}: ${if (currentUser?.id == OfflineUser.ROOT || onlineServerUrl == null) strings.none else onlineServerUrl}")
         }
 
         Row(

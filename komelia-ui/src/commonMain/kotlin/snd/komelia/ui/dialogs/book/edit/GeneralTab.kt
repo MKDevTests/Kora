@@ -23,8 +23,9 @@ import snd.komelia.ui.LocalStrings
 class GeneralTab(
     private val vm: BookEditMetadataState
 ) : DialogTab {
+    @Composable
     override fun options() = TabItem(
-        title = "GENERAL",
+        title = LocalStrings.current.ui.general.uppercase(),
         icon = Icons.Default.FormatAlignCenter
     )
 

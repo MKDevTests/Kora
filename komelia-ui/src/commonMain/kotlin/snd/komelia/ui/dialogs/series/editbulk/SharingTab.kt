@@ -26,8 +26,9 @@ internal class SharingTab(
     private val vm: SeriesBulkEditDialogViewModel,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "SHARING",
+        title = LocalStrings.current.ui.sharing.uppercase(),
         icon = Icons.Default.People
     )
 

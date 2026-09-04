@@ -1082,6 +1082,31 @@ class UiStrings(private val values: Map<String, String>) {
     val yourRating: String get() = at("yourRating")
     val yourReading: String get() = at("yourReading")
     // endregion
+
+    // Hand-written, outside the region above: i18n-apply.py only moves whole
+    // literals, and every one of these is interpolated.
+    val user: String get() = at("user")
+    val online: String get() = at("online")
+    val sharedLibraries: String get() = at("sharedLibraries")
+    val contentRestriction: String get() = at("contentRestriction")
+    val sharing: String get() = at("sharing")
+    val scanner: String get() = at("scanner")
+    val providerSettings: String get() = at("providerSettings")
+    val poster: String get() = at("poster")
+    val options: String get() = at("options")
+    val alternateTitles: String get() = at("alternateTitles")
+    val cardWidthGap: String get() = at("cardWidthGap")
+    val cardHeightGap: String get() = at("cardHeightGap")
+    val cardSpacingBelow: String get() = at("cardSpacingBelow")
+    val noBookFinishedThisMonth: String get() = at("noBookFinishedThisMonth")
+    val oneBookThisMonth: String get() = at("oneBookThisMonth")
+    val oneDayStreak: String get() = at("oneDayStreak")
+
+    fun booksThisMonth(count: Int): String =
+        at("booksThisMonth").replace("{n}", count.toString())
+
+    fun dayStreak(days: Int): String =
+        at("dayStreak").replace("{n}", days.toString())
 }
 
 /** Bottom navigation bar. */

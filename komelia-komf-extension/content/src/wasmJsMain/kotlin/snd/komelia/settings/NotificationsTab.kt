@@ -17,6 +17,7 @@ import snd.komelia.LocalKomfViewModelFactory
 
 class NotificationsTab : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
         title = "Notifications",
         icon = Icons.Default.Notifications

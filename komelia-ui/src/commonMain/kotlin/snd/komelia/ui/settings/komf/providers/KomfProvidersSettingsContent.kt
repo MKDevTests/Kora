@@ -436,7 +436,8 @@ private fun ProviderCard(
 }
 
 private class SeriesMetadataTab(private val state: ProviderConfigState) : DialogTab {
-    override fun options() = TabItem(title = "SERIES METADATA")
+    @Composable
+    override fun options() = TabItem(title = LocalStrings.current.ui.seriesMetadata.uppercase())
 
     @Composable
     override fun Content() {
@@ -537,7 +538,8 @@ private class SeriesMetadataTab(private val state: ProviderConfigState) : Dialog
 }
 
 private class BookMetadataTab(private val state: ProviderConfigState) : DialogTab {
-    override fun options() = TabItem(title = "BOOK METADATA")
+    @Composable
+    override fun options() = TabItem(title = LocalStrings.current.ui.bookMetadata.uppercase())
 
     @Composable
     override fun Content() {
@@ -616,7 +618,8 @@ private class BookMetadataTab(private val state: ProviderConfigState) : DialogTa
 }
 
 private class ProviderSettingsTab(private val state: ProviderConfigState) : DialogTab {
-    override fun options() = TabItem(title = "PROVIDER SETTINGS")
+    @Composable
+    override fun options() = TabItem(title = LocalStrings.current.ui.providerSettings.uppercase())
 
     @Composable
     override fun Content() {

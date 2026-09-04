@@ -21,8 +21,9 @@ internal class OptionsTab(
     private val vm: LibraryEditDialogViewModel,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "OPTIONS",
+        title = LocalStrings.current.ui.options.uppercase(),
         icon = Icons.Default.Tune
     )
 

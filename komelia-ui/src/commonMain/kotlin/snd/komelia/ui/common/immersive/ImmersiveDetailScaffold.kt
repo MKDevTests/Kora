@@ -61,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.compositeOver
@@ -132,7 +133,6 @@ fun ImmersiveDetailScaffold(
     immersive: Boolean = false,
     initiallyExpanded: Boolean = false,
     onExpandChange: (Boolean) -> Unit = {},
-    publisherLogo: ImageBitmap? = null,
     topBarContent: @Composable () -> Unit,
     fabContent: @Composable () -> Unit,
     heroTextContent: (@Composable (expandFraction: Float) -> Unit)? = null,
@@ -472,30 +472,6 @@ fun ImmersiveDetailScaffold(
                             cardContent(expandFraction, onThumbnailPositioned, onTextPositioned)
                         }
                     }
-                }
-            }
-
-            // Layer 2.5: Publisher hero badge — visible when collapsed, fades with cover
-            if (publisherLogo != null) {
-                val badgeHeight = 40.dp
-                val badgeHeightPx = with(density) { (badgeHeight + 12.dp).toPx() }
-                Box(
-                    modifier = Modifier
-                        .then(uiEnterExitModifier)
-                        .offset { IntOffset(
-                            x = with(density) { 12.dp.roundToPx() },
-                            y = (collapsedOffsetPx - badgeHeightPx).roundToInt()
-                        ) }
-                        .graphicsLayer { alpha = (1f - expandFraction * 2f).coerceIn(0f, 1f) }
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Image(
-                        bitmap = publisherLogo,
-                        contentDescription = null,
-                        modifier = Modifier.heightIn(min = 28.dp, max = 40.dp).widthIn(min = 60.dp, max = 120.dp),
-                        contentScale = ContentScale.Fit
-                    )
                 }
             }
 

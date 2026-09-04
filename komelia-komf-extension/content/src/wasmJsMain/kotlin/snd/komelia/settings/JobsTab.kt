@@ -16,6 +16,7 @@ import snd.komelia.LocalKomfViewModelFactory
 
 class JobsTab : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
         title = "Job History",
         icon = Icons.Default.History

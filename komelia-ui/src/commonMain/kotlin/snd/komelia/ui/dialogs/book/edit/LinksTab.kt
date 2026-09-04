@@ -1,5 +1,6 @@
 package snd.komelia.ui.dialogs.book.edit
 
+import snd.komelia.ui.LocalStrings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.runtime.Composable
@@ -11,8 +12,9 @@ import snd.komga.client.common.KomgaWebLink
 class LinksTab(
     private val vm: BookEditMetadataState
 ) : DialogTab {
+    @Composable
     override fun options() = TabItem(
-        title = "LINKS",
+        title = LocalStrings.current.ui.links.uppercase(),
         icon = Icons.Default.Link
     )
 

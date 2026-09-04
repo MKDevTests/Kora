@@ -1,5 +1,6 @@
 package snd.komelia.ui.dialogs.series.edit
 
+import snd.komelia.ui.LocalStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,8 +41,9 @@ internal class GenresTab(
     private val vm: SeriesEditMetadataState,
 ) : DialogTab {
 
+    @Composable
     override fun options() = TabItem(
-        title = "GENRES",
+        title = LocalStrings.current.ui.genres.uppercase(),
         icon = Icons.Default.Category
     )
 
