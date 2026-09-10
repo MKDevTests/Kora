@@ -57,3 +57,5 @@ _bench-ja-holdout/
 # One stray `git add docs` put all ten of them into a commit once; this is
 # the guard so it cannot happen again.
 docs/
+__pycache__/
+*.pyc
