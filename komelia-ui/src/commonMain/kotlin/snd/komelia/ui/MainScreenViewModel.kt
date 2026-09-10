@@ -99,6 +99,14 @@ class MainScreenViewModel(
     val showNextReleasesInBottomNav: StateFlow<Boolean> = settingsRepository.getNextReleasesInBottomNav()
         .stateIn(screenModelScope, SharingStarted.Eagerly, false)
 
+    /**
+     * True when the Discover tab is on. Opt-in and off by default: it is the
+     * only surface that talks to a third party, so the button appears only
+     * once the user has said yes in Settings.
+     */
+    val showDiscoverInBottomNav: StateFlow<Boolean> = settingsRepository.getDiscoverEnabled()
+        .stateIn(screenModelScope, SharingStarted.Eagerly, false)
+
     private val navigatorFlow = MutableStateFlow<Navigator?>(null)
     private val navigator
         get() = navigatorFlow.value ?: error("main screen navigator is not initialized")

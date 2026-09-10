@@ -60,6 +60,7 @@ object AppSettingsTable : Table("AppSettings") {
     val lastSeenReleaseNotesVersion = text("last_seen_release_notes_version").nullable()
     val alternateServerUrls = text("alternate_server_urls").default("[]")
     val experimentalGenreTab = bool("experimental_genre_tab").default(false)
+    val discoverEnabled = bool("discover_enabled").default(false)
     val genreCoverOverrides = text("genre_cover_overrides").default("{}")
     val genreLabelOverrides = text("genre_label_overrides").default("{}")
     val ignoreListEnabled = bool("ignore_list_enabled").default(false)

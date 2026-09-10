@@ -191,6 +191,7 @@ data class AppSettings(
     // Fresh-install default. Only ever read when no settings row exists yet,
     // so an existing install keeps whatever it had -- see the note on the class.
     val experimentalGenreTab: Boolean = true,
+    val discoverEnabled: Boolean = false,
 
     /**
      * Per-(library, genre) cover override for the Genre tab: key

@@ -65,6 +65,7 @@ data class DependencyContainer(
     val appUpdater: AppUpdater?,
     val releaseNotesService: ReleaseNotesService,
     val aniListClient: AniListClient,
+    val mangaUpdatesClient: snd.komelia.discover.MangaUpdatesClient,
     val bookCompletionEvents: BookCompletionEvents,
 
     val coilContext: PlatformContext,

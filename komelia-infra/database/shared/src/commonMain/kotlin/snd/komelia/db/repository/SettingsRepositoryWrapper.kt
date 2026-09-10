@@ -43,6 +43,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(experimentalGenreTab = enabled) }
     }
 
+    override fun getDiscoverEnabled(): Flow<Boolean> =
+        wrapper.state.map { it.discoverEnabled }.distinctUntilChanged()
+
+    override suspend fun putDiscoverEnabled(enabled: Boolean) {
+        wrapper.transform { it.copy(discoverEnabled = enabled) }
+    }
+
     override fun getGenreCoverOverrides(): Flow<Map<String, String>> =
         wrapper.state.map { it.genreCoverOverrides }.distinctUntilChanged()
 

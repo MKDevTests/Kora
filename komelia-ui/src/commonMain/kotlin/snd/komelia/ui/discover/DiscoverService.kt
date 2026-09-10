@@ -1,0 +1,336 @@
+package snd.komelia.ui.discover
+
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import snd.komelia.discover.DiscoverRepository
+import snd.komelia.discover.DiscoverSourceLink
+import snd.komelia.discover.DiscoverSuggestion
+import snd.komelia.discover.MangaUpdatesClient
+import snd.komelia.discover.MangaUpdatesSeries
+import snd.komelia.discover.SOURCE_MANGAUPDATES
+import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.ratings.SeriesRatingsRepository
+import snd.komelia.similarity.SeriesEvidence
+import snd.komelia.similarity.SimilarityIndexRepository
+import snd.komelia.similarity.tasteAffinities
+import snd.komga.client.book.KomgaReadStatus
+import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.KomgaSort.KomgaSeriesSort
+import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.search.allOfSeries
+import snd.komga.client.series.KomgaSeriesId
+import kotlin.time.Clock
+
+private val logger = KotlinLogging.logger {}
+
+/**
+ * Builds the Discover results: series the user does NOT own, from what they
+ * already like.
+ *
+ * Everything else in the app suggests from the Komga catalogue, which caps it
+ * at what is already on the shelf. This asks MangaUpdates instead — whose
+ * per-series recommendations are voted by readers, so they work on the third of
+ * this catalogue that carries no genre, tag, publisher or author.
+ *
+ * The whole design is about the request budget. A pass costs roughly one
+ * request per seed series and never runs while the user is looking at a screen:
+ * [DiscoverScanner] owns it, out of any composition, at most once a week. The
+ * tab itself reads the table and makes no network request at all.
+ */
+class DiscoverService(
+    private val seriesApi: KomgaSeriesApi,
+    private val similarityIndex: SimilarityIndexRepository,
+    private val ratingsRepository: SeriesRatingsRepository,
+    private val favoriteSeriesIds: Flow<Set<String>>,
+    private val repository: DiscoverRepository,
+    private val mangaUpdates: MangaUpdatesClient,
+) {
+
+    /**
+     * Runs a full pass and replaces the stored results. Returns how many
+     * suggestions it produced.
+     *
+     * [onProgress] is 0..1 over the seed series, for the tab's refresh button.
+     */
+    suspend fun scan(
+        libraries: List<KomgaLibraryId>,
+        onProgress: (Float) -> Unit = {},
+    ): Int {
+        val seed = buildSeed(libraries)
+        if (seed.isEmpty()) {
+            logger.debug { "Discover: empty taste profile, nothing to ask" }
+            return 0
+        }
+
+        val links = resolveLinks(seed.keys)
+        val owned = ownedTitleKeys()
+        val dismissed = repository.dismissedIds()
+
+        val accumulator = mutableMapOf<String, Accumulated>()
+        val done = Semaphore(NETWORK_CONCURRENCY)
+        var handled = 0
+
+        coroutineScope {
+            seed.entries
+                .filter { links[it.key]?.externalId != null }
+                .map { (seriesId, affinity) ->
+                    val externalId = requireNotNull(links[seriesId]?.externalId)
+                    async {
+                        done.withPermit { mangaUpdates.series(externalId) }?.let { seriesId to it }
+                    }
+                }
+                .awaitAll()
+                .filterNotNull()
+                .forEach { (seriesId, source) ->
+                    handled++
+                    onProgress(handled.toFloat() / seed.size)
+                    accumulate(accumulator, source, seriesId, seed.getValue(seriesId), owned, dismissed)
+                }
+        }
+
+        val now = Clock.System.now()
+        val suggestions = accumulator.values
+            .sortedByDescending { it.score }
+            .take(MAX_STORED)
+            .map { it.toSuggestion(now) }
+
+        repository.replaceSuggestions(suggestions)
+        logger.info { "Discover: ${suggestions.size} suggestions from ${seed.size} seed series" }
+        return suggestions.size
+    }
+
+    /**
+     * The seed: the series the user liked most, strongest first, capped.
+     *
+     * Deliberately the SAME profile the For-you tab is built on — two notions
+     * of "what this user likes" would drift, and the one nobody re-checked
+     * would be the one shipping suggestions. The cap is the request budget:
+     * beyond a few dozen seeds the recommendations start repeating anyway,
+     * because popular series recommend each other.
+     */
+    private suspend fun buildSeed(libraries: List<KomgaLibraryId>): Map<String, Double> {
+        val favorites = favoriteSeriesIds.first()
+        val ratings = ratingsRepository.listAll().associate { it.seriesId.value to it.stars }
+
+        val read = mutableSetOf<String>()
+        val inProgress = mutableSetOf<String>()
+        libraries.forEach { libraryId ->
+            read += seriesIdsWith(KomgaReadStatus.READ, libraryId)
+            inProgress += seriesIdsWith(KomgaReadStatus.IN_PROGRESS, libraryId)
+        }
+
+        val evidence = (read + inProgress + favorites + ratings.keys)
+            .distinct()
+            .map { id ->
+                SeriesEvidence(
+                    seriesId = id,
+                    read = id in read,
+                    inProgress = id in inProgress,
+                    isFavorite = id in favorites,
+                    stars = ratings[id],
+                    dismissed = false,
+                )
+            }
+
+        return tasteAffinities(evidence)
+            .filterValues { it > 0.0 }
+            .entries
+            .sortedByDescending { it.value }
+            .take(SEED_LIMIT)
+            .associate { it.key to it.value }
+    }
+
+    /**
+     * Ids of the library's series in a given read state, newest first and
+     * capped — same shape as the For-you profile, two pages instead of five:
+     * only the top few dozen affinities survive the seed cap, so paging deeper
+     * would buy requests and no seeds.
+     */
+    private suspend fun seriesIdsWith(status: KomgaReadStatus, libraryId: KomgaLibraryId): Set<String> {
+        val ids = LinkedHashSet<String>()
+        var pageIndex = 0
+        while (pageIndex < MAX_PROFILE_PAGES) {
+            val page = try {
+                seriesApi.getSeriesList(
+                    conditionBuilder = allOfSeries {
+                        library { isEqualTo(libraryId) }
+                        readStatus { isEqualTo(status) }
+                    },
+                    fulltextSearch = null,
+                    pageRequest = KomgaPageRequest(
+                        size = PROFILE_PAGE_SIZE,
+                        pageIndex = pageIndex,
+                        sort = KomgaSeriesSort.byLastModifiedDateDesc(),
+                    ),
+                )
+            } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
+                logger.debug { "Discover: profile page failed for ${libraryId.value}: ${t::class.simpleName}" }
+                break
+            }
+            page.content.forEach { ids += it.id.value }
+            if (page.content.isEmpty() || pageIndex >= page.totalPages - 1) break
+            pageIndex++
+        }
+        return ids
+    }
+
+    /**
+     * Local series id -> MangaUpdates id, resolved once and stored.
+     *
+     * Most of it is free: Komga metadata already carries a mangaupdates.com
+     * link on much of this library (22 of 45 sampled), so the mapping is a
+     * string parse. Only what is left costs a search request, and a miss is
+     * recorded as a miss so the next pass does not pay for it again.
+     */
+    private suspend fun resolveLinks(seriesIds: Collection<String>): Map<String, DiscoverSourceLink> {
+        val known = repository.linksOf(seriesIds)
+        val unresolved = seriesIds.filter { known[it]?.resolvedAt == null }
+        if (unresolved.isEmpty()) return known
+
+        val gate = Semaphore(NETWORK_CONCURRENCY)
+        val resolved = coroutineScope {
+            unresolved.map { seriesId ->
+                async {
+                    try {
+                        val series = seriesApi.getOneSeries(KomgaSeriesId(seriesId))
+                        val fromLinks = series.metadata.links
+                            .firstNotNullOfOrNull { MangaUpdatesClient.idFromUrl(it.url) }
+                        val externalId = fromLinks
+                            ?: gate.withPermit { mangaUpdates.searchOne(series.metadata.title) }
+                                ?.seriesId
+                                ?.takeIf { it > 0 }
+                                ?.toString()
+                        DiscoverSourceLink(
+                            seriesId = seriesId,
+                            source = SOURCE_MANGAUPDATES,
+                            externalId = externalId,
+                            resolvedAt = Clock.System.now(),
+                        )
+                    } catch (t: Throwable) {
+                        currentCoroutineContext().ensureActive()
+                        logger.debug { "Discover: could not resolve $seriesId: ${t::class.simpleName}" }
+                        // No row written: an unreachable server is not a miss,
+                        // and recording it as one would blank this seed for a
+                        // week over a transient failure.
+                        null
+                    }
+                }
+            }.awaitAll().filterNotNull()
+        }
+
+        repository.putLinks(resolved)
+        return known + resolved.associateBy { it.seriesId }
+    }
+
+    /**
+     * Adds one source series' recommendations to the running scores.
+     *
+     * Weights are normalised per source before being scaled by affinity, so a
+     * seed contributes at most its own affinity however popular it is. Raw
+     * vote counts would let one blockbuster outvote every other seed and turn
+     * the tab into a bestseller list.
+     */
+    private fun accumulate(
+        into: MutableMap<String, Accumulated>,
+        source: MangaUpdatesSeries,
+        sourceSeriesId: String,
+        affinity: Double,
+        owned: Set<String>,
+        dismissed: Set<String>,
+    ) {
+        val recommendations = source.allRecommendations
+        val maxWeight = recommendations.maxOfOrNull { it.weight }?.takeIf { it > 0 } ?: return
+        val categoryIds = source.categoryRecommendations.mapTo(mutableSetOf()) { it.seriesId }
+
+        recommendations.forEach { recommendation ->
+            val externalId = recommendation.seriesId.takeIf { it > 0 }?.toString() ?: return@forEach
+            if (externalId in dismissed) return@forEach
+            if (titleKey(recommendation.seriesName) in owned) return@forEach
+
+            val weight = recommendation.weight.toDouble() / maxWeight
+            val discount = if (recommendation.seriesId in categoryIds) CATEGORY_DISCOUNT else 1.0
+            val entry = into.getOrPut(externalId) {
+                Accumulated(
+                    externalId = externalId,
+                    title = recommendation.seriesName,
+                    url = recommendation.seriesUrl,
+                    imageUrl = recommendation.seriesImage?.url?.original.orEmpty(),
+                )
+            }
+            entry.score += weight * discount * affinity
+            entry.becauseOf[sourceSeriesId] = maxOf(
+                entry.becauseOf[sourceSeriesId] ?: 0.0,
+                weight * discount * affinity,
+            )
+        }
+    }
+
+    /**
+     * Normalised titles of everything indexed, for "do I already own this".
+     *
+     * Read from the local term index rather than from Komga: it already holds
+     * every series' title, so the check costs one query instead of a crawl —
+     * and a library that has never been indexed simply contributes nothing,
+     * which is the honest answer rather than a wrong one.
+     */
+    private suspend fun ownedTitleKeys(): Set<String> =
+        similarityIndex.allTitles().mapTo(mutableSetOf()) { titleKey(it.titleSort) }
+
+    private class Accumulated(
+        val externalId: String,
+        val title: String,
+        val url: String,
+        val imageUrl: String,
+    ) {
+        var score: Double = 0.0
+        val becauseOf: MutableMap<String, Double> = mutableMapOf()
+
+        fun toSuggestion(now: kotlin.time.Instant) = DiscoverSuggestion(
+            externalId = externalId,
+            source = SOURCE_MANGAUPDATES,
+            title = title,
+            url = url,
+            imageUrl = imageUrl,
+            year = "",
+            rating = 0.0,
+            score = score,
+            becauseOf = becauseOf.entries
+                .sortedByDescending { it.value }
+                .take(MAX_ATTRIBUTIONS)
+                .map { it.key },
+            updatedAt = now,
+        )
+    }
+}
+
+/**
+ * Comparison key for a title: letters and digits only, lowercased.
+ *
+ * Deliberately crude. The two sides are a Komga shelf name and a MangaUpdates
+ * romanisation, so punctuation, spacing and case never agree, and anything
+ * subtler would need the fuzzy matcher — which is a per-pair cost over twelve
+ * thousand local titles.
+ */
+internal fun titleKey(title: String): String =
+    title.lowercase().filter { it.isLetterOrDigit() }
+
+/** Category votes are a weaker signal than a reader's explicit link. */
+private const val CATEGORY_DISCOUNT = 0.5
+
+/** Two requests in flight. This is somebody's free service. */
+private const val NETWORK_CONCURRENCY = 2
+
+private const val SEED_LIMIT = 40
+private const val MAX_STORED = 200
+private const val MAX_ATTRIBUTIONS = 3
+private const val PROFILE_PAGE_SIZE = 200
+private const val MAX_PROFILE_PAGES = 2

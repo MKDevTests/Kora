@@ -34,6 +34,8 @@ class NavigationSettingsViewModel(
         private set
     var nextReleasesInBottomNav by mutableStateOf(false)
         private set
+    var discoverEnabled by mutableStateOf(false)
+        private set
     var aniListLinkSuggestionsEnabled by mutableStateOf(false)
         private set
     var shareLinksViaKomga by mutableStateOf(false)
@@ -47,6 +49,7 @@ class NavigationSettingsViewModel(
         statsEnabled = settingsRepository.getStatsEnabled().first()
         statsInBottomNav = settingsRepository.getStatsInBottomNav().first()
         nextReleasesInBottomNav = settingsRepository.getNextReleasesInBottomNav().first()
+        discoverEnabled = settingsRepository.getDiscoverEnabled().first()
         aniListLinkSuggestionsEnabled = settingsRepository.getAniListLinkSuggestionsEnabled().first()
         shareLinksViaKomga = settingsRepository.getShareLinksViaKomga().first()
         mutableState.value = LoadState.Success(Unit)
@@ -75,6 +78,11 @@ class NavigationSettingsViewModel(
     fun onNextReleasesInBottomNavChange(enabled: Boolean) {
         nextReleasesInBottomNav = enabled
         screenModelScope.launch { settingsRepository.putNextReleasesInBottomNav(enabled) }
+    }
+
+    fun onDiscoverEnabledChange(enabled: Boolean) {
+        discoverEnabled = enabled
+        screenModelScope.launch { settingsRepository.putDiscoverEnabled(enabled) }
     }
 
     fun onAniListLinkSuggestionsEnabledChange(enabled: Boolean) {

@@ -216,6 +216,7 @@ class DesktopAppModule(
             seriesLinksCacheRepository = snd.komelia.db.library.ExposedSeriesLinksCacheRepository(databases.app),
             seriesBooksCacheRepository = snd.komelia.db.library.ExposedSeriesBooksCacheRepository(databases.app),
             translationGlossaryRepository = snd.komelia.db.translation.ExposedTranslationGlossaryRepository(databases.app),
+            discoverRepository = snd.komelia.db.discover.ExposedDiscoverRepository(databases.app),
         )
     }
 

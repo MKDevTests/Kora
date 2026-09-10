@@ -389,6 +389,11 @@ abstract class AppModule(
             aniListClient = snd.komelia.anilist.AniListClient(
                 ktor = ktor.config { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } },
             ),
+            // Discover's source. Same shape as AniList above, and for the same
+            // reason it exists at all: AniList's API answers 403 today.
+            mangaUpdatesClient = snd.komelia.discover.MangaUpdatesClient(
+                ktor = ktor.config { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } },
+            ),
             bookCompletionEvents = bookCompletionEvents,
 
             coilContext = androidContext,

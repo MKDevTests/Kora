@@ -30,6 +30,8 @@ fun NavigationSettingsContent(
     onStatsInBottomNavChange: (Boolean) -> Unit,
     nextReleasesInBottomNav: Boolean,
     onNextReleasesInBottomNavChange: (Boolean) -> Unit,
+    discoverEnabled: Boolean,
+    onDiscoverEnabledChange: (Boolean) -> Unit,
     aniListLinkSuggestionsEnabled: Boolean,
     onAniListLinkSuggestionsEnabledChange: (Boolean) -> Unit,
     shareLinksViaKomga: Boolean,
@@ -141,6 +143,23 @@ fun NavigationSettingsContent(
                 text = LocalStrings.current.ui.addsADedicatedButtonTo +
                     "the cross-library upcoming releases calendar. When off, the " +
                     "page is still reachable from the Home screen card.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+
+        // Discover tab (opt-in, online) ---------------------------------
+        Column {
+            SwitchWithLabel(
+                label = { Text("Onglet Découvertes") },
+                checked = discoverEnabled,
+                onCheckedChange = onDiscoverEnabledChange,
+            )
+            Text(
+                text = "Propose des séries que vous ne possédez pas, à partir de celles " +
+                    "que vous avez notées, mises en favori ou lues. Interroge MangaUpdates " +
+                    "une fois par semaine, en arrière-plan. Désactivé, rien n'est envoyé.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp),

@@ -27,6 +27,14 @@ interface CommonSettingsRepository {
     fun getExperimentalGenreTab(): Flow<Boolean>
     suspend fun putExperimentalGenreTab(enabled: Boolean)
 
+    /**
+     * Discover tab (V105). Off by default, and it must stay that way:
+     * turning it on sends identifiers of series the user owns to a third
+     * party, which taken together are a reading profile.
+     */
+    fun getDiscoverEnabled(): Flow<Boolean>
+    suspend fun putDiscoverEnabled(enabled: Boolean)
+
     /** Genre tab per-(library, genre) cover + display-name overrides. */
     fun getGenreCoverOverrides(): Flow<Map<String, String>>
     suspend fun putGenreCoverOverrides(overrides: Map<String, String>)

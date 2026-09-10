@@ -67,4 +67,6 @@ data class AppRepositories(
     val seriesBooksCacheRepository: snd.komelia.library.SeriesBooksCacheRepository,
     /** Terms the page translator is not allowed to decide for itself. */
     val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
+    /** Discover results — a cache of a third party's answers, never backed up. */
+    val discoverRepository: snd.komelia.discover.DiscoverRepository,
 )

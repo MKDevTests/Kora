@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Event
+import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalLibrary
 import androidx.compose.material.icons.rounded.Search
@@ -656,6 +657,19 @@ class MainScreen(
                                 navigator.push(snd.komelia.ui.nextreleases.NextReleasesScreen())
                         },
                         isSelected = navigator.lastItem is snd.komelia.ui.nextreleases.NextReleasesScreen,
+                        accentColor = accentColor
+                    )
+                }
+                // Opt-in, so this button is absent for anyone who never turned
+                // Discover on — the only surface backed by a third party.
+                if (vm.showDiscoverInBottomNav.collectAsState().value) {
+                    FloatingToolbarButton(
+                        icon = Icons.Rounded.Explore,
+                        onClick = {
+                            if (navigator.lastItem !is snd.komelia.ui.discover.DiscoverScreen)
+                                navigator.push(snd.komelia.ui.discover.DiscoverScreen())
+                        },
+                        isSelected = navigator.lastItem is snd.komelia.ui.discover.DiscoverScreen,
                         accentColor = accentColor
                     )
                 }

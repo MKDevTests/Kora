@@ -635,6 +635,21 @@ class ViewModelFactory(
         return snd.komelia.ui.nextreleases.NextReleasesViewModel(createNextReleasesService())
     }
 
+    fun getDiscoverViewModel(): snd.komelia.ui.discover.DiscoverViewModel {
+        return snd.komelia.ui.discover.DiscoverViewModel(
+            repository = appRepositories.discoverRepository,
+            service = snd.komelia.ui.discover.DiscoverService(
+                seriesApi = komgaApi.seriesApi,
+                similarityIndex = appRepositories.similarityIndexRepository,
+                ratingsRepository = appRepositories.seriesRatingsRepository,
+                favoriteSeriesIds = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+                repository = appRepositories.discoverRepository,
+                mangaUpdates = dependencies.mangaUpdatesClient,
+            ),
+            seriesApi = komgaApi.seriesApi,
+        )
+    }
+
     /**
      * Factory for [snd.komelia.ui.nextreleases.NextReleasesService]. Exposed
      * separately so the Home card (which can't use Voyager's
