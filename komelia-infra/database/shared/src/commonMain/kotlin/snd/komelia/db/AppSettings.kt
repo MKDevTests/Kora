@@ -192,6 +192,7 @@ data class AppSettings(
     // so an existing install keeps whatever it had -- see the note on the class.
     val experimentalGenreTab: Boolean = true,
     val discoverEnabled: Boolean = false,
+    val discoverLibraryIds: Set<String> = emptySet(),
 
     /**
      * Per-(library, genre) cover override for the Genre tab: key

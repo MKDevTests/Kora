@@ -35,6 +35,16 @@ interface CommonSettingsRepository {
     fun getDiscoverEnabled(): Flow<Boolean>
     suspend fun putDiscoverEnabled(enabled: Boolean)
 
+    /**
+     * Libraries the Discover taste seed is built from. Empty = all of them,
+     * which is what every existing install starts with.
+     *
+     * Only the seed is restricted; what counts as already owned stays the
+     * whole catalogue, so an unticked library still suppresses its own series.
+     */
+    fun getDiscoverLibraryIds(): Flow<Set<String>>
+    suspend fun putDiscoverLibraryIds(libraryIds: Set<String>)
+
     /** Genre tab per-(library, genre) cover + display-name overrides. */
     fun getGenreCoverOverrides(): Flow<Map<String, String>>
     suspend fun putGenreCoverOverrides(overrides: Map<String, String>)

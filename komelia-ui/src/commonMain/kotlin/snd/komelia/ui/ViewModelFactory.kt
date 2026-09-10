@@ -635,6 +635,12 @@ class ViewModelFactory(
         return snd.komelia.ui.nextreleases.NextReleasesViewModel(createNextReleasesService())
     }
 
+    fun getDiscoverSettingsViewModel(): snd.komelia.ui.settings.discover.DiscoverSettingsViewModel {
+        return snd.komelia.ui.settings.discover.DiscoverSettingsViewModel(
+            settingsRepository = appRepositories.settingsRepository,
+        )
+    }
+
     fun getDiscoverViewModel(): snd.komelia.ui.discover.DiscoverViewModel {
         return snd.komelia.ui.discover.DiscoverViewModel(
             repository = appRepositories.discoverRepository,
@@ -643,6 +649,7 @@ class ViewModelFactory(
                 similarityIndex = appRepositories.similarityIndexRepository,
                 ratingsRepository = appRepositories.seriesRatingsRepository,
                 favoriteSeriesIds = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+                seedLibraryIds = appRepositories.settingsRepository.getDiscoverLibraryIds(),
                 repository = appRepositories.discoverRepository,
                 mangaUpdates = dependencies.mangaUpdatesClient,
             ),

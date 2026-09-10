@@ -50,6 +50,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(discoverEnabled = enabled) }
     }
 
+    override fun getDiscoverLibraryIds(): Flow<Set<String>> =
+        wrapper.state.map { it.discoverLibraryIds }.distinctUntilChanged()
+
+    override suspend fun putDiscoverLibraryIds(libraryIds: Set<String>) {
+        wrapper.transform { it.copy(discoverLibraryIds = libraryIds) }
+    }
+
     override fun getGenreCoverOverrides(): Flow<Map<String, String>> =
         wrapper.state.map { it.genreCoverOverrides }.distinctUntilChanged()
 

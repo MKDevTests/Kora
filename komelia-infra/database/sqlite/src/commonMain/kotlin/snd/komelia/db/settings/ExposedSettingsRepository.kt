@@ -84,6 +84,7 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 )
                 it[experimentalGenreTab] = settings.experimentalGenreTab
                 it[discoverEnabled] = settings.discoverEnabled
+                it[discoverLibraryIds] = settings.discoverLibraryIds.joinToString(",")
                 it[genreCoverOverrides] = Json.encodeToString(
                     MapSerializer(String.serializer(), String.serializer()), settings.genreCoverOverrides
                 )
@@ -180,6 +181,10 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             }.getOrDefault(emptyList()),
             experimentalGenreTab = get(AppSettingsTable.experimentalGenreTab),
             discoverEnabled = get(AppSettingsTable.discoverEnabled),
+            discoverLibraryIds = get(AppSettingsTable.discoverLibraryIds)
+                .split(",")
+                .filter { it.isNotBlank() }
+                .toSet(),
             genreCoverOverrides = runCatching {
                 Json.decodeFromString(
                     MapSerializer(String.serializer(), String.serializer()),

@@ -115,6 +115,13 @@ fun SettingsNavigationMenu(
                 )
                 add(
                     NavEntry(
+                        label = "Découvertes",
+                        onClick = { onNavigation(snd.komelia.ui.settings.discover.DiscoverSettingsScreen()) },
+                        isSelected = currentScreen is snd.komelia.ui.settings.discover.DiscoverSettingsScreen,
+                    )
+                )
+                add(
+                    NavEntry(
                         label = LocalStrings.current.ui.connectedServers,
                         onClick = { onNavigation(AppServerManagementScreen()) },
                         isSelected = currentScreen is AppServerManagementScreen,

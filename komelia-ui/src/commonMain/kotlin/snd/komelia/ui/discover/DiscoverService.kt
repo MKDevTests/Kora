@@ -16,12 +16,15 @@ import snd.komelia.discover.DiscoverSuggestion
 import snd.komelia.discover.MangaUpdatesClient
 import snd.komelia.discover.MangaUpdatesSeries
 import snd.komelia.discover.SOURCE_MANGAUPDATES
+import snd.komelia.discover.localTitleVariants
+import snd.komelia.discover.trackerTitle
 import snd.komelia.komga.api.KomgaSeriesApi
 import snd.komelia.ratings.SeriesRatingsRepository
 import snd.komelia.similarity.SeriesEvidence
 import snd.komelia.similarity.SimilarityIndexRepository
 import snd.komelia.similarity.tasteAffinities
 import snd.komga.client.book.KomgaReadStatus
+import snd.komga.client.common.KomgaWebLink
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort.KomgaSeriesSort
 import snd.komga.client.library.KomgaLibraryId
@@ -50,6 +53,8 @@ class DiscoverService(
     private val similarityIndex: SimilarityIndexRepository,
     private val ratingsRepository: SeriesRatingsRepository,
     private val favoriteSeriesIds: Flow<Set<String>>,
+    /** Libraries the seed is drawn from; empty means every library. */
+    private val seedLibraryIds: Flow<Set<String>>,
     private val repository: DiscoverRepository,
     private val mangaUpdates: MangaUpdatesClient,
 ) {
@@ -115,19 +120,39 @@ class DiscoverService(
      * would be the one shipping suggestions. The cap is the request budget:
      * beyond a few dozen seeds the recommendations start repeating anyway,
      * because popular series recommend each other.
+     *
+     * Restricted to the chosen libraries, which is the difference between a
+     * seed that can produce something and one that cannot: on the first real
+     * pass, 37 of the 43 seed slots went to franco-belgian comics that
+     * MangaUpdates does not carry, leaving six manga to generate every
+     * suggestion. Ratings and favourites are filtered too — a five-star comic
+     * is a real preference, but not one this source can answer.
      */
     private suspend fun buildSeed(libraries: List<KomgaLibraryId>): Map<String, Double> {
+        val chosen = seedLibraryIds.first()
+        val seedLibraries = if (chosen.isEmpty()) libraries
+        else libraries.filter { it.value in chosen }
+        if (seedLibraries.isEmpty()) return emptyMap()
+
         val favorites = favoriteSeriesIds.first()
         val ratings = ratingsRepository.listAll().associate { it.seriesId.value to it.stars }
 
         val read = mutableSetOf<String>()
         val inProgress = mutableSetOf<String>()
-        libraries.forEach { libraryId ->
+        seedLibraries.forEach { libraryId ->
             read += seriesIdsWith(KomgaReadStatus.READ, libraryId)
             inProgress += seriesIdsWith(KomgaReadStatus.IN_PROGRESS, libraryId)
         }
 
-        val evidence = (read + inProgress + favorites + ratings.keys)
+        // Ratings and favourites are cross-library and local, so unlike the read
+        // states above they carry no library of their own. The term index does,
+        // and answers ids-only — no JSON blob is decoded to run this filter.
+        val inScope: Set<String>? = if (chosen.isEmpty()) null
+        else seedLibraries.flatMapTo(mutableSetOf()) { similarityIndex.seriesIdsOf(it.value) }
+
+        fun allowed(id: String) = inScope == null || id in inScope
+
+        val evidence = (read + inProgress + favorites.filter(::allowed) + ratings.keys.filter(::allowed))
             .distinct()
             .map { id ->
                 SeriesEvidence(
@@ -186,10 +211,21 @@ class DiscoverService(
     /**
      * Local series id -> MangaUpdates id, resolved once and stored.
      *
-     * Most of it is free: Komga metadata already carries a mangaupdates.com
-     * link on much of this library (22 of 45 sampled), so the mapping is a
-     * string parse. Only what is left costs a search request, and a miss is
-     * recorded as a miss so the next pass does not pay for it again.
+     * Three ways in, cheapest first, and each one only runs when the one
+     * before it found nothing:
+     *
+     *  1. an explicit mangaupdates.com link in the Komga metadata — free,
+     *     certain, and rare in this library;
+     *  2. a Nautiljon or Anime-Planet link, whose slug IS the romanised or
+     *     English title (see [trackerTitle]) — still free, and it asks the
+     *     search the question it can actually answer, since these shelves are
+     *     named in French while MangaUpdates indexes romaji;
+     *  3. the Komga title itself, stripped of its shelf decorations.
+     *
+     * Every search is checked by exact title equality before it counts, so a
+     * step that finds nothing convincing falls through to the next instead of
+     * inventing a match. A series nothing resolves is recorded as a miss, so
+     * the next pass does not pay for it again.
      */
     private suspend fun resolveLinks(seriesIds: Collection<String>): Map<String, DiscoverSourceLink> {
         val known = repository.linksOf(seriesIds)
@@ -202,13 +238,15 @@ class DiscoverService(
                 async {
                     try {
                         val series = seriesApi.getOneSeries(KomgaSeriesId(seriesId))
-                        val fromLinks = series.metadata.links
-                            .firstNotNullOfOrNull { MangaUpdatesClient.idFromUrl(it.url) }
-                        val externalId = fromLinks
-                            ?: gate.withPermit { mangaUpdates.searchOne(series.metadata.title) }
-                                ?.seriesId
-                                ?.takeIf { it > 0 }
-                                ?.toString()
+                        val links = series.metadata.links
+                        val explicit = links.firstNotNullOfOrNull { MangaUpdatesClient.idFromUrl(it.url) }
+                        val externalId = explicit ?: searchQueriesFor(series.metadata.title, links)
+                            .firstNotNullOfOrNull { query ->
+                                gate.withPermit { mangaUpdates.searchOne(query) }
+                                    ?.seriesId
+                                    ?.takeIf { it > 0 }
+                                    ?.toString()
+                            }
                         DiscoverSourceLink(
                             seriesId = seriesId,
                             source = SOURCE_MANGAUPDATES,
@@ -230,6 +268,19 @@ class DiscoverService(
         repository.putLinks(resolved)
         return known + resolved.associateBy { it.seriesId }
     }
+
+    /**
+     * The queries worth trying for a series, in order, without duplicates.
+     *
+     * Tracker slugs come first because they are already in the form the
+     * search indexes; the shelf name is the fallback. Each is tried only
+     * until one produces a match that passes the equality check.
+     */
+    private fun searchQueriesFor(title: String, links: List<KomgaWebLink>): List<String> =
+        (links.mapNotNull { trackerTitle(it.url) } + localTitleVariants(title))
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
 
     /**
      * Adds one source series' recommendations to the running scores.

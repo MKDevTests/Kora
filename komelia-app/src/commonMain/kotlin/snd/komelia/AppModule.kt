@@ -392,7 +392,13 @@ abstract class AppModule(
             // Discover's source. Same shape as AniList above, and for the same
             // reason it exists at all: AniList's API answers 403 today.
             mangaUpdatesClient = snd.komelia.discover.MangaUpdatesClient(
-                ktor = ktor.config { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } },
+                // The client owns its Json: this API sends nulls where it has no
+                // value, and reading it with anything else returns nothing at all.
+                ktor = ktor.config {
+                    install(ContentNegotiation) {
+                        json(snd.komelia.discover.MangaUpdatesClient.json)
+                    }
+                },
             ),
             bookCompletionEvents = bookCompletionEvents,
 
