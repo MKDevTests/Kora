@@ -116,6 +116,8 @@ class AppMigrations : MigrationResourcesProvider() {
         "V104__similarity_language.sql",
         "V105__discover.sql",
         "V106__discover_libraries.sql",
+        "V107__discover_details.sql",
+        "V108__discover_reset_matches.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

@@ -92,6 +92,12 @@ class ExposedDiscoverRepository(
                         imageUrl = row[DiscoverSuggestionsTable.imageUrl],
                         year = row[DiscoverSuggestionsTable.year],
                         rating = row[DiscoverSuggestionsTable.rating],
+                        ratingVotes = row[DiscoverSuggestionsTable.ratingVotes],
+                        status = row[DiscoverSuggestionsTable.status],
+                        description = row[DiscoverSuggestionsTable.description],
+                        genres = row[DiscoverSuggestionsTable.genres].asStringList(),
+                        authors = row[DiscoverSuggestionsTable.authors].asStringList(),
+                        publishers = row[DiscoverSuggestionsTable.publishers].asStringList(),
                         score = row[DiscoverSuggestionsTable.score],
                         becauseOf = runCatching {
                             JsonDbDefault.decodeFromString<List<String>>(row[DiscoverSuggestionsTable.becauseOf])
@@ -116,6 +122,12 @@ class ExposedDiscoverRepository(
                     this[DiscoverSuggestionsTable.imageUrl] = suggestion.imageUrl
                     this[DiscoverSuggestionsTable.year] = suggestion.year
                     this[DiscoverSuggestionsTable.rating] = suggestion.rating
+                    this[DiscoverSuggestionsTable.ratingVotes] = suggestion.ratingVotes
+                    this[DiscoverSuggestionsTable.status] = suggestion.status
+                    this[DiscoverSuggestionsTable.description] = suggestion.description
+                    this[DiscoverSuggestionsTable.genres] = JsonDbDefault.encodeToString(suggestion.genres)
+                    this[DiscoverSuggestionsTable.authors] = JsonDbDefault.encodeToString(suggestion.authors)
+                    this[DiscoverSuggestionsTable.publishers] = JsonDbDefault.encodeToString(suggestion.publishers)
                     this[DiscoverSuggestionsTable.score] = suggestion.score
                     this[DiscoverSuggestionsTable.becauseOf] =
                         JsonDbDefault.encodeToString(suggestion.becauseOf)
@@ -168,6 +180,10 @@ class ExposedDiscoverRepository(
         }
     }
 }
+
+/** A row whose JSON is unreadable costs one field, never the whole card. */
+private fun String.asStringList(): List<String> =
+    runCatching { JsonDbDefault.decodeFromString<List<String>>(this) }.getOrElse { emptyList() }
 
 private fun Instant.asStored(): String = toEpochMilliseconds().toString()
 

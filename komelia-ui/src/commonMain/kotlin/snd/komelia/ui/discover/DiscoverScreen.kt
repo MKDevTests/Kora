@@ -1,6 +1,15 @@
 package snd.komelia.ui.discover
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -153,44 +162,140 @@ private fun SuggestionCard(
     onOpen: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.width(60.dp).height(90.dp).clip(RoundedCornerShape(4.dp))) {
-                if (suggestion.imageUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = suggestion.imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+    // Collapsed by default: the summaries run several paragraphs, and a page of
+    // them is unreadable. Per-card, and deliberately not remembered — this is a
+    // list to skim, not a state to maintain.
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Box(Modifier.width(70.dp).height(105.dp).clip(RoundedCornerShape(4.dp))) {
+                    if (suggestion.imageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = suggestion.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
-            }
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(
-                    suggestion.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                // Only names that resolved: a raw series id on a card would be
-                // noise, and a missing one is not worth an error.
-                val because = suggestion.becauseOf.mapNotNull { sourceNames[it] }
-                if (because.isNotEmpty()) {
+
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(
-                        "Parce que vous lisez ${because.joinToString(", ")}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        suggestion.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
+
+                    // Year, publication state and rating on one line: the three
+                    // things that decide whether a series is worth a second
+                    // look, and they fit.
+                    val facts = buildList {
+                        if (suggestion.year.isNotBlank()) add(suggestion.year)
+                        if (suggestion.status.isNotBlank()) add(suggestion.status)
+                    }
+                    if (facts.isNotEmpty()) {
+                        Text(
+                            facts.joinToString("  ·  "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    // A rating without its sample size is a number pretending to
+                    // be evidence: 8.7 over 4350 votes is not 8.7 over 2.
+                    if (suggestion.rating > 0.0) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                buildString {
+                                    append(" ")
+                                    append(formatRating(suggestion.rating))
+                                    if (suggestion.ratingVotes > 0) append(" (${suggestion.ratingVotes} votes)")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    if (suggestion.authors.isNotEmpty()) {
+                        Text(
+                            suggestion.authors.take(3).joinToString(", "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    // Only names that resolved: a raw series id on a card would
+                    // be noise, and a missing one is not worth an error.
+                    val because = suggestion.becauseOf.mapNotNull { sourceNames[it] }
+                    if (because.isNotEmpty()) {
+                        Text(
+                            "Parce que vous lisez ${because.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Ne plus proposer")
                 }
             }
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Rounded.Close, contentDescription = "Ne plus proposer")
+
+            if (suggestion.genres.isNotEmpty()) {
+                Text(
+                    suggestion.genres.take(6).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            if (suggestion.description.isNotBlank()) {
+                Text(
+                    suggestion.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clickable { expanded = !expanded },
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onOpen, enabled = suggestion.url.isNotBlank()) {
+                    Text("Voir la fiche")
+                }
             }
         }
     }
+}
+
+/** One decimal, without pulling in a formatter for a single number. */
+private fun formatRating(rating: Double): String {
+    val rounded = kotlin.math.round(rating * 10) / 10.0
+    return rounded.toString().take(3)
 }

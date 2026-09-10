@@ -49,7 +49,7 @@ internal fun titleMatches(localTitle: String, candidateTitle: String, hitTitle: 
  *
  * Komga shelf names carry decorations that mean something to their owner and
  * nothing to a database — "(Chap)" on 711 series here, then "(EN)", "(Univers)",
- * "(Couleur)", "(INT)", "(Light Novel)", "(Perfect Edition)". They are the
+ * "(Couleur)", "(INT)", "(Perfect Edition)". They are the
  * user's own convention and stay untouched in Komga; it is this side that has
  * to look past them.
  *
@@ -92,6 +92,30 @@ internal fun stripSourceLanguage(title: String): String {
     return title.removeRange(match.range).trim()
 }
 
+/**
+ * Comparison key for "do I already own this", tolerant of edition wording.
+ *
+ * Unlike [localTitleVariants] this strips the words wherever they sit, with or
+ * without parentheses, because both sides are messy: the shelf says "Spriggan
+ * Perfect Edition" and "Eden - It's An Endless World! (Perfect Edition)" where
+ * the source says plain "Spriggan" and "Eden - It's an Endless World!".
+ *
+ * Measured over 54 candidate suggestions against the 12775 indexed series: 11
+ * duplicates caught, none wrongly. An edit-distance tolerance was tried on the
+ * same data to catch "Parasyte" against a shelf's "Parasite" — it caught two
+ * more and invented two absurd ones ("Kimetsu Gakuen!" matched to "Thaw"), so
+ * equality it is.
+ */
+fun catalogueKey(title: String): String {
+    val words = normalizeTitle(title).split(' ').filter { it.isNotBlank() && it !in EDITION_WORDS }
+    return words.joinToString(" ")
+}
+
+private val EDITION_WORDS = setOf(
+    "perfect", "edition", "integrale", "deluxe", "collector", "couleur", "colour",
+    "color", "chap", "univers", "int", "en", "vf", "vo", "the",
+)
+
 /** Lowercased, unaccented, letters and digits only, single-spaced. */
 internal fun normalizeTitle(title: String): String {
     val builder = StringBuilder(title.length)
@@ -124,7 +148,7 @@ private val DOUBLE_SPACE = Regex("""\s{2,}""")
  * Novels of this library.
  */
 private val DECORATIONS = setOf(
-    "chap", "en", "univers", "couleur", "int", "light novel", "perfect edition",
+    "chap", "en", "univers", "couleur", "int", "perfect edition",
     "vf", "vo", "vostfr", "color", "colour", "deluxe", "collector",
 )
 

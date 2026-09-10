@@ -163,7 +163,21 @@ data class MangaUpdatesSeries(
     @SerialName("bayesian_rating") val rating: Double = 0.0,
     @SerialName("rating_votes") val ratingVotes: Int = 0,
     val type: String = "",
+    /** Free text, several paragraphs, sometimes with the publisher's credit line. */
+    val description: String = "",
+    /** "27 Volumes (Complete)" — publication state as one human string. */
+    val status: String = "",
+    val completed: Boolean = false,
     val image: MangaUpdatesImage? = null,
+    val genres: List<MangaUpdatesGenre> = emptyList(),
+    val authors: List<MangaUpdatesAuthor> = emptyList(),
+    val publishers: List<MangaUpdatesPublisher> = emptyList(),
+    /**
+     * Every other name the series is known by. The reason the "do I own this"
+     * check can work at all: the local shelf says "Parasite" where the source
+     * says "Kiseijuu", and only this list bridges the two.
+     */
+    val associated: List<MangaUpdatesTitle> = emptyList(),
     val recommendations: List<MangaUpdatesRecommendation> = emptyList(),
     @SerialName("category_recommendations") val categoryRecommendations: List<MangaUpdatesRecommendation> = emptyList(),
 ) {
@@ -176,7 +190,36 @@ data class MangaUpdatesSeries(
      */
     val allRecommendations: List<MangaUpdatesRecommendation>
         get() = recommendations + categoryRecommendations
+
+    /**
+     * Prose rather than comics — "Novel" and "Light Novel" both appear here.
+     *
+     * Deliberately out of scope: this reader is for manga and comics, and a
+     * novel suggestion is one the user cannot act on. Measured at 9 of 54
+     * candidates on the real taste profile, so it is not a rounding error.
+     */
+    val isNovel: Boolean
+        get() = type.contains("novel", ignoreCase = true)
 }
+
+@Serializable
+data class MangaUpdatesTitle(val title: String = "")
+
+@Serializable
+data class MangaUpdatesGenre(val genre: String = "")
+
+@Serializable
+data class MangaUpdatesAuthor(
+    val name: String = "",
+    /** "Author", "Artist" — worth keeping apart on a card. */
+    val type: String = "",
+)
+
+@Serializable
+data class MangaUpdatesPublisher(
+    @SerialName("publisher_name") val publisherName: String = "",
+    val type: String = "",
+)
 
 @Serializable
 data class MangaUpdatesImage(val url: MangaUpdatesImageUrl? = null)

@@ -33,6 +33,14 @@ data class DiscoverSuggestion(
     val imageUrl: String,
     val year: String,
     val rating: Double,
+    /** How many people voted. 8.7 over 4350 votes is not 8.7 over 2. */
+    val ratingVotes: Int,
+    /** Publication state as the source words it: "27 Volumes (Complete)". */
+    val status: String,
+    val description: String,
+    val genres: List<String>,
+    val authors: List<String>,
+    val publishers: List<String>,
     val score: Double,
     val becauseOf: List<String>,
     val updatedAt: Instant?,

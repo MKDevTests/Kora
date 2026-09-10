@@ -35,6 +35,14 @@ object DiscoverSuggestionsTable : Table("DiscoverSuggestions") {
     val imageUrl = text("image_url")
     val year = text("year")
     val rating = double("rating")
+    val ratingVotes = integer("rating_votes")
+    val status = text("status")
+    val description = text("description")
+
+    /** JSON arrays: short lists, read whole, never queried into. */
+    val genres = text("genres")
+    val authors = text("authors")
+    val publishers = text("publishers")
     val score = double("score")
 
     /** JSON array of the local series ids that produced this suggestion. */
