@@ -57,6 +57,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(discoverLibraryIds = libraryIds) }
     }
 
+    override fun getDiscoverHideUnlicensed(): Flow<Boolean> =
+        wrapper.state.map { it.discoverHideUnlicensed }.distinctUntilChanged()
+
+    override suspend fun putDiscoverHideUnlicensed(hide: Boolean) {
+        wrapper.transform { it.copy(discoverHideUnlicensed = hide) }
+    }
+
     override fun getGenreCoverOverrides(): Flow<Map<String, String>> =
         wrapper.state.map { it.genreCoverOverrides }.distinctUntilChanged()
 

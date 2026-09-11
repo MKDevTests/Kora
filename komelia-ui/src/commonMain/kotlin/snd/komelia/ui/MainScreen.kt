@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.DrawerValue.Closed
 import androidx.compose.material3.DrawerValue.Open
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,6 +75,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Bookmark
@@ -663,15 +665,33 @@ class MainScreen(
                 // Opt-in, so this button is absent for anyone who never turned
                 // Discover on — the only surface backed by a third party.
                 if (vm.showDiscoverInBottomNav.collectAsState().value) {
-                    FloatingToolbarButton(
-                        icon = Icons.Rounded.Explore,
-                        onClick = {
-                            if (navigator.lastItem !is snd.komelia.ui.discover.DiscoverScreen)
-                                navigator.push(snd.komelia.ui.discover.DiscoverScreen())
-                        },
-                        isSelected = navigator.lastItem is snd.komelia.ui.discover.DiscoverScreen,
-                        accentColor = accentColor
-                    )
+                    // A pass runs process-scoped and outlives the tab, so the
+                    // only place it can be seen from anywhere is this button.
+                    // Without the ring the user leaves the tab and has no way
+                    // to tell the search is still going.
+                    val discovering = snd.komelia.ui.discover.DiscoverScanner.scanning
+                        .collectAsState().value
+                    Box(contentAlignment = Alignment.Center) {
+                        FloatingToolbarButton(
+                            icon = Icons.Rounded.Explore,
+                            onClick = {
+                                if (navigator.lastItem !is snd.komelia.ui.discover.DiscoverScreen)
+                                    navigator.push(snd.komelia.ui.discover.DiscoverScreen())
+                            },
+                            isSelected = navigator.lastItem is snd.komelia.ui.discover.DiscoverScreen,
+                            accentColor = accentColor
+                        )
+                        if (discovering) {
+                            val discoverProgress = snd.komelia.ui.discover.DiscoverScanner.progress
+                                .collectAsState().value
+                            CircularProgressIndicator(
+                                progress = { discoverProgress },
+                                modifier = Modifier.size(38.dp),
+                                strokeWidth = 2.dp,
+                                color = accentColor ?: MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                 }
                 FloatingToolbarButton(
                     icon = Icons.Rounded.Settings,

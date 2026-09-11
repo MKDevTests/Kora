@@ -654,6 +654,7 @@ class ViewModelFactory(
                 mangaUpdates = dependencies.mangaUpdatesClient,
             ),
             seriesApi = komgaApi.seriesApi,
+            settingsRepository = appRepositories.settingsRepository,
         )
     }
 

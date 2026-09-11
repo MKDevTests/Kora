@@ -1,5 +1,6 @@
 package snd.komelia.db.discover
 
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -9,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import snd.komelia.db.ExposedRepository
 import snd.komelia.db.JsonDbDefault
@@ -77,42 +79,48 @@ class ExposedDiscoverRepository(
                 .select(DiscoverDismissedTable.externalId)
                 .mapTo(mutableSetOf()) { it[DiscoverDismissedTable.externalId] }
 
-            DiscoverSuggestionsTable.selectAll()
-                .orderBy(DiscoverSuggestionsTable.score, SortOrder.DESC)
+            DiscoverSuggestionsTable
+                .selectAll()
+                .where { DiscoverSuggestionsTable.interested eq false }
+                // Voted first, whatever the scores say: a tag-derived candidate
+                // named by several seeds otherwise outscores a voted one and
+                // lands among them. Measured 2026-09-10 -- Cos-Chu 8th, above
+                // Kekkaishi and Shin Angyo Onshi.
+                .orderBy(
+                    DiscoverSuggestionsTable.voted to SortOrder.DESC,
+                    DiscoverSuggestionsTable.score to SortOrder.DESC,
+                )
                 .limit(limit + dismissed.size)
                 .asSequence()
                 .filterNot { it[DiscoverSuggestionsTable.externalId] in dismissed }
                 .take(limit)
-                .map { row ->
-                    DiscoverSuggestion(
-                        externalId = row[DiscoverSuggestionsTable.externalId],
-                        source = row[DiscoverSuggestionsTable.sourceName],
-                        title = row[DiscoverSuggestionsTable.title],
-                        url = row[DiscoverSuggestionsTable.url],
-                        imageUrl = row[DiscoverSuggestionsTable.imageUrl],
-                        year = row[DiscoverSuggestionsTable.year],
-                        rating = row[DiscoverSuggestionsTable.rating],
-                        ratingVotes = row[DiscoverSuggestionsTable.ratingVotes],
-                        status = row[DiscoverSuggestionsTable.status],
-                        description = row[DiscoverSuggestionsTable.description],
-                        genres = row[DiscoverSuggestionsTable.genres].asStringList(),
-                        authors = row[DiscoverSuggestionsTable.authors].asStringList(),
-                        publishers = row[DiscoverSuggestionsTable.publishers].asStringList(),
-                        score = row[DiscoverSuggestionsTable.score],
-                        becauseOf = runCatching {
-                            JsonDbDefault.decodeFromString<List<String>>(row[DiscoverSuggestionsTable.becauseOf])
-                        }.getOrElse { emptyList() },
-                        updatedAt = row[DiscoverSuggestionsTable.updatedAt].toInstantOrNull(),
-                    )
-                }
+                .map(::toSuggestion)
                 .toList()
+        }
+    }
+
+    override suspend fun interestedSuggestions(): List<DiscoverSuggestion> = transaction {
+        DiscoverSuggestionsTable
+            .selectAll()
+            .where { DiscoverSuggestionsTable.interested eq true }
+            .orderBy(DiscoverSuggestionsTable.updatedAt to SortOrder.DESC)
+            .map(::toSuggestion)
+    }
+
+    override suspend fun setInterested(externalId: String, interested: Boolean) {
+        transaction {
+            DiscoverSuggestionsTable.update({ DiscoverSuggestionsTable.externalId eq externalId }) {
+                it[DiscoverSuggestionsTable.interested] = interested
+            }
         }
     }
 
     override suspend fun replaceSuggestions(suggestions: Collection<DiscoverSuggestion>) {
         val now = Clock.System.now()
         transaction {
-            DiscoverSuggestionsTable.deleteAll()
+            // NOT deleteAll: a kept card is the user's own decision and must
+            // outlive a pass that no longer recommends it.
+            DiscoverSuggestionsTable.deleteWhere { DiscoverSuggestionsTable.interested eq false }
             suggestions.chunked(WRITE_CHUNK).forEach { chunk ->
                 DiscoverSuggestionsTable.batchUpsert(chunk) { suggestion ->
                     this[DiscoverSuggestionsTable.externalId] = suggestion.externalId
@@ -129,6 +137,13 @@ class ExposedDiscoverRepository(
                     this[DiscoverSuggestionsTable.authors] = JsonDbDefault.encodeToString(suggestion.authors)
                     this[DiscoverSuggestionsTable.publishers] = JsonDbDefault.encodeToString(suggestion.publishers)
                     this[DiscoverSuggestionsTable.score] = suggestion.score
+                    this[DiscoverSuggestionsTable.voted] = suggestion.voted
+                    this[DiscoverSuggestionsTable.licensed] = suggestion.licensed
+                    this[DiscoverSuggestionsTable.englishPublishers] =
+                        JsonDbDefault.encodeToString(suggestion.englishPublishers)
+                    // `interested` is deliberately absent: the upsert would
+                    // clear the flag on a row the user kept and the pass still
+                    // recommends.
                     this[DiscoverSuggestionsTable.becauseOf] =
                         JsonDbDefault.encodeToString(suggestion.becauseOf)
                     this[DiscoverSuggestionsTable.updatedAt] = (suggestion.updatedAt ?: now).asStored()
@@ -180,6 +195,33 @@ class ExposedDiscoverRepository(
         }
     }
 }
+
+/**
+ * One stored row as a card. Shared by the two reads so a column added to the
+ * table can never end up populated on one list and missing on the other.
+ */
+private fun toSuggestion(row: ResultRow) = DiscoverSuggestion(
+    externalId = row[DiscoverSuggestionsTable.externalId],
+    source = row[DiscoverSuggestionsTable.sourceName],
+    title = row[DiscoverSuggestionsTable.title],
+    url = row[DiscoverSuggestionsTable.url],
+    imageUrl = row[DiscoverSuggestionsTable.imageUrl],
+    year = row[DiscoverSuggestionsTable.year],
+    rating = row[DiscoverSuggestionsTable.rating],
+    ratingVotes = row[DiscoverSuggestionsTable.ratingVotes],
+    status = row[DiscoverSuggestionsTable.status],
+    description = row[DiscoverSuggestionsTable.description],
+    genres = row[DiscoverSuggestionsTable.genres].asStringList(),
+    authors = row[DiscoverSuggestionsTable.authors].asStringList(),
+    publishers = row[DiscoverSuggestionsTable.publishers].asStringList(),
+    score = row[DiscoverSuggestionsTable.score],
+    voted = row[DiscoverSuggestionsTable.voted],
+    interested = row[DiscoverSuggestionsTable.interested],
+    licensed = row[DiscoverSuggestionsTable.licensed],
+    englishPublishers = row[DiscoverSuggestionsTable.englishPublishers].asStringList(),
+    becauseOf = row[DiscoverSuggestionsTable.becauseOf].asStringList(),
+    updatedAt = row[DiscoverSuggestionsTable.updatedAt].toInstantOrNull(),
+)
 
 /** A row whose JSON is unreadable costs one field, never the whole card. */
 private fun String.asStringList(): List<String> =

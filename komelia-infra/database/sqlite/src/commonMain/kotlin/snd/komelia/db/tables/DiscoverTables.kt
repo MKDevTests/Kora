@@ -45,6 +45,22 @@ object DiscoverSuggestionsTable : Table("DiscoverSuggestions") {
     val publishers = text("publishers")
     val score = double("score")
 
+    /**
+     * Which of the source's two recommendation lists produced this row (V110).
+     * Reader votes and tag overlap use incomparable weight scales, so this
+     * orders results ahead of [score] instead of being folded into it.
+     */
+    val voted = bool("voted").default(true)
+
+    /** Kept by the user (V110). Such a row survives a pass. */
+    val interested = bool("interested").default(false)
+
+    /** An English edition exists (V111) -- the only availability the source knows. */
+    val licensed = bool("licensed").default(false)
+
+    /** JSON array of the English-language publishers' names (V111). */
+    val englishPublishers = text("english_publishers").default("[]")
+
     /** JSON array of the local series ids that produced this suggestion. */
     val becauseOf = text("because_of")
     val updatedAt = text("updated_at")

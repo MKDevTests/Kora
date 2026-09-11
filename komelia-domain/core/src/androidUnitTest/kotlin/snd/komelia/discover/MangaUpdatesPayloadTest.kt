@@ -38,6 +38,19 @@ class MangaUpdatesPayloadTest {
     }
 
     @Test
+    fun `reads the english licence and its publisher`() {
+        val series = json.decodeFromString<MangaUpdatesSeries>(fixture("mangaupdates_series.json"))
+        assertTrue(series.licensed, "Servant x Service is licensed in English")
+        // The source only ever names Original and English publishers -- measured
+        // over 58 entries on 2026-09-10 -- so English is the one type the card
+        // can turn into a badge.
+        assertEquals(
+            listOf("Yen Press"),
+            series.publishers.filter { it.type.equals("English", ignoreCase = true) }.map { it.publisherName },
+        )
+    }
+
+    @Test
     fun `reads the id out of a modern series url`() {
         assertEquals(
             "1353796125",

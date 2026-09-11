@@ -193,6 +193,7 @@ data class AppSettings(
     val experimentalGenreTab: Boolean = true,
     val discoverEnabled: Boolean = false,
     val discoverLibraryIds: Set<String> = emptySet(),
+    val discoverHideUnlicensed: Boolean = false,
 
     /**
      * Per-(library, genre) cover override for the Genre tab: key

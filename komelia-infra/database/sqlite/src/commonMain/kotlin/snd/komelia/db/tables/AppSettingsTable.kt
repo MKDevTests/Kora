@@ -63,6 +63,8 @@ object AppSettingsTable : Table("AppSettings") {
     val discoverEnabled = bool("discover_enabled").default(false)
     /** Comma-separated library ids; empty means every library. */
     val discoverLibraryIds = text("discover_library_ids").default("")
+    /** Hide suggestions with no English edition. Off by default: see V111. */
+    val discoverHideUnlicensed = bool("discover_hide_unlicensed").default(false)
     val genreCoverOverrides = text("genre_cover_overrides").default("{}")
     val genreLabelOverrides = text("genre_label_overrides").default("{}")
     val ignoreListEnabled = bool("ignore_list_enabled").default(false)

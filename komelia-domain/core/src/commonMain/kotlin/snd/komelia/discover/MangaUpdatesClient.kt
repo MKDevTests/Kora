@@ -168,6 +168,8 @@ data class MangaUpdatesSeries(
     /** "27 Volumes (Complete)" — publication state as one human string. */
     val status: String = "",
     val completed: Boolean = false,
+    /** An English-language licence exists. The only availability the source tracks. */
+    val licensed: Boolean = false,
     val image: MangaUpdatesImage? = null,
     val genres: List<MangaUpdatesGenre> = emptyList(),
     val authors: List<MangaUpdatesAuthor> = emptyList(),
@@ -187,6 +189,12 @@ data class MangaUpdatesSeries(
      * `recommendations` are reader-submitted links; `category_recommendations`
      * come from category votes and are weaker, so they follow rather than
      * interleave.
+     */
+    /**
+     * Both lists at once, for callers that only need to know something was
+     * decoded. Do NOT rank on this: the two carry incomparable weight scales
+     * (reader votes in the tens, category weights in the tens of thousands),
+     * so a shared maximum silently erases the voted ones.
      */
     val allRecommendations: List<MangaUpdatesRecommendation>
         get() = recommendations + categoryRecommendations

@@ -41,7 +41,23 @@ data class DiscoverSuggestion(
     val genres: List<String>,
     val authors: List<String>,
     val publishers: List<String>,
+    /**
+     * An English edition exists, per the source. The only availability it can
+     * answer: it tracks `Original` and `English` publishers and nothing else,
+     * so a French edition is neither confirmed nor denied by this.
+     */
+    val licensed: Boolean = false,
+    /** Names of the English-language publishers, for the card's badge. */
+    val englishPublishers: List<String> = emptyList(),
     val score: Double,
+    /**
+     * True when readers voted this link, false when it came from the source's
+     * tag-overlap list. The two are not measurements of the same thing, so
+     * this orders results ahead of [score] rather than being folded into it.
+     */
+    val voted: Boolean = true,
+    /** Kept by the user: survives a pass that no longer recommends it. */
+    val interested: Boolean = false,
     val becauseOf: List<String>,
     val updatedAt: Instant?,
 )
@@ -77,6 +93,23 @@ interface DiscoverRepository {
      * about a minute and must never happen while somebody is looking.
      */
     suspend fun topSuggestions(limit: Int): List<DiscoverSuggestion>
+
+    /**
+     * Everything the user marked as interesting, newest gesture first.
+     *
+     * Excluded from [topSuggestions]: once kept, a card has been decided on and
+     * stops competing for room with the ones that have not.
+     */
+    suspend fun interestedSuggestions(): List<DiscoverSuggestion>
+
+    /**
+     * Marks or unmarks a suggestion as one to come back to.
+     *
+     * Marking is the opposite gesture to [dismiss] and, like it, survives a
+     * refresh -- but the whole card is kept, not just the id, since the next
+     * pass may well stop recommending it.
+     */
+    suspend fun setInterested(externalId: String, interested: Boolean)
 
     /** Replaces the whole result set — a pass recomputes every score. */
     suspend fun replaceSuggestions(suggestions: Collection<DiscoverSuggestion>)

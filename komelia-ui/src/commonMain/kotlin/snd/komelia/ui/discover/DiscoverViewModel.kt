@@ -12,12 +12,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import snd.komelia.discover.DiscoverRepository
 import snd.komelia.discover.DiscoverSuggestion
 import snd.komelia.komga.api.KomgaSeriesApi
+import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeriesId
@@ -36,6 +38,7 @@ class DiscoverViewModel(
     private val repository: DiscoverRepository,
     private val service: DiscoverService,
     private val seriesApi: KomgaSeriesApi,
+    private val settingsRepository: CommonSettingsRepository,
 ) : StateScreenModel<LoadState<List<DiscoverSuggestion>>>(LoadState.Uninitialized) {
 
     /** Local series id -> title, for the "because you read X" line. */
@@ -45,8 +48,26 @@ class DiscoverViewModel(
     val scanning: StateFlow<Boolean> = DiscoverScanner.scanning
     val progress: StateFlow<Float> = DiscoverScanner.progress
 
+    /**
+     * Hide suggestions with no English edition. Persisted, off by default: a
+     * French edition is unknowable from the source, so this filter can and
+     * does hide series he could read -- it is his call to turn on.
+     */
+    private val _hideUnlicensed = MutableStateFlow(false)
+    val hideUnlicensed: StateFlow<Boolean> = _hideUnlicensed.asStateFlow()
+
+    fun setHideUnlicensed(hide: Boolean) {
+        _hideUnlicensed.value = hide
+        screenModelScope.launch { settingsRepository.putDiscoverHideUnlicensed(hide) }
+    }
+
+    /** Cards the user kept, shown by the "Intéressé" tab of the same screen. */
+    private val _interested = MutableStateFlow<List<DiscoverSuggestion>>(emptyList())
+    val interested: StateFlow<List<DiscoverSuggestion>> = _interested.asStateFlow()
+
     fun initialize(libraries: List<KomgaLibraryId>) {
         if (state.value !is LoadState.Uninitialized) return
+        screenModelScope.launch { _hideUnlicensed.value = settingsRepository.getDiscoverHideUnlicensed().first() }
         load()
         // A pass landing while the tab is open must show up without the user
         // having to leave and come back.
@@ -63,9 +84,34 @@ class DiscoverViewModel(
     fun dismiss(suggestion: DiscoverSuggestion) {
         screenModelScope.launch {
             repository.dismiss(suggestion.externalId)
-            val current = (state.value as? LoadState.Success)?.value ?: return@launch
-            mutableState.value = LoadState.Success(current.filterNot { it.externalId == suggestion.externalId })
+            removeFromList(suggestion.externalId)
+            _interested.value = _interested.value.filterNot { it.externalId == suggestion.externalId }
         }
+    }
+
+    /**
+     * Keeps a suggestion, or puts it back among the others.
+     *
+     * The list it leaves is updated in place rather than reloaded: the gesture
+     * must feel immediate, and a reload would also re-run the source-name
+     * lookups for every card still on screen.
+     */
+    fun setInterested(suggestion: DiscoverSuggestion, interested: Boolean) {
+        screenModelScope.launch {
+            repository.setInterested(suggestion.externalId, interested)
+            if (interested) {
+                removeFromList(suggestion.externalId)
+                _interested.value = listOf(suggestion.copy(interested = true)) + _interested.value
+            } else {
+                _interested.value = _interested.value.filterNot { it.externalId == suggestion.externalId }
+                load()
+            }
+        }
+    }
+
+    private fun removeFromList(externalId: String) {
+        val current = (state.value as? LoadState.Success)?.value ?: return
+        mutableState.value = LoadState.Success(current.filterNot { it.externalId == externalId })
     }
 
     private fun load() {
@@ -73,8 +119,10 @@ class DiscoverViewModel(
             if (state.value is LoadState.Uninitialized) mutableState.value = LoadState.Loading
             try {
                 val suggestions = repository.topSuggestions(PAGE_SIZE)
+                val kept = repository.interestedSuggestions()
                 mutableState.value = LoadState.Success(suggestions)
-                resolveSourceNames(suggestions)
+                _interested.value = kept
+                resolveSourceNames(suggestions + kept)
             } catch (t: Throwable) {
                 currentCoroutineContext().ensureActive()
                 mutableState.value = LoadState.Error(t)

@@ -45,6 +45,10 @@ interface CommonSettingsRepository {
     fun getDiscoverLibraryIds(): Flow<Set<String>>
     suspend fun putDiscoverLibraryIds(libraryIds: Set<String>)
 
+    /** Hide suggestions without an English edition. Opt-in: a French one may still exist. */
+    fun getDiscoverHideUnlicensed(): Flow<Boolean>
+    suspend fun putDiscoverHideUnlicensed(hide: Boolean)
+
     /** Genre tab per-(library, genre) cover + display-name overrides. */
     fun getGenreCoverOverrides(): Flow<Map<String, String>>
     suspend fun putGenreCoverOverrides(overrides: Map<String, String>)

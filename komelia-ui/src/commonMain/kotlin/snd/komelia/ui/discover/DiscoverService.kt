@@ -84,11 +84,23 @@ class DiscoverService(
         val done = Semaphore(NETWORK_CONCURRENCY)
         var handled = 0
 
+        // One request per external id, not per shelf entry. The same work is
+        // often on the shelf several times — a colour edition, a chapter-by-
+        // chapter copy — and each copy resolves to the same source series.
+        // Measured 2026-09-10: 4 of 40 seed slots were spent re-asking for
+        // Gigant, Chainsaw Man, Hokkaido Gals and Smoking Behind. The highest
+        // affinity wins, so the attribution names the copy he reads most.
+        val bySource = seed.entries
+            .mapNotNull { (seriesId, affinity) ->
+                links[seriesId]?.externalId?.let { Triple(it, seriesId, affinity) }
+            }
+            .groupBy { it.first }
+            .values
+            .map { copies -> copies.maxBy { it.third } }
+
         coroutineScope {
-            seed.entries
-                .filter { links[it.key]?.externalId != null }
-                .map { (seriesId, affinity) ->
-                    val externalId = requireNotNull(links[seriesId]?.externalId)
+            bySource
+                .map { (externalId, seriesId, _) ->
                     async {
                         done.withPermit { mangaUpdates.series(externalId) }?.let { seriesId to it }
                     }
@@ -97,18 +109,23 @@ class DiscoverService(
                 .filterNotNull()
                 .forEach { (seriesId, source) ->
                     handled++
-                    onProgress(handled.toFloat() / seed.size)
+                    onProgress(handled.toFloat() / bySource.size)
                     accumulate(accumulator, source, seriesId, seed.getValue(seriesId), owned, dismissed)
                 }
         }
 
         val suggestions = enrich(
-            accumulator.values.sortedByDescending { it.score }.take(MAX_STORED),
+            accumulator.values
+                .sortedWith(compareByDescending<Accumulated> { it.voted }.thenByDescending { it.score })
+                .take(MAX_STORED),
             owned,
         )
 
         repository.replaceSuggestions(suggestions)
-        logger.info { "Discover: ${suggestions.size} suggestions from ${seed.size} seed series" }
+        logger.info {
+            "Discover: ${suggestions.size} suggestions from ${bySource.size} source series " +
+                "(${seed.size} shelf entries), ${suggestions.count { it.score > 0 }} scored"
+        }
         return suggestions.size
     }
 
@@ -348,9 +365,15 @@ class DiscoverService(
         owned: Set<String>,
         dismissed: Set<String>,
     ) {
-        val recommendations = source.allRecommendations
+        // Categories are a fallback, never a supplement. They are derived by the
+        // site from tag overlap, and their weights live on a scale three orders
+        // of magnitude above a reader's vote: measured 2026-09-10, Akira's top
+        // voted link scored 49 against a category weight of 19176. Normalising
+        // both lists under one maximum therefore reduced every voted link to
+        // 0.26% of its value and handed the tab to the tag machine.
+        val voted = source.recommendations.isNotEmpty()
+        val recommendations = if (voted) source.recommendations else source.categoryRecommendations
         val maxWeight = recommendations.maxOfOrNull { it.weight }?.takeIf { it > 0 } ?: return
-        val categoryIds = source.categoryRecommendations.mapTo(mutableSetOf()) { it.seriesId }
 
         recommendations.forEach { recommendation ->
             val externalId = recommendation.seriesId.takeIf { it > 0 }?.toString() ?: return@forEach
@@ -360,7 +383,7 @@ class DiscoverService(
             if (catalogueKey(recommendation.seriesName) in owned) return@forEach
 
             val weight = recommendation.weight.toDouble() / maxWeight
-            val discount = if (recommendation.seriesId in categoryIds) CATEGORY_DISCOUNT else 1.0
+            val discount = if (voted) 1.0 else CATEGORY_DISCOUNT
             val entry = into.getOrPut(externalId) {
                 Accumulated(
                     externalId = externalId,
@@ -369,6 +392,7 @@ class DiscoverService(
                     imageUrl = recommendation.seriesImage?.url?.original.orEmpty(),
                 )
             }
+            entry.voted = entry.voted || voted
             entry.score += weight * discount * affinity
             entry.becauseOf[sourceSeriesId] = maxOf(
                 entry.becauseOf[sourceSeriesId] ?: 0.0,
@@ -395,6 +419,13 @@ class DiscoverService(
         val imageUrl: String,
     ) {
         var score: Double = 0.0
+
+        /**
+         * True once any reader-voted list named this series. Such a candidate
+         * outranks every tag-derived one whatever the scores say: the two are
+         * not measurements of the same thing.
+         */
+        var voted: Boolean = false
         val becauseOf: MutableMap<String, Double> = mutableMapOf()
 
         fun toSuggestion(now: kotlin.time.Instant, details: MangaUpdatesSeries? = null) = DiscoverSuggestion(
@@ -417,6 +448,13 @@ class DiscoverService(
                 ?: emptyList(),
             publishers = details?.publishers?.map { it.publisherName }?.filter { it.isNotBlank() } ?: emptyList(),
             score = score,
+            voted = voted,
+            licensed = details?.licensed ?: false,
+            englishPublishers = details?.publishers
+                ?.filter { it.type.equals("English", ignoreCase = true) }
+                ?.map { it.publisherName }
+                ?.filter { it.isNotBlank() }
+                ?: emptyList(),
             becauseOf = becauseOf.entries
                 .sortedByDescending { it.value }
                 .take(MAX_ATTRIBUTIONS)
@@ -426,7 +464,11 @@ class DiscoverService(
     }
 }
 
-/** Category votes are a weaker signal than a reader's explicit link. */
+/**
+ * Applied to the whole of a seed's contribution when it had no voted links at
+ * all and the tag-derived list stood in. It orders such seeds among themselves;
+ * the tier in [Accumulated.voted] is what keeps them behind the voted ones.
+ */
 private const val CATEGORY_DISCOUNT = 0.5
 
 /** Two requests in flight. This is somebody's free service. */
