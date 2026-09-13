@@ -48,6 +48,12 @@ private const val MIN_FONT_SP = 7f
  * gestures, so page turns and zoom keep working exactly as they do without
  * translation. Blocks with no translation yet are left untouched rather than
  * covered with an empty box — a half-translated page stays readable.
+ *
+ * Night mode: the page below is drawn through the warm colour filter, but a
+ * Canvas on top is not, so a panel sampled white came out cold white on an
+ * amber page. The panel, text and border go through [tintedForNightMode],
+ * the same per-channel multiply as the filter, so a bubble ends up the exact
+ * shade of the paper next to it. Light-or-dark is decided on the raw sample.
  */
 @Composable
 fun TranslationOverlay(
@@ -57,6 +63,7 @@ fun TranslationOverlay(
     intrinsicImageSize: IntSize,
 ) {
     val measurer = rememberTextMeasurer()
+    val nightTint = LocalReaderNightModeIntensity.current
 
     Canvas(modifier = modifier.fillMaxSize()) {
         ocrResults
@@ -70,7 +77,7 @@ fun TranslationOverlay(
                 val panelColor = if (sampled.isEmpty()) fallbackBackground
                 else Color(sampled.sortedBy { luminanceOf(it) }[sampled.size / 2])
                 val panelIsLight = luminanceOf(panelColor.toArgb()) > DARK_TEXT_THRESHOLD
-                val textColor = if (panelIsLight) darkText else lightText
+                val textColor = (if (panelIsLight) darkText else lightText).forNight(nightTint)
                 val borderColor = textColor.copy(alpha = 0.2f)
 
                 val textRect = imageToScreenRect(box.blockRect, intrinsicImageSize, size.toIntSize())
@@ -87,7 +94,7 @@ fun TranslationOverlay(
                 )
 
                 drawRect(
-                    color = panelColor,
+                    color = panelColor.forNight(nightTint),
                     topLeft = screenRect.topLeft,
                     size = screenRect.size,
                 )
@@ -114,6 +121,9 @@ fun TranslationOverlay(
             }
     }
 }
+
+private fun Color.forNight(intensity: Float?): Color =
+    if (intensity == null) this else tintedForNightMode(intensity)
 
 /**
  * Largest size that fits, found by measuring. Translated text is rarely the

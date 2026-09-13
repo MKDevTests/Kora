@@ -56,7 +56,7 @@ fun ReaderImageContent(
         is ReaderImageResult.Error -> PageError(imageResult.throwable, onRetry)
 
         null -> Box(
-            modifier = Modifier.fillMaxHeight().aspectRatio(0.7f).background(Color.White),
+            modifier = Modifier.fillMaxHeight().aspectRatio(0.7f).background(placeholderColor()),
             contentAlignment = Alignment.Center,
             content = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -68,6 +68,15 @@ fun ReaderImageContent(
         )
     }
 }
+
+/**
+ * White paper for a page not yet shown, warmed like the pages around it
+ * when night mode is on — a cold white card between two amber pages reads
+ * as a flash.
+ */
+@Composable
+private fun placeholderColor(): Color =
+    LocalReaderNightModeIntensity.current?.let { Color.White.tintedForNightMode(it) } ?: Color.White
 
 /**
  * "Connection lost — retrying in 8 s (3/6)" under the spinner, while the
@@ -184,7 +193,7 @@ private fun ImageContent(
             }
         }
         Column(
-            modifier = Modifier.animateContentSize().background(Color.White).then(sizeModifier),
+            modifier = Modifier.animateContentSize().background(placeholderColor()).then(sizeModifier),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
