@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import snd.komelia.ui.common.components.CheckboxWithLabel
+import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.platform.cursorForHand
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -30,8 +31,8 @@ fun ConfirmationDialog(
     body: String,
     title: String? = null,
     confirmText: String? = null,
-    buttonCancel: String = "Cancel",
-    buttonConfirm: String = "Confirm",
+    buttonCancel: String = LocalStrings.current.ui.cancel,
+    buttonConfirm: String = LocalStrings.current.ui.confirm,
     buttonAlternate: String? = null,
     buttonConfirmColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     onDialogConfirm: () -> Unit,

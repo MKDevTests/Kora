@@ -276,6 +276,7 @@ class AndroidAppModule(
             seriesBooksCacheRepository = snd.komelia.db.library.ExposedSeriesBooksCacheRepository(databases.app),
             translationGlossaryRepository = snd.komelia.db.translation.ExposedTranslationGlossaryRepository(databases.app),
             discoverRepository = snd.komelia.db.discover.ExposedDiscoverRepository(databases.app),
+            pendingReadProgressRepository = snd.komelia.db.progress.ExposedPendingReadProgressRepository(databases.app),
         )
     }
 
@@ -330,6 +331,8 @@ class AndroidAppModule(
             install(UserAgent) {
                 agent = komeliaUserAgent
             }
+            // Inherited by every `config {}` copy, the Komga client included.
+            install(serverFailover.plugin)
             install(HttpTimeout) {
                 requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
                 // Connect only: the TCP handshake, before any byte of the

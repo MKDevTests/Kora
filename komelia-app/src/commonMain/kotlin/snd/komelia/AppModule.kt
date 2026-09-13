@@ -70,6 +70,8 @@ import snd.komelia.chapters.withChapterFilter
 import snd.komelia.ignore.withIgnoreFilter
 import snd.komelia.hidden.HiddenSeriesController
 import snd.komelia.ui.DependencyContainer
+import snd.komelia.ui.i18n.AppLanguage
+import snd.komelia.ui.i18n.strings
 import snd.komelia.ui.strings.EnStrings
 import snd.komelia.updates.AppUpdater
 import snd.komelia.updates.OnnxModelDownloader
@@ -99,6 +101,8 @@ abstract class AppModule(
     protected val initScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     protected val appNotifications = AppNotifications()
     protected val readerSyncService = ReaderSyncService()
+    /** Installed in the HTTP client by the platform module, configured once settings exist. */
+    protected val serverFailover = snd.komelia.failover.ServerFailover()
     protected var ktor: HttpClient? = null
     protected var ktorWithoutCache: HttpClient? = null
     protected var coil: ImageLoader? = null
@@ -139,6 +143,17 @@ abstract class AppModule(
             appRepositories.secretsRepository
         )
         cookiesStorage.loadRememberMeCookie()
+
+        val uiLanguage = appRepositories.settingsRepository.getUiLanguage().stateIn(initScope)
+        serverFailover.configure(
+            snd.komelia.failover.ServerFailover.Config(
+                settings = appRepositories.settingsRepository,
+                activeUrl = baseUrl,
+                notifications = appNotifications,
+                onSwitched = { from, to -> cookiesStorage.carryOver(from, to) },
+                switchedMessage = { AppLanguage.of(uiLanguage.value).strings().counts.serverSwitchedTo(it) },
+            )
+        )
 
         val komgaClientFactory = KomgaClientFactory.Builder()
             .ktor(ktor)

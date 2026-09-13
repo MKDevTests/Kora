@@ -148,6 +148,7 @@ class ReaderState(
     private val ocrService: OcrService,
     private val translationService: snd.komelia.image.TranslationEngine,
     private val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
+    private val pendingReadProgressRepository: snd.komelia.progress.PendingReadProgressRepository,
     private val translationModelDownloader: snd.komelia.image.TranslationModelDownloader?,
     /**
      * Whether the ONNX panel detector is loaded and usable. When false, webtoon
@@ -213,6 +214,10 @@ class ReaderState(
      * clock half has to be recomputed over time. See [watchNightModeSchedule].
      */
     val nightModeActive = MutableStateFlow(false)
+
+    /** Page downloads waiting between two attempts; see [snd.komelia.image.PageRetry]. */
+    val pageRetries: kotlinx.coroutines.flow.StateFlow<Map<snd.komelia.image.ReaderImage.PageId, snd.komelia.image.PageRetry>>
+        get() = imageLoader.retries
     val webtoonSmartScroll = MutableStateFlow(true)
     val loadThumbnailPreviews = MutableStateFlow(true)
     val showCarousel = MutableStateFlow(false)
@@ -2289,8 +2294,25 @@ class ReaderState(
                 "progression=${r2Prog.locator.locations?.progression} book=${currentBook.id.value}"
         }
         runCatching { bookApi.updateReadiumProgression(currentBook.id, r2Prog) }
+            .onSuccess {
+                // Whatever was left over from an earlier outage is stale now.
+                runCatching { pendingReadProgressRepository.delete(currentBook.id.value) }
+            }
             .onFailure {
                 logger.warn(it) { "[ReadProgress] push FAILED page=$page book=${currentBook.id.value}" }
+                // Kept for PendingReadProgressPusher, with the moment the page
+                // was reached: delivered late, it must still lose to a position
+                // set since on another device.
+                runCatching {
+                    pendingReadProgressRepository.put(
+                        snd.komelia.progress.PendingReadProgress(
+                            bookId = currentBook.id.value,
+                            page = page,
+                            totalPages = snapshotTotalPages,
+                            modified = r2Prog.modified,
+                        )
+                    )
+                }
                 appNotifications.runCatchingToNotifications { throw it }
             }
     }

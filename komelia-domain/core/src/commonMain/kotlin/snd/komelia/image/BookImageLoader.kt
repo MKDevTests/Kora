@@ -3,9 +3,13 @@ package snd.komelia.image
 import coil3.disk.DiskCache
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import snd.komelia.NetworkState
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import okio.FileSystem
@@ -30,6 +34,18 @@ private const val MAX_CONCURRENT_PAGE_DOWNLOADS = 4
  * attempt itself waits up to the client's connect timeout on top of these.
  */
 private val NETWORK_RETRY_DELAYS_S = listOf(2L, 4L, 8L, 16L, 30L, 30L)
+
+/**
+ * A page download waiting to be tried again after a network failure. Shown
+ * under the page's spinner, which otherwise says "Downloading" for up to three
+ * minutes with nothing to explain the wait.
+ */
+data class PageRetry(
+    val attempt: Int,
+    val maxAttempts: Int,
+    /** Wall-clock millis of the next attempt; the display counts down to it. */
+    val nextAttemptAtMillis: Long,
+)
 
 class BookImageLoader(
     private val bookClient: StateFlow<KomgaBookApi>,
@@ -102,6 +118,11 @@ class BookImageLoader(
      */
     private val downloadLimit = Semaphore(MAX_CONCURRENT_PAGE_DOWNLOADS)
 
+    private val _retries = MutableStateFlow<Map<ReaderImage.PageId, PageRetry>>(emptyMap())
+
+    /** Pages currently between two attempts, keyed by page. See [PageRetry]. */
+    val retries: StateFlow<Map<ReaderImage.PageId, PageRetry>> = _retries
+
     private suspend fun fetchPage(bookId: KomgaBookId, page: Int): ByteArray {
         localFileApiProvider?.getApiForBook(bookId)?.let { localApi ->
             // Local files are not a server request and must not take a permit:
@@ -133,28 +154,41 @@ class BookImageLoader(
      * same every time.
      *
      * The pause is taken OUTSIDE the download permit: a page waiting for the
-     * Wi-Fi to return must not hold one of the four slots while it waits.
+     * Wi-Fi to return must not hold one of the four slots while it waits, and
+     * it ends early when the platform announces the link is back
+     * ([NetworkState.comebacks]) — the pause is a ceiling, not a schedule.
      * Cancellation (the reader moved on, the book was closed) ends the wait —
-     * `delay` is cancellable and `ensureActive` is checked after each failure.
+     * the wait is cancellable and `ensureActive` is checked after each failure.
      */
     private suspend fun fetchFromServer(bookId: KomgaBookId, page: Int): ByteArray {
+        val pageId = ReaderImage.PageId(bookId.value, page)
         var attempt = 0
-        while (true) {
-            try {
-                return downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
-            } catch (e: Throwable) {
-                currentCoroutineContext().ensureActive()
-                val pause = NETWORK_RETRY_DELAYS_S.getOrNull(attempt)
-                if (pause == null || !isTransientNetworkFailure(e)) throw e
-                attempt++
-                logger.warn {
-                    "page $page of $bookId: ${e::class.simpleName}: ${e.message} -- " +
-                        "retry $attempt/${NETWORK_RETRY_DELAYS_S.size} in ${pause}s"
+        try {
+            while (true) {
+                try {
+                    return downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
+                } catch (e: Throwable) {
+                    currentCoroutineContext().ensureActive()
+                    val pause = NETWORK_RETRY_DELAYS_S.getOrNull(attempt)
+                    if (pause == null || !isTransientNetworkFailure(e)) throw e
+                    attempt++
+                    logger.warn {
+                        "page $page of $bookId: ${e::class.simpleName}: ${e.message} -- " +
+                            "retry $attempt/${NETWORK_RETRY_DELAYS_S.size} in ${pause}s"
+                    }
+                    _retries.update {
+                        it + (pageId to PageRetry(attempt, NETWORK_RETRY_DELAYS_S.size, nowMillis() + pause * 1000))
+                    }
+                    val comebacks = NetworkState.comebacks.value
+                    withTimeoutOrNull(pause * 1000) { NetworkState.comebacks.first { it != comebacks } }
                 }
-                delay(pause * 1000)
             }
+        } finally {
+            if (attempt > 0) _retries.update { it - pageId }
         }
     }
+
+    private fun nowMillis(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
 
     private suspend fun doLoad(bookId: KomgaBookId, page: Int): ImageSource {
         val pageId = ReaderImage.PageId(bookId.value, page)

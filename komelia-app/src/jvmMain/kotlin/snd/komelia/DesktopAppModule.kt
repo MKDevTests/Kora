@@ -217,6 +217,7 @@ class DesktopAppModule(
             seriesBooksCacheRepository = snd.komelia.db.library.ExposedSeriesBooksCacheRepository(databases.app),
             translationGlossaryRepository = snd.komelia.db.translation.ExposedTranslationGlossaryRepository(databases.app),
             discoverRepository = snd.komelia.db.discover.ExposedDiscoverRepository(databases.app),
+            pendingReadProgressRepository = snd.komelia.db.progress.ExposedPendingReadProgressRepository(databases.app),
         )
     }
 
@@ -269,6 +270,8 @@ class DesktopAppModule(
             install(UserAgent) {
                 agent = komeliaUserAgent
             }
+            // Inherited by every `config {}` copy, the Komga client included.
+            install(serverFailover.plugin)
             install(HttpTimeout) {
                 requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
                 connectTimeoutMillis = 30_000
