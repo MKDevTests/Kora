@@ -16,6 +16,15 @@ import androidx.compose.ui.graphics.ColorMatrix
 val LocalReaderNightModeIntensity = staticCompositionLocalOf<Float?> { null }
 
 /**
+ * Page downloads between two attempts, for the placeholder under a page
+ * that has not arrived. Same route as the tint: ReaderImageContent has no
+ * page id of its own, and the pages waiting are exactly the ones showing
+ * the spinner, so the earliest next attempt is what it reports.
+ */
+val LocalPageRetries =
+    staticCompositionLocalOf<kotlinx.coroutines.flow.StateFlow<Map<snd.komelia.image.ReaderImage.PageId, snd.komelia.image.PageRetry>>?> { null }
+
+/**
  * Multipliers for a blue-light filter, from untouched at 0f to roughly candle
  * light at 1f.
  *

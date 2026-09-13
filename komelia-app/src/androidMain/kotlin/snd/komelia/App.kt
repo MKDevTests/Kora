@@ -46,6 +46,7 @@ class App : Application() {
         startAutobackupScheduler()
         startWidgetRefresher()
         observeAppBackgroundForWidgetRefresh()
+        observePhysicalNetworks()
         observeToolkitCompletion()
     }
 
@@ -92,6 +93,43 @@ class App : Application() {
             .setContentIntent(pi)
             .build()
         runCatching { nm.notify(toolkitNotificationId, notification) }
+    }
+
+    /**
+     * Publishes the presence of a physical network to [NetworkState].
+     *
+     * Not the default-network callback: with a VPN up, the VPN IS the app's
+     * default network, permanently (the requests leave from its address),
+     * so that callback never sees the Wi-Fi go or come back — measured on
+     * the tablet on 2026-09-13, a cut and a return without a single event
+     * for the app while ConnectivityService logged the switch. A request
+     * for INTERNET and NOT_VPN networks fires for each physical network
+     * (Wi-Fi, mobile) as it appears and goes, whatever routes on top.
+     * Validated or not: a LAN server does not need the internet.
+     */
+    private fun observePhysicalNetworks() {
+        val cm = getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return
+        val request = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build()
+        val live = mutableSetOf<android.net.Network>()
+        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                synchronized(live) { live += network }
+                android.util.Log.i("Kora", "physical network up: $network")
+                snd.komelia.NetworkState.networkArrived()
+            }
+
+            override fun onLost(network: android.net.Network) {
+                val none = synchronized(live) { live -= network; live.isEmpty() }
+                android.util.Log.i("Kora", "physical network lost: $network" + if (none) ", none left" else "")
+                if (none) snd.komelia.NetworkState.networkLost()
+            }
+        }
+        runCatching { cm.registerNetworkCallback(request, callback) }
+            .onFailure { android.util.Log.w("Kora", "network callback not registered", it) }
     }
 
     /**

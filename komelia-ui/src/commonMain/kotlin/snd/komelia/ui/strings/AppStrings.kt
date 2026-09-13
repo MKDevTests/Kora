@@ -107,6 +107,7 @@ data class ConfirmStrings(
     val downloadSeriesBulk: (Int) -> String,
     val komfIdentifySeries: (Int) -> String,
     val deleteServerProfile: (String) -> String,
+    val switchActiveUrl: (String) -> String,
 )
 
 /**
@@ -229,6 +230,9 @@ data class CountStrings(
     val expiredNextReleaseTags: (Int) -> String,
     val volumeOn: (String, String) -> String,
     val nextReleaseLine: (String, String, String) -> String,
+    val pageRetryIn: (Int, Int, Int) -> String,
+    val pageRetrying: (Int, Int) -> String,
+    val serverSwitchedTo: (String) -> String,
 )
 
 /**

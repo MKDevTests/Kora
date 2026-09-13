@@ -1312,6 +1312,7 @@ val EnStrings = AppStrings(
         downloadSeriesBulk = { n -> if (n == 1) "Download this series?" else "Download $n series?" },
         komfIdentifySeries = { n -> "$n series will be auto-identified by Komf" },
         deleteServerProfile = { "Are you sure you want to delete the profile for $it? This will also delete all local settings and offline data associated with this server." },
+        switchActiveUrl = { "Reconnect to the same server using:\n\n$it\n\nYour stats, ratings and links stay unified." },
     ),
     counts = CountStrings(
         selected = { "$it selected" },
@@ -1332,6 +1333,9 @@ val EnStrings = AppStrings(
         expiredNextReleaseTags = { "$it expired nextrelease tag" + if (it > 1) "s" else "" },
         volumeOn = { volume, date -> "Volume $volume — $date" },
         nextReleaseLine = { title, volume, date -> "$title — volume $volume, $date" },
+        pageRetryIn = { seconds, attempt, max -> "Connection lost — retrying in $seconds s ($attempt/$max)" },
+        pageRetrying = { attempt, max -> "Connection lost — retrying now ($attempt/$max)" },
+        serverSwitchedTo = { "Server unreachable, switched to $it" },
     ),
     navigation = NavigationStrings(
         libraries = "Libraries",

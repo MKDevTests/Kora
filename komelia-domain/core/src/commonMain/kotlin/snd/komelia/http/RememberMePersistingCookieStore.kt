@@ -52,6 +52,23 @@ class RememberMePersistingCookieStore(
         return cookies
     }
 
+    /**
+     * Copies the cookies held for [from] onto [to], and persists the
+     * remember-me one under the new address. A Komga session is server-side:
+     * the same token opens it from any address the server answers on, so a
+     * failover to another address must not cost a login — nor a login after
+     * the next restart, which is what the persisted copy is for.
+     */
+    suspend fun carryOver(from: Url, to: Url) {
+        delegate.get(from).forEach { cookie ->
+            val moved = cookie.copy(domain = null, path = "/")
+            delegate.addCookie(to, moved)
+            if (cookie.name == rememberMeCookie || cookie.name == deprecatedRememberMeCookie) {
+                secretsRepository.setCookie(to.toString(), renderSetCookieHeader(moved))
+            }
+        }
+    }
+
     override fun close() {
         delegate.close()
     }

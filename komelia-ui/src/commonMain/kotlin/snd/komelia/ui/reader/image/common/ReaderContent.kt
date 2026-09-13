@@ -173,6 +173,7 @@ fun ReaderContent(
     CompositionLocalProvider(
         LocalHazeState provides readerHazeState,
         LocalReaderNightModeIntensity provides nightModeIntensity,
+        LocalPageRetries provides commonReaderState.pageRetries,
     ) {
         Box(
             Modifier

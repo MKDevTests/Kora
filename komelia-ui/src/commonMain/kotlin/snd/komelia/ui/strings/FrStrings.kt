@@ -1324,6 +1324,7 @@ val FrStrings = AppStrings(
         downloadSeriesBulk = { n -> if (n == 1) "Télécharger cette série ?" else "Télécharger $n séries ?" },
         komfIdentifySeries = { n -> "$n série" + (if (n > 1) "s seront identifiées" else " sera identifiée") + " automatiquement par Komf" },
         deleteServerProfile = { "Supprimer le profil « $it » ? Tous les réglages locaux et les données hors ligne de ce serveur seront supprimés aussi." },
+        switchActiveUrl = { "Se reconnecter au même serveur via :\n\n$it\n\nVos statistiques, notes et liens restent unifiés." },
     ),
     counts = CountStrings(
         selected = { "$it sélectionné" + if (it > 1) "s" else "" },
@@ -1344,6 +1345,9 @@ val FrStrings = AppStrings(
         expiredNextReleaseTags = { "$it tag" + (if (it > 1) "s" else "") + " nextrelease périmé" + if (it > 1) "s" else "" },
         volumeOn = { volume, date -> "Tome $volume — $date" },
         nextReleaseLine = { title, volume, date -> "$title — tome $volume, $date" },
+        pageRetryIn = { seconds, attempt, max -> "Connexion perdue — nouvel essai dans $seconds s ($attempt/$max)" },
+        pageRetrying = { attempt, max -> "Connexion perdue — nouvel essai en cours ($attempt/$max)" },
+        serverSwitchedTo = { "Serveur injoignable, bascule sur $it" },
     ),
     navigation = NavigationStrings(
         libraries = "Bibliothèques",

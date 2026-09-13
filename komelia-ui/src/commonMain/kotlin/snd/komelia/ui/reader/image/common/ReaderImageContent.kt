@@ -19,6 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -60,10 +62,44 @@ fun ReaderImageContent(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color.Black)
                     Text(LocalStrings.current.ui.downloading, color = Color.Black)
+                    RetryLine()
                 }
             }
         )
     }
+}
+
+/**
+ * "Connection lost — retrying in 8 s (3/6)" under the spinner, while the
+ * loader is between two attempts at a page. Nothing when it is not: the
+ * spinner alone means an ordinary download.
+ */
+@Composable
+private fun RetryLine() {
+    val retriesFlow = LocalPageRetries.current ?: return
+    val retries = retriesFlow.collectAsState().value
+    val next = retries.values.minByOrNull { it.nextAttemptAtMillis } ?: return
+    // A one-second tick for the countdown; the flow itself only changes
+    // between attempts.
+    var now by remember { mutableStateOf(kotlin.time.Clock.System.now().toEpochMilliseconds()) }
+    LaunchedEffect(next) {
+        while (true) {
+            now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    // Once the countdown is over the attempt itself is running (the connect
+    // alone can take ten seconds, and the pages queue for the download
+    // permits), so "in 0 s" would sit there and lie.
+    val seconds = ((next.nextAttemptAtMillis - now) / 1000).toInt()
+    val strings = LocalStrings.current.counts
+    Text(
+        if (seconds > 0) strings.pageRetryIn(seconds, next.attempt, next.maxAttempts)
+        else strings.pageRetrying(next.attempt, next.maxAttempts),
+        color = Color.Black,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(top = 8.dp),
+    )
 }
 
 /**

@@ -111,6 +111,15 @@ class ViewModelFactory(
     private val imageReaderCurrentBook = MutableStateFlow<KomgaBookId?>(null)
         .also { dependencies.colorCorrectionStep.setBookFlow(it) }
 
+    init {
+        // Positions a reading session could not deliver; retried on network
+        // comeback and on return to the foreground, for this server's API.
+        snd.komelia.progress.PendingReadProgressPusher.attach(
+            bookApi = komgaApi.bookApi,
+            repository = appRepositories.pendingReadProgressRepository,
+        )
+    }
+
     private val komfSharedState = KomfSharedState(
         komfConfigClient = dependencies.komfClientFactory.configClient(),
         komgaServerClient = dependencies.komfClientFactory.mediaServerClient(KOMGA),
@@ -380,6 +389,7 @@ class ViewModelFactory(
             ocrService = dependencies.ocrService,
             translationService = dependencies.translationService,
             translationGlossaryRepository = appRepositories.translationGlossaryRepository,
+            pendingReadProgressRepository = appRepositories.pendingReadProgressRepository,
             translationModelDownloader = dependencies.translationModelDownloader,
             colorCorrectionIsActive = dependencies.colorCorrectionStep.isActive,
             bookSiblingsContext = bookSiblingsContext,

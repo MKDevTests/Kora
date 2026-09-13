@@ -38,6 +38,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import snd.komelia.AppForegroundState
 import snd.komelia.AppNotification
+import snd.komelia.NetworkState
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
 import snd.komelia.image.EdgeSampling
@@ -282,7 +283,15 @@ class PagedReaderState(
         AppForegroundState.isForeground
             .drop(1)
             .filter { it }
-            .onEach { reloadFailedPages() }
+            .onEach { reloadFailedPages("back in foreground") }
+            .launchIn(stateScope)
+
+        // And the link coming back while the reader is on screen: the retries
+        // may have given up before it did, and nobody should have to switch
+        // the screen off and on to get the page.
+        NetworkState.comebacks
+            .drop(1)
+            .onEach { reloadFailedPages("network is back") }
             .launchIn(stateScope)
     }
 
@@ -564,7 +573,7 @@ class PagedReaderState(
      * failures: a page that loaded stays where it is.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun reloadFailedPages() {
+    private fun reloadFailedPages(reason: String) {
         // asMap() is Map<in PageId, _>: the key comes back projected, hence the cast.
         val failed = imageCache.asMap().entries.mapNotNull { (key, job) ->
             val isError = job.isCompleted && !job.isCancelled && job.getCompleted().imageResult is ReaderImageResult.Error
@@ -572,7 +581,7 @@ class PagedReaderState(
         }
         if (failed.isEmpty()) return
         failed.forEach { imageCache.invalidate(it) }
-        logger.info { "back in foreground: dropped ${failed.size} failed page(s), reloading" }
+        logger.info { "$reason: dropped ${failed.size} failed page(s), reloading" }
         loadPage(currentSpreadIndex.value)
         pageReloads.update { it + 1 }
     }

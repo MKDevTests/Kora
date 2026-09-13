@@ -258,8 +258,8 @@ class AppServerManagementScreen : Screen {
         pendingSwitch?.let { target ->
             ConfirmationDialog(
                 title = LocalStrings.current.ui.switchActiveUrl,
-                body = "Reconnect to the same server using:\n\n$target\n\nYour stats, ratings and links stay unified.",
-                buttonConfirm = "Switch",
+                body = LocalStrings.current.confirm.switchActiveUrl(target),
+                buttonConfirm = LocalStrings.current.ui.switch,
                 onDialogConfirm = {
                     onSwitch(target)
                     pendingSwitch = null

@@ -69,4 +69,6 @@ data class AppRepositories(
     val translationGlossaryRepository: snd.komelia.translation.TranslationGlossaryRepository,
     /** Discover results — a cache of a third party's answers, never backed up. */
     val discoverRepository: snd.komelia.discover.DiscoverRepository,
+    /** Read positions the server has not acknowledged yet. */
+    val pendingReadProgressRepository: snd.komelia.progress.PendingReadProgressRepository,
 )

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.intl.Locale
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.strings.AppStrings
 import snd.komelia.ui.strings.EnStrings
 import snd.komelia.ui.strings.FrStrings
 
@@ -38,13 +39,21 @@ enum class AppLanguage(val tag: String) {
  */
 @Composable
 fun ProvideAppLanguage(language: AppLanguage, content: @Composable () -> Unit) {
-    val french = when (language) {
+    CompositionLocalProvider(
+        LocalStrings provides language.strings(),
+        content = content,
+    )
+}
+
+/**
+ * The catalogue for this choice, also usable outside composition (a
+ * notification raised from the HTTP layer, say).
+ */
+fun AppLanguage.strings(): AppStrings {
+    val french = when (this) {
         AppLanguage.FRENCH -> true
         AppLanguage.ENGLISH -> false
         AppLanguage.SYSTEM -> Locale.current.language.startsWith("fr")
     }
-    CompositionLocalProvider(
-        LocalStrings provides if (french) FrStrings else EnStrings,
-        content = content,
-    )
+    return if (french) FrStrings else EnStrings
 }
