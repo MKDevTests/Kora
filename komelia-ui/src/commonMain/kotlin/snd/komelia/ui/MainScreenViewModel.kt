@@ -45,6 +45,11 @@ import snd.komga.client.sse.KomgaEvent.LibraryDeleted
 import snd.komga.client.sse.KomgaEvent.ReadListDeleted
 import snd.komga.client.sse.KomgaEvent.SeriesDeleted
 import snd.komga.client.sse.KomgaEvent.TaskQueueStatus
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import snd.komelia.AppForegroundState
+import snd.komga.client.library.KomgaLibraryId
 
 class MainScreenViewModel(
     private val libraryApi: KomgaLibraryApi,
@@ -53,6 +58,11 @@ class MainScreenViewModel(
     private val screenReloadFlow: MutableSharedFlow<Unit>,
     private val offlineSettingsRepository: OfflineSettingsRepository,
     private val settingsRepository: CommonSettingsRepository,
+    /**
+     * Starts a Discover pass if one is due. Handed in rather than built here
+     * so this model does not depend on the whole Discover wiring.
+     */
+    private val discoverTrigger: (List<KomgaLibraryId>) -> Unit,
     private val taskEmitter: OfflineTaskEmitter,
     private val releaseNotesService: ReleaseNotesService,
     val searchBarState: SearchBarState,
@@ -125,6 +135,32 @@ class MainScreenViewModel(
     init {
         screenModelScope.launch { startEventListener() }
         screenModelScope.launch { checkReleaseNotes() }
+        screenModelScope.launch { runDiscoverOnForeground() }
+    }
+
+    /**
+     * The Discover pass belongs to app foreground, not to the tab: results
+     * should be waiting when the tab is opened, not start loading then. The
+     * scanner's weekly throttle makes this free on every foreground but one.
+     *
+     * Libraries arrive after the first foreground, so the three inputs are
+     * combined rather than the foreground flag alone being watched: the pass
+     * fires once all three say yes, and again on each later foreground.
+     */
+    private suspend fun runDiscoverOnForeground() {
+        combine(
+            AppForegroundState.isForeground,
+            showDiscoverInBottomNav,
+            libraries,
+        ) { foreground, enabled, libraries ->
+            if (foreground && enabled && libraries.isNotEmpty()) libraries.map { it.id } else null
+        }
+            // Background is null, so each return to the front is a change
+            // and fires; a library refresh with the same ids while already in
+            // front is not, and does not.
+            .distinctUntilChanged()
+            .filterNotNull()
+            .collect { discoverTrigger(it) }
     }
 
     private suspend fun checkReleaseNotes() {

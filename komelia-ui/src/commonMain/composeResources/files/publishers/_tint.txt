@@ -21,6 +21,7 @@ ania
 antonio_vallardi_editore
 ape_entertainment
 arrow
+avatar_press
 azteca_productions
 b_h_publishing_group
 bad_dog_books
@@ -98,10 +99,13 @@ renegade_press
 sanwa_publishing_company_ltd
 self_made_hero
 selfmadehero
+seven_seas_entertainment
 shampooing
 shinchosha
 shueisha
 silent_devil_productions
+simon_and_schuster
+simon_schuster
 skript
 skript_editora
 slave_labor_graphics

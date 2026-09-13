@@ -15,9 +15,21 @@ class PublisherLogoMatchTest {
         "manga_up", "seven_seas_entertainment", "delcourt", "casterman",
         "ubisoft", "viz_media", "boom", "futuropolis", "akileos_jpg",
         "yen_press", "panini_comics", "panini_espa_a", "asuka_comics",
+        "manga_plus", "akata", "meian",
     )
 
     private fun key(publisher: String) = resolvePublisherLogoKey(publisher, index)
+
+    @Test
+    fun theThreeLogosAddedFromThePublishersOwnSites() {
+        // Counted on the real library, 2026-09-13: the three most-owned
+        // publishers that had no logo at all. Strings are what Komga sends.
+        assertEquals("manga_plus", key("MANGA Plus"))                    // 216 series
+        assertEquals("manga_plus", key("MANGA Plus; VIZ Media"))         // 58 series
+        assertEquals("akata", key("Éditions Akata"))                     // 40 series
+        assertEquals("akata", key("Akata"))                              // 10 series
+        assertEquals("meian", key("Meian"))                              // 27 series
+    }
 
     @Test
     fun exactNameStillWins() {
@@ -63,7 +75,10 @@ class PublisherLogoMatchTest {
 
     @Test
     fun readsAJsonArrayOfImprints() {
-        assertEquals("viz_media", key("""["MANGA Plus", "VIZ Media"]"""))
+        // The first imprint wins now that MANGA Plus has a logo of its own; the
+        // JSON array is what this test is about, not the pick.
+        assertEquals("manga_plus", key("""["MANGA Plus", "VIZ Media"]"""))
+        assertEquals("viz_media", key("""["VIZ Media", "MANGA Plus"]"""))
     }
 
     @Test

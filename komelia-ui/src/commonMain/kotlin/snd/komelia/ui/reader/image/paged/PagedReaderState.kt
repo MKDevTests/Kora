@@ -13,6 +13,7 @@ import io.github.reactivecircus.cache4k.CacheEvent.Expired
 import io.github.reactivecircus.cache4k.CacheEvent.Removed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import snd.komelia.AppForegroundState
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
@@ -131,6 +133,15 @@ class PagedReaderState(
 
     val pageSpreads = MutableStateFlow<List<List<PageMetadata>>>(emptyList())
     val currentSpreadIndex = MutableStateFlow(0)
+
+    /**
+     * Bumped whenever cached pages are dropped for a reload ([retryPage],
+     * [reloadFailedPages]). The pager item holds the Page it fetched once and
+     * never asks again on its own; this is what tells it to. Measured on
+     * 2026-09-13: without it the cache was refilled but the error stayed on
+     * screen until the next page turn.
+     */
+    val pageReloads = MutableStateFlow(0)
     private var requestedSpreadIndex = 0
     val lastImageBounds = MutableStateFlow<Rect?>(null)
     val currentSpread: MutableStateFlow<PageSpread> = MutableStateFlow(PageSpread(emptyList()))
@@ -261,6 +272,17 @@ class PagedReaderState(
             .distinctUntilChangedBy { it.currentBook.id }
             .drop(1)
             .onEach { onBookChange() }
+            .launchIn(stateScope)
+
+        // A page that failed while the tablet slept would be handed back as
+        // failed until Reload or leaving the book: the Wi-Fi stays dead for
+        // about a minute after waking (see BookImageLoader.fetchFromServer), and
+        // the prefetch asks for several pages during that minute. Coming back
+        // to the foreground is the moment the network is worth asking again.
+        AppForegroundState.isForeground
+            .drop(1)
+            .filter { it }
+            .onEach { reloadFailedPages() }
             .launchIn(stateScope)
     }
 
@@ -534,6 +556,25 @@ class PagedReaderState(
     fun retryPage(page: PageMetadata) {
         imageCache.invalidate(page.toPageId())
         loadPage(currentSpreadIndex.value)
+        pageReloads.update { it + 1 }
+    }
+
+    /**
+     * Drops every cached failure and re-reads the current spread. Only the
+     * failures: a page that loaded stays where it is.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun reloadFailedPages() {
+        // asMap() is Map<in PageId, _>: the key comes back projected, hence the cast.
+        val failed = imageCache.asMap().entries.mapNotNull { (key, job) ->
+            val isError = job.isCompleted && !job.isCancelled && job.getCompleted().imageResult is ReaderImageResult.Error
+            if (isError) key as? PageId else null
+        }
+        if (failed.isEmpty()) return
+        failed.forEach { imageCache.invalidate(it) }
+        logger.info { "back in foreground: dropped ${failed.size} failed page(s), reloading" }
+        loadPage(currentSpreadIndex.value)
+        pageReloads.update { it + 1 }
     }
 
     private fun loadPage(spreadIndex: Int) {

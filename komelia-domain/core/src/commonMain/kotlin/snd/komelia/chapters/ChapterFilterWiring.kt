@@ -22,6 +22,9 @@ import snd.komga.client.series.KomgaSeriesSearch
  */
 const val CHAPTER_TITLE_SUFFIX = "(Chap)"
 
+/** Sort property of `KomgaBooksSort.byReadDate`: the mark of a reading-history list. */
+private const val READ_DATE_SORT = "readProgress.readDate"
+
 /**
  * Returns a [KomgaApi] identical to the receiver except that series whose title
  * ends with [CHAPTER_TITLE_SUFFIX] are dropped from every list response. On
@@ -109,6 +112,12 @@ private class ChapterFilteringSeriesApi(
  * A browse query that has to go through the condition builder should be moved
  * to the search overload rather than filtered here; the library "Keep reading"
  * row was moved for this reason.
+ *
+ * One exception inside the search overload: a list ordered by the reader's
+ * own read date -- "Keep reading" on the home screen and in the library,
+ * "Forgotten" -- is not a browse list but the reader's history, and hiding
+ * chapters from it hid the very book they were in the middle of. Whatever
+ * the filter says, what you were reading is never taken off that shelf.
  */
 private class ChapterFilteringBookApi(
     private val delegate: KomgaBookApi,
@@ -124,7 +133,13 @@ private class ChapterFilteringBookApi(
     override suspend fun getBookList(
         search: KomgaBookSearch,
         pageRequest: KomgaPageRequest?,
-    ): Page<KomeliaBook> = delegate.getBookList(search, pageRequest).filtered()
+    ): Page<KomeliaBook> {
+        val page = delegate.getBookList(search, pageRequest)
+        return if (pageRequest.isReadingHistory()) page else page.filtered()
+    }
+
+    private fun KomgaPageRequest?.isReadingHistory(): Boolean =
+        this?.sort?.orders?.any { it.property == READ_DATE_SORT } == true
 
     override suspend fun getBooksOnDeck(
         libraryIds: List<KomgaLibraryId>?,

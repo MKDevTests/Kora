@@ -86,8 +86,8 @@ fun LibraryActionsMenu(
     if (deleteLibraryDialog)
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteLibrary,
-            body = "The library ${library.name} will be removed from this server. Your media files will not be affected. This cannot be undone. Continue?",
-            confirmText = "Yes, delete the library \"${library.name}\"",
+            body = LocalStrings.current.confirm.deleteLibraryServer(library.name),
+            confirmText = LocalStrings.current.confirm.deleteLibraryServerConfirm(library.name),
             onDialogConfirm = { actions.delete(library) },
             onDialogDismiss = { deleteLibraryDialog = false },
             buttonConfirmColor = MaterialTheme.colorScheme.errorContainer
@@ -96,7 +96,7 @@ fun LibraryActionsMenu(
     if (deleteOfflineLibraryDialog)
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteDownloadedLibrary,
-            body = "The library ${library.name} will be removed from this device only.",
+            body = LocalStrings.current.confirm.deleteLibraryDevice(library.name),
             onDialogConfirm = { actions.deleteOffline(library) },
             onDialogDismiss = { deleteOfflineLibraryDialog = false },
             buttonConfirmColor = MaterialTheme.colorScheme.errorContainer

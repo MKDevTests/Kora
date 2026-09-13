@@ -73,8 +73,8 @@ fun BookActionsMenu(
     if (showDeleteDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteBook,
-            body = "The Book ${book.metadata.title} will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
-            confirmText = "Yes, delete book \"${book.metadata.title}\"",
+            body = LocalStrings.current.confirm.deleteBookServer(book.metadata.title),
+            confirmText = LocalStrings.current.confirm.deleteBookServerConfirm(book.metadata.title),
             onDialogConfirm = {
                 actions.delete(book)
                 onDismissRequest()
@@ -92,9 +92,8 @@ fun BookActionsMenu(
     if (showDeleteSeriesDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteSeries,
-            body = "The whole series \"${book.seriesTitle}\" will be removed from this server, " +
-                "with every volume and its media files. This cannot be undone. Continue?",
-            confirmText = "Yes, delete the series \"${book.seriesTitle}\"",
+            body = LocalStrings.current.confirm.deleteSeriesServer(book.seriesTitle),
+            confirmText = LocalStrings.current.confirm.deleteSeriesServerConfirm(book.seriesTitle),
             onDialogConfirm = {
                 actions.deleteSeries?.invoke(book.seriesId)
                 onDismissRequest()
@@ -110,7 +109,7 @@ fun BookActionsMenu(
     if (showDeleteDownloadedDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteDownloadedBook,
-            body = "Book ${book.metadata.title} will be removed from this device",
+            body = LocalStrings.current.confirm.deleteBookDevice(book.metadata.title),
             onDialogConfirm = {
                 actions.deleteDownloaded(book)
                 onDismissRequest()
@@ -147,7 +146,7 @@ fun BookActionsMenu(
 
         if (permissionRequested) {
             ConfirmationDialog(
-                "Download book \"${book.metadata.title}\"?",
+                LocalStrings.current.confirm.downloadBook(book.metadata.title),
                 onDialogConfirm = { actions.download(book) },
                 onDialogDismiss = { showDownloadDialog = false }
             )
@@ -325,7 +324,7 @@ fun BookActionsMenu(
             DropdownMenuItem(
                 text = {
                     Text(
-                        if (useImmersiveMorphingCover) "Disable Morphing Cover" else "Enable Morphing Cover",
+                        if (useImmersiveMorphingCover) LocalStrings.current.ui.morphingCoverDisable else LocalStrings.current.ui.morphingCoverEnable,
                         style = MaterialTheme.typography.labelLarge
                     )
                 },

@@ -258,8 +258,14 @@ fun BoxScope.PagedReaderContent(
                                 }
                             }
 
+                            // Re-keyed on pageReloads: a page whose cache entry
+                            // was dropped (Reload button, return to foreground)
+                            // is asked for again; a page that loaded gets the
+                            // same object back from the cache at no cost.
+                            val pageReloads = pagedReaderState.pageReloads.collectAsState().value
                             spreadPages.forEach { (meta, pageState) ->
-                                LaunchedEffect(meta) {
+                                LaunchedEffect(meta, pageReloads) {
+                                    if (pageState.value?.imageResult is ReaderImageResult.Error) pageState.value = null
                                     pageState.value = pagedReaderState.getPage(meta)
                                 }
                             }

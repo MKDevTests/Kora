@@ -76,19 +76,39 @@ def strip_white_plate(im):
     edge = ([px[x, 0] for x in range(w)] + [px[x, h - 1] for x in range(w)] +
             [px[0, y] for y in range(h)] + [px[w - 1, y] for y in range(h)])
     (r, g, b, a), count = Counter(edge).most_common(1)[0]
-    if a < 250 or count / len(edge) < 0.55 or min(r, g, b) < 200:
+    if a < 250 or count / len(edge) < 0.55:
+        return im, False
+
+    queue = deque()
+    if min(r, g, b) >= 200:
+        for x in range(w):
+            queue.append((x, 0))
+            queue.append((x, h - 1))
+        for y in range(h):
+            queue.append((0, y))
+            queue.append((w - 1, y))
+    elif max(r, g, b) < 80:
+        # A dark frame around the sheet: seven_seas, avatar_press, simon &
+        # schuster ship as black line art on white, boxed in a 1 px black
+        # border. Seeding from the border stops on the frame, so the white
+        # stays. Seed instead from the white pixels of the ring just inside
+        # it -- a white pixel that close to the edge is the plate, not the
+        # counter of a letter.
+        k = max(2, int(min(w, h) * 0.08))
+        ring = ([(x, y) for y in (k, h - 1 - k) for x in range(k, w - k)] +
+                [(x, y) for x in (k, w - 1 - k) for y in range(k, h - k)])
+        white = [(x, y) for x, y in ring
+                 if px[x, y][3] > 250 and min(px[x, y][:3]) >= 200]
+        if len(white) / max(1, len(ring)) < 0.6:
+            return im, False
+        r, g, b = 255, 255, 255
+        queue.extend(white)
+    else:
         return im, False
 
     out = im.copy()
     opx = out.load()
     seen = bytearray(w * h)
-    queue = deque()
-    for x in range(w):
-        queue.append((x, 0))
-        queue.append((x, h - 1))
-    for y in range(h):
-        queue.append((0, y))
-        queue.append((w - 1, y))
     cleared = 0
     while queue:
         x, y = queue.popleft()
@@ -117,8 +137,11 @@ def densify(im):
     antialiasing instead of hard-edging it. Skipped once the art is already
     dense, which keeps repeated runs from compounding.
     """
-    _, _, alpha = _stats(im)
-    if alpha > 200:
+    # Measured at full size, not on the 96 px thumbnail _stats uses: the
+    # downscale softens every edge and read kodansha at under 200 when the
+    # real art sat at 216, so each run lifted it again (216 -> 230 -> ...).
+    visible = [a for *_, a in im.getdata() if a > 40]
+    if not visible or sum(visible) / len(visible) > 200:
         return im
     channel = im.getchannel("A").point(lambda v: int(255 * ((v / 255) ** 0.55)))
     return Image.merge("RGBA", tuple(im.split()[:3]) + (channel,))
