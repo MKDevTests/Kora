@@ -265,6 +265,13 @@ class ViewModelFactory(
             libraries = dependencies.komgaSharedState.libraries,
             offlineSettingsRepository = dependencies.offlineDependencies.repositories.offlineSettingsRepository,
             settingsRepository = appRepositories.settingsRepository,
+            discoverTrigger = { libraries ->
+                snd.komelia.ui.discover.DiscoverScanner.ensureFresh(
+                    service = discoverService(),
+                    repository = appRepositories.discoverRepository,
+                    libraries = libraries,
+                )
+            },
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             releaseNotesService = dependencies.releaseNotesService,
         )
@@ -641,18 +648,24 @@ class ViewModelFactory(
         )
     }
 
+    /**
+     * Stateless apart from its dependencies, so building one per caller is
+     * fine: the pass itself is owned by [snd.komelia.ui.discover.DiscoverScanner].
+     */
+    private fun discoverService() = snd.komelia.ui.discover.DiscoverService(
+        seriesApi = komgaApi.seriesApi,
+        similarityIndex = appRepositories.similarityIndexRepository,
+        ratingsRepository = appRepositories.seriesRatingsRepository,
+        favoriteSeriesIds = appRepositories.settingsRepository.getFavoriteSeriesIds(),
+        seedLibraryIds = appRepositories.settingsRepository.getDiscoverLibraryIds(),
+        repository = appRepositories.discoverRepository,
+        mangaUpdates = dependencies.mangaUpdatesClient,
+    )
+
     fun getDiscoverViewModel(): snd.komelia.ui.discover.DiscoverViewModel {
         return snd.komelia.ui.discover.DiscoverViewModel(
             repository = appRepositories.discoverRepository,
-            service = snd.komelia.ui.discover.DiscoverService(
-                seriesApi = komgaApi.seriesApi,
-                similarityIndex = appRepositories.similarityIndexRepository,
-                ratingsRepository = appRepositories.seriesRatingsRepository,
-                favoriteSeriesIds = appRepositories.settingsRepository.getFavoriteSeriesIds(),
-                seedLibraryIds = appRepositories.settingsRepository.getDiscoverLibraryIds(),
-                repository = appRepositories.discoverRepository,
-                mangaUpdates = dependencies.mangaUpdatesClient,
-            ),
+            service = discoverService(),
             seriesApi = komgaApi.seriesApi,
             settingsRepository = appRepositories.settingsRepository,
         )

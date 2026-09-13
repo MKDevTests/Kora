@@ -406,6 +406,15 @@ private fun ContinuousReaderImage(
     // load again; without a key the DisposableEffect fires once for the page's
     // whole life on screen and a failed page can never be asked for twice.
     var retryCount by remember { mutableStateOf(0) }
+    // Same path as the button, taken for the page automatically when the state
+    // dropped its cached failures on return to the foreground.
+    val failedPagesDropped = state.failedPagesDropped.collectAsState().value
+    LaunchedEffect(failedPagesDropped) {
+        if (failedPagesDropped > 0 && imageResult is ReaderImageResult.Error) {
+            imageResult = null
+            retryCount++
+        }
+    }
     DisposableEffect(retryCount) {
         coroutineScope.launch {
             val result = state.getImage(page)

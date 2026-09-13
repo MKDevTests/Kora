@@ -18,6 +18,7 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.LocalLibraries
+import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
@@ -38,7 +39,7 @@ class DiscoverSettingsScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getDiscoverSettingsViewModel() }
         LaunchedEffect(Unit) { vm.initialize() }
 
-        SettingsScreenContainer(title = "Découvertes") {
+        SettingsScreenContainer(title = LocalStrings.current.discover.title) {
             when (vm.state.collectAsState().value) {
                 is LoadState.Error, LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
                 is LoadState.Success -> DiscoverSettings(vm)
@@ -50,6 +51,7 @@ class DiscoverSettingsScreen : Screen {
 @Composable
 private fun DiscoverSettings(vm: DiscoverSettingsViewModel) {
     val libraries = LocalLibraries.current.collectAsState().value
+    val strings = LocalStrings.current.discover
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -57,22 +59,18 @@ private fun DiscoverSettings(vm: DiscoverSettingsViewModel) {
     ) {
         Column {
             SwitchWithLabel(
-                label = { Text("Activer l'onglet Découvertes") },
+                label = { Text(strings.settingsEnable) },
                 checked = vm.discoverEnabled,
                 onCheckedChange = vm::onDiscoverEnabledChange,
             )
             Text(
-                text = "Propose des séries que vous ne possédez pas, à partir de celles que " +
-                    "vous avez notées, mises en favori ou lues. Ajoute une icône dans la barre " +
-                    "de navigation.",
+                text = strings.settingsEnableHelp,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp),
             )
             Text(
-                text = "Interroge MangaUpdates une fois par semaine, en arrière-plan. Seuls les " +
-                    "titres des séries qui servent de point de départ sont envoyés, jamais votre " +
-                    "catalogue. Désactivé, rien n'est envoyé.",
+                text = strings.settingsPrivacy,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp, top = 4.dp),
@@ -83,14 +81,12 @@ private fun DiscoverSettings(vm: DiscoverSettingsViewModel) {
 
         Column {
             Text(
-                text = "Bibliothèques utilisées comme point de départ",
+                text = strings.settingsLibrariesTitle,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "MangaUpdates ne référence que des mangas, manhwas et manhuas. Cocher vos " +
-                    "bibliothèques de mangas évite de gaspiller les places de départ avec des BD " +
-                    "ou des comics, qui n'y produisent rien. Aucune case cochée = toutes.",
+                text = strings.settingsLibrariesHelp,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
@@ -103,8 +99,7 @@ private fun DiscoverSettings(vm: DiscoverSettingsViewModel) {
                 )
             }
             Text(
-                text = "Les séries des bibliothèques non cochées restent exclues des suggestions : " +
-                    "vous ne verrez jamais proposer une série que vous possédez déjà.",
+                text = strings.settingsLibrariesExclusion,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),

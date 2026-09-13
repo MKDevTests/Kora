@@ -33,6 +33,12 @@ class AppServerManagementViewModel(
         }
     }
 
+    fun renameServer(profile: ServerProfile, name: String) {
+        screenModelScope.launch {
+            sessionManager.renameServer(profile, name)
+        }
+    }
+
     fun switchServer(profile: ServerProfile) {
         sessionManager.switchServer(profile)
     }

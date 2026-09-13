@@ -11,4 +11,7 @@ interface ServerSessionManager {
     fun switchServer(profile: ServerProfile?)
     suspend fun addServer(name: String, url: String, username: String)
     suspend fun deleteServer(profile: ServerProfile)
+
+    /** Changes the label shown for [profile]; nothing else about it. */
+    suspend fun renameServer(profile: ServerProfile, name: String)
 }

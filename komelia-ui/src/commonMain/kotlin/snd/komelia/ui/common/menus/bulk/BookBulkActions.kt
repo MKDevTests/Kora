@@ -61,14 +61,11 @@ fun BookBulkActionDialogs(state: BookBulkActionsState) {
 
     if (state.showDeleteDownloadedDialog) {
         val booksToDelete = remember(state.books) { state.books.filter { it.downloaded } }
+        // Read outside remember: the catalogue is a composition local.
+        val confirm = LocalStrings.current.confirm
         val textBody = remember(booksToDelete.size) {
-            buildString {
-                if (booksToDelete.size == 1) {
-                    append("Book ${booksToDelete.first().metadata.title} will be removed from this device")
-                } else {
-                    append("${booksToDelete.size} books and their files will be removed from this device")
-                }
-            }
+            if (booksToDelete.size == 1) confirm.deleteBookDevice(booksToDelete.first().metadata.title)
+            else confirm.deleteBooksDevice(booksToDelete.size)
         }
 
         ConfirmationDialog(
@@ -89,12 +86,10 @@ fun BookBulkActionDialogs(state: BookBulkActionsState) {
         var permissionRequested by remember { mutableStateOf(false) }
         DownloadNotificationRequestDialog { permissionRequested = true }
 
+        val confirm = LocalStrings.current.confirm
         val bodyText = remember(state.books) {
-            buildString {
-                append("Download ")
-                if (state.books.size == 1) append("${state.books.first().metadata.title}?")
-                else append("${state.books.size} books?")
-            }
+            if (state.books.size == 1) confirm.downloadBook(state.books.first().metadata.title)
+            else confirm.downloadBooks(state.books.size)
         }
         if (permissionRequested) {
             ConfirmationDialog(
@@ -110,27 +105,9 @@ fun BookBulkActionDialogs(state: BookBulkActionsState) {
     }
 
     if (state.showDeleteDialog) {
-        val textBody = remember(state.books.size) {
-            buildString {
-                if (state.books.size == 1) {
-                    append("Book ")
-                } else {
-                    append("${state.books.size} books ")
-                }
-                append("will be removed from this server alongside with stored media files. This cannot be undone. Continue?")
-            }
-        }
-
-        val confirmationText = remember(state.books.size) {
-            buildString {
-                append("Yes, delete ")
-                if (state.books.size == 1) {
-                    append("book and its files")
-                } else {
-                    append("${state.books.size} books and their files")
-                }
-            }
-        }
+        val confirm = LocalStrings.current.confirm
+        val textBody = remember(state.books.size) { confirm.deleteBooksServer(state.books.size) }
+        val confirmationText = remember(state.books.size) { confirm.deleteBooksServerConfirm(state.books.size) }
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteBooks,
             body = textBody,

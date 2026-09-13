@@ -156,7 +156,7 @@ private fun GenreCard(
     Box(modifier) {
         LibraryItemCard(
             title = tile.label,
-            secondaryText = if (showCount && tile.count >= 0) "${tile.count} ${if (tile.count > 1) "séries" else "série"}" else null,
+            secondaryText = if (showCount && tile.count >= 0) LocalStrings.current.counts.seriesCount(tile.count) else null,
             titleBold = true,
             onClick = onClick,
             onLongClick = { menuExpanded = true },
@@ -278,7 +278,7 @@ fun GenreCoverPickerDialog(
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text(
-                    "Cover for « $genreLabel »",
+                    LocalStrings.current.counts.coverFor(genreLabel),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(8.dp))

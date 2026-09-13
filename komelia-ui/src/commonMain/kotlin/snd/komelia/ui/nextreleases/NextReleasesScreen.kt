@@ -122,7 +122,7 @@ class NextReleasesScreen : Screen {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "${expiredTags.size} tag(s) nextrelease périmé(s)",
+                            LocalStrings.current.counts.expiredNextReleaseTags(expiredTags.size),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
@@ -238,7 +238,7 @@ private fun NextReleaseRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Tome ${release.volume} — ${dayMonthLabel(release.date)}",
+                LocalStrings.current.counts.volumeOn(release.volume, dayMonthLabel(release.date)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -352,9 +352,9 @@ fun NextReleasesHomeCard() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "${next.seriesTitle} — tome ${next.volume}, " +
-                        dayMonthLabel(next.date) +
-                        if (current.size > 1) " (+${current.size - 1})" else "",
+                    text = LocalStrings.current.counts.nextReleaseLine(
+                        next.seriesTitle, next.volume, dayMonthLabel(next.date),
+                    ) + if (current.size > 1) " (+${current.size - 1})" else "",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )

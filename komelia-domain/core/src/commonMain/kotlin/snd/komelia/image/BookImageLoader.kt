@@ -3,12 +3,14 @@ package snd.komelia.image
 import coil3.disk.DiskCache
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import okio.FileSystem
 import okio.Path.Companion.toPath
+import snd.komelia.isTransientNetworkFailure
 import snd.komelia.komga.api.KomgaBookApi
 import snd.komelia.komga.api.LocalFileApiProvider
 import snd.komelia.offline.book.repository.OfflineBookRepository
@@ -18,6 +20,16 @@ private val logger = KotlinLogging.logger {}
 
 /** See [BookImageLoader.downloadLimit] for the measurement behind the number. */
 private const val MAX_CONCURRENT_PAGE_DOWNLOADS = 4
+
+/**
+ * Pauses between attempts at a page whose download failed on the network path,
+ * in seconds. See [BookImageLoader.fetchFromServer].
+ *
+ * The sum is 90 s. Measured on the tablet on 2026-09-13, twice: from the first
+ * request after waking to the Wi-Fi coming back took 63 s and 65 s. Each
+ * attempt itself waits up to the client's connect timeout on top of these.
+ */
+private val NETWORK_RETRY_DELAYS_S = listOf(2L, 4L, 8L, 16L, 30L, 30L)
 
 class BookImageLoader(
     private val bookClient: StateFlow<KomgaBookApi>,
@@ -103,10 +115,45 @@ class BookImageLoader(
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 logger.warn(e) { "Local page read failed for $bookId page $page, falling back to network" }
-                downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
+                fetchFromServer(bookId, page)
             }
         }
-        return downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
+        return fetchFromServer(bookId, page)
+    }
+
+    /**
+     * One page from the server, tried again after a network failure.
+     *
+     * Why here and not in the readers: both readers cache the result of a load,
+     * including a failure, and hand it back until the user presses Reload or
+     * leaves the book. That is deliberate — a request loop is the wrong answer
+     * to a server in trouble — so the result they cache must already be the
+     * outcome of a patient attempt. Only network-path failures are retried
+     * ([isTransientNetworkFailure]): an HTTP error or a bad file comes back the
+     * same every time.
+     *
+     * The pause is taken OUTSIDE the download permit: a page waiting for the
+     * Wi-Fi to return must not hold one of the four slots while it waits.
+     * Cancellation (the reader moved on, the book was closed) ends the wait —
+     * `delay` is cancellable and `ensureActive` is checked after each failure.
+     */
+    private suspend fun fetchFromServer(bookId: KomgaBookId, page: Int): ByteArray {
+        var attempt = 0
+        while (true) {
+            try {
+                return downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
+            } catch (e: Throwable) {
+                currentCoroutineContext().ensureActive()
+                val pause = NETWORK_RETRY_DELAYS_S.getOrNull(attempt)
+                if (pause == null || !isTransientNetworkFailure(e)) throw e
+                attempt++
+                logger.warn {
+                    "page $page of $bookId: ${e::class.simpleName}: ${e.message} -- " +
+                        "retry $attempt/${NETWORK_RETRY_DELAYS_S.size} in ${pause}s"
+                }
+                delay(pause * 1000)
+            }
+        }
     }
 
     private suspend fun doLoad(bookId: KomgaBookId, page: Int): ImageSource {

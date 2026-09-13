@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +43,7 @@ class AppServerManagementScreen : Screen {
                         isCurrent = isCurrent,
                         displayUrl = if (isCurrent && activeUrl.isNotBlank()) activeUrl else profile.url,
                         onDelete = { vm.deleteServer(profile) },
+                        onRename = { vm.renameServer(profile, it) },
                         onSwitch = { vm.switchServer(profile) }
                     )
                     if (isCurrent) {
@@ -73,9 +75,13 @@ class AppServerManagementScreen : Screen {
         isCurrent: Boolean,
         displayUrl: String,
         onDelete: () -> Unit,
+        onRename: (String) -> Unit,
         onSwitch: () -> Unit
     ) {
         var showDeleteConfirmation by remember { mutableStateOf(false) }
+        var showRename by remember { mutableStateOf(false) }
+        val strings = LocalStrings.current.ui
+        val confirm = LocalStrings.current.confirm
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -100,21 +106,68 @@ class AppServerManagementScreen : Screen {
                 }
             }
 
-            IconButton(onClick = { showDeleteConfirmation = true }) {
-                Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.deleteServer)
+            IconButton(onClick = { showRename = true }) {
+                Icon(Icons.Default.Edit, contentDescription = strings.renameServer)
             }
+            IconButton(onClick = { showDeleteConfirmation = true }) {
+                Icon(Icons.Default.Delete, contentDescription = strings.deleteServer)
+            }
+        }
+
+        if (showRename) {
+            RenameServerDialog(
+                current = profile.name,
+                onConfirm = { onRename(it); showRename = false },
+                onDismiss = { showRename = false },
+            )
         }
 
         if (showDeleteConfirmation) {
             ConfirmationDialog(
-                title = LocalStrings.current.ui.deleteServerProfile,
-                body = "Are you sure you want to delete the profile for ${profile.name}? This will also delete all local settings and offline data associated with this server.",
-                buttonConfirm = "Delete",
+                title = strings.deleteServerProfile,
+                body = confirm.deleteServerProfile(profile.name),
+                buttonConfirm = strings.delete,
                 buttonConfirmColor = MaterialTheme.colorScheme.error,
                 onDialogConfirm = onDelete,
                 onDialogDismiss = { showDeleteConfirmation = false }
             )
         }
+    }
+
+    /**
+     * The profile's label is the URL typed at the first login and nothing ever
+     * changed it -- so after moving the server to another address through the
+     * alternates below, the old IP stayed as the title. The label is internal
+     * to the app: no request uses it.
+     */
+    @Composable
+    private fun RenameServerDialog(
+        current: String,
+        onConfirm: (String) -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        val strings = LocalStrings.current.ui
+        var name by remember(current) { mutableStateOf(current) }
+        val valid = name.isNotBlank()
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(strings.renameServer) },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(strings.serverName) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { onConfirm(name.trim()) }, enabled = valid) { Text(strings.save) }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text(strings.cancel) }
+            },
+        )
     }
 
     /**

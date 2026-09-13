@@ -129,6 +129,17 @@ class DefaultServerSessionManager(
         }
     }
 
+    override suspend fun renameServer(profile: ServerProfile, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || trimmed == profile.name) return
+        val renamed = profile.copy(name = trimmed)
+        serverProfileRepository.update(renamed)
+        // The name is only a label: no module rebuild, but the current profile
+        // is what the screens read, so it must carry the new label too.
+        if (_currentServerProfile.value?.id == profile.id) _currentServerProfile.value = renamed
+        refreshServerProfiles()
+    }
+
     override suspend fun deleteServer(profile: ServerProfile) {
         serverProfileRepository.delete(profile.id)
 

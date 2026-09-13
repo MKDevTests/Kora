@@ -332,7 +332,14 @@ class AndroidAppModule(
             }
             install(HttpTimeout) {
                 requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                connectTimeoutMillis = 30_000
+                // Connect only: the TCP handshake, before any byte of the
+                // request. A LAN or Tailscale server answers it in
+                // milliseconds; 30s was a full half-minute of frozen page
+                // every time the Wi-Fi was dead after waking (measured
+                // 2026-09-13: "failed to connect ... after 30000ms", four
+                // pages in a row). The retry in BookImageLoader.fetchFromServer
+                // needs attempts to fail fast to catch the link coming back.
+                connectTimeoutMillis = 10_000
                 // Raised from 30s on 2026-08-20. Measured that day: the same
                 // /api/v1/books/ondeck answered in 1.6s to curl with the app
                 // closed, and took 23-25s inside the app -- three times, and

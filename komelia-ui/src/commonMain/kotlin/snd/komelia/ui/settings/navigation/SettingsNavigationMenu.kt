@@ -115,7 +115,7 @@ fun SettingsNavigationMenu(
                 )
                 add(
                     NavEntry(
-                        label = "Découvertes",
+                        label = LocalStrings.current.discover.title,
                         onClick = { onNavigation(snd.komelia.ui.settings.discover.DiscoverSettingsScreen()) },
                         isSelected = currentScreen is snd.komelia.ui.settings.discover.DiscoverSettingsScreen,
                     )

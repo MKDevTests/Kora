@@ -76,6 +76,70 @@ data class AppStrings(
     val roles: RoleStrings,
     val editions: EditionStrings,
     val shelfPatterns: ShelfPatternStrings,
+    val discover: DiscoverStrings,
+    val confirm: ConfirmStrings,
+)
+
+/**
+ * Bodies and confirm buttons of the destructive dialogs. Every one names the
+ * thing about to go -- a title or a count -- so they are functions, and the
+ * French plural is decided in the translation.
+ */
+data class ConfirmStrings(
+    val deleteBookServer: (String) -> String,
+    val deleteBookServerConfirm: (String) -> String,
+    val deleteSeriesServer: (String) -> String,
+    val deleteSeriesServerConfirm: (String) -> String,
+    val deleteBookDevice: (String) -> String,
+    val deleteSeriesDevice: (String) -> String,
+    val deleteLibraryServer: (String) -> String,
+    val deleteLibraryServerConfirm: (String) -> String,
+    val deleteLibraryDevice: (String) -> String,
+    val downloadBook: (String) -> String,
+    val downloadSeries: (String) -> String,
+    val deleteBooksServer: (Int) -> String,
+    val deleteBooksServerConfirm: (Int) -> String,
+    val deleteBooksDevice: (Int) -> String,
+    val downloadBooks: (Int) -> String,
+    val deleteSeriesBulkServer: (Int) -> String,
+    val deleteSeriesBulkServerConfirm: (Int) -> String,
+    val deleteSeriesBulkDevice: (Int) -> String,
+    val downloadSeriesBulk: (Int) -> String,
+    val komfIdentifySeries: (Int) -> String,
+    val deleteServerProfile: (String) -> String,
+)
+
+/**
+ * The Discover tab and its settings page. Its own group because a third of
+ * its lines carry a number or a name, and those are functions here so the
+ * French plural is decided in the translation, not in the screen.
+ */
+data class DiscoverStrings(
+    val title: String,
+    val refresh: String,
+    val suggestionsTab: String,
+    val interestedTab: (Int) -> String,
+    val hideUnlicensed: String,
+    val emptyKept: String,
+    val searching: String,
+    val emptyAllUnlicensed: String,
+    val emptyNoSuggestions: String,
+    val votes: (Int) -> String,
+    val englishEdition: String,
+    val englishEditionBy: (String) -> String,
+    val originalOnly: String,
+    val becauseYouRead: (String) -> String,
+    val markInterested: String,
+    val unmarkInterested: String,
+    val dismiss: String,
+    val searchFrench: String,
+    val openPage: String,
+    val settingsEnable: String,
+    val settingsEnableHelp: String,
+    val settingsPrivacy: String,
+    val settingsLibrariesTitle: String,
+    val settingsLibrariesHelp: String,
+    val settingsLibrariesExclusion: String,
 )
 
 /**
@@ -157,6 +221,14 @@ data class CountStrings(
     val inLibrary: (String) -> String,
     val releaseYear: (Int) -> String,
     val processedFiles: (Int) -> String,
+    val readOf: (Int, Int) -> String,
+    val publicationDate: (String) -> String,
+    val lastAccessed: (String) -> String,
+    val coverFor: (String) -> String,
+    val coversApplied: (Int) -> String,
+    val expiredNextReleaseTags: (Int) -> String,
+    val volumeOn: (String, String) -> String,
+    val nextReleaseLine: (String, String, String) -> String,
 )
 
 /**
@@ -686,6 +758,8 @@ class UiStrings(private val values: Map<String, String>) {
     val modernTopAppBarAnd: String get() = at("modernTopAppBarAnd")
     val more: String get() = at("more")
     val morphingCoverImageThatFlies: String get() = at("morphingCoverImageThatFlies")
+    val morphingCoverDisable: String get() = at("morphingCoverDisable")
+    val morphingCoverEnable: String get() = at("morphingCoverEnable")
     val morphingImmersiveCover: String get() = at("morphingImmersiveCover")
     val myAccount: String get() = at("myAccount")
     val myAuthenticationActivity: String get() = at("myAuthenticationActivity")
@@ -868,6 +942,7 @@ class UiStrings(private val values: Map<String, String>) {
     val removeModel: String get() = at("removeModel")
     val removeUrl: String get() = at("removeUrl")
     val renameGenre: String get() = at("renameGenre")
+    val renameServer: String get() = at("renameServer")
     val renommer: String get() = at("renommer")
     val repeatNewPassword: String get() = at("repeatNewPassword")
     val replaceTheBottomNavigationBar: String get() = at("replaceTheBottomNavigationBar")
@@ -939,6 +1014,7 @@ class UiStrings(private val values: Map<String, String>) {
     val seriesTitleLanguageIso639: String get() = at("seriesTitleLanguageIso639")
     val server: String get() = at("server")
     val serverManagement: String get() = at("serverManagement")
+    val serverName: String get() = at("serverName")
     val serverSettings: String get() = at("serverSettings")
     val serverUnavailable: String get() = at("serverUnavailable")
     val serverUrl: String get() = at("serverUrl")

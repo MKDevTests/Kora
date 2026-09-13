@@ -1013,7 +1013,12 @@ class ReaderState(
             }
         }
             .distinctUntilChanged()
-            .onEach { nightModeActive.value = it }
+            .onEach { active ->
+                // One line per transition, so a late tint can be read off
+                // logcat against the schedule instead of remembered.
+                logger.info { "NightMode: ${if (active) "on" else "off"} (schedule ${nightMode.value.scheduleEnabled}, ${nightMode.value.startMinute / 60}:${(nightMode.value.startMinute % 60).toString().padStart(2, '0')} -> ${nightMode.value.endMinute / 60}:${(nightMode.value.endMinute % 60).toString().padStart(2, '0')})" }
+                nightModeActive.value = active
+            }
             .launchIn(stateScope)
     }
 

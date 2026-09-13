@@ -176,7 +176,7 @@ private fun CollectionToolbar(
         }
         SuggestionChip(
             onClick = {},
-            label = { Text("$totalSeriesCount series", style = MaterialTheme.typography.bodyMedium) },
+            label = { Text(LocalStrings.current.counts.seriesCount(totalSeriesCount), style = MaterialTheme.typography.bodyMedium) },
             modifier = Modifier.padding(horizontal = 10.dp),
         )
         if (totalBooksAcrossSeries > 0) {
@@ -184,7 +184,7 @@ private fun CollectionToolbar(
                 onClick = {},
                 label = {
                     Text(
-                        "$readBooksAcrossSeries/$totalBooksAcrossSeries read",
+                        LocalStrings.current.counts.readOf(readBooksAcrossSeries, totalBooksAcrossSeries),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 },
@@ -250,7 +250,7 @@ private fun ContinueReadingSeriesHeader(
                     maxLines = 2,
                 )
                 Text(
-                    "${series.booksReadCount}/${series.booksCount} read",
+                    LocalStrings.current.counts.readOf(series.booksReadCount, series.booksCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

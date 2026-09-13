@@ -57,6 +57,7 @@ import snd.komelia.ui.LoadState
 import snd.komelia.ui.LocalLibraries
 import snd.komelia.ui.LocalRawStatusBarHeight
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.strings.DiscoverStrings
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.ErrorContent
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
@@ -89,6 +90,7 @@ class DiscoverScreen : Screen {
         val statusBarHeight = LocalRawStatusBarHeight.current
         val scanning = vm.scanning.collectAsState().value
         val sourceNames = vm.sourceNames.collectAsState().value
+        val strings = LocalStrings.current.discover
 
         Column(Modifier.fillMaxSize().padding(top = statusBarHeight)) {
             Row(
@@ -100,7 +102,7 @@ class DiscoverScreen : Screen {
                 }
                 Icon(Icons.Rounded.Explore, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
                 Text(
-                    "Découvertes",
+                    strings.title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 12.dp).weight(1f),
@@ -109,7 +111,7 @@ class DiscoverScreen : Screen {
                     onClick = { vm.refresh(libraries.map { it.id }) },
                     enabled = !scanning && libraries.isNotEmpty(),
                 ) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = "Actualiser")
+                    Icon(Icons.Rounded.Refresh, contentDescription = strings.refresh)
                 }
             }
 
@@ -134,12 +136,12 @@ class DiscoverScreen : Screen {
                     FilterChip(
                         selected = !showKept,
                         onClick = { showKept = false },
-                        label = { Text("Suggestions") },
+                        label = { Text(strings.suggestionsTab) },
                     )
                     FilterChip(
                         selected = showKept,
                         onClick = { showKept = true },
-                        label = { Text("Intéressé (${interested.size})") },
+                        label = { Text(strings.interestedTab(interested.size)) },
                     )
                 }
                 // Opt-in on purpose: with no French signal available, this
@@ -148,7 +150,7 @@ class DiscoverScreen : Screen {
                     FilterChip(
                         selected = hideUnlicensed,
                         onClick = { vm.setHideUnlicensed(!hideUnlicensed) },
-                        label = { Text("Masquer sans édition anglaise") },
+                        label = { Text(strings.hideUnlicensed) },
                     )
                 }
             }
@@ -170,11 +172,10 @@ class DiscoverScreen : Screen {
                     if (shown.isEmpty()) {
                         Text(
                             when {
-                                showKept -> "Rien de gardé pour l'instant."
-                                scanning -> "Recherche en cours…"
-                                hideUnlicensed && state.value.isNotEmpty() ->
-                                    "Toutes les suggestions sont sans édition anglaise connue. Désactivez le filtre pour les voir."
-                                else -> "Aucune suggestion pour l'instant. Notez ou mettez en favori quelques séries, puis actualisez."
+                                showKept -> strings.emptyKept
+                                scanning -> strings.searching
+                                hideUnlicensed && state.value.isNotEmpty() -> strings.emptyAllUnlicensed
+                                else -> strings.emptyNoSuggestions
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,6 +190,7 @@ class DiscoverScreen : Screen {
                                 SuggestionCard(
                                     suggestion = suggestion,
                                     sourceNames = sourceNames,
+                                    strings = strings,
                                     onOpen = { if (suggestion.url.isNotBlank()) uriHandler.openUri(suggestion.url) },
                                     onDismiss = { vm.dismiss(suggestion) },
                                     onToggleInterested = {
@@ -227,6 +229,7 @@ private fun String.encodeUrlQuery(): String = buildString {
 private fun SuggestionCard(
     suggestion: DiscoverSuggestion,
     sourceNames: Map<String, String>,
+    strings: DiscoverStrings,
     onOpen: () -> Unit,
     onDismiss: () -> Unit,
     onToggleInterested: () -> Unit,
@@ -291,7 +294,7 @@ private fun SuggestionCard(
                                 buildString {
                                     append(" ")
                                     append(formatRating(suggestion.rating))
-                                    if (suggestion.ratingVotes > 0) append(" (${suggestion.ratingVotes} votes)")
+                                    if (suggestion.ratingVotes > 0) append(" (${strings.votes(suggestion.ratingVotes)})")
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -319,9 +322,9 @@ private fun SuggestionCard(
                     Text(
                         if (suggestion.licensed) {
                             val by = suggestion.englishPublishers.joinToString(", ")
-                            if (by.isBlank()) "Édition anglaise" else "Édition anglaise : $by"
+                            if (by.isBlank()) strings.englishEdition else strings.englishEditionBy(by)
                         } else {
-                            "VO uniquement (aucune édition anglaise connue)"
+                            strings.originalOnly
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (suggestion.licensed) MaterialTheme.colorScheme.tertiary
@@ -334,7 +337,7 @@ private fun SuggestionCard(
                     val because = suggestion.becauseOf.mapNotNull { sourceNames[it] }
                     if (because.isNotEmpty()) {
                         Text(
-                            "Parce que vous lisez ${because.joinToString(", ")}",
+                            strings.becauseYouRead(because.joinToString(", ")),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 2,
@@ -348,13 +351,13 @@ private fun SuggestionCard(
                     IconButton(onClick = onToggleInterested) {
                         Icon(
                             if (suggestion.interested) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            contentDescription = if (suggestion.interested) "Retirer des intéressés" else "Intéressé",
+                            contentDescription = if (suggestion.interested) strings.unmarkInterested else strings.markInterested,
                             tint = if (suggestion.interested) MaterialTheme.colorScheme.primary
                             else LocalContentColor.current,
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Ne plus proposer")
+                        Icon(Icons.Rounded.Close, contentDescription = strings.dismiss)
                     }
                 }
             }
@@ -387,10 +390,10 @@ private fun SuggestionCard(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = onSearchFrench) {
-                    Text("Chercher en VF")
+                    Text(strings.searchFrench)
                 }
                 TextButton(onClick = onOpen, enabled = suggestion.url.isNotBlank()) {
-                    Text("Voir la fiche")
+                    Text(strings.openPage)
                 }
             }
         }

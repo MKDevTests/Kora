@@ -652,14 +652,15 @@ private fun OneshotImmersiveTabRow(
 
 @Composable
 private fun BookStatsLine(book: KomeliaBook, modifier: Modifier = Modifier) {
+    val counts = LocalStrings.current.counts
     val segments = remember(book) {
         buildList {
-            book.metadata.releaseDate?.let { add("Publication date: $it") }
+            book.metadata.releaseDate?.let { add(counts.publicationDate(it.toString())) }
             book.readProgress?.let { progress ->
                 val accessed = progress.readDate
                     .toLocalDateTime(TimeZone.currentSystemDefault())
                     .format(localDateTimeFormat)
-                add("last accessed: $accessed")
+                add(counts.lastAccessed(accessed))
             }
         }
     }

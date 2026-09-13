@@ -73,6 +73,7 @@ ait_planet_lar
 ait_planet_lar_jpg
 aka_comics
 akane_shinsha
+akata
 akileos_jpg
 akita_shoten
 alamat_comics
@@ -604,6 +605,7 @@ magnetic_press
 malibu
 man_of_action_studios
 manga_action
+manga_plus
 manga_time_kirara_carat
 manga_up
 mangaone
@@ -645,6 +647,7 @@ maximum_press
 mc2
 media_factory
 meet_danny_ocean
+meian
 mercury_comics
 metropolitan_books
 milestone

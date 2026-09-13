@@ -93,8 +93,8 @@ fun SeriesActionsMenu(
     if (showDeleteDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteSeries2,
-            body = "The Series ${series.metadata.title} will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
-            confirmText = "Yes, delete series \"${series.metadata.title}\"",
+            body = LocalStrings.current.confirm.deleteSeriesServer(series.metadata.title),
+            confirmText = LocalStrings.current.confirm.deleteSeriesServerConfirm(series.metadata.title),
             onDialogConfirm = {
                 actions.delete(series)
                 onDismissRequest()
@@ -111,7 +111,7 @@ fun SeriesActionsMenu(
     if (showDeleteDownloadedDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteDownloadedSeries,
-            body = "The series ${series.metadata.title} will be removed from this device",
+            body = LocalStrings.current.confirm.deleteSeriesDevice(series.metadata.title),
             onDialogConfirm = {
                 actions.deleteDownloaded(series)
                 onDismissRequest()
@@ -170,7 +170,7 @@ fun SeriesActionsMenu(
 
         if (permissionRequested) {
             ConfirmationDialog(
-                "Download series \"${series.metadata.title}\"?",
+                LocalStrings.current.confirm.downloadSeries(series.metadata.title),
                 onDialogConfirm = { actions.download(series) },
                 onDialogDismiss = { showDownloadDialog = false }
             )
@@ -464,7 +464,7 @@ fun SeriesActionsMenu(
             DropdownMenuItem(
                 text = {
                     Text(
-                        if (useImmersiveMorphingCover) "Disable Morphing Cover" else "Enable Morphing Cover",
+                        if (useImmersiveMorphingCover) LocalStrings.current.ui.morphingCoverDisable else LocalStrings.current.ui.morphingCoverEnable,
                         style = MaterialTheme.typography.labelLarge
                     )
                 },

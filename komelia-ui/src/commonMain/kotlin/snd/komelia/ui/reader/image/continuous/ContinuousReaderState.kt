@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import snd.komelia.AppForegroundState
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.image.BookImageLoader
@@ -128,6 +129,13 @@ class ContinuousReaderState(
     val lazyListState = LazyListState(0, 0)
 
     val readingDirection = MutableStateFlow(TOP_TO_BOTTOM)
+
+    /**
+     * Bumped when cached failures are dropped on return to the foreground; a
+     * page composable showing an error keys its reload on it. See
+     * [reloadFailedPages].
+     */
+    val failedPagesDropped = MutableStateFlow(0)
     val tapToZoom = MutableStateFlow(true)
     val sidePaddingFraction = MutableStateFlow(.3f)
     val sidePaddingPx = MutableStateFlow(0)
@@ -361,6 +369,17 @@ class ContinuousReaderState(
             }.launchIn(stateScope)
 
         imageDisplayFlow.drop(1).onEach { pageChangeFlow.emit(Unit) }.launchIn(stateScope)
+
+        // A page that failed while the tablet slept would be handed back as
+        // failed until Reload or leaving the book: the Wi-Fi stays dead for
+        // about a minute after waking (see BookImageLoader.fetchFromServer), and
+        // the prefetch asks for several pages during that minute. Coming back
+        // to the foreground is the moment the network is worth asking again.
+        AppForegroundState.isForeground
+            .drop(1)
+            .filter { it }
+            .onEach { reloadFailedPages() }
+            .launchIn(stateScope)
     }
 
     fun stop() {
@@ -807,6 +826,23 @@ class ContinuousReaderState(
      */
     fun invalidatePage(page: PageMetadata) {
         imageCache.invalidate(page.toPageId())
+    }
+
+    /**
+     * Drops every cached failure and tells the pages on screen that show one to
+     * ask again. Only the failures: a page that loaded stays where it is.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun reloadFailedPages() {
+        // asMap() is Map<in PageId, _>: the key comes back projected, hence the cast.
+        val failed = imageCache.asMap().entries.mapNotNull { (key, job) ->
+            val isError = job.isCompleted && !job.isCancelled && job.getCompleted() is ReaderImageResult.Error
+            if (isError) key as? PageId else null
+        }
+        if (failed.isEmpty()) return
+        failed.forEach { imageCache.invalidate(it) }
+        logger.info { "back in foreground: dropped ${failed.size} failed page(s), reloading" }
+        failedPagesDropped.update { it + 1 }
     }
 
     private fun launchImageJob(requestPage: PageMetadata): Deferred<ReaderImageResult> {

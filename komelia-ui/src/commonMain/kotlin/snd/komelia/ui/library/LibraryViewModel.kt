@@ -477,9 +477,10 @@ class LibraryViewModel(
                 label = "library.keepReading",
                 count = { books: List<*> -> books.size },
             ) {
-                // The `search` overload, not `conditionBuilder`: this is a browse
-                // query, and only that overload goes through the chapter filter
-                // (see ChapterFilteringBookApi). Same request either way.
+                // The `search` overload, sorted by read date: that sort is what
+                // ChapterFilteringBookApi recognises as the reader's history, and
+                // a chapter series being read is never hidden from it, whatever
+                // the "(Chap)" filter says.
                 bookApi.getBookList(
                     search = KomgaBookSearch(
                         allOfBooks {

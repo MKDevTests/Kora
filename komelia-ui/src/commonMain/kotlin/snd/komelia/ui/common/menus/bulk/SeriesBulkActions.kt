@@ -80,8 +80,8 @@ fun SeriesBulkActionDialogs(
     if (state.showDeleteDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteSeries2,
-            body = "${state.series.size} series will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
-            confirmText = "Yes, delete ${state.series.size} series and their files",
+            body = LocalStrings.current.confirm.deleteSeriesBulkServer(state.series.size),
+            confirmText = LocalStrings.current.confirm.deleteSeriesBulkServerConfirm(state.series.size),
             onDialogConfirm = {
                 coroutineScope.launch { state.actions.delete(state.series) }
                 state.showDeleteDialog = false
@@ -94,7 +94,7 @@ fun SeriesBulkActionDialogs(
     if (state.showDeleteDownloadedDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteDownloadedSeries2,
-            body = "${state.series.size} series will be removed from this device",
+            body = LocalStrings.current.confirm.deleteSeriesBulkDevice(state.series.size),
             onDialogConfirm = {
                 coroutineScope.launch { state.actions.deleteDownloaded(state.series) }
                 state.showDeleteDownloadedDialog = false
@@ -107,7 +107,7 @@ fun SeriesBulkActionDialogs(
     if (state.showKomfIdentifyDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.komfSeriesAutoIdentify,
-            body = "${state.series.size} series will be auto-identified by Komf",
+            body = LocalStrings.current.confirm.komfIdentifySeries(state.series.size),
             onDialogConfirm = {
                 coroutineScope.launch { state.actions.komfIdentify(state.series) }
                 state.showKomfIdentifyDialog = false
@@ -120,12 +120,10 @@ fun SeriesBulkActionDialogs(
         var permissionRequested by remember { mutableStateOf(false) }
         DownloadNotificationRequestDialog { permissionRequested = true }
 
+        val confirm = LocalStrings.current.confirm
         val bodyText = remember(state.series) {
-            buildString {
-                append("Download ")
-                if (state.series.size == 1) append("${state.series.first().metadata.title}?")
-                else append("${state.series.size} series?")
-            }
+            if (state.series.size == 1) confirm.downloadSeries(state.series.first().metadata.title)
+            else confirm.downloadSeriesBulk(state.series.size)
         }
         if (permissionRequested) {
             ConfirmationDialog(

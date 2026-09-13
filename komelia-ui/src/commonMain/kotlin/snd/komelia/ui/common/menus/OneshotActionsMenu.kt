@@ -55,8 +55,8 @@ fun OneshotActionsMenu(
     if (showDeleteDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteBook,
-            body = "The Book ${book.metadata.title} will be removed from this server alongside with stored media files. This cannot be undone. Continue?",
-            confirmText = "Yes, delete book \"${book.metadata.title}\"",
+            body = LocalStrings.current.confirm.deleteBookServer(book.metadata.title),
+            confirmText = LocalStrings.current.confirm.deleteBookServerConfirm(book.metadata.title),
             onDialogConfirm = {
                 actions.delete(book)
                 onDismissRequest()
@@ -72,7 +72,7 @@ fun OneshotActionsMenu(
     if (showDeleteDownloadedDialog) {
         ConfirmationDialog(
             title = LocalStrings.current.ui.deleteDownloadedBook,
-            body = "The Book ${book.metadata.title} will be removed from this device only",
+            body = LocalStrings.current.confirm.deleteBookDevice(book.metadata.title),
             onDialogConfirm = {
                 actions.deleteDownloaded(book)
                 onDismissRequest()
@@ -260,7 +260,7 @@ fun OneshotActionsMenu(
             DropdownMenuItem(
                 text = {
                     Text(
-                        if (useImmersiveMorphingCover) "Disable Morphing Cover" else "Enable Morphing Cover",
+                        if (useImmersiveMorphingCover) LocalStrings.current.ui.morphingCoverDisable else LocalStrings.current.ui.morphingCoverEnable,
                         style = MaterialTheme.typography.labelLarge
                     )
                 },
