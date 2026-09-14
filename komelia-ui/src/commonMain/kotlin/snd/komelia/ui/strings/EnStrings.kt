@@ -1100,6 +1100,7 @@ val EnStrings = AppStrings(
         "summary" to "Summary",
         "switch" to "Switch",
         "switchActiveUrl" to "Switch active URL",
+        "testUrl" to "Test",
         "switchLibrary" to "Switch library",
         "switchToThisServer" to "Switch to this server",
         "tagScoreThreshold" to "Tag score threshold",
@@ -1336,6 +1337,8 @@ val EnStrings = AppStrings(
         pageRetryIn = { seconds, attempt, max -> "Connection lost — retrying in $seconds s ($attempt/$max)" },
         pageRetrying = { attempt, max -> "Connection lost — retrying now ($attempt/$max)" },
         serverSwitchedTo = { "Server unreachable, switched to $it" },
+        urlReachable = { ms -> "Reachable, $ms ms" },
+        urlUnreachable = { reason, ms -> "Unreachable ($reason, ${ms / 1000} s)" },
     ),
     navigation = NavigationStrings(
         libraries = "Libraries",

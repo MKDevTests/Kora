@@ -53,6 +53,8 @@ class AppServerManagementScreen : Screen {
                             onAdd = vm::addAlternateUrl,
                             onRemove = vm::removeAlternateUrl,
                             onSwitch = vm::switchToUrl,
+                            onTest = vm::testUrl,
+                            probeResults = vm.probeResults.collectAsState().value,
                         )
                     }
                     HorizontalDivider()
@@ -176,6 +178,39 @@ class AppServerManagementScreen : Screen {
      * ones added. All URLs share the same server profile and per-server DB, so
      * reading stats, ratings and links stay unified whichever address is used.
      */
+    /**
+     * "Test" next to an address, then what the probe found: "reachable, 84 ms"
+     * or "unreachable (ConnectTimeoutException, 5 s)". The same probe the
+     * automatic failover runs, so the answer is the one that would decide a
+     * switch.
+     */
+    @Composable
+    private fun ProbeButton(
+        url: String,
+        probeResults: Map<String, snd.komelia.failover.ServerProbe.Result?>,
+        onTest: (String) -> Unit,
+    ) {
+        val strings = LocalStrings.current
+        if (url !in probeResults) {
+            TextButton(onClick = { onTest(url) }) { Text(strings.ui.testUrl) }
+            return
+        }
+        when (val result = probeResults[url]) {
+            null -> androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.padding(horizontal = 12.dp).size(18.dp),
+                strokeWidth = 2.dp,
+            )
+
+            is snd.komelia.failover.ServerProbe.Result.Reachable -> TextButton(onClick = { onTest(url) }) {
+                Text(strings.counts.urlReachable(result.millis), color = MaterialTheme.colorScheme.primary)
+            }
+
+            is snd.komelia.failover.ServerProbe.Result.Unreachable -> TextButton(onClick = { onTest(url) }) {
+                Text(strings.counts.urlUnreachable(result.reason, result.millis), color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+
     @Composable
     private fun AlternateUrlsSection(
         activeUrl: String,
@@ -183,6 +218,8 @@ class AppServerManagementScreen : Screen {
         onAdd: (String) -> Unit,
         onRemove: (String) -> Unit,
         onSwitch: (String) -> Unit,
+        onTest: (String) -> Unit,
+        probeResults: Map<String, snd.komelia.failover.ServerProbe.Result?>,
     ) {
         var newUrl by remember { mutableStateOf("") }
         var pendingSwitch by remember { mutableStateOf<String?>(null) }
@@ -210,6 +247,7 @@ class AppServerManagementScreen : Screen {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                ProbeButton(activeUrl, probeResults, onTest)
             }
 
             alternates.forEach { url ->
@@ -225,6 +263,7 @@ class AppServerManagementScreen : Screen {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
+                    ProbeButton(url, probeResults, onTest)
                     TextButton(onClick = { pendingSwitch = url }) { Text(LocalStrings.current.ui.switch) }
                     IconButton(onClick = { onRemove(url) }) {
                         Icon(Icons.Default.Delete, contentDescription = LocalStrings.current.ui.removeUrl)

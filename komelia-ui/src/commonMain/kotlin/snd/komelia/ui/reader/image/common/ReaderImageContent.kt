@@ -43,6 +43,8 @@ fun ReaderImageContent(
     onSelectionChanged: (List<OcrElementBox>) -> Unit = {},
     onAddNote: (text: String, x: Float, y: Float) -> Unit = { _, _, _ -> },
     onRetry: (() -> Unit)? = null,
+    /** Which page this is, for the retry line; null shows the earliest retry of any page. */
+    pageId: ReaderImage.PageId? = null,
 ) {
     when (imageResult) {
         is ReaderImageResult.Success -> ImageContent(
@@ -62,7 +64,7 @@ fun ReaderImageContent(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color.Black)
                     Text(LocalStrings.current.ui.downloading, color = Color.Black)
-                    RetryLine()
+                    RetryLine(pageId)
                 }
             }
         )
@@ -80,14 +82,17 @@ private fun placeholderColor(): Color =
 
 /**
  * "Connection lost — retrying in 8 s (3/6)" under the spinner, while the
- * loader is between two attempts at a page. Nothing when it is not: the
- * spinner alone means an ordinary download.
+ * loader is between two attempts at this page. Nothing when it is not: the
+ * spinner alone means an ordinary download. Without a page id (the panels
+ * reader's layout pass) the earliest retry of any page stands in.
  */
 @Composable
-private fun RetryLine() {
+private fun RetryLine(pageId: ReaderImage.PageId?) {
     val retriesFlow = LocalPageRetries.current ?: return
     val retries = retriesFlow.collectAsState().value
-    val next = retries.values.minByOrNull { it.nextAttemptAtMillis } ?: return
+    // The loader keys retries by whole page; a half of a split page shares it.
+    val next = if (pageId != null) retries[ReaderImage.PageId(pageId.bookId, pageId.pageNumber)] ?: return
+    else retries.values.minByOrNull { it.nextAttemptAtMillis } ?: return
     // A one-second tick for the countdown; the flow itself only changes
     // between attempts.
     var now by remember { mutableStateOf(kotlin.time.Clock.System.now().toEpochMilliseconds()) }

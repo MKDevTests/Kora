@@ -201,6 +201,7 @@ fun BoxScope.PanelsReaderContent(
                                 ReaderImageContent(
                                     imageResult = panelsPage?.imageResult,
                                     ocrResults = ocr,
+                                    pageId = panelsPage?.metadata?.toPageId(),
                                     onSelectionChanged = { results: List<snd.komelia.image.OcrElementBox> ->
                                         panelsReaderState.readerState.ocrResults.value = results
                                     },
