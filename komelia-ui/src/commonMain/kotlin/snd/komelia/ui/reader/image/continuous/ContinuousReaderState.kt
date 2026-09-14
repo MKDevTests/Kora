@@ -910,6 +910,7 @@ class ContinuousReaderState(
         val firstItem = visibleItems.first()
 
         val visiblePages = visibleItems.filter { it.key is PageMetadata }.map { it.key as PageMetadata }
+        imageLoader.setUrgentPages(visiblePages.map { it.toPageId() }.toSet())
         val visibleImages = visiblePages.associateWith { page -> imagesInUse[page.toPageId()] }
 
         // The page the reader is on: the one covering most of the viewport, not

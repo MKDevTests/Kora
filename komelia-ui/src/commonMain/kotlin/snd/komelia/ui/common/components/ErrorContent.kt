@@ -12,11 +12,17 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.flow.drop
+import snd.komelia.NetworkState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalStrings
+
+private val logger = KotlinLogging.logger {}
 
 @Composable
 fun ErrorContent(
@@ -31,12 +37,29 @@ fun ErrorContent(
     ErrorContent(messageString, onReload, onExit)
 }
 
+/**
+ * The error screen every list falls back to, with its Reload button.
+ *
+ * While it is on screen, a network coming back presses Reload by itself.
+ * Measured on the tablet on 2026-09-13: the home shelves failed at connect
+ * during a Wi-Fi cut ("home.shelf 'Keep reading' FAILED after 10143ms") and
+ * stayed on this screen until a tap, long after the link was back. Every
+ * screen that shows this gets the repair, none has to know about the network.
+ */
 @Composable
 fun ErrorContent(
     message: String,
     onReload: (() -> Unit)? = null,
     onExit: (() -> Unit)? = null,
 ) {
+    if (onReload != null) {
+        LaunchedEffect(Unit) {
+            NetworkState.comebacks.drop(1).collect {
+                logger.info { "network is back: reloading after '${message.take(80)}'" }
+                onReload()
+            }
+        }
+    }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center

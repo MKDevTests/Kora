@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import snd.komelia.isTransientNetworkFailure
@@ -22,8 +21,9 @@ import snd.komga.client.book.KomgaBookId
 
 private val logger = KotlinLogging.logger {}
 
-/** See [BookImageLoader.downloadLimit] for the measurement behind the number. */
-private const val MAX_CONCURRENT_PAGE_DOWNLOADS = 4
+/** See [BookImageLoader.sharedLane] for the measurement behind the numbers. */
+private const val SHARED_PAGE_DOWNLOADS = 3
+private const val URGENT_PAGE_DOWNLOADS = 1
 
 /**
  * Pauses between attempts at a page whose download failed on the network path,
@@ -111,12 +111,58 @@ class BookImageLoader(
      * was starved this time. A retry button alone would not have fixed it --
      * the retry would join the same queue.
      *
-     * Four, the same bound the home shelves, the genre counts and the
-     * next-releases scan already use. It sits under OkHttp's eight per host,
-     * which leaves room for the screen's own API calls instead of letting a
-     * prefetch burst crowd them out.
+     * Four in total, the same bound the home shelves, the genre counts and
+     * the next-releases scan already use. It sits under OkHttp's eight per
+     * host, which leaves room for the screen's own API calls instead of
+     * letting a prefetch burst crowd them out.
+     *
+     * Split three and one since 2026-09-14. Measured the day before with the
+     * Wi-Fi cut: the page on screen (644) got its error 40 s after the five
+     * prefetched pages ahead of it in the queue, each of which held a permit
+     * for a 10 s connect that could not succeed. The pages the reader has
+     * declared [urgent][setUrgentPages] take a shared permit when one is free
+     * and the reserved one otherwise, so the page being looked at never
+     * queues behind read-ahead; read-ahead only ever uses the shared three.
+     * On a healthy network the shared lane is rarely full, so nothing changes.
      */
-    private val downloadLimit = Semaphore(MAX_CONCURRENT_PAGE_DOWNLOADS)
+    private val sharedLane = Semaphore(SHARED_PAGE_DOWNLOADS)
+    private val urgentLane = Semaphore(URGENT_PAGE_DOWNLOADS)
+
+    /** Bumped on every permit release and every urgency change; waiters re-check. */
+    private val laneTick = MutableStateFlow(0L)
+    private val urgentPages = MutableStateFlow<Set<ReaderImage.PageId>>(emptySet())
+
+    /**
+     * The pages the reader is showing right now, whole-page ids (no half tag).
+     * Replaces the previous set: what was urgent a page ago is read-ahead now.
+     */
+    fun setUrgentPages(pages: Set<ReaderImage.PageId>) {
+        val whole = pages.map { ReaderImage.PageId(it.bookId, it.pageNumber) }.toSet()
+        if (urgentPages.value == whole) return
+        urgentPages.value = whole
+        laneTick.update { it + 1 }
+    }
+
+    private suspend fun <T> withDownloadLane(pageId: ReaderImage.PageId, block: suspend () -> T): T {
+        while (true) {
+            val seen = laneTick.value
+            val lane = when {
+                sharedLane.tryAcquire() -> sharedLane
+                pageId in urgentPages.value && urgentLane.tryAcquire() -> urgentLane
+                else -> null
+            }
+            if (lane != null) {
+                try {
+                    return block()
+                } finally {
+                    lane.release()
+                    laneTick.update { it + 1 }
+                }
+            }
+            // A release or an urgency change since `seen` returns at once.
+            laneTick.first { it != seen }
+        }
+    }
 
     private val _retries = MutableStateFlow<Map<ReaderImage.PageId, PageRetry>>(emptyMap())
 
@@ -166,7 +212,7 @@ class BookImageLoader(
         try {
             while (true) {
                 try {
-                    return downloadLimit.withPermit { bookClient.value.getPage(bookId, page) }
+                    return withDownloadLane(pageId) { bookClient.value.getPage(bookId, page) }
                 } catch (e: Throwable) {
                     currentCoroutineContext().ensureActive()
                     val pause = NETWORK_RETRY_DELAYS_S.getOrNull(attempt)

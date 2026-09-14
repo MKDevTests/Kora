@@ -450,6 +450,7 @@ private fun ContinuousReaderImage(
             imageResult = imageResult,
             ocrResults = ocr,
             translations = translations,
+            pageId = page.toPageId(),
             onRetry = {
                 imageResult = null
                 state.invalidatePage(page)

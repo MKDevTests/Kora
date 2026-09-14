@@ -233,6 +233,8 @@ data class CountStrings(
     val pageRetryIn: (Int, Int, Int) -> String,
     val pageRetrying: (Int, Int) -> String,
     val serverSwitchedTo: (String) -> String,
+    val urlReachable: (Long) -> String,
+    val urlUnreachable: (String, Long) -> String,
 )
 
 /**
@@ -1069,6 +1071,7 @@ class UiStrings(private val values: Map<String, String>) {
     val summary: String get() = at("summary")
     val switch: String get() = at("switch")
     val switchActiveUrl: String get() = at("switchActiveUrl")
+    val testUrl: String get() = at("testUrl")
     val switchLibrary: String get() = at("switchLibrary")
     val switchToThisServer: String get() = at("switchToThisServer")
     val tagScoreThreshold: String get() = at("tagScoreThreshold")

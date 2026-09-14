@@ -1,13 +1,9 @@
 package snd.komelia.failover
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.api.Send
 import io.ktor.client.plugins.api.createClientPlugin
-import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.get
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import kotlinx.coroutines.flow.StateFlow
@@ -126,16 +122,8 @@ class ServerFailover {
         }
     }
 
-    private suspend fun probe(url: String): Boolean {
-        val response = runCatching {
-            probeClient.get("$url/api/v1/libraries") { timeout { connectTimeoutMillis = PROBE_TIMEOUT_MS } }
-        }
-        logger.info {
-            "failover: probe $url -> " +
-                (response.getOrNull()?.status?.toString() ?: response.exceptionOrNull()?.let { it::class.simpleName })
-        }
-        return response.isSuccess
-    }
+    private suspend fun probe(url: String): Boolean =
+        ServerProbe.probe(url) is ServerProbe.Result.Reachable
 
     private fun HttpRequestBuilder.rebase(base: Url) {
         url.protocol = URLProtocol.createOrDefault(base.protocol.name)
@@ -147,19 +135,6 @@ class ServerFailover {
         host.equals(other.host, ignoreCase = true) && port == other.port
 
     private companion object {
-        const val PROBE_TIMEOUT_MS = 5_000L
         const val PROBE_COOLDOWN_MS = 30_000L
-
-        /**
-         * A plain client for the probes: no failover plugin (it must not
-         * fail over while failing over), no expectSuccess (a 401 is an
-         * answer).
-         */
-        val probeClient by lazy {
-            HttpClient {
-                expectSuccess = false
-                install(HttpTimeout) { requestTimeoutMillis = 10_000 }
-            }
-        }
     }
 }

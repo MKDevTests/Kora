@@ -1112,6 +1112,7 @@ val FrStrings = AppStrings(
         "summary" to "Résumé",
         "switch" to "Basculer",
         "switchActiveUrl" to "Changer d'URL active",
+        "testUrl" to "Tester",
         "switchLibrary" to "Changer de bibliothèque",
         "switchToThisServer" to "Basculer sur ce serveur",
         "tagScoreThreshold" to "Seuil de score des tags",
@@ -1348,6 +1349,8 @@ val FrStrings = AppStrings(
         pageRetryIn = { seconds, attempt, max -> "Connexion perdue — nouvel essai dans $seconds s ($attempt/$max)" },
         pageRetrying = { attempt, max -> "Connexion perdue — nouvel essai en cours ($attempt/$max)" },
         serverSwitchedTo = { "Serveur injoignable, bascule sur $it" },
+        urlReachable = { ms -> "Joignable, $ms ms" },
+        urlUnreachable = { reason, ms -> "Injoignable ($reason, ${ms / 1000} s)" },
     ),
     navigation = NavigationStrings(
         libraries = "Bibliothèques",

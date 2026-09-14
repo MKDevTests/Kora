@@ -439,6 +439,7 @@ private fun SinglePageLayout(
             onSelectionChanged = onSelectionChanged,
             onAddNote = onAddNote,
             onRetry = { onRetry(page.metadata) },
+            pageId = page.metadata.toPageId(),
         )
     }) { measurable, constraints ->
         val placeable = measurable.first().measure(constraints)
@@ -474,6 +475,7 @@ private fun DoublePageLayout(
                     onSelectionChanged = onSelectionChanged,
                     onAddNote = { text, x, y -> onAddNote(text, page.metadata.pageNumber - 1, x, y) },
                     onRetry = { onRetry(page.metadata) },
+                    pageId = page.metadata.toPageId(),
                 )
             }
 
@@ -487,6 +489,7 @@ private fun DoublePageLayout(
                     onSelectionChanged = onSelectionChanged,
                     onAddNote = { text, x, y -> onAddNote(text, page1.metadata.pageNumber - 1, x, y) },
                     onRetry = { onRetry(page1.metadata) },
+                    pageId = page1.metadata.toPageId(),
                 )
 
                 val page2 = pages[1]
@@ -498,6 +501,7 @@ private fun DoublePageLayout(
                     onSelectionChanged = onSelectionChanged,
                     onAddNote = { text, x, y -> onAddNote(text, page2.metadata.pageNumber - 1, x, y) },
                     onRetry = { onRetry(page2.metadata) },
+                    pageId = page2.metadata.toPageId(),
                 )
             }
 

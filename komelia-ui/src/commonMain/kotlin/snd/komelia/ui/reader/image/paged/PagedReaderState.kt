@@ -611,6 +611,9 @@ class PagedReaderState(
 
     private suspend fun loadSpread(loadSpreadIndex: Int) {
         val currentSpreadMetadata = pageSpreads.value[loadSpreadIndex]
+        // Declared before the jobs start: a page already queued as read-ahead
+        // is promoted the moment it becomes the one on screen.
+        imageLoader.setUrgentPages(currentSpreadMetadata.map { it.toPageId() }.toSet())
         val currentSpreadJob = launchSpreadLoadJob(currentSpreadMetadata)
 
         schedulePrefetch(loadSpreadIndex)

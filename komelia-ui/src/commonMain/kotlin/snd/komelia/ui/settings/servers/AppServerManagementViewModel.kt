@@ -2,10 +2,13 @@ package snd.komelia.ui.settings.servers
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import snd.komelia.failover.ServerProbe
 import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.settings.model.ServerProfile
 import snd.komelia.ui.session.ServerSessionManager
@@ -26,6 +29,17 @@ class AppServerManagementViewModel(
     val alternateServerUrls: StateFlow<List<String>> =
         settingsRepository.getAlternateServerUrls()
             .stateIn(screenModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** What the "test" button found for each address; absent = not tested, null = testing. */
+    val probeResults = MutableStateFlow<Map<String, ServerProbe.Result?>>(emptyMap())
+
+    fun testUrl(url: String) {
+        probeResults.update { it + (url to null) }
+        screenModelScope.launch {
+            val result = ServerProbe.probe(url)
+            probeResults.update { it + (url to result) }
+        }
+    }
 
     fun deleteServer(profile: ServerProfile) {
         screenModelScope.launch {
