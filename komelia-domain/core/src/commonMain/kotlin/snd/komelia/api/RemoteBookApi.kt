@@ -10,6 +10,7 @@ import snd.komelia.offline.localFilePath
 import snd.komelia.offline.readChunked
 import snd.komga.client.book.KomgaBook
 import snd.komga.client.book.KomgaBookClient
+import kotlinx.coroutines.withTimeout
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.book.KomgaBookMetadataUpdateRequest
 import snd.komga.client.book.KomgaBookPage
@@ -28,6 +29,8 @@ import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.search.BookConditionBuilder
 
 private const val EPUB_BUFFER_SIZE: Int = 64 * 1024
+
+private const val PROGRESS_PUSH_TIMEOUT_MS = 15_000L
 
 class RemoteBookApi(
     private val bookClient: KomgaBookClient,
@@ -188,7 +191,14 @@ class RemoteBookApi(
         bookId: KomgaBookId,
         progression: R2Progression
     ) {
-        bookClient.updateReadiumProgression(bookId, progression)
+        // Bounded: on a dead link this POST sat on the 60 s socket timeout
+        // (measured 2026-09-13, 12:37:02 -> FAILED 12:38:02) while pages
+        // were already retrying. Fifteen seconds covers the 10 s connect
+        // and a slow answer; a push that fails is kept for later anyway
+        // (PendingReadProgress), so giving up early costs nothing.
+        withTimeout(PROGRESS_PUSH_TIMEOUT_MS) {
+            bookClient.updateReadiumProgression(bookId, progression)
+        }
     }
 
     override suspend fun getReadiumPositions(bookId: KomgaBookId): R2Positions {

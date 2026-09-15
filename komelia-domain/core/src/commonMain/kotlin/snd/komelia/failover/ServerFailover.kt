@@ -117,6 +117,10 @@ class ServerFailover {
             runCatching { config.onSwitched(Url(from), Url(reachable)) }
                 .onFailure { logger.warn(it) { "failover: cookies not carried over" } }
             logger.warn { "failover: $from unreachable, switched to $reachable" }
+            // Counts as a network comeback: failed pages, the pending read
+            // progress, the error screens and the event stream all wait on
+            // it, and a new address is exactly the moment to ask again.
+            NetworkState.networkArrived()
             config.notifications.add(AppNotification.Normal(config.switchedMessage(reachable)))
             Url(reachable)
         }

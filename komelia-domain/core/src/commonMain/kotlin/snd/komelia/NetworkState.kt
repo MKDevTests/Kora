@@ -32,7 +32,7 @@ object NetworkState {
     private val _comebacks = MutableStateFlow(0)
     val comebacks: StateFlow<Int> = _comebacks
 
-    /** A physical network arrived (a new one, or the first after none). */
+    /** A physical network arrived (a new one, or the first after none), or the server address changed. */
     fun networkArrived() {
         _isAvailable.value = true
         _comebacks.update { it + 1 }

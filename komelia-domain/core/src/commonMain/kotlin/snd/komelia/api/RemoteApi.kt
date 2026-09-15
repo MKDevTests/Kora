@@ -8,9 +8,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import snd.komelia.NetworkState
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import snd.komelia.komga.api.KomgaApi
@@ -59,14 +63,34 @@ data class RemoteApi(
 
                 while (currentCoroutineContext().isActive) {
                     var session: KomgaSSESession? = null
+                    var droppedOnComeback = false
                     try {
                         session = komgaClientFactory.sseSession()
-                        session.incoming.collect { event ->
-                            // Receiving an event proves the connection works, so a
-                            // later drop retries promptly instead of inheriting the
-                            // backoff from whatever went wrong before it.
-                            attempt = 0
-                            incoming.emit(event)
+                        val live = session
+                        // A stream opened on a link that has since died does
+                        // not fail by itself: it sits on the socket until the
+                        // 60 s timeout ("total=299571ms … Socket closed" in
+                        // the logs). A network comeback or an address switch
+                        // drops it here and reopens at once on the new route.
+                        val comebacksAtOpen = NetworkState.comebacks.value
+                        coroutineScope {
+                            val collecting = launch {
+                                live.incoming.collect { event ->
+                                    // Receiving an event proves the connection works, so a
+                                    // later drop retries promptly instead of inheriting the
+                                    // backoff from whatever went wrong before it.
+                                    attempt = 0
+                                    incoming.emit(event)
+                                }
+                            }
+                            val watcher = launch {
+                                NetworkState.comebacks.first { it != comebacksAtOpen }
+                                logger.info { "SSE: network or server address changed, dropping the stream" }
+                                droppedOnComeback = true
+                                collecting.cancel()
+                            }
+                            collecting.join()
+                            watcher.cancel()
                         }
                     } catch (e: CancellationException) {
                         throw e
@@ -75,11 +99,27 @@ data class RemoteApi(
                     } finally {
                         session?.cancel()
                     }
+                    if (droppedOnComeback) {
+                        attempt = 0
+                        continue
+                    }
 
                     val delayMillis = reconnectDelayMillis(attempt)
                     logger.info { "Reconnecting SSE in ${delayMillis}ms (attempt ${attempt + 1})" }
-                    delay(delayMillis)
-                    attempt++
+                    // A network coming back, or the active address changing
+                    // (failover), is a new situation: reconnect at once and
+                    // from a clean backoff, rather than sit out up to two
+                    // minutes earned against a link that no longer exists.
+                    val comebacks = NetworkState.comebacks.value
+                    val wokenEarly = withTimeoutOrNull(delayMillis) {
+                        NetworkState.comebacks.first { it != comebacks }
+                    } != null
+                    if (wokenEarly) {
+                        logger.info { "SSE: network or server address changed, reconnecting now" }
+                        attempt = 0
+                    } else {
+                        attempt++
+                    }
                 }
             }
 

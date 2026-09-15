@@ -108,6 +108,7 @@ data class ConfirmStrings(
     val komfIdentifySeries: (Int) -> String,
     val deleteServerProfile: (String) -> String,
     val switchActiveUrl: (String) -> String,
+    val analyzeAllLibraries: (Int) -> String,
 )
 
 /**
@@ -232,8 +233,12 @@ data class CountStrings(
     val nextReleaseLine: (String, String, String) -> String,
     val pageRetryIn: (Int, Int, Int) -> String,
     val pageRetrying: (Int, Int) -> String,
+    val serverBusyRetryIn: (Int, Int, Int) -> String,
+    val serverBusyRetrying: (Int, Int) -> String,
+    val pageWaitingForNetwork: (Int, Int) -> String,
     val serverSwitchedTo: (String) -> String,
     val urlReachable: (Long) -> String,
+    val analysisLaunched: (Int) -> String,
     val urlUnreachable: (String, Long) -> String,
 )
 
@@ -1072,6 +1077,8 @@ class UiStrings(private val values: Map<String, String>) {
     val switch: String get() = at("switch")
     val switchActiveUrl: String get() = at("switchActiveUrl")
     val testUrl: String get() = at("testUrl")
+    val analyzeAllLibraries: String get() = at("analyzeAllLibraries")
+    val analyzeAllLibrariesDescription: String get() = at("analyzeAllLibrariesDescription")
     val switchLibrary: String get() = at("switchLibrary")
     val switchToThisServer: String get() = at("switchToThisServer")
     val tagScoreThreshold: String get() = at("tagScoreThreshold")

@@ -108,8 +108,13 @@ private fun RetryLine(pageId: ReaderImage.PageId?) {
     val seconds = ((next.nextAttemptAtMillis - now) / 1000).toInt()
     val strings = LocalStrings.current.counts
     Text(
-        if (seconds > 0) strings.pageRetryIn(seconds, next.attempt, next.maxAttempts)
-        else strings.pageRetrying(next.attempt, next.maxAttempts),
+        when {
+            next.waitingForNetwork -> strings.pageWaitingForNetwork(next.attempt, next.maxAttempts)
+            next.serverBusy && seconds > 0 -> strings.serverBusyRetryIn(seconds, next.attempt, next.maxAttempts)
+            next.serverBusy -> strings.serverBusyRetrying(next.attempt, next.maxAttempts)
+            seconds > 0 -> strings.pageRetryIn(seconds, next.attempt, next.maxAttempts)
+            else -> strings.pageRetrying(next.attempt, next.maxAttempts)
+        },
         color = Color.Black,
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(top = 8.dp),

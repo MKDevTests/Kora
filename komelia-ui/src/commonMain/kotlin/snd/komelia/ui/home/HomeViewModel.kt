@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -35,7 +37,9 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.time.TimeSource
 import snd.komelia.AppForegroundState
+import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
+import snd.komelia.NetworkState
 import snd.komelia.perf.PerfTrace
 import snd.komelia.homefilters.BooksHomeScreenFilter
 import snd.komelia.homefilters.HomeScreenFilter
@@ -218,6 +222,22 @@ class HomeViewModel(
             else refreshProgressShelves()
         }.launchIn(screenModelScope)
 
+        // A load that kept stale shelves because some failed is redone when a
+        // physical network comes back; the error screen does that on its own
+        // (ErrorContent), this is the same repair for the partial case.
+        NetworkState.comebacks.drop(1).onEach {
+            when {
+                // Measured 2026-09-14: the link came back while two shelves
+                // were still sitting on their socket timeout, so the flag
+                // was read before the load had failed. Retry once it ends.
+                loadInFlight -> reloadAfterLoad = true
+                lastLoadFailed -> {
+                    logger.info { "network is back: reloading the home shelves" }
+                    load()
+                }
+            }
+        }.launchIn(screenModelScope)
+
         // The Favorites shelf reads the favorite ids at resolve time, so it used
         // to depend on the global screen-reload that favoriting broadcast. That
         // broadcast is gone (it also re-rolled randomly-sorted library listings
@@ -274,6 +294,11 @@ class HomeViewModel(
             }
         }
     }
+
+    /** True after a load in which at least one shelf failed and stale content was kept. */
+    private var lastLoadFailed = false
+    private var loadInFlight = false
+    private var reloadAfterLoad = false
 
     /** Manual reload entry point (pull-to-refresh, etc.). Bypasses the
      *  random-shelf cache so the user always gets a fresh permutation. */
@@ -430,6 +455,20 @@ class HomeViewModel(
     }
 
     private suspend fun load(force: Boolean = false) {
+        loadInFlight = true
+        try {
+            loadOnce(force)
+        } finally {
+            loadInFlight = false
+        }
+        if (reloadAfterLoad) {
+            reloadAfterLoad = false
+            logger.info { "network came back during the load: reloading the home shelves" }
+            load()
+        }
+    }
+
+    private suspend fun loadOnce(force: Boolean) {
         appNotifications.runCatchingToNotifications {
             // Keep the FULL list (enabled + disabled) here: the home-shelf editor
             // is seeded from currentFilters, so dropping disabled shelves would
@@ -497,6 +536,8 @@ class HomeViewModel(
             // bound as the genre counts, the next-releases scan and the
             // favorites resolver, all added for the same reason.
             val shelfLimit = Semaphore(MAX_CONCURRENT_SHELVES)
+            var failures = 0
+            var firstFailure: Throwable? = null
             withForYou.mapIndexed { index, filter ->
                 screenModelScope.async {
                     // A disabled shelf is never rendered (HomeScreen filters on
@@ -520,7 +561,27 @@ class HomeViewModel(
                         }
                         return@async
                     }
-                    val data = shelfLimit.withPermit { fetchFilterData(filter, force) } ?: return@async
+                    // A shelf that fails keeps what it has instead of taking
+                    // the whole screen down: measured on 2026-09-14, a
+                    // pull-to-refresh with the Wi-Fi off replaced eleven
+                    // painted shelves with the error screen because one
+                    // connect timed out. The failure is counted and shown
+                    // once below; the error screen is for when there is
+                    // nothing at all to show.
+                    val data = shelfLimit.withPermit {
+                        runCatching { fetchFilterData(filter, force) }
+                            .onFailure { e ->
+                                currentCoroutineContext().ensureActive()
+                                logger.warn { "home.shelf '${filter.label}' failed: ${e::class.simpleName}: ${e.message}" }
+                                publishLock.withLock {
+                                    failures += 1
+                                    lastLoadFailed = true
+                                    if (firstFailure == null) firstFailure = e
+                                    if (slots[index] == null) slots[index] = emptyShelf(filter)
+                                }
+                            }
+                            .getOrNull()
+                    } ?: return@async
                     publishLock.withLock {
                         slots[index] = data
                         currentFilters.value = slots.filterNotNull()
@@ -533,6 +594,20 @@ class HomeViewModel(
             }.awaitAll()
 
             val fresh = slots.filterNotNull()
+            val failure = firstFailure
+            if (failure != null) {
+                val anythingToShow = fresh.any { it.isNotEmpty() }
+                lastLoadFailed = true
+                if (!anythingToShow) throw failure
+                currentFilters.value = fresh
+                mutableState.value = LoadState.Success(Unit)
+                shelvesSettled.value = true
+                logger.warn { "home: $failures shelf(ves) failed, keeping what is on screen" }
+                appNotifications.add(AppNotification.Error(failure.message ?: failure::class.simpleName ?: "error"))
+                // Not saved to disk: part of it is the previous snapshot.
+                return@runCatchingToNotifications
+            }
+            lastLoadFailed = false
             currentFilters.value = fresh
 
             mutableState.value = LoadState.Success(Unit)
@@ -544,6 +619,12 @@ class HomeViewModel(
             // Fire-and-forget: the disk write must never delay the screen.
             screenModelScope.launch { HomeShelfCache.save(fresh) }
         }.onFailure { mutableState.value = LoadState.Error(it) }
+    }
+
+    private fun HomeFilterData.isNotEmpty(): Boolean = when (this) {
+        is SeriesFilterData -> series.isNotEmpty()
+        is BookFilterData -> books.isNotEmpty()
+        else -> false
     }
 
     /**
