@@ -120,13 +120,24 @@ class AndroidAppModule(
     private val databases = KomeliaDatabase(context.filesDir.absolutePath.toString(), serverId)
 
     private val okHttpLogger = KotlinLogging.logger("http.logging")
+
+    /**
+     * The dispatcher every Ktor call runs on. Ktor's OkHttp engine does not
+     * keep the one of the preconfigured client: `createOkHttpClient` calls
+     * `newBuilder().dispatcher(Dispatcher())` (verified in the 3.4.3
+     * bytecode) and only then applies the `config {}` block, so the block
+     * is the one place a dispatcher survives. Without it there was no handle
+     * on the API and page calls at all: [close] and the network-lost hook
+     * below cancelled the covers only, and three home shelves sat 60 s on
+     * their dead socket on 2026-09-14.
+     */
+    private val ktorDispatcher = Dispatcher()
+
     private val okHttpClientWithoutCache: OkHttpClient = OkHttpClient.Builder()
-        // OkHttp's default is five requests per host, and every cover shares
-        // this client with every API call. With covers now capped at four in
-        // flight (see AppModule.coilFetcherContext), eight leaves the screen's
-        // own requests four free slots at all times instead of queueing behind
-        // a page of thumbnails — measured as 20-58s waits, up to socket
-        // timeouts, on a server that was idle.
+        // Covers (Coil) only: Ktor swaps this dispatcher for [ktorDispatcher],
+        // so API calls never queued here. With covers capped at four in
+        // flight (see AppModule.coilFetcherContext), eight is never reached;
+        // kept as the ceiling it was measured under.
         .dispatcher(Dispatcher().apply { maxRequestsPerHost = 8 })
         // Reports only calls over two seconds, split into queue / server /
         // body. See SlowCallListener for why a timing around the suspend call
@@ -138,6 +149,30 @@ class AndroidAppModule(
 //        .addInterceptor(HttpLoggingInterceptor { okHttpLogger.info { it } }
 //            .setLevel(HttpLoggingInterceptor.Level.BASIC))
         .build()
+    init {
+        // Every request in flight when the last physical network goes sits
+        // on a dead socket until its timeout — measured 60 s for the home
+        // shelves and 46 s for pages on 2026-09-14 — holding its slot the
+        // whole time. Cancelled here, they fail at once, and everything
+        // downstream already knows what to do with a failure: the pages
+        // retry, the shelves keep what they have, the error screens reload
+        // on the comeback. Two dispatchers: the covers' (both OkHttp clients
+        // share it, newBuilder keeps it) and Ktor's.
+        initScope.launch {
+            snd.komelia.NetworkState.isAvailable.collect { available ->
+                if (!available) {
+                    val running = ktorDispatcher.runningCallsCount() +
+                        okHttpClientWithoutCache.dispatcher.runningCallsCount()
+                    if (running > 0) {
+                        logger.info { "network lost: cancelling $running in-flight call(s)" }
+                        ktorDispatcher.cancelAll()
+                        okHttpClientWithoutCache.dispatcher.cancelAll()
+                    }
+                }
+            }
+        }
+    }
+
     private val okHttpClient = okHttpClientWithoutCache.newBuilder().cache(
         Cache(
             directory = context.cacheDir.resolve("okhttp").let { if (serverId != null) it.resolve("server_$serverId") else it },
@@ -325,7 +360,11 @@ class AndroidAppModule(
 
     private fun configureKtor(okHttpClient: OkHttpClient): HttpClient {
         return HttpClient(OkHttp) {
-            engine { preconfigured = okHttpClient }
+            engine {
+                preconfigured = okHttpClient
+                // Applied after Ktor's own dispatcher swap, see ktorDispatcher.
+                config { dispatcher(ktorDispatcher) }
+            }
             expectSuccess = true
 
             install(UserAgent) {
@@ -614,6 +653,7 @@ override fun createWidgetBookToOpenFlow(
 
 override suspend fun close() {
     okHttpClient.dispatcher.cancelAll()
+    ktorDispatcher.cancelAll()
     // The upscaler owns a Vulkan instance and an ncnn net. Nothing released
     // them, so a server switch leaked both. Off the main thread: releasing a
     // GPU context is a native call of unbounded duration.

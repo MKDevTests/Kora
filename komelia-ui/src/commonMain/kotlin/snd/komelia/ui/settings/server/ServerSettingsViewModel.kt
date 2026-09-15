@@ -28,7 +28,7 @@ class ServerSettingsViewModel(
     private val bookApi: KomgaBookApi,
 
     private val libraryApi: KomgaLibraryApi,
-    private val libraries: StateFlow<List<KomgaLibrary>>,
+    val libraries: StateFlow<List<KomgaLibrary>>,
     private val taskApi: KomgaTaskApi,
     private val actuatorApi: KomgaActuatorApi,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
@@ -182,6 +182,15 @@ class ServerSettingsViewModel(
         appNotifications.runCatchingToNotifications(screenModelScope) {
             libraries.value.forEach { libraryApi.scan(it.id, deep) }
             appNotifications.add(AppNotification.Success("Launched scan for all libraries"))
+        }
+    }
+
+    /** One analysis task per library on the server; the message is the screen's, in its language. */
+    fun onAnalyzeAllLibraries(launchedMessage: (Int) -> String) {
+        appNotifications.runCatchingToNotifications(screenModelScope) {
+            val all = libraries.value
+            all.forEach { libraryApi.analyze(it.id) }
+            appNotifications.add(AppNotification.Success(launchedMessage(all.size)))
         }
     }
 

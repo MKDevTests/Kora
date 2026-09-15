@@ -2,6 +2,12 @@ package snd.komelia.image
 
 import coil3.disk.DiskCache
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.client.plugins.ServerResponseException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -36,6 +42,25 @@ private const val URGENT_PAGE_DOWNLOADS = 1
 private val NETWORK_RETRY_DELAYS_S = listOf(2L, 4L, 8L, 16L, 30L, 30L)
 
 /**
+ * Pauses between attempts at a page the server refused with a 5xx. Two
+ * only: a server that is busy (Komga's read-only SQLite pool has one
+ * connection; under a burst it answers 500 and 40 s per request, seen on
+ * 2026-08) recovers in seconds, a server that is broken does not, and a
+ * bad file comes back the same every time.
+ */
+private val SERVER_RETRY_DELAYS_S = listOf(3L, 6L)
+private val RETRYABLE_SERVER_STATUS = setOf(500, 502, 503, 504)
+
+/**
+ * Thrown into a page download when every physical network is gone. The
+ * request would otherwise sit on a dead socket for the whole socket
+ * timeout — measured 46 s on 2026-09-14 — holding a download permit, and
+ * only fail once the link was back. Treated as a network failure: the
+ * retry loop takes over and waits for the comeback.
+ */
+private class NetworkLostException : RuntimeException("network lost")
+
+/**
  * A page download waiting to be tried again after a network failure. Shown
  * under the page's spinner, which otherwise says "Downloading" for up to three
  * minutes with nothing to explain the wait.
@@ -45,6 +70,14 @@ data class PageRetry(
     val maxAttempts: Int,
     /** Wall-clock millis of the next attempt; the display counts down to it. */
     val nextAttemptAtMillis: Long,
+    /** True when the server answered 5xx, false when the network path failed. */
+    val serverBusy: Boolean = false,
+    /**
+     * True while the device has no physical network at all: no attempt is
+     * being counted, the page waits for the comeback and [nextAttemptAtMillis]
+     * means nothing.
+     */
+    val waitingForNetwork: Boolean = false,
 )
 
 class BookImageLoader(
@@ -209,29 +242,109 @@ class BookImageLoader(
     private suspend fun fetchFromServer(bookId: KomgaBookId, page: Int): ByteArray {
         val pageId = ReaderImage.PageId(bookId.value, page)
         var attempt = 0
+        var serverAttempt = 0
+        var waited = false
         try {
             while (true) {
                 try {
-                    return withDownloadLane(pageId) { bookClient.value.getPage(bookId, page) }
+                    return withDownloadLane(pageId) { getPageUnlessNetworkLost(bookId, page) }
                 } catch (e: Throwable) {
                     currentCoroutineContext().ensureActive()
-                    val pause = NETWORK_RETRY_DELAYS_S.getOrNull(attempt)
-                    if (pause == null || !isTransientNetworkFailure(e)) throw e
-                    attempt++
+                    val serverBusy = e.retryableServerStatus() != null
+                    // No physical network at all: an attempt cannot succeed
+                    // and must not be counted. Measured 2026-09-14: without
+                    // this, six "network lost" attempts went by in forty
+                    // seconds and the page showed an error while the Wi-Fi
+                    // was simply off. Waits for the comeback, which is the
+                    // only thing that can change the outcome.
+                    if (!serverBusy && !NetworkState.isAvailable.value) {
+                        logger.info { "page $page of $bookId: no network, waiting for it (attempt ${attempt + 1}/${NETWORK_RETRY_DELAYS_S.size} kept)" }
+                        _retries.update {
+                            it + (pageId to PageRetry(attempt + 1, NETWORK_RETRY_DELAYS_S.size, nowMillis(), waitingForNetwork = true))
+                        }
+                        waited = true
+                        NetworkState.isAvailable.first { it }
+                        continue
+                    }
+                    val pause = when {
+                        serverBusy -> SERVER_RETRY_DELAYS_S.getOrNull(serverAttempt)
+                        e is NetworkLostException || isTransientNetworkFailure(e) || e.cancelledByNetworkLoss() ->
+                            NETWORK_RETRY_DELAYS_S.getOrNull(attempt)
+                        else -> null
+                    } ?: throw e
+                    val (n, max) = if (serverBusy) {
+                        serverAttempt++
+                        serverAttempt to SERVER_RETRY_DELAYS_S.size
+                    } else {
+                        attempt++
+                        attempt to NETWORK_RETRY_DELAYS_S.size
+                    }
                     logger.warn {
                         "page $page of $bookId: ${e::class.simpleName}: ${e.message} -- " +
-                            "retry $attempt/${NETWORK_RETRY_DELAYS_S.size} in ${pause}s"
+                            "${if (serverBusy) "server " else ""}retry $n/$max in ${pause}s"
                     }
                     _retries.update {
-                        it + (pageId to PageRetry(attempt, NETWORK_RETRY_DELAYS_S.size, nowMillis() + pause * 1000))
+                        it + (pageId to PageRetry(n, max, nowMillis() + pause * 1000, serverBusy))
                     }
-                    val comebacks = NetworkState.comebacks.value
-                    withTimeoutOrNull(pause * 1000) { NetworkState.comebacks.first { it != comebacks } }
+                    if (serverBusy) {
+                        delay(pause * 1000)
+                    } else {
+                        val comebacks = NetworkState.comebacks.value
+                        withTimeoutOrNull(pause * 1000) { NetworkState.comebacks.first { it != comebacks } }
+                    }
                 }
             }
         } finally {
-            if (attempt > 0) _retries.update { it - pageId }
+            if (attempt > 0 || serverAttempt > 0 || waited) _retries.update { it - pageId }
         }
+    }
+
+    /**
+     * The download itself, abandoned the moment the device has no physical
+     * network left (see [NetworkLostException]). The request is cancelled
+     * — OkHttp closes the socket — and the lane is released with it.
+     */
+    private suspend fun getPageUnlessNetworkLost(bookId: KomgaBookId, page: Int): ByteArray = coroutineScope {
+        val download = async { bookClient.value.getPage(bookId, page) }
+        val watcher = launch {
+            NetworkState.isAvailable.first { !it }
+            download.cancel(CancellationException("network lost", NetworkLostException()))
+        }
+        try {
+            download.await()
+        } catch (e: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            throw e.cause as? NetworkLostException ?: e
+        } finally {
+            watcher.cancel()
+        }
+    }
+
+    /**
+     * OkHttp reports a call cancelled by the module's network-lost hook as
+     * "Canceled", the same word as a user cancellation — which is why
+     * [isTransientNetworkFailure] leaves it out. Here the coroutine is still
+     * alive and the network is gone, so it is the hook, and it retries.
+     */
+    private fun Throwable.cancelledByNetworkLoss(): Boolean {
+        if (NetworkState.isAvailable.value) return false
+        var t: Throwable? = this
+        repeat(4) {
+            val e = t ?: return false
+            if (e.message == "Canceled") return true
+            t = e.cause
+        }
+        return false
+    }
+
+    private fun Throwable.retryableServerStatus(): Int? {
+        var t: Throwable? = this
+        repeat(4) {
+            val e = t ?: return null
+            if (e is ServerResponseException && e.response.status.value in RETRYABLE_SERVER_STATUS) return e.response.status.value
+            t = e.cause
+        }
+        return null
     }
 
     private fun nowMillis(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()

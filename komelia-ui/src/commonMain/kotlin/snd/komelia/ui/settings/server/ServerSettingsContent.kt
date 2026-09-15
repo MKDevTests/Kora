@@ -58,6 +58,8 @@ fun ServerSettingsContent(
     onGeneralSettingsDiscard: () -> Unit,
 
     onScanAllLibraries: (deep: Boolean) -> Unit,
+    libraryCount: Int,
+    onAnalyzeAllLibraries: () -> Unit,
     onEmptyTrash: () -> Unit,
     onCancelAllTasks: () -> Unit,
     onShutdown: () -> Unit
@@ -87,6 +89,8 @@ fun ServerSettingsContent(
 
     ServerManagementContent(
         onScanAllLibraries = onScanAllLibraries,
+        libraryCount = libraryCount,
+        onAnalyzeAllLibraries = onAnalyzeAllLibraries,
         onEmptyTrash = onEmptyTrash,
         onCancelAllTasks = onCancelAllTasks,
         onShutdown = onShutdown

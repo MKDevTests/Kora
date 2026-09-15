@@ -26,6 +26,7 @@ class ServerSettingsScreen : Screen {
         val state = vm.state.collectAsState().value
 
         val strings = LocalStrings.current.settings
+        val analysisLaunched = LocalStrings.current.counts.analysisLaunched
         SettingsScreenContainer(strings.serverSettings) {
             when (state) {
                 is LoadState.Error -> Text("Error ${state.exception.message}")
@@ -80,6 +81,8 @@ class ServerSettingsScreen : Screen {
                         onGeneralSettingsSave = vm::updateSettings,
                         onGeneralSettingsDiscard = vm::resetChanges,
                         onScanAllLibraries = vm::onScanAllLibraries,
+                        libraryCount = vm.libraries.collectAsState().value.size,
+                        onAnalyzeAllLibraries = { vm.onAnalyzeAllLibraries(analysisLaunched) },
                         onEmptyTrash = vm::onEmptyTrashForAllLibraries,
                         onCancelAllTasks = vm::onCancelAllTasks,
                         onShutdown = vm::onShutDown,

@@ -25,12 +25,15 @@ import snd.komelia.ui.LocalStrings
 @Composable
 fun ServerManagementContent(
     onScanAllLibraries: (deep: Boolean) -> Unit,
+    libraryCount: Int,
+    onAnalyzeAllLibraries: () -> Unit,
     onEmptyTrash: () -> Unit,
     onCancelAllTasks: () -> Unit,
     onShutdown: () -> Unit
 ) {
 
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
+    var showAnalyzeDialog by remember { mutableStateOf(false) }
     var showShutdownDialog by remember { mutableStateOf(false) }
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -51,6 +54,17 @@ fun ServerManagementContent(
             buttonText = "Deep Scan",
             level = WarningLevel.NORMAL,
             onClick = { onScanAllLibraries(true) }
+        )
+        HorizontalDivider()
+        // The per-library Analyze from the library menu, for every library at
+        // once. Komga queues one analysis task per library and runs them in
+        // the background; the app only fires the requests.
+        Button(
+            title = LocalStrings.current.ui.analyzeAllLibraries,
+            description = LocalStrings.current.ui.analyzeAllLibrariesDescription,
+            buttonText = LocalStrings.current.ui.analyze,
+            level = WarningLevel.NORMAL,
+            onClick = { showAnalyzeDialog = true }
         )
         HorizontalDivider()
         Button(
@@ -86,6 +100,17 @@ fun ServerManagementContent(
                 buttonCancel = "Cancel",
                 onDialogConfirm = onEmptyTrash,
                 onDialogDismiss = { showEmptyTrashDialog = false }
+            )
+        }
+
+        if (showAnalyzeDialog) {
+            ConfirmationDialog(
+                title = LocalStrings.current.ui.analyzeAllLibraries,
+                body = LocalStrings.current.confirm.analyzeAllLibraries(libraryCount),
+                buttonConfirm = LocalStrings.current.ui.analyze,
+                buttonCancel = LocalStrings.current.ui.cancel,
+                onDialogConfirm = onAnalyzeAllLibraries,
+                onDialogDismiss = { showAnalyzeDialog = false }
             )
         }
 
