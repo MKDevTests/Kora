@@ -53,7 +53,6 @@ import snd.komelia.ui.LocalCardShadowLevel
 import snd.komelia.ui.LocalCardSpacingBelow
 import snd.komelia.ui.LocalCardWidthScale
 import snd.komelia.ui.LocalPlatform
-import snd.komelia.ui.LocalUseNewLibraryUI2
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.cursorForHand
@@ -140,8 +139,6 @@ fun LibraryItemCard(
                             val textColor = if (overlayBackground) MaterialTheme.colorScheme.onSurface else Color.White
                             val secondaryTextColor = if (overlayBackground) MaterialTheme.colorScheme.onSurfaceVariant else Color.White.copy(alpha = 0.8f)
                             val shadow = if (overlayBackground) null else Shadow(color = Color.Black, offset = Offset(1f, 1f), blurRadius = 4f)
-
-                            val useNewLibraryUI2 = LocalUseNewLibraryUI2.current
                             val primaryStyle = MaterialTheme.typography.bodySmall.copy(
                                 shadow = shadow,
                                 fontWeight = FontWeight.Bold,
@@ -157,7 +154,7 @@ fun LibraryItemCard(
                             } else {
                                 val secondary = @Composable {
                                     if (secondaryText != null) {
-                                        val text = if (useNewLibraryUI2) secondaryText.uppercase() else secondaryText
+                                        val text = secondaryText
                                         Text(text, style = secondaryStyle, color = secondaryTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
@@ -182,7 +179,6 @@ fun LibraryItemCard(
                     .padding(top = 4.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.Center
             ) {
-                val useNewLibraryUI2 = LocalUseNewLibraryUI2.current
                 val primaryStyle = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
                 val secondaryStyle = MaterialTheme.typography.labelSmall
 
@@ -192,7 +188,7 @@ fun LibraryItemCard(
                 } else {
                     val secondary = @Composable {
                         if (secondaryText != null) {
-                            val text = if (useNewLibraryUI2) secondaryText.uppercase() else secondaryText
+                            val text = secondaryText
                             Text(text, style = secondaryStyle, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -344,7 +340,7 @@ fun CardTextBackground(modifier: Modifier = Modifier) {
 // correct, not because it made anything faster. The card's real cost is node
 // insertion and measurement, and no micro-fix inside the card moves that.
 private val topGradientBrush = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent))
-private val bottomGradientBrush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))
+private val bottomGradientBrush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.85f)))
 
 @Composable
 fun CardTopGradient() {
@@ -353,7 +349,7 @@ fun CardTopGradient() {
 
 @Composable
 fun CardBottomGradient(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(80.dp).background(bottomGradientBrush))
+    Box(modifier.fillMaxWidth().height(64.dp).background(bottomGradientBrush))
 }
 
 @Composable

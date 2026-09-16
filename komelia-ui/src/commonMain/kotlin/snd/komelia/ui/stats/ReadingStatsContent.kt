@@ -219,7 +219,11 @@ private fun HistorySection(stats: ReadingStats, onRefresh: () -> Unit) {
     val (title, bars) = when (window) {
         HistoryWindow.DAYS_7 -> "Last 7 days" to stats.dailyHistory7d.map { it.date to it.count }
         HistoryWindow.DAYS_30 -> "Last 30 days" to stats.dailyHistory30d.map { it.date to it.count }
+        // Leading empty months are dropped (three bars kept at least): a
+        // reader who started in July does not need ten months of nothing
+        // to the left of the two that count.
         HistoryWindow.MONTHS_12 -> "Last 12 months" to stats.monthlyHistory.map { it.yearMonth to it.count }
+            .let { all -> all.dropWhile { it.second == 0 }.let { kept -> if (kept.size < 3) all.takeLast(3) else kept } }
     }
 
     SectionHeader(title = title, onRefresh = onRefresh)

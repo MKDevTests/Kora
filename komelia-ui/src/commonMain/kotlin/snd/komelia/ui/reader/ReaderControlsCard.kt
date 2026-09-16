@@ -33,7 +33,7 @@ fun ReaderControlsCard(
         HazeMaterials.thin(theme.colorScheme.surface.copy(alpha = 0.4f))
     } else null
 
-    val shape = if (isFullWidth) RoundedCornerShape(0.dp) else KoraShapes.extraLarge
+    val shape = if (isFullWidth) RoundedCornerShape(0.dp) else KoraShapes.large
     val commonModifier = if (isFullWidth) {
         modifier
             .fillMaxWidth()
@@ -67,7 +67,7 @@ fun ReaderControlsCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (isFullWidth) 0.dp else 16.dp),
+                .padding(if (isFullWidth) 0.dp else 12.dp),
         ) {
             content()
         }

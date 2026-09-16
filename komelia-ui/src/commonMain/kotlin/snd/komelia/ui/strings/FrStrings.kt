@@ -1352,6 +1352,7 @@ val FrStrings = AppStrings(
         coversApplied = { "$it couverture" + (if (it > 1) "s appliquées" else " appliquée") },
         expiredNextReleaseTags = { "$it tag" + (if (it > 1) "s" else "") + " nextrelease périmé" + if (it > 1) "s" else "" },
         volumeOn = { volume, date -> "Tome $volume — $date" },
+        volumeNumber = { "Tome $it" },
         nextReleaseLine = { title, volume, date -> "$title — tome $volume, $date" },
         pageRetryIn = { seconds, attempt, max -> "Connexion perdue — nouvel essai dans $seconds s ($attempt/$max)" },
         pageRetrying = { attempt, max -> "Connexion perdue — nouvel essai en cours ($attempt/$max)" },
