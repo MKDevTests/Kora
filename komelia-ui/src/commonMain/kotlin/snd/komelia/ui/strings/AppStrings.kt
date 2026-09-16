@@ -232,6 +232,7 @@ data class CountStrings(
     val coversApplied: (Int) -> String,
     val expiredNextReleaseTags: (Int) -> String,
     val volumeOn: (String, String) -> String,
+    val volumeNumber: (String) -> String,
     val nextReleaseLine: (String, String, String) -> String,
     val pageRetryIn: (Int, Int, Int) -> String,
     val pageRetrying: (Int, Int) -> String,

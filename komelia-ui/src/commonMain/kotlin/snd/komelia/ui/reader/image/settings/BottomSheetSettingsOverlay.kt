@@ -1445,21 +1445,27 @@ private fun ReturnNavButton(
     label: String,
     onClick: () -> Unit,
 ) {
-    Column(
+    // Icon and label on one line: the stacked version cost the panel a
+    // third of its height for four links nobody reads twice.
+    Row(
         modifier = Modifier
+            .clip(KoraShapes.small)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
         )
         Text(
             text = label,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
         )
     }
 }

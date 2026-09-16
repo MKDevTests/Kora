@@ -1340,6 +1340,7 @@ val EnStrings = AppStrings(
         coversApplied = { "$it cover" + (if (it > 1) "s" else "") + " applied" },
         expiredNextReleaseTags = { "$it expired nextrelease tag" + if (it > 1) "s" else "" },
         volumeOn = { volume, date -> "Volume $volume — $date" },
+        volumeNumber = { "Volume $it" },
         nextReleaseLine = { title, volume, date -> "$title — volume $volume, $date" },
         pageRetryIn = { seconds, attempt, max -> "Connection lost — retrying in $seconds s ($attempt/$max)" },
         pageRetrying = { attempt, max -> "Connection lost — retrying now ($attempt/$max)" },

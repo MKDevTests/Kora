@@ -1,5 +1,6 @@
 package snd.komelia.ui.nextreleases
 
+import androidx.compose.ui.draw.clip
 import snd.komelia.ui.KoraShapes
 import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.clickable
@@ -233,9 +234,9 @@ private fun NextReleaseRow(
     ) {
         SeriesThumbnail(
             release.seriesId,
-            modifier = Modifier.size(width = 48.dp, height = 68.dp),
+            modifier = Modifier.size(width = 56.dp, height = 80.dp).clip(KoraShapes.small),
         )
-        Column(Modifier.padding(start = 12.dp).fillMaxWidth()) {
+        Column(Modifier.padding(start = 14.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 release.seriesTitle,
                 style = MaterialTheme.typography.titleSmall,
@@ -244,9 +245,14 @@ private fun NextReleaseRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                LocalStrings.current.counts.volumeOn(release.volume, dayMonthLabel(release.date)),
+                LocalStrings.current.counts.volumeNumber(release.volume),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                dayMonthLabel(release.date),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
