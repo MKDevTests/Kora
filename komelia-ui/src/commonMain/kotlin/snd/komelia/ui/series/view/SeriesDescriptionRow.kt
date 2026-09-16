@@ -1,5 +1,6 @@
 package snd.komelia.ui.series.view
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -169,15 +170,6 @@ fun SeriesDescriptionRow(
                     border = KoraChipDefaults.border,
                 )
 
-            if (readingDirection != null) {
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(strings.forReadingDirection(readingDirection)) },
-                    colors = KoraChipDefaults.suggestionChipColors(),
-                    border = KoraChipDefaults.border,
-                )
-            }
-
             if (deleted) {
                 SuggestionChip(
                     onClick = {},
@@ -189,41 +181,27 @@ fun SeriesDescriptionRow(
                 )
             }
 
+        }
+
+        // Facts nobody taps read as one quiet line, not as chips: a chip
+        // says "filter by me", and "3 408 pages" is not a filter. Only the
+        // library, status, age and language keep their chip.
+        val counts = LocalStrings.current.counts
+        val facts = buildList {
             totalBooksCount?.let { booksCount ->
-                val booksLabel = buildString {
-                    append(booksCount)
-                    if (totalBookCount != null) append(" / $totalBookCount")
-                    if (booksCount > 1 || totalBookCount?.let { it > 1 } == true) append(" books")
-                    else append(" book")
-                }
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(booksLabel) },
-                    colors = KoraChipDefaults.suggestionChipColors(),
-                    border = KoraChipDefaults.border,
-                )
+                add(if (totalBookCount != null) counts.booksOf(booksCount, totalBookCount) else counts.booksCount(booksCount))
             }
-
-            totalPagesCount?.let { pagesCount ->
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(LocalStrings.current.counts.pages(pagesCount)) },
-                    colors = KoraChipDefaults.suggestionChipColors(),
-                    border = KoraChipDefaults.border,
-                )
-            }
-
-            pagesLeftCount?.let { pagesLeft ->
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(LocalStrings.current.counts.pagesLeft(pagesLeft)) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        labelColor = accentColor ?: MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    border = KoraChipDefaults.border
-                )
-            }
+            totalPagesCount?.let { add(counts.pages(it)) }
+            pagesLeftCount?.let { add(counts.pagesLeft(it)) }
+            readingDirection?.let { add(strings.forReadingDirection(it)) }
+        }
+        if (facts.isNotEmpty()) {
+            Text(
+                text = facts.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
 
         // Kora genre tags (kora:genre:*), as chips rather than a comma line:

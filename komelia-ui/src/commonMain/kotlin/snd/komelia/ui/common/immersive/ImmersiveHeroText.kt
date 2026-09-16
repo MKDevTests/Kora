@@ -74,7 +74,7 @@ fun ImmersiveHeroText(
 
         // Series Title
         Text(
-            text = seriesTitle.uppercase(),
+            text = seriesTitle,
             color = titleColor,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = FontFamily.Serif,
@@ -98,12 +98,11 @@ fun ImmersiveHeroText(
         // Chapter Name (Optional)
         if (chapterTitle != null) {
             Text(
-                text = chapterTitle.uppercase(),
+                text = chapterTitle,
                 color = chapterColor,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    letterSpacing = 1.5.sp,
+                style = MaterialTheme.typography.titleSmall.copy(
                     shadow = shadow,
-                    fontSize = lerpTextUnit(14.sp * chapterMultiplier, 12.sp * chapterMultiplier, expandFraction)
+                    fontSize = lerpTextUnit(15.sp * chapterMultiplier, 13.sp * chapterMultiplier, expandFraction)
                 ),
                 maxLines = if (isCollapsed) 1 else 2,
                 overflow = TextOverflow.Ellipsis,

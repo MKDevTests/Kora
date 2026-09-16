@@ -1,5 +1,7 @@
 package snd.komelia.ui.book.immersive
 
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.common.ThumbnailConstants.CARD_SCALE
 import snd.komelia.ui.LocalCardHeightScale
@@ -419,6 +421,30 @@ fun ImmersiveBookContent(
                             // Unified stats line that is always present but fades in/out based on card expansion logic if needed,
                             // or just always stays there. The user wants it below the header.
                             BookStatsLine(pageBook, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                        }
+
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            val strings = LocalStrings.current
+                            val progress = pageBook.readProgress
+                            snd.komelia.ui.common.immersive.DetailActionRow(
+                                label = if (progress != null && !progress.completed) strings.ui.resume else strings.ui.read,
+                                detail = if (progress != null && !progress.completed) strings.counts.pageOf(progress.page, pageBook.media.pagesCount) else null,
+                                onClick = { onReadBook(pageBook, true) },
+                                accentColor = accentColor,
+                                secondaryActions = listOf(
+                                    snd.komelia.ui.common.immersive.DetailAction(
+                                        icon = Icons.Rounded.VisibilityOff,
+                                        contentDescription = strings.ui.readIncognito2,
+                                        onClick = { onReadBook(pageBook, false) },
+                                    ),
+                                    snd.komelia.ui.common.immersive.DetailAction(
+                                        icon = Icons.Rounded.Download,
+                                        contentDescription = strings.ui.download,
+                                        onClick = { showDownloadConfirmationDialog = true },
+                                    ),
+                                ),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
                         }
 
                         // Description row (library, status, age rating, etc.)

@@ -1,5 +1,6 @@
 package snd.komelia.ui.stats
 
+import androidx.compose.ui.text.style.TextOverflow
 import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,7 +46,7 @@ import snd.komelia.ui.pushUnique
  * Tapping the card pushes the full [ReadingStatsScreen].
  */
 @Composable
-fun HomeStatsCard(homeReady: Boolean = true) {
+fun HomeStatsCard(homeReady: Boolean = true, modifier: Modifier = Modifier) {
     val mainVm = LocalMainScreenViewModel.current
     // The Home card only checks the master switch — even when the user
     // hasn't opted into the bottom-nav shortcut, the Home card is a
@@ -90,33 +91,26 @@ fun HomeStatsCard(homeReady: Boolean = true) {
     if (current.isEmpty) return
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+        modifier = modifier
             .clickable { navigator.pushUnique(ReadingStatsScreen()) },
         shape = KoraShapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(
                 imageVector = Icons.Rounded.BarChart,
-                contentDescription = null,
+                contentDescription = LocalStrings.current.ui.openStats,
                 tint = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = LocalStrings.current.ui.yourReading,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 Text(
                     text = buildSummaryLine(
                         strings = LocalStrings.current.ui,
@@ -125,13 +119,17 @@ fun HomeStatsCard(homeReady: Boolean = true) {
                     ),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = LocalStrings.current.ui.yourReading,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = LocalStrings.current.ui.openStats,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

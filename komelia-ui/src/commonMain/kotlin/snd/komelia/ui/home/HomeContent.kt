@@ -109,8 +109,17 @@ fun HomeContent(
             topContent = {
                 Column {
                     HomeHeaderSection()
-                    snd.komelia.ui.stats.HomeStatsCard(homeReady = homeReady)
-                    snd.komelia.ui.nextreleases.NextReleasesHomeCard()
+                    // Side by side: each card is one glance (a number, a
+                    // date), two stacked rows of it pushed the shelves down a
+                    // full card height. A card that has nothing to show emits
+                    // no node, so the other one takes the whole width.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        snd.komelia.ui.stats.HomeStatsCard(homeReady = homeReady, modifier = Modifier.weight(1f))
+                        snd.komelia.ui.nextreleases.NextReleasesHomeCard(modifier = Modifier.weight(1f))
+                    }
                     Toolbar(
                         filters = filters,
                         currentFilterNumber = activeFilterNumber,
@@ -389,6 +398,7 @@ private fun SectionHeader(label: String, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
@@ -399,11 +409,13 @@ private fun SectionHeader(label: String, onClick: () -> Unit) {
                 fontWeight = FontWeight.SemiBold
             ),
         )
-        Icon(
-            Icons.Default.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.padding(start = 2.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Spacer(Modifier.weight(1f))
+        // "See all" at the far edge, where the row ends: a chevron glued to
+        // the title said less and sat where nothing else lines up.
+        Text(
+            LocalStrings.current.ui.seeAll,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }
@@ -414,7 +426,7 @@ private fun GridSectionHeader(label: String, onClick: () -> Unit) {
     val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable(onClick = onClick).padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
     ) {
         Text(
             label,
@@ -423,11 +435,13 @@ private fun GridSectionHeader(label: String, onClick: () -> Unit) {
                 fontWeight = FontWeight.SemiBold
             ),
         )
-        Icon(
-            Icons.Default.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.padding(start = 2.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Spacer(Modifier.weight(1f))
+        // "See all" at the far edge, where the row ends: a chevron glued to
+        // the title said less and sat where nothing else lines up.
+        Text(
+            LocalStrings.current.ui.seeAll,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }

@@ -1,5 +1,10 @@
 package snd.komelia.ui.library
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,12 +43,15 @@ fun LetterFilterBar(
     onLetterClick: (String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    FlowRow(
+    // One line of plain letters, like a phone book's index: twenty-eight
+    // pills wrapped onto two rows and weighed more than the grid they filter.
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         LetterChip(label = LocalStrings.current.ui.all2, isSelected = selected == null, onClick = { onLetterClick(null) })
         LetterChip(label = "#", isSelected = selected == "#", onClick = { onLetterClick("#") })
@@ -62,15 +70,20 @@ private fun LetterChip(
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val onAccent = MaterialTheme.colorScheme.onPrimary
+    val wide = label.length > 1
     Text(
         text = label,
         fontSize = 12.sp,
-        color = if (isSelected) onAccent else MaterialTheme.colorScheme.onSurface,
-        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        color = when {
+            isSelected && wide -> onAccent
+            isSelected -> accent
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
         modifier = Modifier
             .clip(CircleShape)
-            .background(if (isSelected) accent else MaterialTheme.colorScheme.surfaceVariant)
+            .background(if (isSelected && wide) accent else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = if (wide) 10.dp else 4.dp, vertical = 8.dp),
     )
 }
