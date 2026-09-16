@@ -43,6 +43,9 @@ import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.LocalUseNewLibraryUI
 import snd.komelia.ui.common.cards.DraggableImageCard
 import snd.komelia.ui.common.cards.SeriesImageCard
+import snd.komelia.ui.common.cards.SeriesListRow
+import snd.komelia.ui.LocalCompactUi
+import snd.komelia.settings.model.BooksLayout
 import snd.komelia.ui.common.components.Pagination
 import snd.komelia.ui.common.menus.SeriesMenuActions
 import snd.komelia.ui.platform.PlatformType
@@ -85,6 +88,8 @@ fun SeriesLazyCardGrid(
     pageSize: Int = 0,
     minSize: Dp = 200.dp,
     gridState: LazyGridState = rememberLazyGridState(),
+    /** LIST = one [SeriesListRow] per line; GRID = the usual cover cards. */
+    layout: BooksLayout = BooksLayout.GRID,
 
     modifier: Modifier = Modifier,
 
@@ -129,7 +134,14 @@ fun SeriesLazyCardGrid(
 
 
     val useNewLibraryUI = LocalUseNewLibraryUI.current
-    val cardSpacing = if (useNewLibraryUI) 7.dp else 15.dp
+    val compact = LocalCompactUi.current
+    val isList = layout == BooksLayout.LIST
+    val cardSpacing = when {
+        isList -> 2.dp
+        !useNewLibraryUI -> 15.dp
+        compact -> 5.dp
+        else -> 7.dp
+    }
     val horizontalPadding = if (useNewLibraryUI) 10.dp else 20.dp
     val extraBottomPadding = LocalTransparentNavBarPadding.current
     val toolbarPadding = LocalFloatingToolbarPadding.current
@@ -139,7 +151,7 @@ fun SeriesLazyCardGrid(
         // a count that does not divide the page size ends every full page on a
         // ragged row.
         val density = LocalDensity.current
-        val columnCount = with(density) {
+        val columnCount = if (isList) 1 else with(density) {
             completeRowColumnCount(
                 adaptive = adaptiveColumnCount(
                     availablePx = (maxWidth - horizontalPadding * 2).roundToPx(),
@@ -166,7 +178,15 @@ fun SeriesLazyCardGrid(
 
             items(items = series, key = { it.id.value }) { series ->
                 val isSelected = remember(selectedSeries) { selectedSeries.any { it.id == series.id } }
-                DraggableImageCard(
+                if (isList) {
+                    SeriesListRow(
+                        series = series,
+                        onSeriesClick = { onSeriesClick(series) },
+                        seriesMenuActions = seriesMenuActions,
+                        isSelected = isSelected,
+                        onSeriesSelect = onSeriesSelect?.let { { onSeriesSelect(series) } },
+                    )
+                } else DraggableImageCard(
                     key = series.id.value,
                     dragEnabled = reorderable,
                     reorderableState = reorderableLazyGridState

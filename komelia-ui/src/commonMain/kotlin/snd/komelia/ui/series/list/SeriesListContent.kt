@@ -53,6 +53,7 @@ import io.github.snd_r.komelia.ui.komelia_ui.generated.resources.Res
 import snd.komelia.ui.LocalAccentColor
 import snd.komelia.ui.LocalFloatingActionButton
 import snd.komelia.settings.model.ChapterSeriesFilter
+import snd.komelia.settings.model.BooksLayout
 import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.LocalUseFloatingNavigationBar
@@ -103,6 +104,7 @@ fun SeriesListContent(
 
     minSize: Dp,
     beforeContent: (@Composable () -> Unit)? = null,
+    layout: BooksLayout = BooksLayout.GRID,
 ) {
     val useNewLibraryUI = LocalUseNewLibraryUI.current
     val strings = LocalStrings.current.seriesFilter
@@ -143,6 +145,7 @@ fun SeriesListContent(
                     beforeContent?.invoke()
                 },
                 minSize = minSize,
+                layout = layout,
             )
             val width = LocalWindowWidth.current
             if ((width == COMPACT || width == MEDIUM) && selectedSeries.isNotEmpty()) {

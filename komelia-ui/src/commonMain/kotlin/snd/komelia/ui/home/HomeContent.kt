@@ -56,6 +56,7 @@ import snd.komelia.ui.LocalFloatingToolbarPadding
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalTransparentNavBarPadding
 import snd.komelia.ui.LocalUseNewLibraryUI
+import snd.komelia.ui.LocalCompactUi
 import snd.komelia.ui.LocalUseNewLibraryUI2
 import snd.komelia.ui.common.traceLayout
 import snd.komelia.ui.common.cards.BookImageCard
@@ -307,10 +308,11 @@ private fun DisplayContent(
     val extraBottomPadding = LocalTransparentNavBarPadding.current
     val toolbarPadding = LocalFloatingToolbarPadding.current
     val shelfStrings = LocalStrings.current.shelves
+    val compact = LocalCompactUi.current
     if (useNewLibraryUI && activeFilterNumber == 0) {
         LazyColumn(
             state = columnState,
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 20.dp),
             contentPadding = PaddingValues(top = toolbarPadding, bottom = 15.dp + extraBottomPadding),
         ) {
             if (topContent != null) {
@@ -328,7 +330,7 @@ private fun DisplayContent(
                         // absent from the tree, when nothing is capturing.
                         Column(
                             modifier = Modifier.traceLayout("home.shelf"),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
                         ) {
                             SectionHeader(shelfLabel(data.filter.label, shelfStrings), onClick = { onShelfClick(data.filter) })
                             SectionRow(
@@ -395,16 +397,17 @@ private fun DisplayContent(
 @Composable
 private fun SectionHeader(label: String, onClick: () -> Unit) {
     val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
+    val compact = LocalCompactUi.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = if (compact) 2.dp else 4.dp),
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.titleLarge.copy(
+            style = (if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge).copy(
                 fontFamily = inter,
                 fontWeight = FontWeight.SemiBold
             ),

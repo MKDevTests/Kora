@@ -59,6 +59,9 @@ import snd.komelia.ui.LocalLanguageBadgeScale
 import snd.komelia.ui.LocalLibraries
 import snd.komelia.ui.LocalPlanned
 import snd.komelia.ui.LocalShowCompleteSeriesBadge
+import snd.komelia.ui.LocalUnreadBadgeAtStart
+import snd.komelia.ui.LocalUnreadBadgeStyle
+import snd.komelia.settings.model.UnreadBadgeStyle
 import snd.komelia.ui.LocalShowLanguageOnCovers
 import snd.komelia.ui.LocalWindowWidth
 import snd.komelia.ui.common.components.NoPaddingChip
@@ -301,12 +304,27 @@ private fun SeriesImageBadges(
         }
     }
     val showCompleteBadge = LocalShowCompleteSeriesBadge.current && series.isComplete
-    if (series.booksUnreadCount > 0) {
+    val badgeStyle = LocalUnreadBadgeStyle.current
+    val badgeCorner = if (LocalUnreadBadgeAtStart.current) Alignment.TopStart else Alignment.TopEnd
+    if (series.booksUnreadCount > 0 && badgeStyle != UnreadBadgeStyle.NONE) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.TopEnd
+            contentAlignment = badgeCorner
         ) {
-            if (showCompleteBadge) {
+            if (badgeStyle == UnreadBadgeStyle.DOT) {
+                // A dot says "something left" without the arithmetic; the
+                // tertiary tint still marks a complete series.
+                val dotColor = if (showCompleteBadge) MaterialTheme.colorScheme.tertiary
+                else MaterialTheme.colorScheme.primary
+                Box(
+                    Modifier
+                        .padding(6.dp)
+                        .size(12.dp)
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.8f), CircleShape)
+                        .padding(2.dp)
+                        .background(dotColor, CircleShape)
+                )
+            } else if (showCompleteBadge) {
                 IndicatorBadge(
                     backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
                     borderColor = MaterialTheme.colorScheme.tertiary,
@@ -332,7 +350,7 @@ private fun SeriesImageBadges(
         // marked so a finished-and-owned-in-full series is still recognizable.
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.TopEnd
+            contentAlignment = badgeCorner
         ) {
             IndicatorBadge(
                 backgroundColor = MaterialTheme.colorScheme.tertiary,

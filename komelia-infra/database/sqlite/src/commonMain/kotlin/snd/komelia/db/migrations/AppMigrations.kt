@@ -123,6 +123,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V111__discover_licensed.sql",
         "V112__pending_read_progress.sql",
         "V113__theme_palette.sql",
+        "V114__lot_f_display.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {

@@ -1207,7 +1207,24 @@ class UiStrings(private val values: Map<String, String>) {
     val titleFontSerif: String get() = at("titleFontSerif")
     val titleFontSans: String get() = at("titleFontSans")
     val titleFontSystem: String get() = at("titleFontSystem")
+    val compactUi: String get() = at("compactUi")
+    val compactUiDesc: String get() = at("compactUiDesc")
+    val appIcon: String get() = at("appIcon")
+    val appIconDesc: String get() = at("appIconDesc")
+    val appIconDefault: String get() = at("appIconDefault")
+    val appIconMono: String get() = at("appIconMono")
+    val unreadBadge: String get() = at("unreadBadge")
+    val unreadBadgeCount: String get() = at("unreadBadgeCount")
+    val unreadBadgeDot: String get() = at("unreadBadgeDot")
+    val unreadBadgeNone: String get() = at("unreadBadgeNone")
+    val unreadBadgeAtStart: String get() = at("unreadBadgeAtStart")
+    val unreadBadgeAtStartDesc: String get() = at("unreadBadgeAtStartDesc")
+    val allRead: String get() = at("allRead")
+    val unreadCountOne: String get() = at("unreadCountOne")
     // endregion
+
+    fun unreadCountMany(count: Int): String =
+        at("unreadCountMany").replace("{n}", count.toString())
 
     /** Display name of a palette seed, by its key in Theme.PALETTES. */
     fun paletteName(key: String): String = at("palette_" + key)

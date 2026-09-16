@@ -1,6 +1,8 @@
 package snd.komelia.db.settings
 
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -55,6 +57,11 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[accentFollowsCover] = settings.accentFollowsCover
                 it[textScale] = settings.textScale
                 it[titleFont] = settings.titleFont.name
+                it[unreadBadgeStyle] = settings.unreadBadgeStyle.name
+                it[unreadBadgeAtStart] = settings.unreadBadgeAtStart
+                it[seriesListLayout] = settings.seriesListLayout.name
+                it[compactUi] = settings.compactUi
+                it[appIcon] = settings.appIcon.name
                 it[useNewLibraryUI] = settings.useNewLibraryUI
                 it[cardLayoutBelow] = settings.cardLayoutBelow
                 it[immersiveColorEnabled] = settings.immersiveColorEnabled
@@ -158,6 +165,11 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
             accentFollowsCover = get(AppSettingsTable.accentFollowsCover),
             textScale = get(AppSettingsTable.textScale),
             titleFont = TitleFont.parse(get(AppSettingsTable.titleFont)),
+            unreadBadgeStyle = UnreadBadgeStyle.parse(get(AppSettingsTable.unreadBadgeStyle)),
+            unreadBadgeAtStart = get(AppSettingsTable.unreadBadgeAtStart),
+            seriesListLayout = BooksLayout.entries.firstOrNull { it.name == get(AppSettingsTable.seriesListLayout) } ?: BooksLayout.GRID,
+            compactUi = get(AppSettingsTable.compactUi),
+            appIcon = AppIcon.parse(get(AppSettingsTable.appIcon)),
             useNewLibraryUI = get(AppSettingsTable.useNewLibraryUI),
             cardLayoutBelow = get(AppSettingsTable.cardLayoutBelow),
             immersiveColorEnabled = get(AppSettingsTable.immersiveColorEnabled),

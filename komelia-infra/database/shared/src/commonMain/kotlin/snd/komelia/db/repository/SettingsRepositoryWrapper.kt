@@ -1,6 +1,8 @@
 package snd.komelia.db.repository
 
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -312,6 +314,41 @@ class SettingsRepositoryWrapper(
 
     override suspend fun putTitleFont(font: TitleFont) {
         wrapper.transform { it.copy(titleFont = font) }
+    }
+
+    override fun getUnreadBadgeStyle(): Flow<UnreadBadgeStyle> =
+        wrapper.state.map { it.unreadBadgeStyle }.distinctUntilChanged()
+
+    override suspend fun putUnreadBadgeStyle(style: UnreadBadgeStyle) {
+        wrapper.transform { it.copy(unreadBadgeStyle = style) }
+    }
+
+    override fun getUnreadBadgeAtStart(): Flow<Boolean> =
+        wrapper.state.map { it.unreadBadgeAtStart }.distinctUntilChanged()
+
+    override suspend fun putUnreadBadgeAtStart(atStart: Boolean) {
+        wrapper.transform { it.copy(unreadBadgeAtStart = atStart) }
+    }
+
+    override fun getSeriesListLayout(): Flow<BooksLayout> =
+        wrapper.state.map { it.seriesListLayout }.distinctUntilChanged()
+
+    override suspend fun putSeriesListLayout(layout: BooksLayout) {
+        wrapper.transform { it.copy(seriesListLayout = layout) }
+    }
+
+    override fun getCompactUi(): Flow<Boolean> =
+        wrapper.state.map { it.compactUi }.distinctUntilChanged()
+
+    override suspend fun putCompactUi(enabled: Boolean) {
+        wrapper.transform { it.copy(compactUi = enabled) }
+    }
+
+    override fun getAppIcon(): Flow<AppIcon> =
+        wrapper.state.map { it.appIcon }.distinctUntilChanged()
+
+    override suspend fun putAppIcon(icon: AppIcon) {
+        wrapper.transform { it.copy(appIcon = icon) }
     }
 
     override fun getUseNewLibraryUI(): Flow<Boolean> {

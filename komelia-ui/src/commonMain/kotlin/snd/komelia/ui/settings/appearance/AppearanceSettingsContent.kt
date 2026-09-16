@@ -1,6 +1,8 @@
 package snd.komelia.ui.settings.appearance
 
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +76,14 @@ fun AppearanceSettingsContent(
     onTextScaleChange: (Float) -> Unit,
     titleFont: TitleFont,
     onTitleFontChange: (TitleFont) -> Unit,
+    unreadBadgeStyle: UnreadBadgeStyle,
+    onUnreadBadgeStyleChange: (UnreadBadgeStyle) -> Unit,
+    unreadBadgeAtStart: Boolean,
+    onUnreadBadgeAtStartChange: (Boolean) -> Unit,
+    compactUi: Boolean,
+    onCompactUiChange: (Boolean) -> Unit,
+    appIcon: AppIcon,
+    onAppIconChange: (AppIcon) -> Unit,
     useNewLibraryUI: Boolean,
     onUseNewLibraryUIChange: (Boolean) -> Unit,
     cardLayoutBelow: Boolean,
@@ -161,6 +171,31 @@ fun AppearanceSettingsContent(
             options = snd.komelia.ui.i18n.AppLanguage.entries.map { LabeledEntry(it, languageLabel(it)) },
             onOptionChange = { onUiLanguageChange(it.value) },
             inputFieldModifier = Modifier.widthIn(min = 250.dp)
+        )
+
+        HorizontalDivider()
+
+        // a ter. Density and launcher icon (lot F).
+        SwitchWithLabel(
+            checked = compactUi,
+            onCheckedChange = onCompactUiChange,
+            label = { Text(LocalStrings.current.ui.compactUi) },
+            supportingText = { Text(LocalStrings.current.ui.compactUiDesc) },
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+        )
+        DropdownChoiceMenu(
+            label = { Text(LocalStrings.current.ui.appIcon) },
+            selectedOption = LabeledEntry(appIcon, appIconLabel(appIcon)),
+            options = AppIcon.entries.map { LabeledEntry(it, appIconLabel(it)) },
+            onOptionChange = { onAppIconChange(it.value) },
+            inputFieldModifier = Modifier.widthIn(min = 250.dp)
+        )
+        Text(
+            LocalStrings.current.ui.appIconDesc,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 10.dp),
         )
 
         HorizontalDivider()
@@ -442,6 +477,25 @@ fun AppearanceSettingsContent(
             )
         }
 
+        // i.2 Unread badge: count, dot or nothing, and which corner.
+        DropdownChoiceMenu(
+            label = { Text(LocalStrings.current.ui.unreadBadge) },
+            selectedOption = LabeledEntry(unreadBadgeStyle, unreadBadgeLabel(unreadBadgeStyle)),
+            options = UnreadBadgeStyle.entries.map { LabeledEntry(it, unreadBadgeLabel(it)) },
+            onOptionChange = { onUnreadBadgeStyleChange(it.value) },
+            inputFieldModifier = Modifier.widthIn(min = 250.dp)
+        )
+        if (unreadBadgeStyle != UnreadBadgeStyle.NONE) {
+            SwitchWithLabel(
+                checked = unreadBadgeAtStart,
+                onCheckedChange = onUnreadBadgeAtStartChange,
+                label = { Text(LocalStrings.current.ui.unreadBadgeAtStart) },
+                supportingText = { Text(LocalStrings.current.ui.unreadBadgeAtStartDesc) },
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
+
         // i.3 Complete series badge
         SwitchWithLabel(
             checked = showCompleteSeriesBadge,
@@ -463,6 +517,27 @@ fun AppearanceSettingsContent(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         )
+    }
+}
+
+@Composable
+private fun unreadBadgeLabel(style: UnreadBadgeStyle): String {
+    val strings = LocalStrings.current.ui
+    return when (style) {
+        UnreadBadgeStyle.COUNT -> strings.unreadBadgeCount
+        UnreadBadgeStyle.DOT -> strings.unreadBadgeDot
+        UnreadBadgeStyle.NONE -> strings.unreadBadgeNone
+    }
+}
+
+@Composable
+private fun appIconLabel(icon: AppIcon): String {
+    val strings = LocalStrings.current.ui
+    return when (icon) {
+        AppIcon.DEFAULT -> strings.appIconDefault
+        AppIcon.EMBER -> strings.paletteName("ember")
+        AppIcon.FOREST -> strings.paletteName("forest")
+        AppIcon.MONO -> strings.appIconMono
     }
 }
 

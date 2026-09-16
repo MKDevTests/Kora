@@ -1,6 +1,8 @@
 package snd.komelia.settings
 
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
 import kotlinx.coroutines.flow.Flow
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.ChapterSeriesFilter
@@ -161,6 +163,24 @@ interface CommonSettingsRepository {
 
     fun getTitleFont(): Flow<TitleFont>
     suspend fun putTitleFont(font: TitleFont)
+
+    fun getUnreadBadgeStyle(): Flow<UnreadBadgeStyle>
+    suspend fun putUnreadBadgeStyle(style: UnreadBadgeStyle)
+
+    /** Unread badge in the top-left corner instead of the top-right. */
+    fun getUnreadBadgeAtStart(): Flow<Boolean>
+    suspend fun putUnreadBadgeAtStart(atStart: Boolean)
+
+    /** Grid or list for the library's series tab. */
+    fun getSeriesListLayout(): Flow<BooksLayout>
+    suspend fun putSeriesListLayout(layout: BooksLayout)
+
+    /** Tighter spacing, smaller shelf headers and cards, shorter settings rows. */
+    fun getCompactUi(): Flow<Boolean>
+    suspend fun putCompactUi(enabled: Boolean)
+
+    fun getAppIcon(): Flow<AppIcon>
+    suspend fun putAppIcon(icon: AppIcon)
 
     fun getUseNewLibraryUI(): Flow<Boolean>
     suspend fun putUseNewLibraryUI(enabled: Boolean)

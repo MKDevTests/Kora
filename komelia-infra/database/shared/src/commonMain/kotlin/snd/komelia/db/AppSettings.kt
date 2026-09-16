@@ -1,6 +1,8 @@
 package snd.komelia.db
 
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
 import kotlinx.serialization.Serializable
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.AutobackupFrequency
@@ -47,6 +49,11 @@ data class AppSettings(
     val accentFollowsCover: Boolean = true,
     val textScale: Float = 1f,
     val titleFont: TitleFont = TitleFont.SERIF,
+    val unreadBadgeStyle: UnreadBadgeStyle = UnreadBadgeStyle.COUNT,
+    val unreadBadgeAtStart: Boolean = false,
+    val seriesListLayout: BooksLayout = BooksLayout.GRID,
+    val compactUi: Boolean = false,
+    val appIcon: AppIcon = AppIcon.DEFAULT,
     val useNewLibraryUI: Boolean = true,
     val cardLayoutBelow: Boolean = false,
     val immersiveColorEnabled: Boolean = true,
