@@ -32,6 +32,12 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.GridView
+import snd.komelia.ui.LocalSeriesListLayout
+import snd.komelia.ui.LocalToggleSeriesListLayout
+import snd.komelia.ui.LocalCompactUi
+import snd.komelia.settings.model.BooksLayout
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.SegmentedButton
@@ -283,6 +289,8 @@ class LibraryScreen(
                                     onPageSizeChange = onPageSizeChange,
                                     sortOrder = if (vm.currentTab == SERIES) vm.seriesTabState.filterState.state.collectAsState().value.sortOrder else null,
                                     onSortChange = if (vm.currentTab == SERIES) vm.seriesTabState.filterState::onSortOrderChange else null,
+                                    seriesLayout = if (vm.currentTab == SERIES) LocalSeriesListLayout.current else null,
+                                    onSeriesLayoutToggle = LocalToggleSeriesListLayout.current,
                                     modifier = Modifier.padding(horizontal = gridPadding)
                                 )
                                 LibraryTabChips(
@@ -505,7 +513,8 @@ class LibraryScreen(
                     onPageChange = seriesTabState::onPageChange,
 
                     minSize = seriesTabState.cardWidth.collectAsState().value,
-                    beforeContent = combinedBeforeContent
+                    beforeContent = combinedBeforeContent,
+                    layout = LocalSeriesListLayout.current,
                 )
             }
         }
@@ -744,13 +753,15 @@ private fun LibraryHeaderSection(
     onPageSizeChange: (Int) -> Unit,
     sortOrder: LibrarySeriesTabState.SeriesSort? = null,
     onSortChange: ((LibrarySeriesTabState.SeriesSort) -> Unit)? = null,
+    seriesLayout: BooksLayout? = null,
+    onSeriesLayoutToggle: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val notoSerif = MaterialTheme.typography.titleLarge.fontFamily
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = if (LocalCompactUi.current) 6.dp else 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -785,6 +796,16 @@ private fun LibraryHeaderSection(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (seriesLayout != null) {
+                    // Grid <-> list for the series tab; the choice is remembered.
+                    IconButton(onClick = onSeriesLayoutToggle) {
+                        Icon(
+                            if (seriesLayout == BooksLayout.GRID) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 if (sortOrder != null && onSortChange != null) {
                     LibrarySortDropdown(sortOrder, onSortChange)
                     Spacer(Modifier.width(8.dp))

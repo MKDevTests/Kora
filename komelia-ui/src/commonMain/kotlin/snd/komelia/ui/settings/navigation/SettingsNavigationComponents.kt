@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import snd.komelia.ui.LocalPlatform
+import snd.komelia.ui.LocalCompactUi
 import snd.komelia.ui.LocalTheme
 import snd.komelia.ui.Theme
 import snd.komelia.ui.platform.PlatformType.DESKTOP
@@ -71,7 +72,7 @@ fun SettingsListItem(
     trailingContent: @Composable (() -> Unit)? = null,
 ) {
     val height = when (LocalPlatform.current) {
-        MOBILE -> 56.dp
+        MOBILE -> if (LocalCompactUi.current) 44.dp else 56.dp
         DESKTOP, WEB_KOMF -> 48.dp
     }
 

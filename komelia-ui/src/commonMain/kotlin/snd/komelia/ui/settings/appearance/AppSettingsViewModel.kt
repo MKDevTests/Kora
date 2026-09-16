@@ -1,6 +1,9 @@
 package snd.komelia.ui.settings.appearance
 
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -32,6 +35,10 @@ class AppSettingsViewModel(
     var accentFollowsCover by mutableStateOf(true)
     var textScale by mutableStateOf(1f)
     var titleFont by mutableStateOf(TitleFont.SERIF)
+    var unreadBadgeStyle by mutableStateOf(UnreadBadgeStyle.COUNT)
+    var unreadBadgeAtStart by mutableStateOf(false)
+    var compactUi by mutableStateOf(false)
+    var appIcon by mutableStateOf(AppIcon.DEFAULT)
     var useNewLibraryUI by mutableStateOf(true)
     var cardLayoutBelow by mutableStateOf(false)
     var immersiveColorEnabled by mutableStateOf(true)
@@ -69,6 +76,10 @@ class AppSettingsViewModel(
         accentFollowsCover = settingsRepository.getAccentFollowsCover().first()
         textScale = settingsRepository.getTextScale().first()
         titleFont = settingsRepository.getTitleFont().first()
+        unreadBadgeStyle = settingsRepository.getUnreadBadgeStyle().first()
+        unreadBadgeAtStart = settingsRepository.getUnreadBadgeAtStart().first()
+        compactUi = settingsRepository.getCompactUi().first()
+        appIcon = settingsRepository.getAppIcon().first()
         useNewLibraryUI = settingsRepository.getUseNewLibraryUI().first()
         cardLayoutBelow = settingsRepository.getCardLayoutBelow().first()
         immersiveColorEnabled = settingsRepository.getImmersiveColorEnabled().first()
@@ -174,6 +185,26 @@ class AppSettingsViewModel(
     fun onTitleFontChange(font: TitleFont) {
         this.titleFont = font
         screenModelScope.launch { settingsRepository.putTitleFont(font) }
+    }
+
+    fun onUnreadBadgeStyleChange(style: UnreadBadgeStyle) {
+        this.unreadBadgeStyle = style
+        screenModelScope.launch { settingsRepository.putUnreadBadgeStyle(style) }
+    }
+
+    fun onUnreadBadgeAtStartChange(atStart: Boolean) {
+        this.unreadBadgeAtStart = atStart
+        screenModelScope.launch { settingsRepository.putUnreadBadgeAtStart(atStart) }
+    }
+
+    fun onCompactUiChange(enabled: Boolean) {
+        this.compactUi = enabled
+        screenModelScope.launch { settingsRepository.putCompactUi(enabled) }
+    }
+
+    fun onAppIconChange(icon: AppIcon) {
+        this.appIcon = icon
+        screenModelScope.launch { settingsRepository.putAppIcon(icon) }
     }
 
     fun onUseNewLibraryUIChange(enabled: Boolean) {

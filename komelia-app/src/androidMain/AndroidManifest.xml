@@ -42,10 +42,8 @@
                 android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard"
         >
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
+            <!-- MAIN/LAUNCHER lives on the icon aliases below, one per
+                 selectable launcher icon (Appearance > App icon). -->
 
             <!-- Match by MIME type (works for content:// URIs from modern file managers) -->
             <intent-filter>
@@ -80,6 +78,54 @@
             </intent-filter>
 
         </activity>
+        <activity-alias
+                android:name="snd.komelia.icon.Default"
+                android:targetActivity="snd.komelia.MainActivity"
+                android:enabled="true"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher"
+                android:roundIcon="@mipmap/ic_launcher_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+                android:name="snd.komelia.icon.Ember"
+                android:targetActivity="snd.komelia.MainActivity"
+                android:enabled="false"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher_ember"
+                android:roundIcon="@mipmap/ic_launcher_ember">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+                android:name="snd.komelia.icon.Forest"
+                android:targetActivity="snd.komelia.MainActivity"
+                android:enabled="false"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher_forest"
+                android:roundIcon="@mipmap/ic_launcher_forest">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+                android:name="snd.komelia.icon.Mono"
+                android:targetActivity="snd.komelia.MainActivity"
+                android:enabled="false"
+                android:exported="true"
+                android:icon="@mipmap/ic_launcher_mono"
+                android:roundIcon="@mipmap/ic_launcher_mono">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
         <activity
                 android:name="snd.komelia.CrashActivity"
                 android:exported="false"

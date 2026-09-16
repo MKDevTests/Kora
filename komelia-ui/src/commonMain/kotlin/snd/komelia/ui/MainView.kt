@@ -2,6 +2,10 @@ package snd.komelia.ui
 
 import androidx.compose.ui.unit.Density
 import snd.komelia.settings.model.TitleFont
+import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.UnreadBadgeStyle
+import snd.komelia.settings.model.AppIcon
+import snd.komelia.ui.settings.appearance.rememberAppIconSwitcher
 import androidx.compose.foundation.isSystemInDarkTheme
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.ui.Theme.Companion.isDark
@@ -96,6 +100,11 @@ fun MainView(
     var accentFollowsCover by remember { mutableStateOf(true) }
     var textScale by remember { mutableStateOf(1f) }
     var titleFont by remember { mutableStateOf(TitleFont.SERIF) }
+    var unreadBadgeStyle by remember { mutableStateOf(UnreadBadgeStyle.COUNT) }
+    var unreadBadgeAtStart by remember { mutableStateOf(false) }
+    var seriesListLayout by remember { mutableStateOf(BooksLayout.GRID) }
+    var compactUi by remember { mutableStateOf(false) }
+    var appIcon by remember { mutableStateOf(AppIcon.DEFAULT) }
     var navBarColor by remember { mutableStateOf<Color?>(null) }
     var accentColor by remember { mutableStateOf<Color?>(null) }
     var useNewLibraryUI by remember { mutableStateOf(true) }
@@ -148,6 +157,27 @@ fun MainView(
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getTitleFont()?.collect { titleFont = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getUnreadBadgeStyle()?.collect { unreadBadgeStyle = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getUnreadBadgeAtStart()?.collect { unreadBadgeAtStart = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getSeriesListLayout()?.collect { seriesListLayout = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getCompactUi()?.collect { compactUi = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getAppIcon()?.collect { appIcon = it }
+    }
+    // The launcher alias follows the setting; a no-op when it already matches
+    // (the package manager returns early), so this costs nothing at start.
+    val applyAppIcon = rememberAppIconSwitcher()
+    LaunchedEffect(appIcon, dependencies) {
+        if (dependencies != null) applyAppIcon(appIcon)
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getLockScreenRotation()
@@ -393,7 +423,18 @@ fun MainView(
                         dependencies.appRepositories.settingsRepository.putUseImmersiveMorphingCover(!useImmersiveMorphingCover)
                     }
                 },
-                LocalCardWidthScale provides cardWidthScale,
+                LocalCardWidthScale provides (if (compactUi) cardWidthScale * 0.85f else cardWidthScale),
+                LocalUnreadBadgeStyle provides unreadBadgeStyle,
+                LocalUnreadBadgeAtStart provides unreadBadgeAtStart,
+                LocalSeriesListLayout provides seriesListLayout,
+                LocalToggleSeriesListLayout provides {
+                    coroutineScope.launch {
+                        dependencies.appRepositories.settingsRepository.putSeriesListLayout(
+                            if (seriesListLayout == BooksLayout.GRID) BooksLayout.LIST else BooksLayout.GRID
+                        )
+                    }
+                },
+                LocalCompactUi provides compactUi,
                 LocalCardHeightScale provides cardHeightScale,
                 LocalCardSpacingBelow provides cardSpacingBelow,
                 LocalCardShadowLevel provides cardShadowLevel,

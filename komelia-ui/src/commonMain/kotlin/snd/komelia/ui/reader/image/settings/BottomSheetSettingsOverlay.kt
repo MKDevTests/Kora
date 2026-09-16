@@ -1446,12 +1446,14 @@ private fun ReturnNavButton(
     onClick: () -> Unit,
 ) {
     // Icon and label on one line: the stacked version cost the panel a
-    // third of its height for four links nobody reads twice.
+    // third of its height for four links nobody reads twice. 14 dp of
+    // vertical padding (was 8) makes them a comfortable tap target on a
+    // tablet without going back to the stacked height.
     Row(
         modifier = Modifier
             .clip(KoraShapes.small)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -1459,12 +1461,12 @@ private fun ReturnNavButton(
             imageVector = icon,
             contentDescription = label,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(20.dp),
         )
         Text(
             text = label,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
         )
     }

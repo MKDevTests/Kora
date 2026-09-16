@@ -22,6 +22,8 @@ import snd.komelia.offline.sync.model.DownloadEvent
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.WindowSizeClass
 import snd.komelia.ui.strings.EnStrings
+import snd.komelia.settings.model.BooksLayout
+import snd.komelia.settings.model.UnreadBadgeStyle
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.sse.KomgaEvent
 
@@ -73,6 +75,13 @@ val LocalUseFloatingNavigationBar = compositionLocalOf { false }
 val LocalUseImmersiveMorphingCover = compositionLocalOf { false }
 val LocalToggleImmersiveMorphingCover = staticCompositionLocalOf<() -> Unit> { {} }
 val LocalCardWidthScale = compositionLocalOf { 1.0f }
+val LocalUnreadBadgeStyle = compositionLocalOf { UnreadBadgeStyle.COUNT }
+val LocalUnreadBadgeAtStart = compositionLocalOf { false }
+/** Grid or list in the library's series tab; the toggle lives in the library header. */
+val LocalSeriesListLayout = compositionLocalOf { BooksLayout.GRID }
+val LocalToggleSeriesListLayout = staticCompositionLocalOf<() -> Unit> { {} }
+/** Tighter home shelves, settings rows and cards (Appearance > Compact). */
+val LocalCompactUi = compositionLocalOf { false }
 val LocalCardHeightScale = compositionLocalOf { 1.0f }
 val LocalCardSpacingBelow = compositionLocalOf { 0.0f }
 val LocalCardShadowLevel = compositionLocalOf { 2.0f }
