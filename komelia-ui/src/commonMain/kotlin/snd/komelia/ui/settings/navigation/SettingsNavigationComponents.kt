@@ -1,5 +1,7 @@
 package snd.komelia.ui.settings.navigation
 
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
 import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -33,9 +35,9 @@ fun SettingsGroup(
     title: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val theme = LocalTheme.current
-    val containerColor = if (theme.type == Theme.ThemeType.DARK) Color(43, 43, 43)
-    else MaterialTheme.colorScheme.surfaceVariant
+    // One step above the page, not a hard-coded #2B2B2B: the group reads as
+    // a panel, the rows inside no longer need dividers to be told apart.
+    val containerColor = MaterialTheme.colorScheme.surfaceContainer
 
     Column(
         modifier = Modifier
@@ -65,6 +67,7 @@ fun SettingsListItem(
     label: String,
     onClick: () -> Unit,
     isSelected: Boolean,
+    icon: ImageVector? = null,
     trailingContent: @Composable (() -> Unit)? = null,
 ) {
     val height = when (LocalPlatform.current) {
@@ -80,6 +83,16 @@ fun SettingsListItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        },
+        leadingContent = icon?.let {
+            {
+                Icon(
+                    it,
+                    contentDescription = null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         },
         trailingContent = trailingContent,
         colors = ListItemDefaults.colors(

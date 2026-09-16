@@ -216,6 +216,8 @@ data class CountStrings(
     val selected: (Int) -> String,
     val pages: (Int) -> String,
     val pagesLeft: (Int) -> String,
+    val pageOf: (Int, Int) -> String,
+    val booksOf: (Int, Int) -> String,
     val bookAndPages: (String, Int) -> String,
     val seriesCount: (Int) -> String,
     val booksCount: (Int) -> String,
@@ -295,6 +297,8 @@ class UiStrings(private val values: Map<String, String>) {
     val align: String get() = at("align")
     val all: String get() = at("all")
     val all2: String get() = at("all2")
+    val seeAll: String get() = at("seeAll")
+    val resume: String get() = at("resume")
     val allLibraries: String get() = at("allLibraries")
     val alreadyContainsThisBook: String get() = at("alreadyContainsThisBook")
     val alreadyContainsThisSeries: String get() = at("alreadyContainsThisSeries")

@@ -1,5 +1,9 @@
 package snd.komelia.ui.settings.navigation
 
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +71,7 @@ import snd.komelia.ui.LocalStrings
 private data class NavEntry(
     val label: String,
     val isSelected: Boolean,
+    val icon: ImageVector? = null,
     val trailingContent: (@Composable () -> Unit)? = null,
     val onClick: () -> Unit,
 )
@@ -102,6 +107,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.appearance,
+                        icon = Icons.Rounded.Palette,
                         onClick = { onNavigation(AppSettingsScreen()) },
                         isSelected = currentScreen is AppSettingsScreen,
                     )
@@ -109,6 +115,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.navigation,
+                        icon = Icons.Rounded.Navigation,
                         onClick = { onNavigation(NavigationSettingsScreen()) },
                         isSelected = currentScreen is NavigationSettingsScreen,
                     )
@@ -116,6 +123,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.discover.title,
+                        icon = Icons.Rounded.Explore,
                         onClick = { onNavigation(snd.komelia.ui.settings.discover.DiscoverSettingsScreen()) },
                         isSelected = currentScreen is snd.komelia.ui.settings.discover.DiscoverSettingsScreen,
                     )
@@ -123,6 +131,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.connectedServers,
+                        icon = Icons.Rounded.Dns,
                         onClick = { onNavigation(AppServerManagementScreen()) },
                         isSelected = currentScreen is AppServerManagementScreen,
                     )
@@ -130,6 +139,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.imageReader,
+                        icon = Icons.Rounded.Image,
                         onClick = { onNavigation(ImageReaderSettingsScreen()) },
                         isSelected = currentScreen is ImageReaderSettingsScreen,
                     )
@@ -138,6 +148,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.epubReader,
+                            icon = Icons.AutoMirrored.Rounded.MenuBook,
                             onClick = { onNavigation(EpubReaderSettingsScreen()) },
                             isSelected = currentScreen is EpubReaderSettingsScreen,
                         )
@@ -147,6 +158,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.updates,
+                            icon = Icons.Rounded.SystemUpdate,
                             onClick = { onNavigation(AppUpdatesScreen()) },
                             isSelected = currentScreen is AppUpdatesScreen,
                             trailingContent = if (newVersionIsAvailable) {
@@ -158,6 +170,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.offlineMode2,
+                        icon = Icons.Rounded.CloudOff,
                         onClick = { onNavigation(OfflineSettingsScreen()) },
                         isSelected = currentScreen is OfflineSettingsScreen,
                     )
@@ -165,6 +178,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.backupRestore2,
+                        icon = Icons.Rounded.Backup,
                         onClick = { onNavigation(BackupSettingsScreen()) },
                         isSelected = currentScreen is BackupSettingsScreen,
                     )
@@ -172,6 +186,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.diagnostics,
+                        icon = Icons.Rounded.BugReport,
                         onClick = { onNavigation(DiagnosticsScreen()) },
                         isSelected = currentScreen is DiagnosticsScreen,
                     )
@@ -190,6 +205,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.genreTab,
+                        icon = Icons.Rounded.Category,
                         onClick = { onNavigation(ExperimentalSettingsScreen()) },
                         isSelected = currentScreen is ExperimentalSettingsScreen,
                     )
@@ -197,6 +213,7 @@ fun SettingsNavigationMenu(
                 add(
                     NavEntry(
                         label = LocalStrings.current.ui.ignoreList,
+                        icon = Icons.Rounded.Block,
                         onClick = { onNavigation(IgnoreListScreen()) },
                         isSelected = currentScreen is IgnoreListScreen,
                     )
@@ -205,6 +222,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.sRiesMasquEs,
+                            icon = Icons.Rounded.VisibilityOff,
                             onClick = { onNavigation(HiddenSeriesScreen()) },
                             isSelected = currentScreen is HiddenSeriesScreen,
                         )
@@ -223,6 +241,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.maintenance,
+                            icon = Icons.Rounded.Build,
                             onClick = { onNavigation(MaintenanceScreen()) },
                             isSelected = currentScreen is MaintenanceScreen,
                         )
@@ -230,6 +249,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.komgaToolkit,
+                            icon = Icons.Rounded.Construction,
                             onClick = { onNavigation(ToolkitScreen()) },
                             isSelected = currentScreen is ToolkitScreen,
                         )
@@ -237,6 +257,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.chapterManagement,
+                            icon = Icons.Rounded.FormatListNumbered,
                             onClick = { onNavigation(ChapterManagementScreen()) },
                             isSelected = currentScreen is ChapterManagementScreen,
                         )
@@ -244,6 +265,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.duplicateSeries,
+                            icon = Icons.Rounded.ContentCopy,
                             onClick = { onNavigation(DuplicateSeriesScreen()) },
                             isSelected = currentScreen is DuplicateSeriesScreen,
                         )
@@ -260,6 +282,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.myAccount,
+                            icon = Icons.Rounded.AccountCircle,
                             onClick = { onNavigation(AccountSettingsScreen()) },
                             isSelected = currentScreen is AccountSettingsScreen,
                         )
@@ -267,6 +290,7 @@ fun SettingsNavigationMenu(
                     add(
                         NavEntry(
                             label = LocalStrings.current.ui.myAuthenticationActivity,
+                            icon = Icons.Rounded.History,
                             onClick = { onNavigation(AuthenticationActivityScreen(true)) },
                             isSelected = currentScreen is AuthenticationActivityScreen && currentScreen.forMe,
                         )
@@ -282,6 +306,7 @@ fun SettingsNavigationMenu(
                         add(
                             NavEntry(
                                 label = LocalStrings.current.ui.general,
+                                icon = Icons.Rounded.Tune,
                                 onClick = { onNavigation(ServerSettingsScreen()) },
                                 isSelected = currentScreen is ServerSettingsScreen,
                             )
@@ -289,6 +314,7 @@ fun SettingsNavigationMenu(
                         add(
                             NavEntry(
                                 label = LocalStrings.current.ui.users,
+                                icon = Icons.Rounded.Group,
                                 onClick = { onNavigation(UsersScreen()) },
                                 isSelected = currentScreen is UsersScreen,
                             )
@@ -296,6 +322,7 @@ fun SettingsNavigationMenu(
                         add(
                             NavEntry(
                                 label = LocalStrings.current.ui.authenticationActivity,
+                                icon = Icons.Rounded.Security,
                                 onClick = { onNavigation(AuthenticationActivityScreen(false)) },
                                 isSelected = currentScreen is AuthenticationActivityScreen && !currentScreen.forMe,
                             )
@@ -303,6 +330,7 @@ fun SettingsNavigationMenu(
                         add(
                             NavEntry(
                                 label = LocalStrings.current.ui.mediaManagement,
+                                icon = Icons.Rounded.PermMedia,
                                 onClick = { onNavigation(MediaAnalysisScreen()) },
                                 isSelected = currentScreen is MediaAnalysisScreen,
                                 trailingContent = if (hasMediaErrors) {
@@ -313,6 +341,7 @@ fun SettingsNavigationMenu(
                         add(
                             NavEntry(
                                 label = LocalStrings.current.ui.announcements,
+                                icon = Icons.Rounded.Campaign,
                                 onClick = { onNavigation(AnnouncementsScreen()) },
                                 isSelected = currentScreen is AnnouncementsScreen,
                             )
@@ -329,6 +358,7 @@ fun SettingsNavigationMenu(
                         add(
                             NavEntry(
                                 label = LocalStrings.current.ui.connection,
+                                icon = Icons.Rounded.Link,
                                 onClick = { onNavigation(KomfSettingsScreen()) },
                                 isSelected = currentScreen is KomfSettingsScreen,
                             )
@@ -337,6 +367,7 @@ fun SettingsNavigationMenu(
                             add(
                                 NavEntry(
                                     label = LocalStrings.current.ui.processing2,
+                                    icon = Icons.Rounded.Memory,
                                     onClick = { onNavigation(KomfProcessingSettingsScreen(KOMGA)) },
                                     isSelected = currentScreen is KomfProcessingSettingsScreen,
                                 )
@@ -344,6 +375,7 @@ fun SettingsNavigationMenu(
                             add(
                                 NavEntry(
                                     label = LocalStrings.current.ui.providers,
+                                    icon = Icons.Rounded.Extension,
                                     onClick = { onNavigation(KomfProvidersSettingsScreen()) },
                                     isSelected = currentScreen is KomfProvidersSettingsScreen,
                                 )
@@ -351,6 +383,7 @@ fun SettingsNavigationMenu(
                             add(
                                 NavEntry(
                                     label = LocalStrings.current.ui.notifications,
+                                    icon = Icons.Rounded.Notifications,
                                     onClick = { onNavigation(KomfNotificationSettingsScreen()) },
                                     isSelected = currentScreen is KomfNotificationSettingsScreen,
                                 )
@@ -358,6 +391,7 @@ fun SettingsNavigationMenu(
                             add(
                                 NavEntry(
                                     label = LocalStrings.current.ui.jobHistory,
+                                    icon = Icons.Rounded.Schedule,
                                     onClick = { onNavigation(KomfJobsScreen()) },
                                     isSelected = currentScreen is KomfJobsScreen,
                                 )
@@ -375,6 +409,7 @@ fun SettingsNavigationMenu(
             entries = listOf(
                 NavEntry(
                     label = LocalStrings.current.ui.logOut,
+                    icon = Icons.AutoMirrored.Rounded.Logout,
                     onClick = { showLogoutConfirmation = true },
                     isSelected = false,
                 )
@@ -422,9 +457,9 @@ private fun FilteredSettingsGroup(
                 label = entry.label,
                 onClick = entry.onClick,
                 isSelected = entry.isSelected,
+                icon = entry.icon,
                 trailingContent = entry.trailingContent,
             )
-            if (index != visible.lastIndex) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
     }
 }

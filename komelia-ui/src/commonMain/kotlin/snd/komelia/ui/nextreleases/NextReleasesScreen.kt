@@ -305,7 +305,7 @@ class NextReleasesViewModel(
  * Tapping the card pushes the full [NextReleasesScreen].
  */
 @Composable
-fun NextReleasesHomeCard() {
+fun NextReleasesHomeCard(modifier: Modifier = Modifier) {
     val factory = LocalViewModelFactory.current
     val libraries = LocalLibraries.current.collectAsState().value
     // The card runs the service directly rather than through a Voyager
@@ -330,19 +330,17 @@ fun NextReleasesHomeCard() {
     val next = current.first()
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+        modifier = modifier
             .clickable { navigator.pushUnique(NextReleasesScreen()) },
         shape = KoraShapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -351,18 +349,23 @@ fun NextReleasesHomeCard() {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(end = 12.dp),
             )
-            Column(Modifier.fillMaxWidth()) {
-                Text(
-                    text = LocalStrings.current.ui.prochainesSorties2,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = LocalStrings.current.counts.nextReleaseLine(
                         next.seriesTitle, next.volume, dayMonthLabel(next.date),
-                    ) + if (current.size > 1) " (+${current.size - 1})" else "",
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = LocalStrings.current.ui.prochainesSorties2 +
+                        if (current.size > 1) " · +${current.size - 1}" else "",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

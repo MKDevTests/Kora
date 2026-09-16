@@ -64,6 +64,8 @@ fun ImmersiveDetailFab(
     onReadFromStartClick: (() -> Unit)? = null,
     onContinueReadClick: (() -> Unit)? = null,
     canContinueRead: Boolean = true,
+    // False when the page shows a DetailActionRow, which already offers it.
+    showDownloadFab: Boolean = true,
 ) {
     val theme = LocalTheme.current
     val navBarColor = LocalNavBarColor.current
@@ -139,11 +141,13 @@ fun ImmersiveDetailFab(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FloatingFAB(
-                            icon = Icons.Rounded.Download,
-                            onClick = onDownloadClick,
-                            accentColor = accentColor,
-                        )
+                        if (showDownloadFab) {
+                            FloatingFAB(
+                                icon = Icons.Rounded.Download,
+                                onClick = onDownloadClick,
+                                accentColor = accentColor,
+                            )
+                        }
                         if (onReadFromStartClick != null) {
                             FloatingFAB(
                                 icon = Icons.Rounded.Replay,

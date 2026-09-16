@@ -1,5 +1,7 @@
 package snd.komelia.ui.series.immersive
 
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -367,13 +369,14 @@ fun ImmersiveSeriesContent(
                 onNextSiblingSeriesClick = onNextSiblingSeriesClick,
                 hasPreviousSiblingSeries = hasPreviousSiblingSeries,
                 hasNextSiblingSeries = hasNextSiblingSeries,
-                onReadFromStartClick = firstBook?.let { book ->
-                    { onBookReadClick(book, true) }
-                },
+                // Restart and download sit in the action row under the
+                // title; the bar keeps the one button people tap most.
+                onReadFromStartClick = null,
                 onContinueReadClick = {
                     continueBook?.let { onBookReadClick(it, true) }
                 },
                 canContinueRead = continueBook != null,
+                showDownloadFab = false,
             )
         },
         cardContent = { expandFraction, onThumbnailPositioned, onTextPositioned ->
@@ -504,6 +507,44 @@ fun ImmersiveSeriesContent(
                 }
 
                 // Description row (library, status, age rating, etc.) — full width
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    val strings = LocalStrings.current
+                    val continueLabel = continueBook?.let { book ->
+                        if (book.readProgress != null) strings.ui.resume else strings.ui.read
+                    } ?: strings.ui.read
+                    val continueDetail = continueBook?.let { book ->
+                        val progress = book.readProgress
+                        if (progress != null && !progress.completed) strings.counts.pageOf(progress.page, book.media.pagesCount)
+                        else book.metadata.number.takeIf { it.isNotBlank() }?.let { "#$it" }
+                    }
+                    snd.komelia.ui.common.immersive.DetailActionRow(
+                        label = continueLabel,
+                        detail = continueDetail,
+                        onClick = { continueBook?.let { onBookReadClick(it, true) } },
+                        enabled = continueBook != null,
+                        accentColor = accentColor,
+                        secondaryActions = buildList {
+                            firstBook?.let { book ->
+                                add(
+                                    snd.komelia.ui.common.immersive.DetailAction(
+                                        icon = Icons.Rounded.Replay,
+                                        contentDescription = strings.ui.readFromStart,
+                                        onClick = { onBookReadClick(book, true) },
+                                    )
+                                )
+                            }
+                            add(
+                                snd.komelia.ui.common.immersive.DetailAction(
+                                    icon = Icons.Rounded.Download,
+                                    contentDescription = strings.ui.download,
+                                    onClick = { showDownloadConfirmationDialog = true },
+                                )
+                            )
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+
                 if (library != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SeriesDescriptionRow(
