@@ -1,5 +1,6 @@
 package snd.komelia.db.settings
 
+import snd.komelia.settings.model.TitleFont
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -46,6 +47,14 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[updateDismissedVersion] = settings.updateDismissedVersion?.toString()
                 it[navBarColor] = settings.navBarColor?.toString(16)
                 it[accentColor] = settings.accentColor?.toString(16)
+                it[paletteSeed] = settings.paletteSeed?.toString(16)
+                it[pureBlack] = settings.pureBlack
+                it[darkAtNight] = settings.darkAtNight
+                it[darkNightStart] = settings.darkNightStart
+                it[darkNightEnd] = settings.darkNightEnd
+                it[accentFollowsCover] = settings.accentFollowsCover
+                it[textScale] = settings.textScale
+                it[titleFont] = settings.titleFont.name
                 it[useNewLibraryUI] = settings.useNewLibraryUI
                 it[cardLayoutBelow] = settings.cardLayoutBelow
                 it[immersiveColorEnabled] = settings.immersiveColorEnabled
@@ -141,6 +150,14 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 ?.let { AppVersion.fromString(it) },
             navBarColor = get(AppSettingsTable.navBarColor)?.toLong(16),
             accentColor = get(AppSettingsTable.accentColor)?.toLong(16),
+            paletteSeed = get(AppSettingsTable.paletteSeed)?.toLong(16),
+            pureBlack = get(AppSettingsTable.pureBlack),
+            darkAtNight = get(AppSettingsTable.darkAtNight),
+            darkNightStart = get(AppSettingsTable.darkNightStart),
+            darkNightEnd = get(AppSettingsTable.darkNightEnd),
+            accentFollowsCover = get(AppSettingsTable.accentFollowsCover),
+            textScale = get(AppSettingsTable.textScale),
+            titleFont = TitleFont.parse(get(AppSettingsTable.titleFont)),
             useNewLibraryUI = get(AppSettingsTable.useNewLibraryUI),
             cardLayoutBelow = get(AppSettingsTable.cardLayoutBelow),
             immersiveColorEnabled = get(AppSettingsTable.immersiveColorEnabled),

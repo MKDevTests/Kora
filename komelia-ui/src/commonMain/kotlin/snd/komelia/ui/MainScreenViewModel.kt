@@ -192,15 +192,9 @@ class MainScreenViewModel(
 
     fun toggleTheme(currentTheme: Theme) {
         screenModelScope.launch {
-            val (newAppTheme, newAccent) = when (currentTheme) {
-                Theme.LIGHT        -> AppTheme.DARK         to null
-                Theme.DARK         -> AppTheme.LIGHT        to null
-                Theme.DARKER       -> AppTheme.LIGHT        to null
-                Theme.LIGHT_MODERN -> AppTheme.DARK_MODERN  to Color(0xFFBA9EFF.toInt())
-                Theme.DARK_MODERN  -> AppTheme.LIGHT_MODERN to Color(0xFF6A1CF6.toInt())
-            }
+            // Leaves SYSTEM: the button means "not what I see now".
+            val newAppTheme = if (currentTheme.type == Theme.ThemeType.DARK) AppTheme.LIGHT else AppTheme.DARK
             settingsRepository.putAppTheme(newAppTheme)
-            if (newAccent != null) settingsRepository.putAccentColor(newAccent.toArgb().toLong())
         }
     }
 

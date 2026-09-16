@@ -168,7 +168,7 @@ fun HomeContent(
 
 @Composable
 private fun HomeHeaderSection() {
-    val notoSerif = FontFamily(Font(Res.font.NotoSerif_Bold, FontWeight.Bold))
+    val notoSerif = MaterialTheme.typography.titleLarge.fontFamily
     val mainScreenVm = snd.komelia.ui.LocalMainScreenViewModel.current
     val libraries = mainScreenVm.libraries.collectAsState().value
     val showDropdown = mainScreenVm.libraryDropdownInTitle.collectAsState().value

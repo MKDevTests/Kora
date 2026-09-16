@@ -1,5 +1,6 @@
 package snd.komelia.db
 
+import snd.komelia.settings.model.TitleFont
 import kotlinx.serialization.Serializable
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.AutobackupFrequency
@@ -36,7 +37,16 @@ data class AppSettings(
     val updateDismissedVersion: AppVersion? = null,
 
     val navBarColor: Long? = null,
+    /** Unused since 1.8.22 (the palette seed drives the accent); kept so old backups restore. */
     val accentColor: Long? = null,
+    val paletteSeed: Long? = null,
+    val pureBlack: Boolean = false,
+    val darkAtNight: Boolean = false,
+    val darkNightStart: Int = 21 * 60,
+    val darkNightEnd: Int = 7 * 60,
+    val accentFollowsCover: Boolean = true,
+    val textScale: Float = 1f,
+    val titleFont: TitleFont = TitleFont.SERIF,
     val useNewLibraryUI: Boolean = true,
     val cardLayoutBelow: Boolean = false,
     val immersiveColorEnabled: Boolean = true,

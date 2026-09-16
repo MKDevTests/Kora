@@ -1,5 +1,6 @@
 package snd.komelia.ui
 
+import snd.komelia.settings.model.TitleFont
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -49,7 +50,7 @@ fun koraShapes() = Shapes(
  * added by hand; the screens keep those, they simply match now.
  */
 @Composable
-fun koraTypography(): Typography {
+fun koraTypography(titleFont: TitleFont = TitleFont.SERIF): Typography {
     val serif = FontFamily(Font(Res.font.NotoSerif_Bold, FontWeight.Bold))
     val sans = FontFamily(
         Font(Res.font.Inter_Regular, FontWeight.Normal),
@@ -57,7 +58,12 @@ fun koraTypography(): Typography {
         Font(Res.font.Inter_SemiBold, FontWeight.SemiBold),
     )
     val base = Typography()
-    fun TextStyle.serif() = copy(fontFamily = serif, fontWeight = FontWeight.Bold)
+    // "serif" is the title role; Appearance decides which face fills it.
+    fun TextStyle.serif() = when (titleFont) {
+        TitleFont.SERIF -> copy(fontFamily = serif, fontWeight = FontWeight.Bold)
+        TitleFont.SANS -> copy(fontFamily = sans, fontWeight = FontWeight.SemiBold)
+        TitleFont.SYSTEM -> copy(fontFamily = FontFamily.Default, fontWeight = FontWeight.Bold)
+    }
     fun TextStyle.sans(weight: FontWeight = FontWeight.Normal) = copy(fontFamily = sans, fontWeight = weight)
     return Typography(
         displayLarge = base.displayLarge.serif(),

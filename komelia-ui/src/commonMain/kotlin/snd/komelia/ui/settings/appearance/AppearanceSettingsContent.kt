@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.appearance
 
+import snd.komelia.settings.model.TitleFont
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -51,43 +52,28 @@ import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.platform.cursorForHand
 import kotlin.math.roundToInt
 
-private val accentPresets: List<Pair<Color?, String>> = listOf(
-    null to "Auto",
-    Color(0xFF800020.toInt()) to "Burgundy",
-    Color(0xFFE57373.toInt()) to "Muted Red",
-    Color(0xFFC47890.toInt()) to "Muted Rose",
-    Color(0xFFCC8855.toInt()) to "Muted Amber",
-    Color(0xFF8A9B5A.toInt()) to "Muted Olive",
-    Color(0xFF5A8F6E.toInt()) to "Muted Sage",
-    Color(0xFF4D8D8D.toInt()) to "Muted Teal",
-    Color(0xFF5783D4.toInt()) to "Secondary Blue",
-    Color(0xFF8678B8.toInt()) to "Muted Violet",
-    Color(0xFF201F23.toInt()) to "Toolbar (Dark)",
-    Color(0xFFE1E1E1.toInt()) to "Toolbar (Light)",
-    Color(0xFF2D3436.toInt()) to "Charcoal",
-    Color(0xFF1A1A2E.toInt()) to "Navy",
-    Color(0xFF0D3B46.toInt()) to "D.Teal",
-    Color(0xFF1B4332.toInt()) to "Forest",
-    Color(0xFF3D1A78.toInt()) to "Violet",
-    Color(0xFF3B82F6.toInt()) to "Blue",
-    Color(0xFF14B8A6.toInt()) to "Teal",
-    Color(0xFF8B5CF6.toInt()) to "Purple",
-    Color(0xFF6A1CF6.toInt()) to "Modern Purple",
-    Color(0xFFBA9EFF.toInt()) to "Modern Lavender",
-    Color(0xFF9720AB.toInt()) to "Modern Magenta",
-    Color(0xFFEC4899.toInt()) to "Pink",
-    Color(0xFFF97316.toInt()) to "Orange",
-    Color(0xFF22C55E.toInt()) to "Green",
-)
-
 @Composable
 fun AppearanceSettingsContent(
     cardWidth: Dp,
     onCardWidthChange: (Dp) -> Unit,
     currentTheme: AppTheme,
     onThemeChange: (AppTheme) -> Unit,
-    accentColor: Color?,
-    onAccentColorChange: (Color?) -> Unit,
+    darkAtNight: Boolean,
+    onDarkAtNightChange: (Boolean) -> Unit,
+    darkNightStart: Int,
+    onDarkNightStartChange: (Int) -> Unit,
+    darkNightEnd: Int,
+    onDarkNightEndChange: (Int) -> Unit,
+    pureBlack: Boolean,
+    onPureBlackChange: (Boolean) -> Unit,
+    paletteSeed: Color?,
+    onPaletteSeedChange: (Color?) -> Unit,
+    accentFollowsCover: Boolean,
+    onAccentFollowsCoverChange: (Boolean) -> Unit,
+    textScale: Float,
+    onTextScaleChange: (Float) -> Unit,
+    titleFont: TitleFont,
+    onTitleFontChange: (TitleFont) -> Unit,
     useNewLibraryUI: Boolean,
     onUseNewLibraryUIChange: (Boolean) -> Unit,
     cardLayoutBelow: Boolean,
@@ -139,15 +125,33 @@ fun AppearanceSettingsContent(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         val strings = LocalStrings.current.settings
+        // Sliders below used to take the accent preset; the palette is the
+        // theme's primary now, which is what a null accent resolves to.
+        val accentColor: Color? = null
 
-        // a. App theme
-        DropdownChoiceMenu(
-            label = { Text(strings.appTheme) },
-            selectedOption = LabeledEntry(currentTheme, strings.forAppTheme(currentTheme)),
-            options = AppTheme.entries.map { LabeledEntry(it, strings.forAppTheme(it)) },
-            onOptionChange = { onThemeChange(it.value) },
-            inputFieldModifier = Modifier.widthIn(min = 250.dp)
+        // a. Theme: mode, night, pure black, palette, cover accent, preview
+        ThemeSettingsSection(
+            currentTheme = currentTheme,
+            onThemeChange = onThemeChange,
+            darkAtNight = darkAtNight,
+            onDarkAtNightChange = onDarkAtNightChange,
+            darkNightStart = darkNightStart,
+            onDarkNightStartChange = onDarkNightStartChange,
+            darkNightEnd = darkNightEnd,
+            onDarkNightEndChange = onDarkNightEndChange,
+            pureBlack = pureBlack,
+            onPureBlackChange = onPureBlackChange,
+            paletteSeed = paletteSeed,
+            onPaletteSeedChange = onPaletteSeedChange,
+            accentFollowsCover = accentFollowsCover,
+            onAccentFollowsCoverChange = onAccentFollowsCoverChange,
+            textScale = textScale,
+            onTextScaleChange = onTextScaleChange,
+            titleFont = titleFont,
+            onTitleFontChange = onTitleFontChange,
         )
+
+        HorizontalDivider()
 
         // a bis. Interface language. Not driven by the device on purpose: a
         // French reader on an English phone had no way to ask for French.
@@ -157,20 +161,6 @@ fun AppearanceSettingsContent(
             options = snd.komelia.ui.i18n.AppLanguage.entries.map { LabeledEntry(it, languageLabel(it)) },
             onOptionChange = { onUiLanguageChange(it.value) },
             inputFieldModifier = Modifier.widthIn(min = 250.dp)
-        )
-
-        HorizontalDivider()
-
-        // b. Accent color (always shown)
-        DropdownChoiceMenu(
-            label = { Text(LocalStrings.current.ui.accentColorChipsTabs) },
-            selectedOption = accentPresets.find { it.first == accentColor }
-                ?.let { LabeledEntry(it.first, it.second) },
-            options = accentPresets.map { LabeledEntry(it.first, it.second) },
-            onOptionChange = { onAccentColorChange(it.value) },
-            inputFieldModifier = Modifier.widthIn(min = 250.dp),
-            selectedOptionContent = { ColorLabel(it) },
-            optionContent = { ColorLabel(it) }
         )
 
         HorizontalDivider()
@@ -483,37 +473,4 @@ private fun languageLabel(language: snd.komelia.ui.i18n.AppLanguage) = when (lan
     snd.komelia.ui.i18n.AppLanguage.SYSTEM -> LocalStrings.current.settings.languageSystem
     snd.komelia.ui.i18n.AppLanguage.ENGLISH -> "English"
     snd.komelia.ui.i18n.AppLanguage.FRENCH -> "Français"
-}
-
-@Composable
-private fun ColorLabel(entry: LabeledEntry<Color?>) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        val swatchColor = entry.value ?: MaterialTheme.colorScheme.surfaceVariant
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(swatchColor)
-                .then(
-                    if (entry.value == null) Modifier.border(
-                        1.dp,
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                        CircleShape
-                    )
-                    else Modifier
-                )
-        ) {
-            if (entry.value == null) {
-                Text(
-                    "A",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        }
-        Text(entry.label)
-    }
 }
