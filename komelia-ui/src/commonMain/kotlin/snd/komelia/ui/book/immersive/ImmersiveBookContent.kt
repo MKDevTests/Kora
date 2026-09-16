@@ -1,5 +1,7 @@
 package snd.komelia.ui.book.immersive
 
+import snd.komelia.ui.common.immersive.extractVibrantColor
+import snd.komelia.ui.common.immersive.rememberCoverAccent
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.VisibilityOff
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
@@ -247,9 +249,16 @@ fun ImmersiveBookContent(
             val coverData = remember(pageBook.id) { BookDefaultThumbnailRequest(pageBook.id) }
             val coverPainter = rememberAsyncImagePainter(model = coverData)
             val dominantColor = remember(pageBook.id) { mutableStateOf<Color?>(null) }
+            val vibrantColor = remember(pageBook.id) { mutableStateOf<Color?>(null) }
             LaunchedEffect(pageBook.id) {
                 dominantColor.value = extractDominantColor(coverPainter)
+                vibrantColor.value = extractVibrantColor(coverPainter)
             }
+
+            // The cover's hue becomes the page accent when Appearance says so;
+            // shadows the parameter on purpose so every child below gets it.
+            @Suppress("NAME_SHADOWING")
+            val accentColor = rememberCoverAccent(vibrantColor.value, accentColor)
 
             val writers = remember(pageBook.metadata.authors) {
                 pageBook.metadata.authors
@@ -273,6 +282,7 @@ fun ImmersiveBookContent(
                 coverData = coverData,
                 coverKey = pageBook.id.value,
                 cardColor = dominantColor.value,
+                pageAccent = accentColor,
                 immersive = true,
                 initiallyExpanded = initiallyExpanded,
                 onExpandChange = onExpandChange,

@@ -1,5 +1,7 @@
 package snd.komelia.ui.oneshot.immersive
 
+import snd.komelia.ui.common.immersive.extractVibrantColor
+import snd.komelia.ui.common.immersive.rememberCoverAccent
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.common.ThumbnailConstants.CARD_SCALE
 import snd.komelia.ui.LocalCardHeightScale
@@ -166,9 +168,16 @@ fun ImmersiveOneshotContent(
 
     val coverPainter = rememberAsyncImagePainter(model = coverData)
     val dominantColor = remember(series.id.value) { mutableStateOf<Color?>(null) }
+    val vibrantColor = remember(series.id.value) { mutableStateOf<Color?>(null) }
     LaunchedEffect(series.id.value, coverData) {
         dominantColor.value = extractDominantColor(coverPainter)
+        vibrantColor.value = extractVibrantColor(coverPainter)
     }
+
+    // The cover's hue becomes the page accent when Appearance says so;
+    // shadows the parameter on purpose so every child below gets it.
+    @Suppress("NAME_SHADOWING")
+    val accentColor = rememberCoverAccent(vibrantColor.value, accentColor)
 
     val publisherLogo = rememberPublisherLogo(series.metadata.publisher)
 
@@ -225,6 +234,7 @@ fun ImmersiveOneshotContent(
             coverData = coverData,
             coverKey = series.id.value,
             cardColor = dominantColor.value,
+            pageAccent = accentColor,
             immersive = true,
             initiallyExpanded = initiallyExpanded,
             onExpandChange = onExpandChange,

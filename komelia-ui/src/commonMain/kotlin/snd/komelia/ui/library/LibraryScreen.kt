@@ -746,7 +746,7 @@ private fun LibraryHeaderSection(
     onSortChange: ((LibrarySeriesTabState.SeriesSort) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val notoSerif = FontFamily(Font(Res.font.NotoSerif_Bold, FontWeight.Bold))
+    val notoSerif = MaterialTheme.typography.titleLarge.fontFamily
     Column(
         modifier = modifier
             .fillMaxWidth()

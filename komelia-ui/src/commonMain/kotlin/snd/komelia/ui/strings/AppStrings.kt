@@ -1184,7 +1184,33 @@ class UiStrings(private val values: Map<String, String>) {
     val youHaveUnsavedChanges: String get() = at("youHaveUnsavedChanges")
     val yourRating: String get() = at("yourRating")
     val yourReading: String get() = at("yourReading")
+    val themeMode: String get() = at("themeMode")
+    val themeModeSystem: String get() = at("themeModeSystem")
+    val themeModeLight: String get() = at("themeModeLight")
+    val themeModeDark: String get() = at("themeModeDark")
+    val darkAtNight: String get() = at("darkAtNight")
+    val darkAtNightDesc: String get() = at("darkAtNightDesc")
+    val darkNightFrom: String get() = at("darkNightFrom")
+    val darkNightTo: String get() = at("darkNightTo")
+    val pureBlack: String get() = at("pureBlack")
+    val pureBlackDesc: String get() = at("pureBlackDesc")
+    val palette: String get() = at("palette")
+    val paletteDesc: String get() = at("paletteDesc")
+    val paletteCustom: String get() = at("paletteCustom")
+    val customColor: String get() = at("customColor")
+    val hue: String get() = at("hue")
+    val saturation: String get() = at("saturation")
+    val accentFollowsCover: String get() = at("accentFollowsCover")
+    val accentFollowsCoverDesc: String get() = at("accentFollowsCoverDesc")
+    val textScale: String get() = at("textScale")
+    val titleFont: String get() = at("titleFont")
+    val titleFontSerif: String get() = at("titleFontSerif")
+    val titleFontSans: String get() = at("titleFontSans")
+    val titleFontSystem: String get() = at("titleFontSystem")
     // endregion
+
+    /** Display name of a palette seed, by its key in Theme.PALETTES. */
+    fun paletteName(key: String): String = at("palette_" + key)
 
     // Hand-written, outside the region above: i18n-apply.py only moves whole
     // literals, and every one of these is interpolated.
@@ -1571,6 +1597,7 @@ data class SettingsStrings(
     val appThemeOled: String,
     val appThemeLightModern: String,
     val appThemeDarkModern: String,
+    val appThemeSystem: String,
     val imageCardSize: String,
     val cardShadowLevel: String,
     val cardCornerRadius: String,
@@ -1596,6 +1623,7 @@ data class SettingsStrings(
             AppTheme.DARKER -> appThemeOled
             AppTheme.LIGHT_MODERN -> appThemeLightModern
             AppTheme.DARK_MODERN -> appThemeDarkModern
+            AppTheme.SYSTEM -> appThemeSystem
         }
     }
 

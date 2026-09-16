@@ -1,5 +1,10 @@
 package snd.komelia.ui
 
+import androidx.compose.ui.unit.Density
+import snd.komelia.settings.model.TitleFont
+import androidx.compose.foundation.isSystemInDarkTheme
+import snd.komelia.settings.model.AppTheme
+import snd.komelia.ui.Theme.Companion.isDark
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -51,7 +56,6 @@ import snd.komelia.komga.api.LocalFileApiProvider
 import snd.komelia.ui.BookSiblingsContext
 import snd.komelia.KomgaAuthenticationState.DataState.AuthenticationRequired
 import snd.komelia.KomgaAuthenticationState.DataState.Loaded
-import snd.komelia.ui.Theme.Companion.toTheme
 import snd.komelia.ui.Theme.ThemeType
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.dialogs.update.UpdateDialog
@@ -83,7 +87,15 @@ fun MainView(
     keyEvents: SharedFlow<KeyEvent>
 ) {
     val currentServerProfile by sessionManager.currentServerProfile.collectAsState()
-    var theme by rememberSaveable { mutableStateOf(Theme.DARK) }
+    var appTheme by remember { mutableStateOf(AppTheme.DARK) }
+    var paletteSeed by remember { mutableStateOf<Color?>(null) }
+    var pureBlack by remember { mutableStateOf(false) }
+    var darkAtNight by remember { mutableStateOf(false) }
+    var darkNightStart by remember { mutableStateOf(21 * 60) }
+    var darkNightEnd by remember { mutableStateOf(7 * 60) }
+    var accentFollowsCover by remember { mutableStateOf(true) }
+    var textScale by remember { mutableStateOf(1f) }
+    var titleFont by remember { mutableStateOf(TitleFont.SERIF) }
     var navBarColor by remember { mutableStateOf<Color?>(null) }
     var accentColor by remember { mutableStateOf<Color?>(null) }
     var useNewLibraryUI by remember { mutableStateOf(true) }
@@ -110,7 +122,32 @@ fun MainView(
     var cardLayoutOverlayBackground by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(dependencies) {
-        dependencies?.appRepositories?.settingsRepository?.getAppTheme()?.collect { theme = it.toTheme() }
+        dependencies?.appRepositories?.settingsRepository?.getAppTheme()?.collect { appTheme = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getPaletteSeed()
+            ?.collect { paletteSeed = it?.let { v -> Color(v.toInt()) } }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getPureBlack()?.collect { pureBlack = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getDarkAtNight()?.collect { darkAtNight = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getDarkNightStart()?.collect { darkNightStart = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getDarkNightEnd()?.collect { darkNightEnd = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getAccentFollowsCover()?.collect { accentFollowsCover = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getTextScale()?.collect { textScale = it }
+    }
+    LaunchedEffect(dependencies) {
+        dependencies?.appRepositories?.settingsRepository?.getTitleFont()?.collect { titleFont = it }
     }
     LaunchedEffect(dependencies) {
         dependencies?.appRepositories?.settingsRepository?.getLockScreenRotation()
@@ -213,7 +250,22 @@ fun MainView(
             ?.collect { useFloatingNavigationBar = it }
     }
 
-    MaterialTheme(colorScheme = theme.colorScheme, typography = koraTypography(), shapes = koraShapes()) {
+    // Mode (or the system, or the night schedule) picks dark/light; the seed
+    // and the pure-black switch pick the colours. Remembered on its inputs so
+    // ConfigurePlatformTheme's LaunchedEffect(theme) fires only on real change.
+    val systemDark = isSystemInDarkTheme()
+    val night = rememberIsNight(darkAtNight, darkNightStart, darkNightEnd)
+    val dark = appTheme.isDark(systemDark) || night
+    val theme = remember(dark, paletteSeed, pureBlack) { Theme.build(dark, paletteSeed, pureBlack) }
+
+    // Text size is a multiplier on the density's font scale: every sp in
+    // the app follows, hand-set sizes included, which a Typography could not do.
+    val baseDensity = LocalDensity.current
+    val scaledDensity = remember(baseDensity, textScale) {
+        Density(baseDensity.density, baseDensity.fontScale * textScale)
+    }
+    CompositionLocalProvider(LocalDensity provides scaledDensity) {
+    MaterialTheme(colorScheme = theme.colorScheme, typography = koraTypography(titleFont), shapes = koraShapes()) {
         ConfigurePlatformTheme(theme)
         val focusManager = LocalFocusManager.current
         Surface(
@@ -315,6 +367,7 @@ fun MainView(
                 LocalKomgaState provides dependencies.komgaSharedState,
                 LocalNavBarColor provides navBarColor,
                 LocalAccentColor provides accentColor,
+                LocalAccentFollowsCover provides accentFollowsCover,
                 LocalUseNewLibraryUI provides useNewLibraryUI,
                 LocalCardLayoutBelow provides cardLayoutBelow,
                 LocalImmersiveColorEnabled provides immersiveColorEnabled,
@@ -376,6 +429,7 @@ fun MainView(
 
             BackPressHandler {}
         }
+    }
     }
 }
 

@@ -61,6 +61,8 @@ val LocalOfflineMode = staticCompositionLocalOf<StateFlow<Boolean>> { error("off
 val LocalKomgaState = staticCompositionLocalOf<KomgaAuthenticationState> { error("komga state was not initialized") }
 val LocalNavBarColor = compositionLocalOf<Color?> { null }
 val LocalAccentColor = compositionLocalOf<Color?> { null }
+/** Series/book pages tint their accent with the cover's dominant hue (Appearance). */
+val LocalAccentFollowsCover = compositionLocalOf { true }
 val LocalUseNewLibraryUI = compositionLocalOf { true }
 val LocalCardLayoutBelow = compositionLocalOf { false }
 val LocalImmersiveColorEnabled = compositionLocalOf { true }

@@ -1,5 +1,6 @@
 package snd.komelia.settings
 
+import snd.komelia.settings.model.TitleFont
 import kotlinx.coroutines.flow.Flow
 import snd.komelia.settings.model.AppTheme
 import snd.komelia.settings.model.ChapterSeriesFilter
@@ -133,6 +134,33 @@ interface CommonSettingsRepository {
 
     fun getAccentColor(): Flow<Long?>
     suspend fun putAccentColor(color: Long?)
+
+    /** Seed colour of the generated palette (ARGB); null = the default blue. */
+    fun getPaletteSeed(): Flow<Long?>
+    suspend fun putPaletteSeed(color: Long?)
+
+    /** Dark mode on #000000 surfaces instead of #0E0E0E. */
+    fun getPureBlack(): Flow<Boolean>
+    suspend fun putPureBlack(enabled: Boolean)
+
+    /** Force dark between [getDarkNightStart] and [getDarkNightEnd] (minutes since midnight). */
+    fun getDarkAtNight(): Flow<Boolean>
+    suspend fun putDarkAtNight(enabled: Boolean)
+    fun getDarkNightStart(): Flow<Int>
+    suspend fun putDarkNightStart(minutes: Int)
+    fun getDarkNightEnd(): Flow<Int>
+    suspend fun putDarkNightEnd(minutes: Int)
+
+    /** On series/book pages, the accent takes the cover's dominant hue. */
+    fun getAccentFollowsCover(): Flow<Boolean>
+    suspend fun putAccentFollowsCover(enabled: Boolean)
+
+    /** Multiplier on the system font scale, 0.85..1.2. */
+    fun getTextScale(): Flow<Float>
+    suspend fun putTextScale(scale: Float)
+
+    fun getTitleFont(): Flow<TitleFont>
+    suspend fun putTitleFont(font: TitleFont)
 
     fun getUseNewLibraryUI(): Flow<Boolean>
     suspend fun putUseNewLibraryUI(enabled: Boolean)

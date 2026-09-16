@@ -1,5 +1,6 @@
 package snd.komelia.db.repository
 
+import snd.komelia.settings.model.TitleFont
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -255,6 +256,62 @@ class SettingsRepositoryWrapper(
 
     override suspend fun putAccentColor(color: Long?) {
         wrapper.transform { it.copy(accentColor = color) }
+    }
+
+    override fun getPaletteSeed(): Flow<Long?> =
+        wrapper.state.map { it.paletteSeed }.distinctUntilChanged()
+
+    override suspend fun putPaletteSeed(color: Long?) {
+        wrapper.transform { it.copy(paletteSeed = color) }
+    }
+
+    override fun getPureBlack(): Flow<Boolean> =
+        wrapper.state.map { it.pureBlack }.distinctUntilChanged()
+
+    override suspend fun putPureBlack(enabled: Boolean) {
+        wrapper.transform { it.copy(pureBlack = enabled) }
+    }
+
+    override fun getDarkAtNight(): Flow<Boolean> =
+        wrapper.state.map { it.darkAtNight }.distinctUntilChanged()
+
+    override suspend fun putDarkAtNight(enabled: Boolean) {
+        wrapper.transform { it.copy(darkAtNight = enabled) }
+    }
+
+    override fun getDarkNightStart(): Flow<Int> =
+        wrapper.state.map { it.darkNightStart }.distinctUntilChanged()
+
+    override suspend fun putDarkNightStart(minutes: Int) {
+        wrapper.transform { it.copy(darkNightStart = minutes) }
+    }
+
+    override fun getDarkNightEnd(): Flow<Int> =
+        wrapper.state.map { it.darkNightEnd }.distinctUntilChanged()
+
+    override suspend fun putDarkNightEnd(minutes: Int) {
+        wrapper.transform { it.copy(darkNightEnd = minutes) }
+    }
+
+    override fun getAccentFollowsCover(): Flow<Boolean> =
+        wrapper.state.map { it.accentFollowsCover }.distinctUntilChanged()
+
+    override suspend fun putAccentFollowsCover(enabled: Boolean) {
+        wrapper.transform { it.copy(accentFollowsCover = enabled) }
+    }
+
+    override fun getTextScale(): Flow<Float> =
+        wrapper.state.map { it.textScale }.distinctUntilChanged()
+
+    override suspend fun putTextScale(scale: Float) {
+        wrapper.transform { it.copy(textScale = scale) }
+    }
+
+    override fun getTitleFont(): Flow<TitleFont> =
+        wrapper.state.map { it.titleFont }.distinctUntilChanged()
+
+    override suspend fun putTitleFont(font: TitleFont) {
+        wrapper.transform { it.copy(titleFont = font) }
     }
 
     override fun getUseNewLibraryUI(): Flow<Boolean> {

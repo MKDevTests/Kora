@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.appearance
 
+import snd.komelia.settings.model.TitleFont
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -23,7 +24,14 @@ class AppSettingsViewModel(
     var cardWidth by mutableStateOf(defaultCardWidth.dp)
     var currentTheme by mutableStateOf(AppTheme.DARK)
     var uiLanguage by mutableStateOf(snd.komelia.ui.i18n.AppLanguage.SYSTEM)
-    var accentColor by mutableStateOf<Color?>(null)
+    var paletteSeed by mutableStateOf<Color?>(null)
+    var pureBlack by mutableStateOf(false)
+    var darkAtNight by mutableStateOf(false)
+    var darkNightStart by mutableStateOf(21 * 60)
+    var darkNightEnd by mutableStateOf(7 * 60)
+    var accentFollowsCover by mutableStateOf(true)
+    var textScale by mutableStateOf(1f)
+    var titleFont by mutableStateOf(TitleFont.SERIF)
     var useNewLibraryUI by mutableStateOf(true)
     var cardLayoutBelow by mutableStateOf(false)
     var immersiveColorEnabled by mutableStateOf(true)
@@ -53,7 +61,14 @@ class AppSettingsViewModel(
         cardWidth = settingsRepository.getCardWidth().map { it.dp }.first()
         currentTheme = settingsRepository.getAppTheme().first()
         uiLanguage = snd.komelia.ui.i18n.AppLanguage.of(settingsRepository.getUiLanguage().first())
-        accentColor = settingsRepository.getAccentColor().first()?.let { Color(it.toInt()) }
+        paletteSeed = settingsRepository.getPaletteSeed().first()?.let { Color(it.toInt()) }
+        pureBlack = settingsRepository.getPureBlack().first()
+        darkAtNight = settingsRepository.getDarkAtNight().first()
+        darkNightStart = settingsRepository.getDarkNightStart().first()
+        darkNightEnd = settingsRepository.getDarkNightEnd().first()
+        accentFollowsCover = settingsRepository.getAccentFollowsCover().first()
+        textScale = settingsRepository.getTextScale().first()
+        titleFont = settingsRepository.getTitleFont().first()
         useNewLibraryUI = settingsRepository.getUseNewLibraryUI().first()
         cardLayoutBelow = settingsRepository.getCardLayoutBelow().first()
         immersiveColorEnabled = settingsRepository.getImmersiveColorEnabled().first()
@@ -118,25 +133,47 @@ class AppSettingsViewModel(
 
     fun onAppThemeChange(theme: AppTheme) {
         this.currentTheme = theme
-        screenModelScope.launch {
-            settingsRepository.putAppTheme(theme)
-            when (theme) {
-                AppTheme.LIGHT_MODERN -> {
-                    this@AppSettingsViewModel.accentColor = Color(0xFF6A1CF6.toInt())
-                    settingsRepository.putAccentColor(Color(0xFF6A1CF6.toInt()).toArgb().toLong())
-                }
-                AppTheme.DARK_MODERN -> {
-                    this@AppSettingsViewModel.accentColor = Color(0xFFBA9EFF.toInt())
-                    settingsRepository.putAccentColor(Color(0xFFBA9EFF.toInt()).toArgb().toLong())
-                }
-                else -> {}
-            }
-        }
+        screenModelScope.launch { settingsRepository.putAppTheme(theme) }
     }
 
-    fun onAccentColorChange(color: Color?) {
-        this.accentColor = color
-        screenModelScope.launch { settingsRepository.putAccentColor(color?.toArgb()?.toLong()) }
+    fun onPaletteSeedChange(color: Color?) {
+        this.paletteSeed = color
+        screenModelScope.launch { settingsRepository.putPaletteSeed(color?.toArgb()?.toLong()) }
+    }
+
+    fun onPureBlackChange(enabled: Boolean) {
+        this.pureBlack = enabled
+        screenModelScope.launch { settingsRepository.putPureBlack(enabled) }
+    }
+
+    fun onDarkAtNightChange(enabled: Boolean) {
+        this.darkAtNight = enabled
+        screenModelScope.launch { settingsRepository.putDarkAtNight(enabled) }
+    }
+
+    fun onDarkNightStartChange(minutes: Int) {
+        this.darkNightStart = minutes
+        screenModelScope.launch { settingsRepository.putDarkNightStart(minutes) }
+    }
+
+    fun onDarkNightEndChange(minutes: Int) {
+        this.darkNightEnd = minutes
+        screenModelScope.launch { settingsRepository.putDarkNightEnd(minutes) }
+    }
+
+    fun onAccentFollowsCoverChange(enabled: Boolean) {
+        this.accentFollowsCover = enabled
+        screenModelScope.launch { settingsRepository.putAccentFollowsCover(enabled) }
+    }
+
+    fun onTextScaleChange(scale: Float) {
+        this.textScale = scale
+        screenModelScope.launch { settingsRepository.putTextScale(scale) }
+    }
+
+    fun onTitleFontChange(font: TitleFont) {
+        this.titleFont = font
+        screenModelScope.launch { settingsRepository.putTitleFont(font) }
     }
 
     fun onUseNewLibraryUIChange(enabled: Boolean) {

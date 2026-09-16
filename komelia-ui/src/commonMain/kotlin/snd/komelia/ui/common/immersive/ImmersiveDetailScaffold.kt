@@ -1,5 +1,7 @@
 package snd.komelia.ui.common.immersive
 
+import snd.komelia.ui.LocalAccentColor
+import androidx.compose.runtime.CompositionLocalProvider
 import snd.komelia.ui.KoraShapes
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.common.ThumbnailConstants.CARD_SCALE
@@ -131,6 +133,8 @@ fun ImmersiveDetailScaffold(
     coverKey: String,
     cardColor: Color?,
     modifier: Modifier = Modifier,
+    /** Accent for everything inside (chips, switches, FAB); null keeps the theme's. */
+    pageAccent: Color? = null,
     immersive: Boolean = false,
     initiallyExpanded: Boolean = false,
     onExpandChange: (Boolean) -> Unit = {},
@@ -246,6 +250,8 @@ fun ImmersiveDetailScaffold(
         }
     } else Modifier
 
+    // Chips, switches and the FAB inside read LocalAccentColor themselves.
+    CompositionLocalProvider(LocalAccentColor provides (pageAccent ?: LocalAccentColor.current)) {
     BoxWithConstraints(modifier = modifier.fillMaxSize().then(scaffoldEnterExitModifier)) {
         val screenHeight = maxHeight
         val statusBarDp = LocalRawStatusBarHeight.current
@@ -587,5 +593,6 @@ fun ImmersiveDetailScaffold(
                 fabContent()
             }
         }
+    }
     }
 }

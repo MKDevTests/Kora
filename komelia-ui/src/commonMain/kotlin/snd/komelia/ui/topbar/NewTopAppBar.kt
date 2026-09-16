@@ -72,7 +72,7 @@ fun NewTopAppBar(
     val showThreeDotsMenu = library != null && libraryActions != null && (isAdmin || isOffline)
 
     val iconColor = accentColor ?: theme.colorScheme.primary
-    val notoSerif = FontFamily(Font(Res.font.NotoSerif_Bold, FontWeight.Bold))
+    val notoSerif = MaterialTheme.typography.titleLarge.fontFamily
     val hazeStyle = if (hazeState != null) HazeMaterials.thin(theme.colorScheme.surface) else null
 
     Column(
@@ -128,10 +128,7 @@ fun NewTopAppBar(
                 )
             }
 
-            val toggleIcon = when (theme) {
-                Theme.LIGHT, Theme.LIGHT_MODERN -> Icons.Rounded.DarkMode
-                else -> Icons.Rounded.LightMode
-            }
+            val toggleIcon = if (theme.type == Theme.ThemeType.LIGHT) Icons.Rounded.DarkMode else Icons.Rounded.LightMode
             IconButton(onClick = { mainScreenVm.toggleTheme(theme) }) {
                 Icon(toggleIcon, contentDescription = LocalStrings.current.ui.toggleTheme, tint = iconColor)
             }
