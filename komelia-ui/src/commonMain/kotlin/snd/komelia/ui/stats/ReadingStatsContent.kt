@@ -1,5 +1,6 @@
 package snd.komelia.ui.stats
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -231,6 +232,8 @@ private fun HistorySection(stats: ReadingStats, onRefresh: () -> Unit) {
                 selected = window == option,
                 onClick = { window = option },
                 label = { Text(option.labelText) },
+                colors = KoraChipDefaults.filterChipColors(),
+                border = KoraChipDefaults.border,
             )
         }
     }

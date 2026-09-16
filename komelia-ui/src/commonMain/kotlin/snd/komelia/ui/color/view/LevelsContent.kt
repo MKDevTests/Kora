@@ -1,5 +1,6 @@
 package snd.komelia.ui.color.view
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -82,7 +83,7 @@ fun ColorLevelContent(
             )
             OutlinedButton(
                 onClick = state::onAllChannelsReset,
-                shape = RoundedCornerShape(5.dp),
+                shape = KoraShapes.small,
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
                     .pointerHoverIcon(PointerIcon.Hand),

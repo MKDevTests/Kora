@@ -1,5 +1,6 @@
 package snd.komelia.ui.book
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -199,7 +200,9 @@ fun BookInfoRow(
                     onClick = onSeriesButtonClick,
                     label = { Text(seriesTitle) },
                     icon = { Icon(Icons.AutoMirrored.Outlined.LibraryBooks, null) },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
             if (book.deleted) {

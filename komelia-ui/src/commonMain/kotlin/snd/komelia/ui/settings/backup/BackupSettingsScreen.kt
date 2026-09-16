@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.backup
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -303,6 +304,8 @@ private fun AutobackupSection(vm: BackupSettingsViewModel) {
                         selected = option == frequency,
                         onClick = { vm.onFrequencyChange(option) },
                         label = { Text(option.label()) },
+                        colors = KoraChipDefaults.filterChipColors(),
+                        border = KoraChipDefaults.border,
                     )
                 }
             }

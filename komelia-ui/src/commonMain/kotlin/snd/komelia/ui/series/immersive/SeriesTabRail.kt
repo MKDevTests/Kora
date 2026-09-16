@@ -1,5 +1,6 @@
 package snd.komelia.ui.series.immersive
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -148,7 +149,7 @@ internal fun SeriesTabRail(
             exit = fadeOut(tween(250)) + slideOutHorizontally(tween(250)) { it / 2 },
         ) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = KoraShapes.large,
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 tonalElevation = 3.dp,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),

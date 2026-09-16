@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.chapters
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -142,16 +143,22 @@ class ChapterManagementScreen : Screen {
                             selected = vm.listFilter == ChapterListFilter.UNLINKED,
                             onClick = { vm.onListFilterChange(ChapterListFilter.UNLINKED) },
                             label = { Text(strings.chapterManagementUnlinkedOnly) },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
                         )
                         FilterChip(
                             selected = vm.listFilter == ChapterListFilter.LINKED,
                             onClick = { vm.onListFilterChange(ChapterListFilter.LINKED) },
                             label = { Text(strings.chapterManagementLinkedOnly) },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
                         )
                         FilterChip(
                             selected = vm.listFilter == ChapterListFilter.ALL,
                             onClick = { vm.onListFilterChange(ChapterListFilter.ALL) },
                             label = { Text(strings.all) },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
                         )
                     }
 

@@ -1,5 +1,6 @@
 package snd.komelia.ui.library
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -978,7 +979,9 @@ fun LibraryToolBar(
                         onClick = {},
                         label = { Text("$totalCount $countLabel") },
                         shape = AppSuggestionChipDefaults.shape(),
-                        modifier = Modifier.padding(end = 5.dp)
+                        modifier = Modifier.padding(end = 5.dp),
+                        colors = KoraChipDefaults.suggestionChipColors(),
+                        border = KoraChipDefaults.border,
                     )
 
                     if (sortOrder != null && onSortChange != null) {

@@ -1,5 +1,6 @@
 package snd.komelia.ui.readlist
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,7 +52,7 @@ fun BookReadListsContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(KoraShapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { show = !show }
                     .cursorForHand()

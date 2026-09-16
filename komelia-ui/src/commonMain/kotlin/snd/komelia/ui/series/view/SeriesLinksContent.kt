@@ -1,5 +1,6 @@
 package snd.komelia.ui.series.view
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -355,7 +356,7 @@ private fun SearchResultRow(series: KomgaSeries, onClick: () -> Unit) {
 
 @Composable
 private fun KindChip(label: String, onClick: () -> Unit) {
-    AssistChip(onClick = onClick, label = { Text(label) })
+    AssistChip(onClick = onClick, label = { Text(label) }, colors = KoraChipDefaults.assistChipColors(), border = KoraChipDefaults.border)
 }
 
 /** Debounced reaction to a changing query string. */

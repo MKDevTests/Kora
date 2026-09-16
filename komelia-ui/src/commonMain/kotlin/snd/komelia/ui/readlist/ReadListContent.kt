@@ -1,5 +1,7 @@
 package snd.komelia.ui.readlist
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -183,6 +185,8 @@ private fun ReadListToolbar(
             onClick = {},
             label = { Text("$readBookCount/$totalForChip read", style = MaterialTheme.typography.bodyMedium) },
             modifier = Modifier.padding(10.dp, 0.dp),
+            colors = KoraChipDefaults.suggestionChipColors(),
+            border = KoraChipDefaults.border,
         )
 
         val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
@@ -218,7 +222,7 @@ private fun ContinueReadingHeader(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = KoraShapes.small,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(

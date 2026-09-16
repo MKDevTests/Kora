@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.components
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BasicTooltipBox
 import androidx.compose.foundation.BorderStroke
@@ -368,7 +369,7 @@ fun <T> FilterDropdownMultiChoiceWithSearch(
         label = label?.let { { FilterLabelAndCount(label, selectedOptions.size) } },
         placeholder = placeholder,
         inputFieldColor = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.clip(RoundedCornerShape(5.dp)),
+        modifier = modifier.clip(KoraShapes.small),
         textFieldModifier = Modifier.fillMaxWidth()
     )
 }
@@ -416,7 +417,7 @@ fun <T> FilterDialogMultiChoiceWithSearch(
                     .fillMaxWidth(0.9f)
                     .padding(vertical = 20.dp)
                     .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
-                shape = RoundedCornerShape(12.dp),
+                shape = KoraShapes.medium,
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 3.dp,
                 shadowElevation = 3.dp
@@ -449,7 +450,7 @@ fun <T> FilterDialogMultiChoiceWithSearch(
                                 onClearAll?.invoke()
                             },
                             enabled = selectedOptions.isNotEmpty(),
-                            shape = RoundedCornerShape(5.dp),
+                            shape = KoraShapes.small,
                             modifier = Modifier.cursorForHand()
                         ) {
                             Text(strings.filterTagsReset, style = MaterialTheme.typography.bodyLarge)
@@ -685,7 +686,7 @@ private fun TagFilterDropdownContent(
                     onReset()
                 },
                 enabled = includeTags.isNotEmpty() || excludeTags.isNotEmpty() || includeGenres.isNotEmpty() || excludeGenres.isNotEmpty(),
-                shape = RoundedCornerShape(5.dp),
+                shape = KoraShapes.small,
                 modifier = Modifier.cursorForHand()
             ) {
                 Text(strings.filterTagsReset, style = MaterialTheme.typography.bodyLarge)
@@ -779,7 +780,7 @@ private fun TagsRow(
         if (tags.size > maxTagNum) {
             TextButton(
                 onClick = { isExpanded = !isExpanded },
-                shape = RoundedCornerShape(5.dp),
+                shape = KoraShapes.small,
                 modifier = Modifier.cursorForHand()
             ) {
                 Text(

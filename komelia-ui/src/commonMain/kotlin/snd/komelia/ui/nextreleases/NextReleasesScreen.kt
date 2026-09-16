@@ -1,5 +1,7 @@
 package snd.komelia.ui.nextreleases
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -142,6 +144,8 @@ class NextReleasesScreen : Screen {
                             selected = selectedLibraryIds.isEmpty(),
                             onClick = { selectedLibraryIds = emptySet() },
                             label = { Text(LocalStrings.current.ui.toutes2) },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
                         )
                     }
                     items(libraries) { library ->
@@ -155,6 +159,8 @@ class NextReleasesScreen : Screen {
                                 }
                             },
                             label = { Text(library.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
                         )
                     }
                 }
@@ -328,7 +334,7 @@ fun NextReleasesHomeCard() {
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .clickable { navigator.pushUnique(NextReleasesScreen()) },
-        shape = RoundedCornerShape(14.dp),
+        shape = KoraShapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),

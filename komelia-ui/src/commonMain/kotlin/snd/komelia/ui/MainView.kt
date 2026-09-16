@@ -213,7 +213,7 @@ fun MainView(
             ?.collect { useFloatingNavigationBar = it }
     }
 
-    MaterialTheme(colorScheme = theme.colorScheme) {
+    MaterialTheme(colorScheme = theme.colorScheme, typography = koraTypography(), shapes = koraShapes()) {
         ConfigurePlatformTheme(theme)
         val focusManager = LocalFocusManager.current
         Surface(

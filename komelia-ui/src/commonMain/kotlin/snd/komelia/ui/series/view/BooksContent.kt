@@ -1,5 +1,7 @@
 package snd.komelia.ui.series.view
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -167,7 +169,7 @@ private fun LoadIndicator() {
             .height(500.dp)
             .fillMaxWidth()
             .background(animatedColor.value)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(KoraShapes.medium)
     )
 
 }
@@ -251,7 +253,9 @@ private fun BooksToolBar(
                 SuggestionChip(
                     onClick = {},
                     label = { Text(booksLabel, style = MaterialTheme.typography.bodyMedium) },
-                    modifier = Modifier.padding(10.dp, 0.dp)
+                    modifier = Modifier.padding(10.dp, 0.dp),
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
 
@@ -289,11 +293,11 @@ private fun BooksToolBar(
                             if (booksLayout == LIST) Modifier.border(
                                 Dp.Hairline,
                                 MaterialTheme.colorScheme.outline,
-                                RoundedCornerShape(8.dp)
+                                KoraShapes.small
                             )
                             else Modifier
                         )
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(KoraShapes.small)
                         .clickable { onBooksLayoutChange(LIST) }
                         .cursorForHand()
                         .padding(10.dp)
@@ -310,11 +314,11 @@ private fun BooksToolBar(
                             if (booksLayout == GRID) Modifier.border(
                                 Dp.Hairline,
                                 MaterialTheme.colorScheme.outline,
-                                RoundedCornerShape(8.dp)
+                                KoraShapes.small
                             )
                             else Modifier
                         )
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(KoraShapes.small)
                         .clickable { onBooksLayoutChange(GRID) }
                         .cursorForHand()
                         .padding(10.dp)
@@ -584,7 +588,7 @@ private fun TagsFilter(
         label = if (withLabel) strings.tags else null,
         placeholder = if (withLabel) null else strings.tags,
         contentPadding = PaddingValues(5.dp),
-        modifier = modifier.clip(RoundedCornerShape(5.dp)),
+        modifier = modifier.clip(KoraShapes.small),
         inputFieldColor = MaterialTheme.colorScheme.surfaceVariant,
         inputFieldModifier = Modifier.fillMaxWidth()
     )

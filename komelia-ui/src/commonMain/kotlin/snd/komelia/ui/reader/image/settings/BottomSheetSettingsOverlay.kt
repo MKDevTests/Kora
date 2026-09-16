@@ -1,5 +1,7 @@
 package snd.komelia.ui.reader.image.settings
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.animation.AnimatedContent
@@ -271,7 +273,7 @@ fun BottomSheetSettingsOverlay(
                 contentColor = if (accentColor != null) {
                     if (accentColor.luminance() > 0.5f) Color.Black else Color.White
                 } else MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = RoundedCornerShape(16.dp),
+                shape = KoraShapes.large,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.navigationBars)
@@ -583,20 +585,23 @@ private fun BottomSheetReadingModeSettings(
                 selected = readerType == PAGED,
                 onClick = { onReaderTypeChange(PAGED) },
                 colors = accentInputChipColors(),
-                label = { Text(LocalStrings.current.ui.paged) }
+                label = { Text(LocalStrings.current.ui.paged) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = readerType == CONTINUOUS,
                 onClick = { onReaderTypeChange(CONTINUOUS) },
                 colors = accentInputChipColors(),
-                label = { Text(LocalStrings.current.ui.continuous) }
+                label = { Text(LocalStrings.current.ui.continuous) },
+                border = KoraChipDefaults.border,
             )
             if (panelsReaderState != null)
                 InputChip(
                     selected = readerType == PANELS,
                     onClick = { onReaderTypeChange(PANELS) },
                     colors = accentInputChipColors(),
-                    label = { Text(LocalStrings.current.ui.panels) }
+                    label = { Text(LocalStrings.current.ui.panels) },
+                    border = KoraChipDefaults.border,
                 )
         }
 
@@ -644,25 +649,29 @@ private fun PagedModeSettings(
                 selected = scaleType == LayoutScaleType.SCREEN,
                 onClick = { pageState.onScaleTypeChange(LayoutScaleType.SCREEN) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forScaleType(LayoutScaleType.SCREEN)) }
+                label = { Text(strings.forScaleType(LayoutScaleType.SCREEN)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = scaleType == LayoutScaleType.FIT_WIDTH,
                 onClick = { pageState.onScaleTypeChange(LayoutScaleType.FIT_WIDTH) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forScaleType(LayoutScaleType.FIT_WIDTH)) }
+                label = { Text(strings.forScaleType(LayoutScaleType.FIT_WIDTH)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = scaleType == LayoutScaleType.FIT_HEIGHT,
                 onClick = { pageState.onScaleTypeChange(LayoutScaleType.FIT_HEIGHT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forScaleType(LayoutScaleType.FIT_HEIGHT)) }
+                label = { Text(strings.forScaleType(LayoutScaleType.FIT_HEIGHT)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = scaleType == LayoutScaleType.ORIGINAL,
                 onClick = { pageState.onScaleTypeChange(LayoutScaleType.ORIGINAL) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forScaleType(LayoutScaleType.ORIGINAL)) }
+                label = { Text(strings.forScaleType(LayoutScaleType.ORIGINAL)) },
+                border = KoraChipDefaults.border,
             )
         }
 
@@ -675,13 +684,15 @@ private fun PagedModeSettings(
                 selected = readingDirection == PagedReadingDirection.RIGHT_TO_LEFT,
                 onClick = { pageState.onReadingDirectionChange(PagedReadingDirection.RIGHT_TO_LEFT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(PagedReadingDirection.RIGHT_TO_LEFT)) }
+                label = { Text(strings.forReadingDirection(PagedReadingDirection.RIGHT_TO_LEFT)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = readingDirection == PagedReadingDirection.LEFT_TO_RIGHT,
                 onClick = { pageState.onReadingDirectionChange(PagedReadingDirection.LEFT_TO_RIGHT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(PagedReadingDirection.LEFT_TO_RIGHT)) }
+                label = { Text(strings.forReadingDirection(PagedReadingDirection.LEFT_TO_RIGHT)) },
+                border = KoraChipDefaults.border,
             )
         }
         SwitchWithLabel(
@@ -700,19 +711,22 @@ private fun PagedModeSettings(
                 selected = layout == PageDisplayLayout.SINGLE_PAGE,
                 onClick = { pageState.onLayoutChange(PageDisplayLayout.SINGLE_PAGE) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forLayout(PageDisplayLayout.SINGLE_PAGE)) }
+                label = { Text(strings.forLayout(PageDisplayLayout.SINGLE_PAGE)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = layout == PageDisplayLayout.DOUBLE_PAGES,
                 onClick = { pageState.onLayoutChange(PageDisplayLayout.DOUBLE_PAGES) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forLayout(PageDisplayLayout.DOUBLE_PAGES)) }
+                label = { Text(strings.forLayout(PageDisplayLayout.DOUBLE_PAGES)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = layout == PageDisplayLayout.DOUBLE_PAGES_NO_COVER,
                 onClick = { pageState.onLayoutChange(PageDisplayLayout.DOUBLE_PAGES_NO_COVER) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forLayout(PageDisplayLayout.DOUBLE_PAGES_NO_COVER)) }
+                label = { Text(strings.forLayout(PageDisplayLayout.DOUBLE_PAGES_NO_COVER)) },
+                border = KoraChipDefaults.border,
             )
         }
         AnimatedVisibility(layout == PageDisplayLayout.DOUBLE_PAGES || layout == PageDisplayLayout.DOUBLE_PAGES_NO_COVER) {
@@ -785,13 +799,15 @@ private fun PanelsModeSettings(
                 selected = readingDirection == PagedReadingDirection.RIGHT_TO_LEFT,
                 onClick = { state.onReadingDirectionChange(PagedReadingDirection.RIGHT_TO_LEFT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(PagedReadingDirection.RIGHT_TO_LEFT)) }
+                label = { Text(strings.forReadingDirection(PagedReadingDirection.RIGHT_TO_LEFT)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = readingDirection == PagedReadingDirection.LEFT_TO_RIGHT,
                 onClick = { state.onReadingDirectionChange(PagedReadingDirection.LEFT_TO_RIGHT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(PagedReadingDirection.LEFT_TO_RIGHT)) }
+                label = { Text(strings.forReadingDirection(PagedReadingDirection.LEFT_TO_RIGHT)) },
+                border = KoraChipDefaults.border,
             )
         }
 
@@ -803,7 +819,8 @@ private fun PanelsModeSettings(
                     selected = displayMode == mode,
                     onClick = { state.onFullPageDisplayModeChange(mode) },
                     colors = accentInputChipColors(),
-                    label = { Text(mode.name) }
+                    label = { Text(mode.name) },
+                    border = KoraChipDefaults.border,
                 )
             }
         }
@@ -843,19 +860,22 @@ private fun ContinuousModeSettings(
                 selected = readingDirection == ContinuousReadingDirection.TOP_TO_BOTTOM,
                 onClick = { state.onReadingDirectionChange(ContinuousReadingDirection.TOP_TO_BOTTOM) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(ContinuousReadingDirection.TOP_TO_BOTTOM)) }
+                label = { Text(strings.forReadingDirection(ContinuousReadingDirection.TOP_TO_BOTTOM)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = readingDirection == ContinuousReadingDirection.LEFT_TO_RIGHT,
                 onClick = { state.onReadingDirectionChange(ContinuousReadingDirection.LEFT_TO_RIGHT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(ContinuousReadingDirection.LEFT_TO_RIGHT)) }
+                label = { Text(strings.forReadingDirection(ContinuousReadingDirection.LEFT_TO_RIGHT)) },
+                border = KoraChipDefaults.border,
             )
             InputChip(
                 selected = readingDirection == ContinuousReadingDirection.RIGHT_TO_LEFT,
                 onClick = { state.onReadingDirectionChange(ContinuousReadingDirection.RIGHT_TO_LEFT) },
                 colors = accentInputChipColors(),
-                label = { Text(strings.forReadingDirection(ContinuousReadingDirection.RIGHT_TO_LEFT)) }
+                label = { Text(strings.forReadingDirection(ContinuousReadingDirection.RIGHT_TO_LEFT)) },
+                border = KoraChipDefaults.border,
             )
         }
 
@@ -1469,7 +1489,8 @@ private fun SamplingModeSettings(
                         selected = upsamplingMode == mode,
                         onClick = { onUpsamplingModeChange(mode) },
                         colors = accentInputChipColors(),
-                        label = { Text(strings.forUpsamplingMode(mode)) }
+                        label = { Text(strings.forUpsamplingMode(mode)) },
+                        border = KoraChipDefaults.border,
                     )
 
                 }
@@ -1488,7 +1509,8 @@ private fun SamplingModeSettings(
                         selected = downsamplingKernel == kernel,
                         onClick = { onDownsamplingKernelChange(kernel) },
                         colors = accentInputChipColors(),
-                        label = { Text(strings.forDownsamplingKernel(kernel)) }
+                        label = { Text(strings.forDownsamplingKernel(kernel)) },
+                        border = KoraChipDefaults.border,
                     )
 
                 }
@@ -1559,7 +1581,8 @@ private fun OcrModeSettings(
                             onTranslationSettingsChange(translationSettings.copy(source = language))
                         },
                         colors = accentInputChipColors(),
-                        label = { Text(language.name) }
+                        label = { Text(language.name) },
+                        border = KoraChipDefaults.border,
                     )
                 }
             }

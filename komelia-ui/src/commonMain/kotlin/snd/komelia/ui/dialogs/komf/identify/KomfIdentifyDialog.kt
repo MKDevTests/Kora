@@ -1,5 +1,6 @@
 package snd.komelia.ui.dialogs.komf.identify
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -194,7 +195,7 @@ private fun ProviderProgressCard(progress: ProviderProgressStatus) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(5.dp))
+            .clip(KoraShapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(5.dp)
     ) {
@@ -245,7 +246,7 @@ private fun ProcessingProgressCard() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(5.dp))
+            .clip(KoraShapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(5.dp)
     ) {

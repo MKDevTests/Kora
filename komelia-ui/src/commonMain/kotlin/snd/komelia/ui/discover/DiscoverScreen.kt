@@ -1,5 +1,7 @@
 package snd.komelia.ui.discover
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.rounded.Star
@@ -137,11 +139,15 @@ class DiscoverScreen : Screen {
                         selected = !showKept,
                         onClick = { showKept = false },
                         label = { Text(strings.suggestionsTab) },
+                        colors = KoraChipDefaults.filterChipColors(),
+                        border = KoraChipDefaults.border,
                     )
                     FilterChip(
                         selected = showKept,
                         onClick = { showKept = true },
                         label = { Text(strings.interestedTab(interested.size)) },
+                        colors = KoraChipDefaults.filterChipColors(),
+                        border = KoraChipDefaults.border,
                     )
                 }
                 // Opt-in on purpose: with no French signal available, this
@@ -151,6 +157,8 @@ class DiscoverScreen : Screen {
                         selected = hideUnlicensed,
                         onClick = { vm.setHideUnlicensed(!hideUnlicensed) },
                         label = { Text(strings.hideUnlicensed) },
+                        colors = KoraChipDefaults.filterChipColors(),
+                        border = KoraChipDefaults.border,
                     )
                 }
             }
@@ -243,7 +251,7 @@ private fun SuggestionCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                Box(Modifier.width(70.dp).height(105.dp).clip(RoundedCornerShape(4.dp))) {
+                Box(Modifier.width(70.dp).height(105.dp).clip(KoraShapes.small)) {
                     if (suggestion.imageUrl.isNotBlank()) {
                         AsyncImage(
                             model = suggestion.imageUrl,

@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.offline.users
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -112,7 +113,7 @@ fun ServerCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(KoraShapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { showUsers = !showUsers }
             .pointerHoverIcon(PointerIcon.Hand)
@@ -208,7 +209,7 @@ fun RootUserCard(goOffline: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(KoraShapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),

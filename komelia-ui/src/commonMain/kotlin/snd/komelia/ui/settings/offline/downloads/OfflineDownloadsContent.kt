@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.offline.downloads
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -69,7 +70,7 @@ fun OfflineDownloadsContent(
         for (event in downloads) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(5.dp))
+                    .clip(KoraShapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(5.dp)
                     .fillMaxWidth()
@@ -95,7 +96,7 @@ private fun OfflineScanDialog(
 ) {
     Dialog(onDismissRequest = { if (state is OfflineScanState.Finished) onClose() }) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = KoraShapes.extraLarge,
             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {

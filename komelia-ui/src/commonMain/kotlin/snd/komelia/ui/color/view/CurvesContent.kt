@@ -1,5 +1,6 @@
 package snd.komelia.ui.color.view
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -145,7 +146,7 @@ fun ColorCurvesContent(
 
             OutlinedButton(
                 onClick = onAllChannelsReset,
-                shape = RoundedCornerShape(5.dp),
+                shape = KoraShapes.small,
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
                     .pointerHoverIcon(PointerIcon.Hand),
@@ -415,7 +416,7 @@ private fun PointTypeSelection(
         Row {
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(5.dp))
+                    .clip(KoraShapes.small)
                     .border(Dp.Hairline, selectColor)
                     .background(if (pointType == CurvePointType.SMOOTH) selectColor else Color.Unspecified)
                     .clickable { onPointTypeChange(CurvePointType.SMOOTH) }
@@ -432,7 +433,7 @@ private fun PointTypeSelection(
             }
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(5.dp))
+                    .clip(KoraShapes.small)
                     .border(Dp.Hairline, selectColor)
                     .background(if (pointType == CurvePointType.CORNER) selectColor else Color.Unspecified)
                     .clickable { onPointTypeChange(CurvePointType.CORNER) }

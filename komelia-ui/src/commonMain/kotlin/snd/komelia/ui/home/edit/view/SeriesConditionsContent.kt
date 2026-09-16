@@ -1,5 +1,6 @@
 package snd.komelia.ui.home.edit.view
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -88,7 +89,7 @@ fun SeriesMatchConditionContent(
             .border(
                 1.dp,
                 MaterialTheme.colorScheme.secondary,
-                RoundedCornerShape(10.dp)
+                KoraShapes.medium
             ).padding(5.dp)
     ) {
         FlowRow {

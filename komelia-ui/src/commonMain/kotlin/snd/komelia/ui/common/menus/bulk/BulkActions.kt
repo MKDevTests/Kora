@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.menus.bulk
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -99,7 +100,7 @@ fun BulkActionsContainer(
                     IconButton(onClick = onCancel) { Icon(Icons.Default.Close, null, tint = contentColor) }
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(5.dp))
+                            .clip(KoraShapes.small)
                             .clickable { onSelectAll() }
                             .cursorForHand()
                             .padding(end = 15.dp),
@@ -137,7 +138,7 @@ fun BottomPopupBulkActionsPanel(content: @Composable RowScope.() -> Unit) {
             color = containerColor,
             contentColor = contentColor,
             tonalElevation = 4.dp,
-            shape = RoundedCornerShape(5.dp)
+            shape = KoraShapes.small
         ) {
             Row(
                 horizontalArrangement = Arrangement.Center,

@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.cards
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -394,7 +395,7 @@ private fun LanguageBadge(
             modifier = Modifier
                 .background(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = KoraShapes.small,
                 )
                 .padding(horizontal = (5 * scale).dp, vertical = (2 * scale).dp),
         )

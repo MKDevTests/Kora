@@ -1,5 +1,6 @@
 package snd.komelia.ui.topbar
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -115,7 +116,7 @@ private fun NotificationsContent(
     Surface(
         modifier = Modifier.widthIn(max = 400.dp).heightIn(min = 200.dp, max = 600.dp),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.surfaceContainerHighest),
-        shape = RoundedCornerShape(12.dp),
+        shape = KoraShapes.medium,
     ) {
         Column {
             Row(

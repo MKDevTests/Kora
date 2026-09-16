@@ -1,5 +1,6 @@
 package snd.komelia.ui.library
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -273,7 +274,7 @@ fun GenreCoverPickerDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = KoraShapes.medium,
             color = MaterialTheme.colorScheme.surface,
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
@@ -320,7 +321,7 @@ fun GenreCoverPickerDialog(
                             Box(
                                 Modifier
                                     .aspectRatio(0.7f)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(KoraShapes.small)
                                     .clickable { onPick(s.id) },
                             ) {
                                 ThumbnailImage(

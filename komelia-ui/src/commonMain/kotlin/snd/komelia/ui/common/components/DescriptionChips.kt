@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.components
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -100,8 +101,8 @@ fun NoPaddingChip(
 ) {
     Box(
         modifier = modifier
-            .border(Dp.Hairline, borderColor, RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
+            .border(Dp.Hairline, borderColor, KoraShapes.small)
+            .clip(KoraShapes.small)
             .background(color)
             .clickable { onClick() }
             .padding(10.dp, 5.dp)
@@ -131,7 +132,7 @@ object AppFilterChipDefaults {
         val onAccent = if (0.299 * accent.red + 0.587 * accent.green + 0.114 * accent.blue > 0.5f)
             Color.Black else Color.White
         return FilterChipDefaults.filterChipColors(
-            containerColor = Color.Transparent,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             labelColor = MaterialTheme.colorScheme.onSurface,
             selectedContainerColor = accent,
             selectedLabelColor = onAccent,
@@ -140,7 +141,8 @@ object AppFilterChipDefaults {
 
     @Composable
     fun filterChipBorder(selected: Boolean): BorderStroke? {
-        return if (selected) null else BorderStroke(Dp.Hairline, MaterialTheme.colorScheme.outline)
+        // Filled chips, see KoraChipDefaults.
+        return null
     }
 }
 

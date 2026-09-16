@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader.image.common
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -211,7 +212,7 @@ private fun Slider(
                 modifier = Modifier
                     .background(
                         color = labelBackground,
-                        shape = RoundedCornerShape(20.dp)
+                        shape = KoraShapes.large
                     )
                     .clickable { onLabelClick() }
                     .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -319,7 +320,7 @@ fun BookPageThumbnail(
     useRoundedCorners: Boolean = true,
     isCurrentPage: Boolean = false
 ) {
-    val shape = if (useRoundedCorners) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
+    val shape = if (useRoundedCorners) KoraShapes.medium else RoundedCornerShape(0.dp)
     val borderColor = if (isCurrentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     val borderWidth = 2.dp
     Column(

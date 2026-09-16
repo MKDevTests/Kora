@@ -1,5 +1,6 @@
 package snd.komelia.ui.home.edit.view
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -239,7 +240,7 @@ private fun ReorderableCollectionItemScope.FilterContent(
     Column(
         modifier = Modifier
             .padding(vertical = 5.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(KoraShapes.medium)
             .background(
                 if (isDragging) MaterialTheme.colorScheme.surfaceBright
                 else MaterialTheme.colorScheme.surface
@@ -248,7 +249,7 @@ private fun ReorderableCollectionItemScope.FilterContent(
                 if (isDragging) Modifier.border(
                     4.dp,
                     MaterialTheme.colorScheme.secondary,
-                    RoundedCornerShape(10.dp)
+                    KoraShapes.medium
                 )
                 else Modifier
             )

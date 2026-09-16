@@ -1,5 +1,7 @@
 package snd.komelia.ui.settings.duplicates
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -150,6 +152,7 @@ class DuplicateSeriesScreen : Screen {
                                 onClick = { vm.onLibrarySelected(null) },
                                 label = { Text(strings.all) },
                                 colors = accentFilterChipColors(),
+                                border = KoraChipDefaults.border,
                             )
                             vm.libraryFacets.forEach { facet ->
                                 FilterChip(
@@ -157,6 +160,7 @@ class DuplicateSeriesScreen : Screen {
                                     onClick = { vm.onLibrarySelected(facet.libraryId) },
                                     label = { Text("${facet.name} · ${facet.count}") },
                                     colors = accentFilterChipColors(),
+                                    border = KoraChipDefaults.border,
                                 )
                             }
                         }
@@ -213,7 +217,7 @@ class DuplicateSeriesScreen : Screen {
 private fun SummaryBanner(vm: DuplicateSeriesViewModel) {
     val strings = LocalStrings.current.ui
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = KoraShapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -286,7 +290,7 @@ private fun GroupCard(vm: DuplicateSeriesViewModel, row: DuplicateRow) {
     val expanded = row.details.isNotEmpty()
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = KoraShapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {

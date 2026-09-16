@@ -1,5 +1,6 @@
 package snd.komelia.ui.dialogs
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -77,7 +78,7 @@ fun BasicAppDialog(
         val focusManager = LocalFocusManager.current
         Surface(
             border = BorderStroke(2.dp, MaterialTheme.colorScheme.surfaceContainerHighest),
-            shape = RoundedCornerShape(12.dp),
+            shape = KoraShapes.medium,
             color = color,
             modifier = modifier
                 .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) }

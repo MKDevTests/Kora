@@ -1,5 +1,7 @@
 package snd.komelia.ui.series.view
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -133,6 +135,8 @@ fun ReadingOrderContent(
             selected = state.currentIsOriginal,
             onClick = { state.toggleOriginal() },
             label = { Text(strings.originalSeries) },
+            colors = KoraChipDefaults.filterChipColors(),
+            border = KoraChipDefaults.border,
         )
     }
 }
@@ -284,12 +288,12 @@ private fun NodeRow(
     // not the transition.
     val request = remember(node.seriesId) { SeriesDefaultThumbnailRequest(seriesId) }
     Surface(
-        shape = RoundedCornerShape(8.dp),
+        shape = KoraShapes.small,
         color = if (highlighted) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(KoraShapes.small)
             .clickable { onSeriesIdClick(seriesId) },
     ) {
         Row(
@@ -300,7 +304,7 @@ private fun NodeRow(
                 data = request,
                 cacheKey = node.seriesId,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(width = 38.dp, height = 54.dp).clip(RoundedCornerShape(4.dp)),
+                modifier = Modifier.size(width = 38.dp, height = 54.dp).clip(KoraShapes.small),
             )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {

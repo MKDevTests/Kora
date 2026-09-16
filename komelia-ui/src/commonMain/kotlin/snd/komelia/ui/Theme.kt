@@ -99,10 +99,10 @@ enum class Theme(
             secondaryContainer = Color(0xFFE5E2E1.toInt()),
             onSecondaryContainer = Color(0xFF525151.toInt()),
 
-            tertiary = Color(0xFF06B6D4.toInt()),
-            onTertiary = Color(0xFFECFEFF.toInt()),
-            tertiaryContainer = Color(0xFF67E8F9.toInt()),
-            onTertiaryContainer = Color(0xFF064E5C.toInt()),
+            tertiary = Color(0xFF3B82F6.toInt()),
+            onTertiary = Color(0xFFEFF6FF.toInt()),
+            tertiaryContainer = Color(0xFF93C5FD.toInt()),
+            onTertiaryContainer = Color(0xFF0B2A60.toInt()),
 
             background = Color(0xFFF8F6F1.toInt()),
             onBackground = Color(0xFF2E2F2C.toInt()),
@@ -122,8 +122,8 @@ enum class Theme(
             surfaceDim = Color(0xFFD5D5CE.toInt()),
             surfaceBright = Color(0xFFF8F6F1.toInt()),
 
-            outline = Color(0xFF777773.toInt()),
-            outlineVariant = Color(0xFFAEADA9.toInt()),
+            outline = Color(0xFFC9C8C3.toInt()),
+            outlineVariant = Color(0xFFDEDDD7.toInt()),
 
             error = Color(0xFFB41340.toInt()),
             onError = Color(0xFFFFEFEF.toInt()),
@@ -145,15 +145,18 @@ enum class Theme(
             primaryContainer = Color(0xFF3B82F6.toInt()),
             onPrimaryContainer = Color(0xFFDBEAFE.toInt()),
 
-            secondary = Color(0xFF7DD3FC.toInt()),
-            onSecondary = Color(0xFF082F49.toInt()),
-            secondaryContainer = Color(0xFF075985.toInt()),
-            onSecondaryContainer = Color(0xFFE0F2FE.toInt()),
+            // One accent. Secondary and tertiary used to be two cyans
+            // (#7DD3FC, #22D3EE) next to the blue primary: sliders, toggles
+            // and badges each had their own shade of the same idea.
+            secondary = Color(0xFF93C5FD.toInt()),
+            onSecondary = Color(0xFF0B2A60.toInt()),
+            secondaryContainer = Color(0xFF1E3A8A.toInt()),
+            onSecondaryContainer = Color(0xFFDBEAFE.toInt()),
 
-            tertiary = Color(0xFF22D3EE.toInt()),
-            onTertiary = Color(0xFF064E5C.toInt()),
-            tertiaryContainer = Color(0xFF155E75.toInt()),
-            onTertiaryContainer = Color(0xFFCFFAFE.toInt()),
+            tertiary = Color(0xFF60A5FA.toInt()),
+            onTertiary = Color(0xFF0B2A60.toInt()),
+            tertiaryContainer = Color(0xFF3B82F6.toInt()),
+            onTertiaryContainer = Color(0xFFDBEAFE.toInt()),
 
             background = Color(0xFF0E0E0E.toInt()),
             onBackground = Color(0xFFFFFFFF.toInt()),
@@ -173,8 +176,11 @@ enum class Theme(
             surfaceDim = Color(0xFF0E0E0E.toInt()),
             surfaceBright = Color(0xFF2C2C2C.toInt()),
 
-            outline = Color(0xFF767575.toInt()),
-            outlineVariant = Color(0xFF484847.toInt()),
+            // Quiet outlines: on #0E0E0E every mid-grey stroke reads as
+            // noise. Fields and dividers stay findable, chips lose theirs
+            // (see KoraChipDefaults).
+            outline = Color(0xFF3A3A39.toInt()),
+            outlineVariant = Color(0xFF262626.toInt()),
 
             error = Color(0xFFFF6E84.toInt()),
             onError = Color(0xFF490013.toInt()),

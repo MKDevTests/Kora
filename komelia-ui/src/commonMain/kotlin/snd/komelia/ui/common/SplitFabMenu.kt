@@ -1,5 +1,6 @@
 package snd.komelia.ui.common
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -46,7 +47,7 @@ fun SplitFabMenu(
         expanded = expanded,
         button = {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = KoraShapes.large,
                 color = containerColor,
                 contentColor = contentColor,
                 shadowElevation = 6.dp,
@@ -56,7 +57,7 @@ fun SplitFabMenu(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(KoraShapes.large)
                             .clickable { onExpandedChange(false) },
                         contentAlignment = Alignment.Center
                     ) {

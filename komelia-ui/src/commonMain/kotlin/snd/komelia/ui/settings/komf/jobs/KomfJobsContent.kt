@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.komf.jobs
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -163,7 +164,7 @@ private fun JobCard(
 
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(5.dp))
+            .clip(KoraShapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .height(70.dp)
             .padding(end = 5.dp),
@@ -226,7 +227,7 @@ private fun JobCard(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .9f),
                             border = BorderStroke(Dp.Hairline, MaterialTheme.colorScheme.surface),
                             modifier = Modifier.widthIn(max = 400.dp),
-                            shape = RoundedCornerShape(5.dp)
+                            shape = KoraShapes.small
                         ) {
                             job.message?.let {
                                 Text(it, modifier = Modifier.padding(10.dp))
@@ -294,7 +295,7 @@ private fun StatusFilters(
         var showConfirmationDialog by remember { mutableStateOf(false) }
         FilledTonalButton(
             onClick = { showConfirmationDialog = true },
-            shape = RoundedCornerShape(12.dp),
+            shape = KoraShapes.medium,
             colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
             modifier = Modifier.cursorForHand()
         ) {
