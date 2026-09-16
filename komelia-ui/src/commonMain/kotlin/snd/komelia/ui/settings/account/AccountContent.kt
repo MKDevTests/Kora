@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.account
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -54,7 +55,9 @@ private fun RolesDetails(user: KomgaUser) {
             user.roles.forEach { role ->
                 SuggestionChip(
                     onClick = {},
-                    label = { Text(role) }
+                    label = { Text(role) },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
         }

@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.components
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -144,7 +145,7 @@ fun NoPaddingTextField(
     text: String,
     placeholder: String,
     onTextChange: (String) -> Unit,
-    shape: Shape = RoundedCornerShape(5.dp),
+    shape: Shape = KoraShapes.small,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(),
     trailingIcon: @Composable () -> Unit = {},
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -406,7 +407,7 @@ fun NumberFieldWithIncrements(
                     .pointerHoverIcon(PointerIcon.Hand)
                     .indication(remember { MutableInteractionSource() }, ripple)
                     .doWhilePointerPressed { value?.let { onvValueChange((it + stepSize).coerceAtMost(maxValue)) } }
-                    .clip(RoundedCornerShape(5.dp))
+                    .clip(KoraShapes.small)
                     .clickable(enabled = value != null) { }
             )
             Icon(
@@ -417,7 +418,7 @@ fun NumberFieldWithIncrements(
                     .pointerHoverIcon(PointerIcon.Hand)
                     .indication(remember { MutableInteractionSource() }, ripple)
                     .doWhilePointerPressed { value?.let { onvValueChange((it - stepSize).coerceAtLeast(minValue)) } }
-                    .clip(RoundedCornerShape(5.dp))
+                    .clip(KoraShapes.small)
                     .clickable(enabled = value != null) { }
             )
         }

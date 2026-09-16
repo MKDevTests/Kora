@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.lists
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -65,6 +66,8 @@ fun LibraryScopeFilterRow(
                     selected = selectedLibraryId == null,
                     onClick = { onSelect(null) },
                     label = { Text(LocalStrings.current.ui.toutes) },
+                    colors = KoraChipDefaults.filterChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
             items(libraries, key = { it.id.value }) { library ->
@@ -78,6 +81,8 @@ fun LibraryScopeFilterRow(
                             textDecoration = if (id in excludedLibraryIds) TextDecoration.LineThrough else null,
                         )
                     },
+                    colors = KoraChipDefaults.filterChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
         }

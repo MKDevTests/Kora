@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader.image.settings
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -277,19 +278,22 @@ fun CommonImageSettings(
                                 selected = flashWith == ReaderFlashColor.BLACK,
                                 onClick = { onFlashWithChange(ReaderFlashColor.BLACK) },
                                 colors = accentInputChipColors(),
-                                label = { Text(LocalStrings.current.ui.black) }
+                                label = { Text(LocalStrings.current.ui.black) },
+                                border = KoraChipDefaults.border,
                             )
                             InputChip(
                                 selected = flashWith == ReaderFlashColor.WHITE,
                                 onClick = { onFlashWithChange(ReaderFlashColor.WHITE) },
                                 colors = accentInputChipColors(),
-                                label = { Text(LocalStrings.current.ui.white) }
+                                label = { Text(LocalStrings.current.ui.white) },
+                                border = KoraChipDefaults.border,
                             )
                             InputChip(
                                 selected = flashWith == ReaderFlashColor.WHITE_AND_BLACK,
                                 onClick = { onFlashWithChange(ReaderFlashColor.WHITE_AND_BLACK) },
                                 colors = accentInputChipColors(),
-                                label = { Text(LocalStrings.current.ui.whiteAndBlack) }
+                                label = { Text(LocalStrings.current.ui.whiteAndBlack) },
+                                border = KoraChipDefaults.border,
                             )
                         }
                     }

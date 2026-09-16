@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.komf.providers
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -149,7 +150,7 @@ private fun ProvidersConfigContent(
                 ReorderableItem {
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(5.dp))
+                            .clip(KoraShapes.small)
                             .height(70.dp)
                             .fillMaxWidth()
                             .background(

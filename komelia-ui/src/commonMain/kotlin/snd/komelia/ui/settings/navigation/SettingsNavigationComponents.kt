@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.navigation
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -50,7 +51,7 @@ fun SettingsGroup(
             )
         }
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = KoraShapes.medium,
             color = containerColor,
             modifier = Modifier.fillMaxWidth()
         ) {

@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.servers
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -100,7 +101,9 @@ class AppServerManagementScreen : Screen {
                 SuggestionChip(
                     onClick = {},
                     label = { Text(LocalStrings.current.ui.current2) },
-                    enabled = false
+                    enabled = false,
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             } else {
                 Button(onClick = onSwitch) {
@@ -239,7 +242,7 @@ class AppServerManagementScreen : Screen {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SuggestionChip(onClick = {}, enabled = false, label = { Text(LocalStrings.current.ui.active2) })
+                SuggestionChip(onClick = {}, enabled = false, label = { Text(LocalStrings.current.ui.active2) }, colors = KoraChipDefaults.suggestionChipColors(), border = KoraChipDefaults.border)
                 Text(
                     activeUrl,
                     style = MaterialTheme.typography.bodyMedium,

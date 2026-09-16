@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.users
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -137,7 +138,9 @@ private fun UserRoles(user: KomgaUser) {
             user.roles.forEach { role ->
                 SuggestionChip(
                     onClick = {},
-                    label = { Text(role) }
+                    label = { Text(role) },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
         }

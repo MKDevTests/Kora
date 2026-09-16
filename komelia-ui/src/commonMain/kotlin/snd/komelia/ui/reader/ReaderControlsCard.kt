@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +33,7 @@ fun ReaderControlsCard(
         HazeMaterials.thin(theme.colorScheme.surface.copy(alpha = 0.4f))
     } else null
 
-    val shape = if (isFullWidth) RoundedCornerShape(0.dp) else RoundedCornerShape(28.dp)
+    val shape = if (isFullWidth) RoundedCornerShape(0.dp) else KoraShapes.extraLarge
     val commonModifier = if (isFullWidth) {
         modifier
             .fillMaxWidth()

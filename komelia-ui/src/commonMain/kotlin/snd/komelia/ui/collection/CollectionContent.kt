@@ -1,5 +1,7 @@
 package snd.komelia.ui.collection
 
+import snd.komelia.ui.KoraShapes
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -178,6 +180,8 @@ private fun CollectionToolbar(
             onClick = {},
             label = { Text(LocalStrings.current.counts.seriesCount(totalSeriesCount), style = MaterialTheme.typography.bodyMedium) },
             modifier = Modifier.padding(horizontal = 10.dp),
+            colors = KoraChipDefaults.suggestionChipColors(),
+            border = KoraChipDefaults.border,
         )
         if (totalBooksAcrossSeries > 0) {
             SuggestionChip(
@@ -189,6 +193,8 @@ private fun CollectionToolbar(
                     )
                 },
                 modifier = Modifier.padding(end = 10.dp),
+                colors = KoraChipDefaults.suggestionChipColors(),
+                border = KoraChipDefaults.border,
             )
         }
 
@@ -226,7 +232,7 @@ private fun ContinueReadingSeriesHeader(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = KoraShapes.small,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(

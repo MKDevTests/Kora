@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.offline.logs
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -117,7 +118,7 @@ private fun LogsContent(logs: List<OfflineLogEntry>) {
     SelectionContainer {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(5.dp))
+                .clip(KoraShapes.small)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(5.dp),

@@ -1,5 +1,6 @@
 package snd.komelia.ui.home.edit.view
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -759,6 +760,8 @@ fun ExcludedLibrariesContent(
                     onExcludedChange(updated)
                 },
                 label = { Text(lib.name) },
+                colors = KoraChipDefaults.filterChipColors(),
+                border = KoraChipDefaults.border,
             )
         }
     }

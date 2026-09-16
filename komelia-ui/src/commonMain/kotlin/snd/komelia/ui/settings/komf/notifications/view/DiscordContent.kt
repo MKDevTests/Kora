@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.komf.notifications.view
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -512,7 +513,7 @@ private fun TemplatesPreview(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(5.dp)
+        shape = KoraShapes.small
     ) {
         Layout(content = {
             PreviewContent(

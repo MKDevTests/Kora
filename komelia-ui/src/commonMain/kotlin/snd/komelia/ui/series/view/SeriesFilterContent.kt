@@ -1,5 +1,6 @@
 package snd.komelia.ui.series.view
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -166,7 +167,7 @@ fun SeriesFilterContent(
                 inputFieldColor = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .width(width)
-                    .clip(RoundedCornerShape(5.dp)),
+                    .clip(KoraShapes.small),
                 inputFieldModifier = Modifier.fillMaxWidth()
             )
             FilterDropdownMultiChoice(
@@ -268,7 +269,7 @@ fun SeriesFilterContent(
                         .clickable { filterState.onCompletionToggle() }
                         .cursorForHand()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clip(RoundedCornerShape(5.dp)),
+                        .clip(KoraShapes.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val checkboxState by derivedStateOf {
@@ -294,7 +295,7 @@ fun SeriesFilterContent(
                         .clickable { filterState.onFormatToggle() }
                         .cursorForHand()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clip(RoundedCornerShape(5.dp)),
+                        .clip(KoraShapes.small),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val checkboxState by derivedStateOf {
@@ -326,7 +327,7 @@ fun SeriesFilterContent(
                         .clickable { onChapterSeriesFilterCycle() }
                         .cursorForHand()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clip(RoundedCornerShape(5.dp)),
+                        .clip(KoraShapes.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(

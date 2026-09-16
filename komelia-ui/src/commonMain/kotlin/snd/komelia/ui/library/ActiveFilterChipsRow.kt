@@ -1,5 +1,6 @@
 package snd.komelia.ui.library
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
@@ -69,6 +70,8 @@ fun ActiveFilterChipsRow(
                         modifier = Modifier.size(18.dp),
                     )
                 },
+                colors = KoraChipDefaults.assistChipColors(),
+                border = KoraChipDefaults.border,
             )
         }
 
@@ -81,6 +84,8 @@ fun ActiveFilterChipsRow(
                     onClick = onClearAll,
                     label = { Text(strings.ui.clearAll) },
                     shape = AppFilterChipDefaults.shape(),
+                    colors = KoraChipDefaults.assistChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
         }

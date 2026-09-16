@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.cards
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -357,7 +358,7 @@ fun CardBottomGradient(modifier: Modifier = Modifier) {
 
 @Composable
 fun overlayBorderModifier() =
-    Modifier.border(BorderStroke(3.dp, MaterialTheme.colorScheme.tertiary), RoundedCornerShape(5.dp))
+    Modifier.border(BorderStroke(3.dp, MaterialTheme.colorScheme.tertiary), KoraShapes.small)
 
 
 @Composable

@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.analysis
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +71,7 @@ private fun BookAnalysisCard(
     val strings = LocalStrings.current
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(5.dp),
+        shape = KoraShapes.small,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(

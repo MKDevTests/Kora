@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.navigation
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -92,12 +93,16 @@ private fun WidgetLibrarySection() {
                 selected = filter.libraryId == null,
                 onClick = { filter.set(null) },
                 label = { Text(LocalStrings.current.ui.toutes2) },
+                colors = KoraChipDefaults.filterChipColors(),
+                border = KoraChipDefaults.border,
             )
             libraries.forEach { library ->
                 FilterChip(
                     selected = filter.libraryId == library.id.value,
                     onClick = { filter.set(library.id.value) },
                     label = { Text(library.name) },
+                    colors = KoraChipDefaults.filterChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
         }

@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.imagereader.onnxruntime
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -101,7 +102,7 @@ fun OnnxRuntimeSettingsContent(
             ) {
                 FilledTonalButton(
                     onClick = { showOrtInstallDialog = true },
-                    shape = RoundedCornerShape(5.dp),
+                    shape = KoraShapes.small,
                     modifier = Modifier.cursorForHand()
                 ) { Text(LocalStrings.current.ui.updateOnnxRuntime, maxLines = 1) }
 

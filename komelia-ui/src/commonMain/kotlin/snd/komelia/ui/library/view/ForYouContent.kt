@@ -1,5 +1,6 @@
 package snd.komelia.ui.library.view
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -164,6 +165,8 @@ private fun ForYouHeader(state: LibraryForYouTabState) {
                 selected = state.includeRead,
                 onClick = { state.toggleIncludeRead() },
                 label = { Text(strings.showRead) },
+                colors = KoraChipDefaults.filterChipColors(),
+                border = KoraChipDefaults.border,
             )
             if (state.dismissedCount > 0) {
                 // An irreversible one-tap action needs a way back in sight of

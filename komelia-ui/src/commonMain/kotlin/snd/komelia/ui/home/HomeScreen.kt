@@ -1,5 +1,6 @@
 package snd.komelia.ui.home
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -256,7 +257,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     contentColor = if (accentColor != null) {
                                         if (accentColor.luminance() > 0.5f) Color.Black else Color.White
                                     } else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = KoraShapes.large,
                                 ) {
                                     Icon(Icons.Rounded.Edit, null)
                                 }

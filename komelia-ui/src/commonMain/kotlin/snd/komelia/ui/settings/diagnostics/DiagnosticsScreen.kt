@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.diagnostics
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -125,6 +126,8 @@ class DiagnosticsScreen : Screen {
                                 selected = logInfo?.cap == cap,
                                 onClick = { vm.setLogCap(cap) },
                                 label = { Text("${cap.totalMb} MB") },
+                                colors = KoraChipDefaults.filterChipColors(),
+                                border = KoraChipDefaults.border,
                             )
                         }
                     }

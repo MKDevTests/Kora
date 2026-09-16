@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.datetime.LocalDate
 import snd.komelia.ui.LocalStrings
+import snd.komelia.ui.common.components.KoraChipDefaults
 import snd.komelia.ui.common.components.ExpandableText
 import snd.komelia.ui.library.NextReleaseLabels
 import snd.komelia.ui.library.SeriesScreenFilter
@@ -116,7 +117,9 @@ fun SeriesDescriptionRow(
                 onClick = { onLibraryClick(library) },
                 label = { Text(library.name) },
                 icon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
-                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                colors = KoraChipDefaults.suggestionChipColors(),
+                border = KoraChipDefaults.border,
             )
 
             if (status != null) {
@@ -145,26 +148,33 @@ fun SeriesDescriptionRow(
                                 labelColor = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         },
+                        border = KoraChipDefaults.border,
                 )
             }
 
             ageRating?.let { age ->
                 SuggestionChip(
                     onClick = { onFilterClick(SeriesScreenFilter(ageRating = listOf(age))) },
-                    label = { Text("$age+") }
+                    label = { Text("$age+") },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
 
             if (language.isNotBlank())
                 SuggestionChip(
                     onClick = { onFilterClick(SeriesScreenFilter(language = listOf(language))) },
-                    label = { Text(language) }
+                    label = { Text(language) },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
 
             if (readingDirection != null) {
                 SuggestionChip(
                     onClick = {},
-                    label = { Text(strings.forReadingDirection(readingDirection)) }
+                    label = { Text(strings.forReadingDirection(readingDirection)) },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
 
@@ -189,6 +199,8 @@ fun SeriesDescriptionRow(
                 SuggestionChip(
                     onClick = {},
                     label = { Text(booksLabel) },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
 
@@ -196,6 +208,8 @@ fun SeriesDescriptionRow(
                 SuggestionChip(
                     onClick = {},
                     label = { Text(LocalStrings.current.counts.pages(pagesCount)) },
+                    colors = KoraChipDefaults.suggestionChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
 
@@ -204,12 +218,10 @@ fun SeriesDescriptionRow(
                     onClick = {},
                     label = { Text(LocalStrings.current.counts.pagesLeft(pagesLeft)) },
                     colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         labelColor = accentColor ?: MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    border = SuggestionChipDefaults.suggestionChipBorder(
-                        enabled = true,
-                        borderColor = accentColor ?: MaterialTheme.colorScheme.outline
-                    )
+                    border = KoraChipDefaults.border
                 )
             }
         }
@@ -231,6 +243,7 @@ fun SeriesDescriptionRow(
                                 fontWeight = FontWeight.Medium,
                             )
                         },
+                        border = KoraChipDefaults.border,
                     )
                 }
             }
@@ -268,6 +281,7 @@ fun SeriesDescriptionRow(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         },
+                        border = KoraChipDefaults.border,
                     )
                 }
             }

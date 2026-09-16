@@ -1,5 +1,6 @@
 package snd.komelia.ui.common.immersive
 
+import snd.komelia.ui.KoraShapes
 import snd.komelia.ui.common.ThumbnailConstants.ASPECT_RATIO
 import snd.komelia.ui.common.ThumbnailConstants.CARD_SCALE
 import snd.komelia.ui.LocalCardHeightScale
@@ -444,7 +445,7 @@ fun ImmersiveDetailScaffold(
                                 Box(
                                     modifier = Modifier
                                         .size(width = 32.dp, height = 4.dp)
-                                        .clip(RoundedCornerShape(2.dp))
+                                        .clip(KoraShapes.small)
                                         .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                                 )
                             }

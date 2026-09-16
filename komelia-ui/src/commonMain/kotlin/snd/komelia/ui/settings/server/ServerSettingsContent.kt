@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.server
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -277,7 +278,7 @@ fun ChangesConfirmationPopup(
         ) {
             Surface(
                 border = BorderStroke(2.dp, MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(5.dp),
+                shape = KoraShapes.small,
                 modifier = Modifier
                     .width(600.dp)
                     .padding(20.dp)

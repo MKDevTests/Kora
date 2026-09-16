@@ -1,5 +1,6 @@
 package snd.komelia.ui.search
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.FocusInteraction
@@ -149,7 +150,9 @@ fun SearchBarWithResults(
                     androidx.compose.material3.FilterChip(
                         selected = selectedLibraryId == null,
                         onClick = { onSelectedLibraryChange(null) },
-                        label = { Text(LocalStrings.current.ui.all) }
+                        label = { Text(LocalStrings.current.ui.all) },
+                        colors = KoraChipDefaults.filterChipColors(),
+                        border = KoraChipDefaults.border,
                     )
                 }
                 items(libraries.size) { idx ->
@@ -157,7 +160,9 @@ fun SearchBarWithResults(
                     androidx.compose.material3.FilterChip(
                         selected = selectedLibraryId == lib.id,
                         onClick = { onSelectedLibraryChange(lib.id) },
-                        label = { Text(lib.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        label = { Text(lib.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        colors = KoraChipDefaults.filterChipColors(),
+                        border = KoraChipDefaults.border,
                     )
                 }
             }
@@ -169,6 +174,8 @@ fun SearchBarWithResults(
                     selected = fuzzyEnabled,
                     onClick = { onFuzzyEnabledChange(!fuzzyEnabled) },
                     label = { Text(LocalStrings.current.ui.fuzzy) },
+                    colors = KoraChipDefaults.filterChipColors(),
+                    border = KoraChipDefaults.border,
                 )
             }
         }

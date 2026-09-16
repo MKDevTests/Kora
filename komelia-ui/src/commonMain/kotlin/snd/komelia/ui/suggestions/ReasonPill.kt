@@ -1,5 +1,6 @@
 package snd.komelia.ui.suggestions
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +28,7 @@ fun ReasonPill(
     val extra = reasons.size - 1
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
+        shape = KoraShapes.small,
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Text(

@@ -1,5 +1,6 @@
 package snd.komelia.ui.dialogs.libraryedit
 
+import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -177,5 +178,7 @@ private fun ScanFiletypeChip(
         } else {
             null
         },
+        colors = KoraChipDefaults.filterChipColors(),
+        border = KoraChipDefaults.border,
     )
 }

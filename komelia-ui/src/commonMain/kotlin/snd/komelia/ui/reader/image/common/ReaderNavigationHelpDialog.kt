@@ -1,5 +1,6 @@
 package snd.komelia.ui.reader.image.common
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.Orientation.Horizontal
 import androidx.compose.foundation.gestures.Orientation.Vertical
@@ -226,7 +227,7 @@ private fun ShortcutKeys(keys: List<String>, modifier: Modifier) {
 private fun ShortcutKey(label: String) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
-        shape = RoundedCornerShape(2.dp),
+        shape = KoraShapes.small,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
     ) {
         Text(

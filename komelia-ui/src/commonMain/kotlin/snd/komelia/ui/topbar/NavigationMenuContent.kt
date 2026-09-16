@@ -1,5 +1,6 @@
 package snd.komelia.ui.topbar
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.BasicTooltipBox
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
@@ -309,7 +310,7 @@ private fun NavButton(
     TextButton(
         onClick = onClick,
         contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(10.dp),
+        shape = KoraShapes.medium,
     ) {
         Row(
             horizontalArrangement = Arrangement.Start,

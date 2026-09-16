@@ -1,5 +1,6 @@
 package snd.komelia.ui.stats
 
+import snd.komelia.ui.KoraShapes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -93,7 +94,7 @@ fun HomeStatsCard(homeReady: Boolean = true) {
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .clickable { navigator.pushUnique(ReadingStatsScreen()) },
-        shape = RoundedCornerShape(14.dp),
+        shape = KoraShapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
