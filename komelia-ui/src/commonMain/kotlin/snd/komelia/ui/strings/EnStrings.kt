@@ -1250,6 +1250,10 @@ val EnStrings = AppStrings(
         "allRead" to "all read",
         "unreadCountOne" to "1 unread",
         "unreadCountMany" to "{n} unread",
+        "serverAddress" to "Address",
+        "serverPort" to "Port",
+        "serverAddressHelp" to "IP or host name, without http:// or port. Komga's default port is 25600.",
+        "fullAddress" to "Full address",
     // endregion
         "user" to "User",
         "online" to "Online",

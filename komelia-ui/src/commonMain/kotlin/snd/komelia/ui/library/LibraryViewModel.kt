@@ -130,7 +130,9 @@ class LibraryViewModel(
     suggestionFeedbackRepository: snd.komelia.similarity.SuggestionFeedbackRepository,
     hiddenSeriesIds: StateFlow<Set<String>>,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
-    val library = libraryFlow.onEach { settingsRepository.putLastSelectedLibraryId(it?.id) }
+    // Eager flow with no supervisor: a failed write here (the pool closing
+    // under a server switch) would take the whole app down.
+    val library = libraryFlow.onEach { runCatching { settingsRepository.putLastSelectedLibraryId(it?.id) } }
         .stateIn(screenModelScope, SharingStarted.Eagerly, null)
     val cardWidth = settingsRepository.getCardWidth().map { Dp(it.toFloat()) }
         .stateIn(screenModelScope, SharingStarted.Eagerly, defaultCardWidth.dp)

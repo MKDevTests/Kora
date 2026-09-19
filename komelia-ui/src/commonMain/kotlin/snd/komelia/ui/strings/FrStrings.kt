@@ -1262,6 +1262,10 @@ val FrStrings = AppStrings(
         "allRead" to "tout lu",
         "unreadCountOne" to "1 non lu",
         "unreadCountMany" to "{n} non lus",
+        "serverAddress" to "Adresse",
+        "serverPort" to "Port",
+        "serverAddressHelp" to "IP ou nom d'hôte, sans http:// ni port. Le port Komga par défaut est 25600.",
+        "fullAddress" to "Adresse complète",
     // endregion
         "user" to "Utilisateur",
         "online" to "En ligne",

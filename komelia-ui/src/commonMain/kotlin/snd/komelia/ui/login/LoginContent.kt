@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,7 +44,7 @@ import snd.komelia.settings.model.ServerProfile
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.common.components.DropdownChoiceMenu
 import snd.komelia.ui.common.components.LabeledEntry
-import snd.komelia.ui.common.components.OutlinedHttpTextField
+import snd.komelia.ui.common.components.ServerAddressFields
 import snd.komelia.ui.common.components.withTextFieldNavigation
 import snd.komelia.ui.platform.PlatformType
 import snd.komelia.ui.platform.PlatformType.DESKTOP
@@ -94,7 +95,7 @@ fun LoginContent(
                 LoginForm(
                     viewModel = viewModel,
                     onOfflineSelect = onOfflineSelect,
-                    textFieldsModifier = Modifier
+                    textFieldsModifier = Modifier.width(420.dp)
                 )
             }
 
@@ -159,15 +160,16 @@ fun ColumnScope.LoginForm(
         val coroutineScope = rememberCoroutineScope()
         val (first, second, third) = remember { FocusRequester.createRefs() }
 
-        OutlinedHttpTextField(
-            value = viewModel.url,
-            onValueChange = { viewModel.url = it },
-            label = { Text(LocalStrings.current.ui.serverUrl) },
-            modifier = textFieldsModifier
+        ServerAddressFields(
+            url = viewModel.url,
+            onUrlChange = { viewModel.url = it },
+            modifier = textFieldsModifier,
+            hostFieldModifier = Modifier
                 .withTextFieldNavigation()
-                .focusRequester(first)
+                .focusRequester(first),
+            portFieldModifier = Modifier
+                .withTextFieldNavigation()
                 .focusProperties { next = second },
-            placeholder = { Text("localhost:25600") }
         )
 
         OutlinedTextField(

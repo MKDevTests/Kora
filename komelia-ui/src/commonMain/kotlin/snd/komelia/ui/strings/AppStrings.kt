@@ -1221,6 +1221,10 @@ class UiStrings(private val values: Map<String, String>) {
     val unreadBadgeAtStartDesc: String get() = at("unreadBadgeAtStartDesc")
     val allRead: String get() = at("allRead")
     val unreadCountOne: String get() = at("unreadCountOne")
+    val serverAddress: String get() = at("serverAddress")
+    val serverPort: String get() = at("serverPort")
+    val serverAddressHelp: String get() = at("serverAddressHelp")
+    val fullAddress: String get() = at("fullAddress")
     // endregion
 
     fun unreadCountMany(count: Int): String =
