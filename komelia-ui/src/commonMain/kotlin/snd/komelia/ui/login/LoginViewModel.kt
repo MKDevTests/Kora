@@ -125,10 +125,21 @@ class LoginViewModel(
             sessionManager.switchServer(null)
         }
 
+        // switchServer tears down the module that owns these repositories on
+        // another thread; a lookup racing that shutdown used to surface as a
+        // "DB offline pool has been closed" crash. A server that is not added
+        // yet has no offline user, and a failed lookup only hides the
+        // "go offline as this user" button.
+        if (profile == null) {
+            offlineUser.value = null
+            return
+        }
         screenModelScope.launch {
-            val offlineUsers = offlineUserRepository.findAll()
-            val offlineServer = offlineServerRepository.findByUrl(url)
-            offlineUser.value = offlineServer?.let { server -> offlineUsers.firstOrNull { it.serverId == server.id } }
+            offlineUser.value = runCatching {
+                val offlineUsers = offlineUserRepository.findAll()
+                val offlineServer = offlineServerRepository.findByUrl(url)
+                offlineServer?.let { server -> offlineUsers.firstOrNull { it.serverId == server.id } }
+            }.getOrNull()
         }
     }
 

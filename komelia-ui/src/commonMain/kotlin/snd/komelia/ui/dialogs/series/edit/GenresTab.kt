@@ -22,8 +22,8 @@ import snd.komelia.ui.dialogs.tabs.DialogTab
 import snd.komelia.ui.dialogs.tabs.TabItem
 import snd.komelia.ui.library.GenreLabels
 
-/** How many genres a series may carry. Above this the tab stops accepting picks. */
-private const val MAX_GENRES = 4
+/** How many genres a series may carry (0 to 5). Above this the tab stops accepting picks. */
+private const val MAX_GENRES = 5
 
 /**
  * Admin-only tab that edits a series' Kora genres.

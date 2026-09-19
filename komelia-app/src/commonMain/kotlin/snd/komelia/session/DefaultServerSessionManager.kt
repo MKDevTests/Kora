@@ -90,6 +90,10 @@ class DefaultServerSessionManager(
         val inserted = serverProfileRepository.insert(newProfile)
         refreshServerProfiles()
 
+        // The switch runs on this manager's own scope (the caller's screen is
+        // torn down halfway through), but the caller waits for it: reporting
+        // the login as successful before the swap let the main screen start
+        // on the old module and write settings into a pool being closed.
         scope.launch {
             switchMutex.withLock {
                 _dependencies.value = null
@@ -103,7 +107,7 @@ class DefaultServerSessionManager(
                 _dependencies.value = container
                 _currentServerProfile.value = inserted
             }
-        }
+        }.join()
     }
 
     private fun renameNullProfileFiles(serverId: Long) {

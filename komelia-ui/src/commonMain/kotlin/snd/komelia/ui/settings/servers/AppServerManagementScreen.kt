@@ -1,6 +1,7 @@
 package snd.komelia.ui.settings.servers
 
 import snd.komelia.ui.common.components.KoraChipDefaults
+import snd.komelia.ui.common.components.ServerAddressFields
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -278,12 +279,10 @@ class AppServerManagementScreen : Screen {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = newUrl,
-                    onValueChange = { newUrl = it },
-                    label = { Text("http://192.168.x.x:25600 or https://…") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
+                ServerAddressFields(
+                    url = newUrl,
+                    onUrlChange = { newUrl = it },
+                    modifier = Modifier.weight(1f),
                 )
                 Button(
                     onClick = {
