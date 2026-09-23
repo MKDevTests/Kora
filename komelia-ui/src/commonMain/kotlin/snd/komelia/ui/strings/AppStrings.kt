@@ -1225,10 +1225,23 @@ class UiStrings(private val values: Map<String, String>) {
     val serverPort: String get() = at("serverPort")
     val serverAddressHelp: String get() = at("serverAddressHelp")
     val fullAddress: String get() = at("fullAddress")
+    val editServerAddress: String get() = at("editServerAddress")
+    val addressMayHaveChanged: String get() = at("addressMayHaveChanged")
+    val addressChangeNote: String get() = at("addressChangeNote")
+    val passwordIfNeeded: String get() = at("passwordIfNeeded")
+    val sessionExpiredEnterPassword: String get() = at("sessionExpiredEnterPassword")
+    val addressChangeUnavailable: String get() = at("addressChangeUnavailable")
+    val checkForUpdate: String get() = at("checkForUpdate")
+    val appUpToDate: String get() = at("appUpToDate")
+    val updateCheckFailed: String get() = at("updateCheckFailed")
     // endregion
 
     fun unreadCountMany(count: Int): String =
         at("unreadCountMany").replace("{n}", count.toString())
+
+    fun newAddressOf(name: String): String = at("newAddressOf").replace("{name}", name)
+
+    fun addressUnreachable(url: String): String = at("addressUnreachable").replace("{url}", url)
 
     /** Display name of a palette seed, by its key in Theme.PALETTES. */
     fun paletteName(key: String): String = at("palette_" + key)

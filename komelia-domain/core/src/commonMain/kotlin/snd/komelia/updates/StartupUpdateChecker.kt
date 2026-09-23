@@ -24,6 +24,27 @@ class StartupUpdateChecker(
     private val updateScope = CoroutineScope(Dispatchers.Default)
     val downloadProgress = MutableStateFlow<UpdateProgress?>(null)
 
+    /** The release the update dialog is showing, whoever found it. */
+    val offeredRelease = MutableStateFlow<AppRelease?>(null)
+
+    /**
+     * Asks GitHub now, ignoring the once-a-day gate, the startup setting and
+     * a dismissed version: the user pressed the button. Needs no Komga
+     * server, so it works from the login screen. Returns the newer release
+     * (also offered to the dialog), or null when this version is the latest;
+     * throws when GitHub cannot be reached.
+     */
+    suspend fun checkNow(): AppRelease? {
+        val releases = updater.getReleases()
+        val latest = releases.first()
+        releaseFlow.value = releases
+        settings.putLastUpdateCheckTimestamp(Clock.System.now())
+        settings.putLastCheckedReleaseVersion(latest.version)
+        if (AppVersion.current >= latest.version) return null
+        offeredRelease.value = latest
+        return latest
+    }
+
     suspend fun checkForUpdates(): AppRelease? {
         try {
             val checkForUpdates = settings.getCheckForUpdatesOnStartup().first()
