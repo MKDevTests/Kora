@@ -59,21 +59,27 @@ fun ServerAddressFields(
 ) {
     val strings = LocalStrings.current.ui
     var parts by remember { mutableStateOf(ServerUrlParts.parse(url)) }
-    var lastEmitted by remember { mutableStateOf(url) }
+    // Every URL handed to the parent, newest last. The parent echoes each one
+    // back a frame later, and fast typing can be a few keystrokes ahead by
+    // then: comparing the echo with the latest value only took a stale echo
+    // for an outside change and reset the field mid-word, which is how
+    // "shodan" came out as "sodanh" (measured on the tablet, 4 times).
+    val emitted = remember { ArrayDeque<String>().apply { addLast(url) } }
 
-    // Follow external changes (profile switch, prefilled last URL) without
-    // fighting the user's own keystrokes, which we emitted ourselves.
+    // Follow real outside changes (profile switch, prefilled last URL).
     LaunchedEffect(url) {
-        if (url != lastEmitted) {
+        if (url !in emitted) {
             parts = ServerUrlParts.parse(url)
-            lastEmitted = url
+            emitted.clear()
+            emitted.addLast(url)
         }
     }
 
     fun update(next: ServerUrlParts) {
         parts = next
         val built = next.build()
-        lastEmitted = built
+        emitted.addLast(built)
+        while (emitted.size > 64) emitted.removeFirst()
         onUrlChange(built)
     }
 

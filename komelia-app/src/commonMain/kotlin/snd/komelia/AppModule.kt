@@ -390,6 +390,7 @@ abstract class AppModule(
             komgaApi = komgaApi,
             rawKomgaApi = rawKomgaApi,
             hiddenSeriesController = hiddenSeriesController,
+            serverFailover = serverFailover,
             similarityIndexBuilder = similarityIndexBuilder,
             isOffline = isOffline,
             komfClientFactory = komfClientFactory,

@@ -455,7 +455,7 @@ fun MainView(
                     }
 
                     AppNotifications(dependencies.appNotifications, theme)
-                    val updateChecker = remember { viewModelFactory.getStartupUpdateChecker() }
+                    val updateChecker = remember(viewModelFactory) { viewModelFactory.getStartupUpdateChecker() }
                     if (updateChecker != null) {
                         StartupUpdateChecker(updateChecker)
                     }
@@ -606,23 +606,24 @@ fun AppNotifications(
 @Composable
 private fun StartupUpdateChecker(updater: StartupUpdateChecker) {
     val coroutineScope = rememberCoroutineScope()
-    var newRelease by remember { mutableStateOf<AppRelease?>(null) }
-    LaunchedEffect(Unit) { updater.checkForUpdates()?.let { newRelease = it } }
+    // Shared with the login screen's "check for updates", which offers its
+    // find through the same flow.
+    LaunchedEffect(updater) { updater.checkForUpdates()?.let { updater.offeredRelease.value = it } }
 
     val progress = updater.downloadProgress.collectAsState().value
-    val release = newRelease
+    val release = updater.offeredRelease.collectAsState().value
     if (release != null) {
         UpdateDialog(
             newRelease = release,
             onConfirm = {
                 coroutineScope.launch {
                     updater.onUpdate(release)
-                    newRelease = null
+                    updater.offeredRelease.value = null
                 }
             },
             onDismiss = {
                 coroutineScope.launch { updater.onUpdateDismiss(release) }
-                newRelease = null
+                updater.offeredRelease.value = null
             }
         )
     }

@@ -1,6 +1,10 @@
 package snd.komelia.ui.login
 
 import androidx.compose.foundation.clickable
+import snd.komelia.ui.KoraShapes
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -74,18 +78,30 @@ fun LoginContent(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error
             )
+            Text(
+                LocalStrings.current.ui.addressMayHaveChanged,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Button(onClick = { showAutoLoginError = false }) { Text(LocalStrings.current.ui.loginWithAnotherAccount) }
+                // The usual cause of "cannot connect" on a home server: its
+                // address changed. Fixing it here keeps the profile, its
+                // favorites, stats and settings; a new server would not.
+                Button(onClick = {
+                    showAutoLoginError = false
+                    viewModel.startEditAddress()
+                }) { Text(LocalStrings.current.ui.editServerAddress) }
+                Button(onClick = onAutoLoginRetry) { Text(LocalStrings.current.ui.retry) }
                 if (canGoOfflineAsCurrentUser) {
                     Button(onClick = goOfflineAsCurrentUser) { Text(LocalStrings.current.ui.goOffline2) }
                 }
-
-                Button(onClick = onAutoLoginRetry) { Text(LocalStrings.current.ui.retry) }
+                TextButton(onClick = { showAutoLoginError = false }) { Text(LocalStrings.current.ui.loginWithAnotherAccount) }
             }
+            UpdateCheckRow(viewModel)
         }
     } else {
         val platform = LocalPlatform.current
@@ -137,13 +153,16 @@ fun ColumnScope.LoginForm(
 ) {
     val serverProfiles by viewModel.serverProfiles.collectAsState(emptyList())
     val serverOptions: List<LabeledEntry<ServerProfile?>> = remember(serverProfiles) {
-        serverProfiles.map { LabeledEntry<ServerProfile?>(it, "${it.url} (${it.username})") } +
+        serverProfiles.map { LabeledEntry<ServerProfile?>(it, serverLabel(it)) } +
                 LabeledEntry<ServerProfile?>(null, "Connect to a new server")
     }
 
     if (serverProfiles.isNotEmpty()) {
-        val selectedOption: LabeledEntry<ServerProfile?> = viewModel.selectedServerProfile?.let {
-            LabeledEntry<ServerProfile?>(it, "${it.url} (${it.username})")
+        // The list is refreshed when a profile's address follows its active
+        // one; show the refreshed copy, not the one picked earlier.
+        val selectedOption: LabeledEntry<ServerProfile?> = viewModel.selectedServerProfile?.let { picked ->
+            val current = serverProfiles.firstOrNull { it.id == picked.id } ?: picked
+            LabeledEntry<ServerProfile?>(current, serverLabel(current))
         } ?: LabeledEntry<ServerProfile?>(null, "Connect to a new server")
 
         DropdownChoiceMenu(
@@ -195,15 +214,62 @@ fun ColumnScope.LoginForm(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
     } else {
+        val strings = LocalStrings.current.ui
+        if (viewModel.editingAddress) {
+            val serverName = viewModel.selectedServerProfile?.let { picked ->
+                (serverProfiles.firstOrNull { it.id == picked.id } ?: picked).name
+            } ?: ""
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = textFieldsModifier
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow, KoraShapes.medium)
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        strings.newAddressOf(serverName),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = viewModel::cancelEditAddress) { Text(strings.cancel) }
+                }
+                ServerAddressFields(
+                    url = viewModel.newAddress,
+                    onUrlChange = { viewModel.newAddress = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    strings.addressChangeNote,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else if (viewModel.selectedServerProfile != null) {
+            TextButton(onClick = viewModel::startEditAddress) { Text(strings.editServerAddress) }
+        }
+
         OutlinedTextField(
             value = viewModel.password,
             onValueChange = { viewModel.password = it },
             visualTransformation = PasswordVisualTransformation(),
-            label = { Text(LocalStrings.current.ui.password) },
+            label = { Text(if (viewModel.editingAddress) strings.passwordIfNeeded else strings.password) },
             modifier = textFieldsModifier.withTextFieldNavigation(
                 onEnterPress = { viewModel.loginWithCredentials() }
             ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+        )
+    }
+
+    viewModel.addressError?.let { error ->
+        val strings = LocalStrings.current.ui
+        Text(
+            when (error) {
+                is LoginViewModel.AddressError.Unreachable -> strings.addressUnreachable(error.url)
+                LoginViewModel.AddressError.PasswordNeeded -> strings.sessionExpiredEnterPassword
+                LoginViewModel.AddressError.Unavailable -> strings.addressChangeUnavailable
+            },
+            style = TextStyle(color = MaterialTheme.colorScheme.error),
+            modifier = textFieldsModifier,
         )
     }
 
@@ -215,10 +281,51 @@ fun ColumnScope.LoginForm(
         if (viewModel.offlineIsAvailable.collectAsState().value) {
             TextButton(onClick = onOfflineSelect) { Text(LocalStrings.current.ui.offlineMode) }
         }
-        Button(onClick = { viewModel.loginWithCredentials() }) { Text(LocalStrings.current.ui.login) }
+        Button(
+            onClick = { viewModel.loginWithCredentials() },
+            enabled = !viewModel.addressBusy,
+        ) {
+            if (viewModel.addressBusy) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(18.dp).width(18.dp))
+            else Text(LocalStrings.current.ui.login)
+        }
     }
 
     Spacer(Modifier.imePadding())
+}
+
+/** "Palantir — http://…" when the server was named, else "http://… (user)" as before. */
+private fun serverLabel(profile: ServerProfile): String =
+    if (profile.name.isNotBlank() && profile.name.trim().trimEnd('/') != profile.url.trim().trimEnd('/'))
+        "${profile.name} — ${profile.url}"
+    else "${profile.url} (${profile.username})"
+
+/**
+ * "Kora 1.8.x · Check for updates" under the connection error: an update
+ * comes from GitHub, so it must not wait for a server that cannot be
+ * reached — that is exactly when a fixed version is needed.
+ */
+@Composable
+private fun UpdateCheckRow(viewModel: LoginViewModel) {
+    if (!viewModel.canCheckForUpdates) return
+    val strings = LocalStrings.current.ui
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Kora ${viewModel.appVersion} ·",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        when (viewModel.updateCheck) {
+            LoginViewModel.UpdateCheck.Checking ->
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(14.dp).width(14.dp))
+            LoginViewModel.UpdateCheck.UpToDate ->
+                Text(strings.appUpToDate, style = MaterialTheme.typography.bodySmall)
+            LoginViewModel.UpdateCheck.Failed ->
+                TextButton(onClick = viewModel::checkForUpdatesNow) {
+                    Text(strings.updateCheckFailed, color = MaterialTheme.colorScheme.error)
+                }
+            null -> TextButton(onClick = viewModel::checkForUpdatesNow) { Text(strings.checkForUpdate) }
+        }
+    }
 }
 
 @Composable

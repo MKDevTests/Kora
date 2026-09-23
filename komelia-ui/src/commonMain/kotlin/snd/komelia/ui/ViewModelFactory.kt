@@ -414,6 +414,7 @@ class ViewModelFactory(
             offlineServerRepository = dependencies.offlineDependencies.repositories.mediaServerRepository,
             offlineSettingsRepository = dependencies.offlineDependencies.repositories.offlineSettingsRepository,
             offlineLibraryApi = dependencies.offlineDependencies.komgaApi.libraryApi,
+            updateChecker = startupUpdateChecker,
         )
     }
 

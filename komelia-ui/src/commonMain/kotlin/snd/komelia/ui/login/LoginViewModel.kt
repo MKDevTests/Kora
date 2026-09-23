@@ -18,6 +18,9 @@ import kotlinx.coroutines.launch
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.KomgaAuthenticationState
+import snd.komelia.failover.ServerProbe
+import snd.komelia.updates.AppVersion
+import snd.komelia.updates.StartupUpdateChecker
 import snd.komelia.komga.api.KomgaLibraryApi
 import snd.komelia.komga.api.KomgaUserApi
 import snd.komelia.offline.api.OfflineLibraryApi
@@ -51,7 +54,30 @@ class LoginViewModel(
     private val offlineServerRepository: OfflineMediaServerRepository,
     private val offlineSettingsRepository: OfflineSettingsRepository,
     private val offlineLibraryApi: OfflineLibraryApi,
+    private val updateChecker: StartupUpdateChecker? = null,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
+
+    /** Why "change address" did not go through; the screen words it. */
+    sealed interface AddressError {
+        data class Unreachable(val url: String) : AddressError
+        data object PasswordNeeded : AddressError
+        data object Unavailable : AddressError
+    }
+
+    /** What the login screen's "check for updates" found. */
+    enum class UpdateCheck { Checking, UpToDate, Failed }
+
+    var editingAddress by mutableStateOf(false)
+        private set
+    var newAddress by mutableStateOf("")
+    var addressError by mutableStateOf<AddressError?>(null)
+        private set
+    var addressBusy by mutableStateOf(false)
+        private set
+    var updateCheck by mutableStateOf<UpdateCheck?>(null)
+        private set
+    val appVersion: String = AppVersion.current.toString()
+    val canCheckForUpdates: Boolean get() = updateChecker != null
 
     var url by mutableStateOf("")
     var user by mutableStateOf("")
@@ -115,6 +141,8 @@ class LoginViewModel(
 
     fun onServerProfileSelect(profile: ServerProfile?) {
         selectedServerProfile = profile
+        editingAddress = false
+        addressError = null
         if (profile != null) {
             showNewServerFields = false
             url = profile.url
@@ -143,9 +171,92 @@ class LoginViewModel(
         }
     }
 
+    /**
+     * Opens "change address" for the selected server, prefilled with the
+     * address the client really uses (the profile's own may be stale).
+     */
+    fun startEditAddress() {
+        screenModelScope.launch {
+            val active = sessionManager.dependencies.value?.appRepositories?.settingsRepository
+                ?.getServerUrl()?.first()
+            newAddress = active?.ifBlank { null } ?: url
+            addressError = null
+            userLoginError = null
+            autoLoginError = null
+            editingAddress = true
+        }
+    }
+
+    fun cancelEditAddress() {
+        editingAddress = false
+        addressError = null
+    }
+
+    /**
+     * Same server, new address: probe it, make it the active one (the old
+     * one becomes a fallback, the session cookies follow), then log in —
+     * with the session when it is still valid, else with the password.
+     * Nothing is written when the new address does not answer.
+     */
+    private suspend fun changeAddressAndLogin() {
+        val target = newAddress.trim().trimEnd('/')
+        if (target.isBlank()) return
+        addressBusy = true
+        try {
+            if (ServerProbe.probe(target) is ServerProbe.Result.Unreachable) {
+                addressError = AddressError.Unreachable(target)
+                return
+            }
+            val failover = sessionManager.dependencies.value?.serverFailover
+            if (failover == null || !failover.switchTo(target)) {
+                addressError = AddressError.Unavailable
+                return
+            }
+            url = target
+            editingAddress = false
+            addressError = null
+            val sessionStillValid = try {
+                tryLogin()
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                false
+            }
+            when {
+                sessionStillValid -> mutableState.value = LoadState.Success(Unit)
+                password.isNotBlank() -> tryUserLogin(user, password)
+                else -> addressError = AddressError.PasswordNeeded
+            }
+        } finally {
+            addressBusy = false
+        }
+    }
+
+    /** The login screen's "check for updates": GitHub only, no server needed. */
+    fun checkForUpdatesNow() {
+        val checker = updateChecker ?: return
+        if (updateCheck == UpdateCheck.Checking) return
+        updateCheck = UpdateCheck.Checking
+        screenModelScope.launch {
+            updateCheck = try {
+                // A newer release opens the update dialog through the shared flow.
+                if (checker.checkNow() == null) UpdateCheck.UpToDate else null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                UpdateCheck.Failed
+            }
+        }
+    }
+
     fun loginWithCredentials() {
         screenModelScope.launch {
             userLoginError = null
+            if (!showNewServerFields && editingAddress) {
+                changeAddressAndLogin()
+                return@launch
+            }
             if (showNewServerFields) {
                 settingsRepository.putServerUrl(url)
                 settingsRepository.putCurrentUser(user)

@@ -56,6 +56,8 @@ data class DependencyContainer(
     val hiddenSeriesController: HiddenSeriesController? = null,
     /** Builds/refreshes the local term index behind "Similar series". */
     val similarityIndexBuilder: snd.komelia.similarity.SimilarityIndexBuilder? = null,
+    /** Active-address switching for this server; the login screen's "change address" uses it. */
+    val serverFailover: snd.komelia.failover.ServerFailover? = null,
 
     val isOffline: StateFlow<Boolean>,
     val komfClientFactory: KomfClientFactory,

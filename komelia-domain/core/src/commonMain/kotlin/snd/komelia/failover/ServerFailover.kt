@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import snd.komelia.AppNotification
 import snd.komelia.AppNotifications
 import snd.komelia.NetworkState
@@ -124,6 +125,39 @@ class ServerFailover {
             config.notifications.add(AppNotification.Normal(config.switchedMessage(reachable)))
             Url(reachable)
         }
+    }
+
+    /**
+     * Makes [target] the active address on the user's request (the login
+     * screen's "change address"), with the same bookkeeping as a failover
+     * pass: the old address joins the alternates, the session cookies follow,
+     * nothing is rebuilt. The caller probes first. Returns false before
+     * [configure] has run.
+     */
+    suspend fun switchTo(target: String): Boolean {
+        val config = config ?: return false
+        val to = target.trim().trimEnd('/')
+        if (to.isBlank()) return false
+        passMutex.withLock {
+            val from = config.activeUrl.value.trim().trimEnd('/')
+            if (from != to) {
+                val alternates = config.settings.getAlternateServerUrls().first()
+                    .map { it.trim().trimEnd('/') }
+                    .filter { it.isNotBlank() && it != to }
+                config.settings.putServerUrl(to)
+                config.settings.putAlternateServerUrls((alternates + from).filter { it.isNotBlank() }.distinct())
+                if (from.isNotBlank()) {
+                    runCatching { config.onSwitched(Url(from), Url(to)) }
+                        .onFailure { logger.warn(it) { "manual switch: cookies not carried over" } }
+                }
+                logger.warn { "manual switch: $from -> $to" }
+            }
+        }
+        // The client reads its base URL from a flow fed by the settings; the
+        // next request must not leave before that flow has followed.
+        withTimeoutOrNull(2_000) { config.activeUrl.first { it.trim().trimEnd('/') == to } }
+        NetworkState.networkArrived()
+        return true
     }
 
     private suspend fun probe(url: String): Boolean =
