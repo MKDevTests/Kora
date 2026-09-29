@@ -234,11 +234,20 @@ class PagedReaderState(
         screenScaleState.enableOverscrollArea(false)
         screenScaleState.edgeHandoffEnabled = true
 
-        combine(
-            screenScaleState.transformation,
-            screenScaleState.areaSize,
-            readerState.imageStretchToFit
-        ) { }.drop(1)
+        // A new screen size (rotation, split screen) or a stretch toggle needs
+        // the whole fit recomputed, which only a page load does. Re-fitting the
+        // zoom alone left a page opened in portrait zoomed-in and cropped after
+        // turning the tablet to landscape (upstream ee7f29c4, Komelia #170).
+        combine(screenScaleState.areaSize, readerState.imageStretchToFit) { }
+            .drop(1)
+            .conflate()
+            .onEach {
+                val currentPage = currentSpread.value.pages.firstOrNull()?.metadata ?: return@onEach
+                loadPage(spreadIndexOf(currentPage))
+            }
+            .launchIn(stateScope)
+
+        screenScaleState.transformation.drop(1)
             .conflate()
             .onEach {
                 val spread = currentSpread.value
@@ -251,7 +260,6 @@ class PagedReaderState(
                 val maxPageSize = getMaxPageSize(spread.pages.map { it.metadata }, containerSize)
                 val targetSize = fitToScreenZoom(spread.pages, maxPageSize, layout.value)
                 screenScaleState.setTargetSize(targetSize.toSize())
-                delay(100)
             }
             .launchIn(stateScope)
 
@@ -783,7 +791,7 @@ class PagedReaderState(
         val pageId = page.toPageId()
         val cached = imageCache.get(pageId)
         return if (cached != null && !cached.isCancelled) {
-            cached.await()
+            cached.await().fittedTo(screenScaleState.areaSize.value)
         } else {
             val job = pageLoadScope.async {
                 val imageResult = imageLoader.loadReaderImage(page.bookId, page.pageNumber, page.half?.name)
@@ -802,6 +810,18 @@ class PagedReaderState(
             }.also { cachePage(pageId, it) }
             job.await()
         }
+    }
+
+    /**
+     * [Page.imageSize] is the page fitted to the screen it was loaded on. A page
+     * cached before a rotation kept the portrait size, and the adaptive
+     * background, placed from it, drew black bands between itself and the page.
+     */
+    private suspend fun Page.fittedTo(area: IntSize): Page {
+        if (area == IntSize.Zero) return this
+        val image = (imageResult as? ReaderImageResult.Success)?.image ?: return this
+        val size = image.calculateSizeForArea(area, true) ?: return this
+        return if (size == imageSize) this else copy(imageSize = size)
     }
 
     private fun getMaxPageSize(pages: List<PageMetadata>, containerSize: IntSize): IntSize {
