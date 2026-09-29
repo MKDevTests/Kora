@@ -234,11 +234,20 @@ class PagedReaderState(
         screenScaleState.enableOverscrollArea(false)
         screenScaleState.edgeHandoffEnabled = true
 
-        combine(
-            screenScaleState.transformation,
-            screenScaleState.areaSize,
-            readerState.imageStretchToFit
-        ) { }.drop(1)
+        // A new screen size (rotation, split screen) or a stretch toggle needs
+        // the whole fit recomputed, which only a page load does. Re-fitting the
+        // zoom alone left a page opened in portrait zoomed-in and cropped after
+        // turning the tablet to landscape (upstream ee7f29c4, Komelia #170).
+        combine(screenScaleState.areaSize, readerState.imageStretchToFit) { }
+            .drop(1)
+            .conflate()
+            .onEach {
+                val currentPage = currentSpread.value.pages.firstOrNull()?.metadata ?: return@onEach
+                loadPage(spreadIndexOf(currentPage))
+            }
+            .launchIn(stateScope)
+
+        screenScaleState.transformation.drop(1)
             .conflate()
             .onEach {
                 val spread = currentSpread.value
@@ -251,7 +260,6 @@ class PagedReaderState(
                 val maxPageSize = getMaxPageSize(spread.pages.map { it.metadata }, containerSize)
                 val targetSize = fitToScreenZoom(spread.pages, maxPageSize, layout.value)
                 screenScaleState.setTargetSize(targetSize.toSize())
-                delay(100)
             }
             .launchIn(stateScope)
 

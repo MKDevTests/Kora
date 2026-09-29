@@ -41,7 +41,10 @@ fun KomgaBookMetadata.toOfflineBookMetadata(bookId: KomgaBookId) =
         number = this.number,
         numberSort = this.numberSort,
         releaseDate = this.releaseDate,
-        authors = this.authors,
+        // Komga can list the same author twice; BOOK_METADATA_AUTHOR's key is
+        // (book_id, name, role), so a duplicate failed the whole download
+        // (upstream 66241f79, Komelia #175).
+        authors = this.authors.distinctBy { it.name to it.role },
         tags = this.tags,
         isbn = this.isbn,
         links = this.links,
