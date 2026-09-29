@@ -1,5 +1,11 @@
 package snd.komelia.ui.topbar
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -96,7 +102,7 @@ fun NewTopAppBar(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = { coroutineScope.launch { mainScreenVm.toggleNavBar() } }) {
+            IconButton(onClick = { mainScreenVm.openLibraryPicker() }) {
                 Icon(Icons.Rounded.Menu, contentDescription = null, tint = iconColor)
             }
 
@@ -148,4 +154,83 @@ fun NewTopAppBar(
             }
         }
     }
+}
+
+/**
+ * Online/offline switch and light/dark toggle as round tonal buttons, for a
+ * page header that replaced the old second bar (Home).
+ */
+@Composable
+fun HeaderTools(modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    val accentColor = LocalAccentColor.current
+    val mainScreenVm = LocalMainScreenViewModel.current
+    val isOffline = LocalOfflineMode.current.collectAsState().value
+    val iconColor = accentColor ?: theme.colorScheme.primary
+    var showOfflineDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RoundToolButton(onClick = { showOfflineDialog = true }) {
+            Icon(
+                if (isOffline) Icons.Rounded.WifiOff else Icons.Rounded.Wifi,
+                contentDescription = null,
+                tint = if (isOffline) MaterialTheme.colorScheme.error else iconColor,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        RoundToolButton(onClick = { mainScreenVm.toggleTheme(theme) }) {
+            Icon(
+                if (theme.type == Theme.ThemeType.LIGHT) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                contentDescription = LocalStrings.current.ui.toggleTheme,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+    if (showOfflineDialog) {
+        ConfirmationDialog(
+            body = if (isOffline) "Go Online?" else "Go Offline?",
+            onDialogConfirm = {
+                if (isOffline) mainScreenVm.goOnline() else mainScreenVm.goOffline()
+                showOfflineDialog = false
+            },
+            onDialogDismiss = { showOfflineDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun RoundToolButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+/**
+ * Keeps the status bar legible on a screen that no longer has a top bar:
+ * with the transparent-bars themes the content scrolls under the clock.
+ */
+@Composable
+fun StatusBarScrim(modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    val hazeState = LocalHazeState.current
+    val hazeStyle = if (hazeState != null) HazeMaterials.thin(theme.colorScheme.surface) else null
+    Spacer(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsTopHeight(WindowInsets.statusBars)
+            .then(
+                if (hazeState != null && hazeStyle != null) Modifier.hazeEffect(hazeState) { style = hazeStyle }
+                else Modifier.background(theme.colorScheme.surface.copy(alpha = 0.92f))
+            )
+    )
 }

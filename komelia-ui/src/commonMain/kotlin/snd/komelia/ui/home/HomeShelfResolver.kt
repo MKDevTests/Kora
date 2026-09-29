@@ -209,3 +209,16 @@ fun HomeScreenFilter.withPageSize(size: Int): HomeScreenFilter = when (this) {
     is BooksHomeScreenFilter.CustomFilter ->
         copy(pageRequest = (pageRequest ?: KomgaPageRequest()).copy(size = size))
 }
+
+/** Mirror of [withPageSize]: the page size a shelf asks for, null when unknown. */
+fun HomeScreenFilter.shelfPageSize(): Int? = when (this) {
+    is SeriesHomeScreenFilter.RecentlyAdded -> pageSize
+    is SeriesHomeScreenFilter.RecentlyUpdated -> pageSize
+    is SeriesHomeScreenFilter.AlmostFinished -> pageSize
+    is SeriesHomeScreenFilter.Favorites -> pageSize
+    is SeriesHomeScreenFilter.ForYou -> pageSize
+    is SeriesHomeScreenFilter.CustomFilter -> pageRequest?.size
+    is BooksHomeScreenFilter.OnDeck -> pageSize
+    is BooksHomeScreenFilter.ForgottenBooks -> pageSize
+    is BooksHomeScreenFilter.CustomFilter -> pageRequest?.size
+}

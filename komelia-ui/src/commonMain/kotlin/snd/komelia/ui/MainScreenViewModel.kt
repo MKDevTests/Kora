@@ -1,5 +1,13 @@
 package snd.komelia.ui
 
+import kotlin.time.TimeSource
+import kotlin.time.TimeMark
+import kotlin.time.Duration.Companion.minutes
+import snd.komga.client.series.KomgaSeriesId
+import snd.komga.client.common.KomgaPageRequest
+import snd.komelia.komga.api.KomgaSeriesApi
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import cafe.adriel.voyager.core.model.ScreenModel
@@ -68,6 +76,8 @@ class MainScreenViewModel(
     val searchBarState: SearchBarState,
     val notificationsState: NotificationsState,
     val libraries: StateFlow<List<KomgaLibrary>>,
+    /** Covers and counts for the library picker. Null: the picker shows names only. */
+    private val seriesApi: KomgaSeriesApi? = null,
 ) : ScreenModel {
 
     val isOffline = offlineSettingsRepository.getOfflineMode().stateIn(screenModelScope, SharingStarted.Eagerly, false)
@@ -190,6 +200,55 @@ class MainScreenViewModel(
         else navBarState.close()
     }
 
+    /** The library picker sheet (replaced the left drawer on phones and tablets). */
+    val libraryPickerOpen = MutableStateFlow(false)
+
+    private val _libraryPreviews = MutableStateFlow<Map<KomgaLibraryId, LibraryPreview>>(emptyMap())
+    val libraryPreviews: StateFlow<Map<KomgaLibraryId, LibraryPreview>> = _libraryPreviews
+    private var previewsJob: Job? = null
+    private var previewsFetchedAt: TimeMark? = null
+
+    fun openLibraryPicker() {
+        libraryPickerOpen.value = true
+        refreshLibraryPreviews()
+    }
+
+    fun closeLibraryPicker() {
+        libraryPickerOpen.value = false
+    }
+
+    /**
+     * One call per library, size 3: the page's total is the series count and
+     * its content the three covers of the fan. Sequential on purpose (the
+     * Komga pool rule, see reference_server_stampede), and at most once every
+     * ten minutes: counts do not move between two openings of the sheet.
+     */
+    private fun refreshLibraryPreviews() {
+        val api = seriesApi ?: return
+        if (previewsJob?.isActive == true) return
+        val fetchedAt = previewsFetchedAt
+        val allKnown = _libraryPreviews.value.keys.containsAll(libraries.value.map { it.id })
+        if (fetchedAt != null && allKnown && fetchedAt.elapsedNow() < 10.minutes) return
+        previewsJob = screenModelScope.launch {
+            for (library in libraries.value) {
+                runCatching {
+                    api.getNewSeries(
+                        libraryIds = listOf(library.id),
+                        deleted = false,
+                        pageRequest = KomgaPageRequest(size = 3),
+                    )
+                }.onSuccess { page ->
+                    val preview = LibraryPreview(
+                        seriesCount = page.totalElements.toInt(),
+                        coverSeriesIds = page.content.map { it.id },
+                    )
+                    _libraryPreviews.update { it + (library.id to preview) }
+                }
+            }
+            previewsFetchedAt = TimeSource.Monotonic.markNow()
+        }
+    }
+
     fun toggleTheme(currentTheme: Theme) {
         screenModelScope.launch {
             // Leaves SYSTEM: the button means "not what I see now".
@@ -215,6 +274,13 @@ class MainScreenViewModel(
         if (last is LibraryScreen && last.libraryId == libraryId) return
         navigator.replaceAll(LibraryScreen(libraryId))
         screenModelScope.launch { settingsRepository.putLastSelectedLibraryId(libraryId) }
+    }
+
+    /** The "all libraries" view. No-op if it is already on screen. */
+    fun navigateToAllLibraries() {
+        val last = navigator.lastItem
+        if (last is LibraryScreen && last.libraryId == null) return
+        navigator.replaceAll(LibraryScreen())
     }
 
     /** Switch to the Home screen from the title dropdown. No-op if already on Home. */
@@ -306,3 +372,9 @@ class MainScreenViewModel(
         notificationsState.onDispose()
     }
 }
+
+/** What a library tile of the picker shows: how many series, and three covers. */
+data class LibraryPreview(
+    val seriesCount: Int,
+    val coverSeriesIds: List<KomgaSeriesId>,
+)

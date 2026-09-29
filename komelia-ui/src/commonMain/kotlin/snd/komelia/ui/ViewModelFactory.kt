@@ -283,6 +283,7 @@ class ViewModelFactory(
             },
             taskEmitter = dependencies.offlineDependencies.taskEmitter,
             releaseNotesService = dependencies.releaseNotesService,
+            seriesApi = komgaApi.seriesApi,
         )
     }
 

@@ -367,7 +367,9 @@ class LibraryScreen(
                         val containerColor = if (theme.type == Theme.ThemeType.DARK) Color(43, 43, 43)
                         else MaterialTheme.colorScheme.surfaceVariant
                         CompositionLocalProvider(
-                            LocalFloatingToolbarPadding provides barHeight + statusBarHeight,
+                            // One bar, not two: the header below the status bar
+                            // carries the title and the tools (UI 2026).
+                            LocalFloatingToolbarPadding provides statusBarHeight,
                             LocalHazeState provides screenHazeState,
                         ) {
                             // Wire the Continue-reading FAB into the
@@ -410,7 +412,7 @@ class LibraryScreen(
                                 ) {
                                     tabContent()
                                 }
-                                NewTopAppBar(library = library, libraryActions = vm.libraryActions())
+                                if (theme.transparentBars) snd.komelia.ui.topbar.StatusBarScrim()
                             }
                         }
                     } else if (floatToolbar) {
@@ -811,6 +813,30 @@ private fun LibraryHeaderSection(
                     Spacer(Modifier.width(8.dp))
                 }
                 PageSizeSelectionDropdown(currentSize = pageSize, onPageSizeChange = onPageSizeChange)
+                // The library menu (scan, edit, empty trash…) moved here from
+                // the top bar that went away. Same gate as before.
+                if (LocalUseNewLibraryUI2.current && library != null) {
+                    val isAdmin = LocalKomgaState.current.authenticatedUser.collectAsState().value?.roleAdmin() ?: true
+                    val isOffline = LocalOfflineMode.current.collectAsState().value
+                    if (isAdmin || isOffline) {
+                        val showActions = remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { showActions.value = true }) {
+                                Icon(
+                                    Icons.Rounded.MoreVert,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            LibraryActionsMenu(
+                                library = library,
+                                actions = mainScreenVm.getLibraryActions(),
+                                expanded = showActions.value,
+                                onDismissRequest = { showActions.value = false },
+                            )
+                        }
+                    }
+                }
             }
         }
         if (totalCount > 0) {
@@ -990,7 +1016,7 @@ fun LibraryToolBar(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = { coroutineScope.launch { mainScreenVm.toggleNavBar() } }) {
+                IconButton(onClick = { mainScreenVm.openLibraryPicker() }) {
                     Icon(Icons.Rounded.Menu, contentDescription = null)
                 }
             },
