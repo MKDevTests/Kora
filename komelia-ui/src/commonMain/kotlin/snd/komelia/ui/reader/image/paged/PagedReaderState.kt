@@ -791,7 +791,7 @@ class PagedReaderState(
         val pageId = page.toPageId()
         val cached = imageCache.get(pageId)
         return if (cached != null && !cached.isCancelled) {
-            cached.await()
+            cached.await().fittedTo(screenScaleState.areaSize.value)
         } else {
             val job = pageLoadScope.async {
                 val imageResult = imageLoader.loadReaderImage(page.bookId, page.pageNumber, page.half?.name)
@@ -810,6 +810,18 @@ class PagedReaderState(
             }.also { cachePage(pageId, it) }
             job.await()
         }
+    }
+
+    /**
+     * [Page.imageSize] is the page fitted to the screen it was loaded on. A page
+     * cached before a rotation kept the portrait size, and the adaptive
+     * background, placed from it, drew black bands between itself and the page.
+     */
+    private suspend fun Page.fittedTo(area: IntSize): Page {
+        if (area == IntSize.Zero) return this
+        val image = (imageResult as? ReaderImageResult.Success)?.image ?: return this
+        val size = image.calculateSizeForArea(area, true) ?: return this
+        return if (size == imageSize) this else copy(imageSize = size)
     }
 
     private fun getMaxPageSize(pages: List<PageMetadata>, containerSize: IntSize): IntSize {

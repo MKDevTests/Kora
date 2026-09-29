@@ -264,7 +264,9 @@ fun BoxScope.PagedReaderContent(
                             // same object back from the cache at no cost.
                             val pageReloads = pagedReaderState.pageReloads.collectAsState().value
                             spreadPages.forEach { (meta, pageState) ->
-                                LaunchedEffect(meta, pageReloads) {
+                                // And on the screen size: the page's display size (which
+                                // places the adaptive background) follows a rotation.
+                                LaunchedEffect(meta, pageReloads, currentContainerSize) {
                                     if (pageState.value?.imageResult is ReaderImageResult.Error) pageState.value = null
                                     pageState.value = pagedReaderState.getPage(meta)
                                 }
