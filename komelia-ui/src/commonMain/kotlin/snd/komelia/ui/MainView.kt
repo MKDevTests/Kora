@@ -108,7 +108,7 @@ fun MainView(
     var navBarColor by remember { mutableStateOf<Color?>(null) }
     var accentColor by remember { mutableStateOf<Color?>(null) }
     var useNewLibraryUI by remember { mutableStateOf(true) }
-    var cardLayoutBelow by remember { mutableStateOf(false) }
+    var cardLayoutBelow by remember { mutableStateOf(true) }
     var immersiveColorEnabled by remember { mutableStateOf(true) }
     var immersiveColorAlpha by remember { mutableStateOf(0.12f) }
     var showImmersiveNavBar by remember { mutableStateOf(false) }
@@ -117,8 +117,8 @@ fun MainView(
     var cardWidthScale by remember { mutableStateOf(1.0f) }
     var cardHeightScale by remember { mutableStateOf(1.0f) }
     var cardSpacingBelow by remember { mutableStateOf(0.0f) }
-    var cardShadowLevel by remember { mutableStateOf(2.0f) }
-    var cardCornerRadius by remember { mutableStateOf(8.0f) }
+    var cardShadowLevel by remember { mutableStateOf(6.0f) }
+    var cardCornerRadius by remember { mutableStateOf(12.0f) }
     var useFloatingNavigationBar by remember { mutableStateOf(false) }
     var hideParenthesesInNames by remember { mutableStateOf(false) }
     var uiLanguage by remember { mutableStateOf(snd.komelia.ui.i18n.AppLanguage.SYSTEM) }

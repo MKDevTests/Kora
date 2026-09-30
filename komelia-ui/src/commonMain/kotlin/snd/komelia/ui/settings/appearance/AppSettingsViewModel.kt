@@ -58,8 +58,8 @@ class AppSettingsViewModel(
     var cardWidthScale by mutableStateOf(1.0f)
     var cardHeightScale by mutableStateOf(1.0f)
     var cardSpacingBelow by mutableStateOf(0.0f)
-    var cardShadowLevel by mutableStateOf(2.0f)
-    var cardCornerRadius by mutableStateOf(8.0f)
+    var cardShadowLevel by mutableStateOf(6.0f)
+    var cardCornerRadius by mutableStateOf(12.0f)
     var useFloatingNavigationBar by mutableStateOf(false)
 
     suspend fun initialize() {

@@ -1,5 +1,8 @@
 package snd.komelia.ui.home
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -85,6 +88,9 @@ fun HomeContent(
     onShelfClick: (HomeScreenFilter) -> Unit = {},
     /** True once the shelves have loaded. Gates the accessory statistics card. */
     homeReady: Boolean = true,
+    /** The book in progress, for the card at the top. Null: no card. */
+    lastReadBook: KomeliaBook? = null,
+    onContinueReading: (KomeliaBook) -> Unit = {},
 ) {
     val gridState = rememberLazyGridState()
     val columnState = rememberLazyListState()
@@ -110,6 +116,14 @@ fun HomeContent(
             topContent = {
                 Column {
                     HomeHeaderSection()
+                    if (lastReadBook != null) {
+                        ContinueReadingHero(
+                            book = lastReadBook,
+                            onContinue = { onContinueReading(lastReadBook) },
+                            onDetails = { onBookClick(lastReadBook) },
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
                     // Side by side: each card is one glance (a number, a
                     // date), two stacked rows of it pushed the shelves down a
                     // full card height. A card that has nothing to show emits
@@ -178,10 +192,12 @@ private fun HomeHeaderSection() {
         fontWeight = FontWeight.Bold,
         letterSpacing = (-0.5).sp,
     )
-    Column(
+    // Title and tools on one row: the separate "Kora" bar above it went away.
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(start = 10.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showDropdown) {
             snd.komelia.ui.common.components.LibraryTitleSelector(
@@ -191,10 +207,12 @@ private fun HomeHeaderSection() {
                 currentLibraryId = null,
                 onPickHome = { /* already on Home — no-op */ },
                 onPickLibrary = { libId -> mainScreenVm.navigateToLibrary(libId) },
+                modifier = Modifier.weight(1f),
             )
         } else {
-            Text(LocalStrings.current.ui.home, style = titleStyle)
+            Text(LocalStrings.current.ui.home, style = titleStyle, modifier = Modifier.weight(1f))
         }
+        snd.komelia.ui.topbar.HeaderTools()
     }
 }
 
@@ -332,7 +350,11 @@ private fun DisplayContent(
                             modifier = Modifier.traceLayout("home.shelf"),
                             verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
                         ) {
-                            SectionHeader(shelfLabel(data.filter.label, shelfStrings), onClick = { onShelfClick(data.filter) })
+                            SectionHeader(
+                                label = shelfLabel(data.filter.label, shelfStrings),
+                                countLabel = data.shelfCountLabel(),
+                                onClick = { onShelfClick(data.filter) },
+                            )
                             SectionRow(
                                 modifier = Modifier.traceLayout("home.shelfRow"),
                                 data = data,
@@ -367,6 +389,7 @@ private fun DisplayContent(
                     when (data) {
                         is BookFilterData -> BookFilterEntry(
                             label = shelfLabel(data.filter.label, shelfStrings),
+                            countLabel = data.shelfCountLabel(),
                             onLabelClick = { onShelfClick(data.filter) },
                             books = data.books,
                             bookMenuActions = bookMenuActions,
@@ -376,6 +399,7 @@ private fun DisplayContent(
 
                         is SeriesFilterData -> SeriesFilterEntries(
                             label = shelfLabel(data.filter.label, shelfStrings),
+                            countLabel = data.shelfCountLabel(),
                             onLabelClick = { onShelfClick(data.filter) },
                             series = data.series,
                             onSeriesClick = onSeriesClick,
@@ -391,12 +415,14 @@ private fun DisplayContent(
 }
 
 /**
- * Shelf title. Tapping it opens the shelf full-screen ([ShelfDetailScreen]);
- * the chevron is what tells the user the row is more than a label.
+ * Shelf title. Tapping it opens the shelf full-screen ([ShelfDetailScreen]).
+ *
+ * UI 2026: the title face (serif by default) instead of Inter, a count pill,
+ * and a round chevron where "See all" was — the row reads as a heading with
+ * a way in, not as a label with a link.
  */
 @Composable
-private fun SectionHeader(label: String, onClick: () -> Unit) {
-    val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
+private fun SectionHeader(label: String, countLabel: String?, onClick: () -> Unit) {
     val compact = LocalCompactUi.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -405,48 +431,81 @@ private fun SectionHeader(label: String, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = if (compact) 2.dp else 4.dp),
     ) {
-        Text(
-            label,
-            style = (if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge).copy(
-                fontFamily = inter,
-                fontWeight = FontWeight.SemiBold
-            ),
-        )
-        Spacer(Modifier.weight(1f))
-        // "See all" at the far edge, where the row ends: a chevron glued to
-        // the title said less and sat where nothing else lines up.
-        Text(
-            LocalStrings.current.ui.seeAll,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        ShelfTitle(label, countLabel, compact, Modifier.weight(1f))
+        ShelfChevron()
     }
 }
 
 /** [SectionHeader]'s twin for the paginated grid layout (no horizontal inset). */
 @Composable
-private fun GridSectionHeader(label: String, onClick: () -> Unit) {
-    val inter = FontFamily(Font(Res.font.Inter_SemiBold, FontWeight.SemiBold))
+private fun GridSectionHeader(label: String, countLabel: String?, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
     ) {
+        ShelfTitle(label, countLabel, compact = false, modifier = Modifier.weight(1f))
+        ShelfChevron()
+    }
+}
+
+@Composable
+private fun ShelfTitle(label: String, countLabel: String?, compact: Boolean, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Text(
             label,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = inter,
-                fontWeight = FontWeight.SemiBold
-            ),
+            style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
-        Spacer(Modifier.weight(1f))
-        // "See all" at the far edge, where the row ends: a chevron glued to
-        // the title said less and sat where nothing else lines up.
-        Text(
-            LocalStrings.current.ui.seeAll,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+        if (countLabel != null) {
+            Text(
+                countLabel,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShelfChevron() {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = LocalStrings.current.ui.seeAll,
+            modifier = Modifier.size(20.dp),
         )
     }
+}
+
+/**
+ * "12", or "20+" when the shelf is as full as its page size allows: the
+ * shelf then shows the first N of more, and a bare "20" would lie.
+ */
+private fun HomeFilterData.shelfCountLabel(): String? {
+    val count = when (this) {
+        is BookFilterData -> books.size
+        is SeriesFilterData -> series.size
+    }
+    if (count == 0) return null
+    val cap = filter.shelfPageSize()
+    return if (cap != null && count >= cap) "$count+" else count.toString()
 }
 
 @Composable
@@ -499,6 +558,7 @@ private fun SectionRow(
 
 private fun LazyGridScope.BookFilterEntry(
     label: String,
+    countLabel: String? = null,
     onLabelClick: () -> Unit,
     books: List<KomeliaBook>,
     bookMenuActions: BookMenuActions,
@@ -508,7 +568,7 @@ private fun LazyGridScope.BookFilterEntry(
     if (books.isEmpty()) return
 
     item(span = { GridItemSpan(maxLineSpan) }) {
-        GridSectionHeader(label, onLabelClick)
+        GridSectionHeader(label, countLabel, onLabelClick)
     }
     items(books) { book ->
         BookImageCard(
@@ -524,6 +584,7 @@ private fun LazyGridScope.BookFilterEntry(
 
 private fun LazyGridScope.SeriesFilterEntries(
     label: String,
+    countLabel: String? = null,
     onLabelClick: () -> Unit,
     series: List<KomgaSeries>,
     onSeriesClick: (KomgaSeries) -> Unit,
@@ -533,7 +594,7 @@ private fun LazyGridScope.SeriesFilterEntries(
 ) {
     if (series.isEmpty()) return
     item(span = { GridItemSpan(maxLineSpan) }) {
-        GridSectionHeader(label, onLabelClick)
+        GridSectionHeader(label, countLabel, onLabelClick)
     }
 
     items(series) { s ->

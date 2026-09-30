@@ -1246,6 +1246,32 @@ class UiStrings(private val values: Map<String, String>) {
     /** Display name of a palette seed, by its key in Theme.PALETTES. */
     fun paletteName(key: String): String = at("palette_" + key)
 
+    // UI 2026: library picker sheet, "continue reading" card, floating nav.
+    val addLibrary: String get() = at("addLibrary")
+    val myLists: String get() = at("myLists")
+    val starredSeries: String get() = at("starredSeries")
+    val readingList: String get() = at("readingList")
+    val libraryLongPressHint: String get() = at("libraryLongPressHint")
+    val continueCta: String get() = at("continueCta")
+    val navDiscover: String get() = at("navDiscover")
+
+    fun seriesCount(n: Int): String =
+        if (n == 1) at("seriesCountOne") else at("seriesCountN").replace("{n}", groupThousands(n))
+
+    fun librariesCount(n: Int): String =
+        if (n == 1) at("librariesCountOne") else at("librariesCountN").replace("{n}", n.toString())
+
+    fun volumeNumber(number: String): String = at("volumeNumberN").replace("{n}", number)
+
+    fun pagesProgress(page: Int, total: Int): String = at("pagesProgressN")
+        .replace("{page}", page.toString())
+        .replace("{total}", total.toString())
+        .replace("{left}", (total - page).coerceAtLeast(0).toString())
+
+    /** 4770 -> "4 770" with a narrow no-break space, as a count reads in both languages. */
+    private fun groupThousands(n: Int): String =
+        n.toString().reversed().chunked(3).joinToString("\u202F").reversed()
+
     // Hand-written, outside the region above: i18n-apply.py only moves whole
     // literals, and every one of these is interpolated.
     val user: String get() = at("user")

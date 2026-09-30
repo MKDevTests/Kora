@@ -104,7 +104,10 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
         val theme = LocalTheme.current
         val barHeight = 45.dp
         val statusBarHeight = if (theme.transparentBars) LocalRawStatusBarHeight.current else 0.dp
-        val floatingPadding = if (useNewUI2) barHeight + statusBarHeight else 0.dp
+        // One bar, not two (UI 2026): the Home header carries the tools.
+        val floatingPadding = if (useNewUI2) statusBarHeight else 0.dp
+        // One lookup for the hero card and the bottom-row button.
+        val lastReadBook = snd.komelia.ui.common.rememberLastReadBook(vm.bookApi, null)
         val screenHazeState = if (useNewUI2 && theme.transparentBars) rememberHazeState() else null
         CompositionLocalProvider(
             LocalFloatingToolbarPadding provides floatingPadding,
@@ -174,6 +177,16 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     // shelf landed at 12.4 s, so the card's three
                                     // API calls raced them anyway.
                                     homeReady = vm.shelvesSettled.collectAsState().value,
+                                    lastReadBook = lastReadBook.value,
+                                    onContinueReading = { book ->
+                                        navigator.parent?.pushUnique(
+                                            readerScreen(
+                                                book = book,
+                                                markReadProgress = true,
+                                                onExit = { vm.refreshAfterReading() },
+                                            )
+                                        )
+                                    },
                                 )
 
                         }
@@ -227,8 +240,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                 }
                                 fabFarRight.value = this@HomeScreen to {
                                     ContinueReadingFab(
-                                        bookApi = vm.bookApi,
-                                        libraryId = null,
+                                        book = lastReadBook.value,
                                         accentColor = accentColor,
                                         onOpenBook = openContinueBook,
                                     )
@@ -262,8 +274,7 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                                     Icon(Icons.Rounded.Edit, null)
                                 }
                                 ContinueReadingFab(
-                                    bookApi = vm.bookApi,
-                                    libraryId = null,
+                                    book = lastReadBook.value,
                                     accentColor = accentColor,
                                     onOpenBook = openContinueBook,
                                 )
@@ -271,8 +282,8 @@ class HomeScreen(private val libraryId: KomgaLibraryId? = null) : ReloadableScre
                         }
                     }
                 }
-                if (useNewUI2) {
-                    NewTopAppBar()
+                if (useNewUI2 && theme.transparentBars) {
+                    snd.komelia.ui.topbar.StatusBarScrim()
                 }
             }
         }

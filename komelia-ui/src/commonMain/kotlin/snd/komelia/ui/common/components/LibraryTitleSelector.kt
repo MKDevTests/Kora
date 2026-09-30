@@ -1,43 +1,34 @@
 package snd.komelia.ui.common.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
+import snd.komelia.ui.LocalMainScreenViewModel
 import snd.komelia.ui.LocalStrings
 
 /**
- * Renders a big page title that doubles as a library-switcher dropdown.
+ * Renders a big page title that doubles as the library switcher.
  *
  * The label (e.g. "Home" or "Mangas") is shown in the caller-provided
- * [titleStyle], with a small chevron after it. Tapping anywhere on the
- * row opens a dropdown listing Home + every library, with the active one
- * checkmarked. Picking an entry calls back to the parent to navigate.
+ * [titleStyle], with a small chevron after it. Tapping anywhere on the row
+ * opens the library picker sheet (UI 2026), which replaced the dropdown this
+ * used to open: the sheet shows covers and counts, and is the same one the
+ * floating bar's long-press opens.
  *
- * Designed to replace the bare `Text(...)` inside HomeHeaderSection /
- * LibraryHeaderSection so the title slot itself is the affordance,
- * without adding a second visual row (which conflicted with the existing
- * filter chips below it).
+ * [currentLibraryId], [onPickHome] and [onPickLibrary] are kept so the two
+ * callers did not have to change; the sheet navigates on its own.
  */
 @Composable
 fun LibraryTitleSelector(
@@ -49,63 +40,32 @@ fun LibraryTitleSelector(
     onPickLibrary: (KomgaLibraryId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     // If there are no libraries (still loading, or empty server), the
-    // dropdown wouldn't add anything useful — fall back to a plain Text.
+    // picker wouldn't add anything useful — fall back to a plain Text.
     if (libraries.isEmpty()) {
         Text(label, style = titleStyle, modifier = modifier)
         return
     }
 
-    Box(modifier = modifier) {
+    val mainScreenVm = LocalMainScreenViewModel.current
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Row(
-            modifier = Modifier.clickable { expanded = true },
+            modifier = Modifier
+                .clip(RoundedCornerShape(12))
+                .clickable { mainScreenVm.openLibraryPicker() },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = titleStyle)
+            Text(
+                label,
+                style = titleStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
             Icon(
                 imageVector = Icons.Filled.ArrowDropDown,
                 contentDescription = LocalStrings.current.ui.switchLibrary,
             )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            // "Home" entry: always first, checkmarked when no library is
-            // active (the caller passes currentLibraryId = null on Home).
-            DropdownMenuItem(
-                text = { Text(LocalStrings.current.ui.home) },
-                onClick = {
-                    expanded = false
-                    onPickHome()
-                },
-                leadingIcon = {
-                    if (currentLibraryId == null) {
-                        Icon(Icons.Filled.Check, contentDescription = null)
-                    } else {
-                        Spacer(Modifier.width(24.dp))
-                    }
-                },
-            )
-            HorizontalDivider()
-            libraries.forEach { lib ->
-                DropdownMenuItem(
-                    text = { Text(lib.name) },
-                    onClick = {
-                        expanded = false
-                        onPickLibrary(lib.id)
-                    },
-                    leadingIcon = {
-                        if (currentLibraryId == lib.id) {
-                            Icon(Icons.Filled.Check, contentDescription = null)
-                        } else {
-                            Spacer(Modifier.width(24.dp))
-                        }
-                    },
-                )
-            }
         }
     }
 }

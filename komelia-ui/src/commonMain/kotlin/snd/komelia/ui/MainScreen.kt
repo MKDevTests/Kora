@@ -1,5 +1,7 @@
 package snd.komelia.ui
 
+import snd.komelia.ui.LocalStrings
+import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -341,21 +343,6 @@ class MainScreen(
                 CompositionLocalProvider(
                     LocalTransparentNavBarPadding provides if (transparentBars || useFloatingNavigationBar) paddingValues.calculateBottomPadding() + rawNavBarHeight + (if (useFloatingNavigationBar) 80.dp else 0.dp) else 0.dp,
                 ) {
-                    ModalNavigationDrawer(
-                        drawerState = vm.navBarState,
-                        drawerContent = {
-                            LibrariesNavBar(
-                                modifier = Modifier.padding(
-                                    start = paddingValues.calculateStartPadding(layoutDirection),
-                                    end = paddingValues.calculateEndPadding(layoutDirection),
-                                    top = paddingValues.calculateTopPadding(),
-                                    bottom = paddingValues.calculateBottomPadding(),
-                                ).consumeWindowInsets(paddingValues),
-                                vm = vm,
-                                navigator = navigator
-                            )
-                        },
-                        content = {
                             Box(Modifier.fillMaxSize()) {
                                 Box(
                                     Modifier
@@ -536,11 +523,34 @@ class MainScreen(
                                 }
 
                             }
-                        }
-                    )
                 }
             }
+            LibraryPickerHost(navigator, vm)
         }
+    }
+
+    /** The library picker sheet, when open. Replaces the drawer that lived here. */
+    @Composable
+    private fun LibraryPickerHost(navigator: Navigator, vm: MainScreenViewModel) {
+        if (!vm.libraryPickerOpen.collectAsState().value) return
+        val current = navigator.lastItem
+        val close = { vm.closeLibraryPicker() }
+        snd.komelia.ui.topbar.LibraryPickerSheet(
+            vm = vm,
+            currentLibraryId = (current as? LibraryScreen)?.libraryId,
+            allSelected = current is LibraryScreen && current.libraryId == null,
+            onDismiss = close,
+            onAllLibraries = { close(); vm.navigateToAllLibraries() },
+            onLibrary = { id -> close(); vm.navigateToLibrary(id) },
+            onFavorites = {
+                close()
+                if (navigator.lastItem !is FavoritesScreen) navigator.push(FavoritesScreen())
+            },
+            onPlanned = {
+                close()
+                if (navigator.lastItem !is PlannedScreen) navigator.push(PlannedScreen())
+            },
+        )
     }
 
     @Composable
@@ -552,8 +562,17 @@ class MainScreen(
         val accentColor = LocalAccentColor.current
         val hazeState = LocalHazeState.current
         val theme = LocalTheme.current
-        val useHaze = hazeState != null && theme.transparentBars
+        // Glass whenever there is something behind to blur, not only with
+        // the transparent-bars themes.
+        val useHaze = hazeState != null
         val hazeStyle = if (useHaze) HazeMaterials.regular(containerColor) else null
+        val navStrings = LocalStrings.current.navigation
+        val windowWidth = with(androidx.compose.ui.platform.LocalDensity.current) {
+            androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width.toDp()
+        }
+        // Naming the active tab costs ~100 dp. A tablet has them; a phone's
+        // island (~316 dp for six tabs) already fills the row.
+        val showLabels = windowWidth >= 600.dp
 
         Surface(
             color = if (useHaze) Color.Transparent else containerColor,
@@ -576,69 +595,35 @@ class MainScreen(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box {
-                    val showSwitcher = remember { mutableStateOf(false) }
-                    val libraries = vm.libraries.collectAsState().value
-                    val haptics = LocalHapticFeedback.current
-                    val currentLibraryId = (navigator.lastItem as? LibraryScreen)?.libraryId
-                    FloatingToolbarButton(
-                        icon = Icons.Rounded.LocalLibrary,
-                        onClick = vm::navigateToLibrary,
-                        isSelected = navigator.lastItem is LibraryScreen,
-                        accentColor = accentColor,
-                        // Long-press opens a quick switcher: Favorites + every library.
-                        onLongClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showSwitcher.value = true
-                        },
-                    )
-                    DropdownMenu(
-                        expanded = showSwitcher.value,
-                        onDismissRequest = { showSwitcher.value = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(LocalStrings.current.ui.favoris) },
-                            onClick = {
-                                showSwitcher.value = false
-                                if (navigator.lastItem !is FavoritesScreen) navigator.push(FavoritesScreen())
-                            },
-                            leadingIcon = { Icon(Icons.Rounded.Star, null) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(LocalStrings.current.ui.lire) },
-                            onClick = {
-                                showSwitcher.value = false
-                                if (navigator.lastItem !is PlannedScreen) navigator.push(PlannedScreen())
-                            },
-                            leadingIcon = { Icon(Icons.Rounded.Bookmark, null) },
-                        )
-                        if (libraries.isNotEmpty()) HorizontalDivider()
-                        libraries.forEach { lib ->
-                            DropdownMenuItem(
-                                text = { Text(lib.name) },
-                                onClick = {
-                                    showSwitcher.value = false
-                                    vm.navigateToLibrary(lib.id)
-                                },
-                                leadingIcon = {
-                                    if (currentLibraryId == lib.id) Icon(Icons.Filled.Check, null)
-                                    else Spacer(Modifier.width(24.dp))
-                                },
-                            )
-                        }
-                    }
-                }
+                val haptics = LocalHapticFeedback.current
+                FloatingToolbarButton(
+                    icon = Icons.Rounded.LocalLibrary,
+                    onClick = vm::navigateToLibrary,
+                    isSelected = navigator.lastItem is LibraryScreen,
+                    accentColor = accentColor,
+                    label = navStrings.libraries,
+                    showLabel = showLabels,
+                    // Long-press opens the library picker sheet.
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        vm.openLibraryPicker()
+                    },
+                )
                 FloatingToolbarButton(
                     icon = Icons.Rounded.Home,
                     onClick = { if (navigator.lastItem !is HomeScreen) navigator.replaceAll(HomeScreen()) },
                     isSelected = navigator.lastItem is HomeScreen,
-                    accentColor = accentColor
+                    accentColor = accentColor,
+                    label = navStrings.home,
+                    showLabel = showLabels,
                 )
                 FloatingToolbarButton(
                     icon = Icons.Rounded.Search,
                     onClick = { if (navigator.lastItem !is SearchScreen) navigator.push(SearchScreen(null)) },
                     isSelected = navigator.lastItem is SearchScreen,
-                    accentColor = accentColor
+                    accentColor = accentColor,
+                    label = navStrings.search,
+                    showLabel = showLabels,
                 )
                 if (vm.showStatsInBottomNav.collectAsState().value) {
                     FloatingToolbarButton(
@@ -648,7 +633,9 @@ class MainScreen(
                                 navigator.push(snd.komelia.ui.stats.ReadingStatsScreen())
                         },
                         isSelected = navigator.lastItem is snd.komelia.ui.stats.ReadingStatsScreen,
-                        accentColor = accentColor
+                        accentColor = accentColor,
+                        label = navStrings.stats,
+                        showLabel = showLabels,
                     )
                 }
                 if (vm.showNextReleasesInBottomNav.collectAsState().value) {
@@ -659,7 +646,9 @@ class MainScreen(
                                 navigator.push(snd.komelia.ui.nextreleases.NextReleasesScreen())
                         },
                         isSelected = navigator.lastItem is snd.komelia.ui.nextreleases.NextReleasesScreen,
-                        accentColor = accentColor
+                        accentColor = accentColor,
+                        label = navStrings.releases,
+                        showLabel = showLabels,
                     )
                 }
                 // Opt-in, so this button is absent for anyone who never turned
@@ -679,7 +668,9 @@ class MainScreen(
                                     navigator.push(snd.komelia.ui.discover.DiscoverScreen())
                             },
                             isSelected = navigator.lastItem is snd.komelia.ui.discover.DiscoverScreen,
-                            accentColor = accentColor
+                            accentColor = accentColor,
+                            label = LocalStrings.current.ui.navDiscover,
+                            showLabel = showLabels,
                         )
                         if (discovering) {
                             val discoverProgress = snd.komelia.ui.discover.DiscoverScanner.progress
@@ -700,7 +691,9 @@ class MainScreen(
                             navigator.push(MobileSettingsScreen())
                     },
                     isSelected = navigator.lastItem is MobileSettingsScreen || navigator.lastItem is SettingsScreen,
-                    accentColor = accentColor
+                    accentColor = accentColor,
+                    label = navStrings.settings,
+                    showLabel = showLabels,
                 )
             }
         }
@@ -714,23 +707,38 @@ class MainScreen(
         isSelected: Boolean,
         accentColor: Color?,
         onLongClick: (() -> Unit)? = null,
+        label: String? = null,
+        showLabel: Boolean = false,
     ) {
-        val tint = if (isSelected) accentColor ?: MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.onSurfaceVariant
-        if (onLongClick == null) {
-            IconButton(onClick = onClick) {
-                Icon(icon, null, tint = tint)
-            }
-        } else {
-            // IconButton has no long-press; reproduce its size + circular ripple.
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, null, tint = tint)
+        val accent = accentColor ?: MaterialTheme.colorScheme.primary
+        val tint = if (isSelected) accent else MaterialTheme.colorScheme.onSurfaceVariant
+        // The active tab is a tinted pill; on a wide screen it also says its name.
+        val withLabel = isSelected && showLabel && label != null
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .height(48.dp)
+                .then(if (withLabel) Modifier else Modifier.width(48.dp))
+                .clip(CircleShape)
+                .then(
+                    if (isSelected) Modifier.background(accent.copy(alpha = 0.18f))
+                    else Modifier
+                )
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .then(if (withLabel) Modifier.padding(horizontal = 16.dp) else Modifier),
+        ) {
+            Icon(icon, label, tint = tint)
+            if (withLabel && label != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    ),
+                    color = tint,
+                    maxLines = 1,
+                )
             }
         }
     }
