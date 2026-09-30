@@ -633,7 +633,14 @@ class ViewModelFactory(
     }
 
     fun getReadingStatsViewModel(): snd.komelia.ui.stats.ReadingStatsViewModel {
-        return snd.komelia.ui.stats.ReadingStatsViewModel(createReadingStatsService())
+        return snd.komelia.ui.stats.ReadingStatsViewModel(
+            createReadingStatsService(),
+            appRepositories.settingsRepository.getStatsExcludedLibraryIds(),
+        )
+    }
+
+    fun getStatsSettingsViewModel(): snd.komelia.ui.stats.StatsSettingsViewModel {
+        return snd.komelia.ui.stats.StatsSettingsViewModel(appRepositories.settingsRepository)
     }
 
     /**
@@ -647,6 +654,7 @@ class ViewModelFactory(
             readingEvents = appRepositories.readingEventsRepository,
             komgaApi = dependencies.komgaApi,
             libraries = dependencies.komgaSharedState.libraries,
+            excludedLibraryIds = appRepositories.settingsRepository.getStatsExcludedLibraryIds(),
         )
     }
 

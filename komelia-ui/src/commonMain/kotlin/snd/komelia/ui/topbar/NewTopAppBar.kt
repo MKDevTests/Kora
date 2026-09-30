@@ -125,7 +125,7 @@ fun NewTopAppBar(
             }
             if (showOfflineDialog) {
                 ConfirmationDialog(
-                    body = if (isOffline) "Go Online?" else "Go Offline?",
+                    body = if (isOffline) LocalStrings.current.ui.goOnlineQuestion else LocalStrings.current.ui.goOfflineQuestion,
                     onDialogConfirm = {
                         if (isOffline) mainScreenVm.goOnline() else mainScreenVm.goOffline()
                         showOfflineDialog = false
@@ -193,7 +193,7 @@ fun HeaderTools(modifier: Modifier = Modifier) {
     }
     if (showOfflineDialog) {
         ConfirmationDialog(
-            body = if (isOffline) "Go Online?" else "Go Offline?",
+            body = if (isOffline) LocalStrings.current.ui.goOnlineQuestion else LocalStrings.current.ui.goOfflineQuestion,
             onDialogConfirm = {
                 if (isOffline) mainScreenVm.goOnline() else mainScreenVm.goOffline()
                 showOfflineDialog = false

@@ -778,7 +778,7 @@ private fun LibraryHeaderSection(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.5).sp,
             )
-            val titleLabel = library?.name ?: "All Libraries"
+            val titleLabel = library?.name ?: LocalStrings.current.ui.allLibraries
             if (showDropdown) {
                 snd.komelia.ui.common.components.LibraryTitleSelector(
                     label = titleLabel,
@@ -1010,7 +1010,7 @@ fun LibraryToolBar(
             else Modifier,
             title = {
                 Text(
-                    library?.let { library.name } ?: "All Libraries",
+                    library?.let { library.name } ?: LocalStrings.current.ui.allLibraries,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

@@ -1,5 +1,17 @@
 package snd.komelia.stats
 
+import kotlin.coroutines.cancellation.CancellationException
+import snd.komga.client.library.KomgaLibraryId
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.async
+import io.ktor.http.HttpStatusCode
+import io.ktor.client.plugins.ClientRequestException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.flow.StateFlow
 import snd.komga.client.library.KomgaLibrary
@@ -21,6 +33,9 @@ private val logger = KotlinLogging.logger {}
 
 /** How long a server-provided count of finished books is trusted before re-asking. */
 private val BOOKS_BASELINE_TTL = 7.days
+
+/** Logged books whose library is looked up per statistics pass, at most. */
+private const val BACKFILL_BATCH = 500
 
 /**
  * Computes a [ReadingStats] snapshot by combining:
@@ -50,6 +65,8 @@ class ReadingStatsService(
      * every cold start, for a number the app had in memory.
      */
     private val libraries: StateFlow<List<KomgaLibrary>>,
+    /** Libraries left out of every figure (stats settings). */
+    private val excludedLibraryIds: Flow<Set<String>> = flowOf(emptySet()),
     private val clock: Clock = Clock.System,
 ) {
 
@@ -66,28 +83,34 @@ class ReadingStatsService(
     suspend fun compute(): ReadingStats = snd.komelia.perf.PerfTrace.measure("stats.total") {
         val now = clock.now()
         val api = komgaApi.value
+        val excluded = runCatching { excludedLibraryIds.first() }.getOrDefault(emptySet())
+        // Only needed when a library is left out: events logged before V117
+        // do not know their library yet.
+        if (excluded.isNotEmpty()) trace("stats.libraryBackfill") { resolveEventLibraries(api) }
 
-        val booksLast7 = trace("stats.booksLast7") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days) }
-        val booksLast30 = trace("stats.booksLast30") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days) }
-        val pagesLast7 = trace("stats.pagesLast7") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days) }
-        val pagesLast30 = trace("stats.pagesLast30") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days) }
+        val booksLast7 = trace("stats.booksLast7") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 7.days, excluded) }
+        val booksLast30 = trace("stats.booksLast30") { readingEvents.countSince(ReadingEvent.Type.COMPLETED, now - 30.days, excluded) }
+        val pagesLast7 = trace("stats.pagesLast7") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 7.days, excluded) }
+        val pagesLast30 = trace("stats.pagesLast30") { readingEvents.sumPagesSince(ReadingEvent.Type.COMPLETED, now - 30.days, excluded) }
         // Lifetime = pages from COMPLETED events still in the local log +
         // pages carried over from older events trimmed by past backup
         // exports (LIFETIME_CARRYOVER sentinel rows). Without the carryover
         // term the total would silently reset after a 365-day cliff.
+        // The carryover is one aggregate without books, so no library can be
+        // taken out of it: it stays whole (said so on the settings page).
         val pagesLifetime = trace("stats.pagesLifetime") {
-            readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED) +
+            readingEvents.sumPagesLifetime(ReadingEvent.Type.COMPLETED, excluded) +
                 readingEvents.sumPagesLifetimeCarryover()
         }
-        val streak = trace("stats.streak") { computeStreak(now) }
-        val monthly = trace("stats.monthly") { computeMonthlyHistory(now) }
-        val daily30 = trace("stats.daily30") { computeDailyHistory(now, days = 30) }
-        val daily7 = trace("stats.daily7") { computeDailyHistory(now, days = 7) }
+        val streak = trace("stats.streak") { computeStreak(now, excluded) }
+        val monthly = trace("stats.monthly") { computeMonthlyHistory(now, excluded) }
+        val daily30 = trace("stats.daily30") { computeDailyHistory(now, days = 30, excluded) }
+        val daily7 = trace("stats.daily7") { computeDailyHistory(now, days = 7, excluded) }
 
-        val lifetimeBooks = trace("stats.lifetimeBooks") { lifetimeBooksFinished(api, now) }
-        val lifetimeSeries = trace("stats.api.lifetimeSeries") { fetchLifetimeSeriesFinished(api) }
-        val librariesExplored = fetchLibrariesCount()
-        val recent = trace("stats.api.recentSeries") { fetchRecentSeries(api) }
+        val lifetimeBooks = trace("stats.lifetimeBooks") { lifetimeBooksFinished(api, now, excluded) }
+        val lifetimeSeries = trace("stats.api.lifetimeSeries") { fetchLifetimeSeriesFinished(api, excluded) }
+        val librariesExplored = fetchLibrariesCount(excluded)
+        val recent = trace("stats.api.recentSeries") { fetchRecentSeries(api, excluded) }
 
         ReadingStats(
             booksFinishedLast7Days = booksLast7,
@@ -116,10 +139,10 @@ class ReadingStatsService(
      * — so the streak doesn't reset before the user reads today) that have
      * at least one COMPLETED event.
      */
-    private suspend fun computeStreak(now: Instant): Int {
+    private suspend fun computeStreak(now: Instant, excluded: Set<String>): Int {
         val tz = TimeZone.currentSystemDefault()
         val dates = readingEvents
-            .distinctDates(ReadingEvent.Type.COMPLETED, limit = 365)
+            .distinctDates(ReadingEvent.Type.COMPLETED, limit = 365, excluded = excluded)
             .toSet()
         if (dates.isEmpty()) return 0
 
@@ -153,9 +176,9 @@ class ReadingStatsService(
      * "YYYY-MM" labels for the past 12 months relative to [now], then
      * fills with the per-month counts from the event log.
      */
-    private suspend fun computeMonthlyHistory(now: Instant): List<MonthBucket> {
+    private suspend fun computeMonthlyHistory(now: Instant, excluded: Set<String>): List<MonthBucket> {
         val tz = TimeZone.currentSystemDefault()
-        val raw = readingEvents.monthlyBuckets(ReadingEvent.Type.COMPLETED, now - 365.days)
+        val raw = readingEvents.monthlyBuckets(ReadingEvent.Type.COMPLETED, now - 365.days, excluded)
 
         val current = now.toLocalDateTime(tz).date
         val labels = generateMonthLabels(current.year, current.monthNumber, count = 12)
@@ -168,7 +191,7 @@ class ReadingStatsService(
      * today) and zero-fills any missing days so the chart x-axis stays
      * stable. Used by the 7-day and 30-day chart options (v1.0.12+).
      */
-    private suspend fun computeDailyHistory(now: Instant, days: Int): List<DayBucket> {
+    private suspend fun computeDailyHistory(now: Instant, days: Int, excluded: Set<String>): List<DayBucket> {
         require(days > 0) { "days must be positive" }
         val tz = TimeZone.currentSystemDefault()
         // `since` covers exactly `days` calendar days back from today —
@@ -176,6 +199,7 @@ class ReadingStatsService(
         val raw = readingEvents.dailyBuckets(
             ReadingEvent.Type.COMPLETED,
             now - (days - 1).days,
+            excluded,
         )
 
         val today = now.toLocalDateTime(tz).date
@@ -213,34 +237,37 @@ class ReadingStatsService(
      * inclusive). One millisecond wide, worth one book, self-correcting at the
      * next refresh: left alone rather than papered over.
      */
-    private suspend fun lifetimeBooksFinished(api: KomgaApi, now: Instant): Int {
-        val baseline = runCatching { readingEvents.getLifetimeBooksBaseline() }
+    private suspend fun lifetimeBooksFinished(api: KomgaApi, now: Instant, excluded: Set<String>): Int {
+        // The stored count is only valid for the exclusions it was taken with.
+        val scope = excluded.sorted().joinToString(",")
+        val baseline = runCatching { readingEvents.getLifetimeBooksBaseline(scope) }
             .onFailure { logger.warn(it) { "reading the lifetime books baseline failed" } }
             .getOrNull()
 
         suspend fun fromBaseline(known: LifetimeBooksBaseline): Int =
             known.count + runCatching {
-                readingEvents.countSince(ReadingEvent.Type.COMPLETED, known.takenAt)
+                readingEvents.countSince(ReadingEvent.Type.COMPLETED, known.takenAt, excluded)
             }.getOrDefault(0)
 
         if (baseline != null && now - baseline.takenAt < BOOKS_BASELINE_TTL) {
             return fromBaseline(baseline)
         }
 
-        val fromServer = trace("stats.api.lifetimeBooks") { fetchLifetimeBooksFinished(api) }
+        val fromServer = trace("stats.api.lifetimeBooks") { fetchLifetimeBooksFinished(api, excluded) }
         // 0 is also what the fetch returns when it fails. A stale baseline beats
         // showing zero to someone who has finished hundreds of books.
         if (fromServer <= 0) return baseline?.let { fromBaseline(it) } ?: 0
 
-        runCatching { readingEvents.upsertLifetimeBooksBaseline(fromServer, now) }
+        runCatching { readingEvents.upsertLifetimeBooksBaseline(fromServer, now, scope = scope) }
             .onFailure { logger.warn(it) { "storing the lifetime books baseline failed" } }
         return fromServer
     }
 
-    private suspend fun fetchLifetimeBooksFinished(api: KomgaApi): Int =
+    private suspend fun fetchLifetimeBooksFinished(api: KomgaApi, excluded: Set<String>): Int =
         runCatching {
             val condition = allOfBooks {
                 readStatus { isEqualTo(KomgaReadStatus.READ) }
+                excluded.forEach { library { isNotEqualTo(KomgaLibraryId(it)) } }
             }.toBookCondition()
             api.bookApi.getBookList(
                 search = KomgaBookSearch(condition = condition),
@@ -250,10 +277,11 @@ class ReadingStatsService(
             logger.warn(it) { "fetchLifetimeBooksFinished failed" }
         }.getOrDefault(0)
 
-    private suspend fun fetchLifetimeSeriesFinished(api: KomgaApi): Int =
+    private suspend fun fetchLifetimeSeriesFinished(api: KomgaApi, excluded: Set<String>): Int =
         runCatching {
             val condition = allOfSeries {
                 readStatus { isEqualTo(KomgaReadStatus.READ) }
+                excluded.forEach { library { isNotEqualTo(KomgaLibraryId(it)) } }
             }.toSeriesCondition()
             api.seriesApi.getSeriesList(
                 search = KomgaSeriesSearch(condition = condition),
@@ -268,7 +296,8 @@ class ReadingStatsService(
      * `librariesExplored` on [ReadingStats] for UI consumers that
      * want a quick scope count.
      */
-    private fun fetchLibrariesCount(): Int = libraries.value.size
+    private fun fetchLibrariesCount(excluded: Set<String>): Int =
+        libraries.value.count { it.id.value !in excluded }
 
     // ---------------------------------------------------------- recent series
 
@@ -278,13 +307,14 @@ class ReadingStatsService(
      * seriesId client-side — cheap and resilient to oneshots / series
      * with many books read on the same day.
      */
-    private suspend fun fetchRecentSeries(api: KomgaApi): List<RecentSeriesEntry> =
+    private suspend fun fetchRecentSeries(api: KomgaApi, excluded: Set<String>): List<RecentSeriesEntry> =
         runCatching {
             val condition = allOfBooks {
                 anyOf {
                     readStatus { isEqualTo(KomgaReadStatus.READ) }
                     readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
                 }
+                excluded.forEach { library { isNotEqualTo(KomgaLibraryId(it)) } }
             }.toBookCondition()
             val page = api.bookApi.getBookList(
                 search = KomgaBookSearch(condition = condition),
@@ -310,6 +340,44 @@ class ReadingStatsService(
             logger.warn(it) { "fetchRecentSeries failed" }
         }.getOrDefault(emptyList())
 
+    // ------------------------------------------------------ event libraries
+
+    /**
+     * Fills in the library of events logged without one (before V117, or when
+     * the book could not be fetched at completion), so an excluded library
+     * leaves the local figures too. At most [BACKFILL_BATCH] books a pass,
+     * four requests at a time — Komga's pool is small and a burst stalls the
+     * rest of the app. Stored once resolved: later passes find nothing to do.
+     * A book the server no longer knows is stored as "" and kept in the
+     * figures, since nothing says which library it was in.
+     */
+    private suspend fun resolveEventLibraries(api: KomgaApi) {
+        val missing = runCatching { readingEvents.bookIdsWithoutLibrary(ReadingEvent.Type.COMPLETED, BACKFILL_BATCH) }
+            .onFailure { logger.warn(it) { "listing events without a library failed" } }
+            .getOrDefault(emptyList())
+        if (missing.isEmpty()) return
+        val permits = Semaphore(4)
+        val resolved = coroutineScope {
+            missing.map { id ->
+                async {
+                    permits.withPermit {
+                        try {
+                            id to api.bookApi.getOne(id).libraryId.value
+                        } catch (e: ClientRequestException) {
+                            if (e.response.status == HttpStatusCode.NotFound) id to "" else null
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            null
+                        }
+                    }
+                }
+            }.awaitAll().filterNotNull().toMap()
+        }
+        runCatching { readingEvents.setLibraryIds(resolved) }
+            .onFailure { logger.warn(it) { "storing event libraries failed" } }
+        logger.info { "stats: resolved the library of ${resolved.size}/${missing.size} logged books" }
+    }
 }
 
 // -- helpers ---------------------------------------------------------------

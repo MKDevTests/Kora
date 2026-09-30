@@ -21,36 +21,47 @@ interface ReadingEventsRepository {
     /**
      * Idempotent insert. No-op if an event for (bookId, type) already exists.
      * [pageCount] is the book's page count at completion time; pass null when
-     * unavailable (e.g. offline reader with missing metadata).
+     * unavailable (e.g. offline reader with missing metadata). [libraryId] is
+     * the book's library, null when unknown.
+     *
+     * Every statistic query below takes [excluded]: library ids whose events
+     * are left out. Events whose library is not known yet are kept.
      */
     suspend fun record(
         bookId: KomgaBookId,
         type: ReadingEvent.Type,
         at: Instant,
         pageCount: Int? = null,
+        libraryId: String? = null,
     )
 
     /** Count of events of [type] whose timestamp is >= [since]. */
-    suspend fun countSince(type: ReadingEvent.Type, since: Instant): Int
+    suspend fun countSince(type: ReadingEvent.Type, since: Instant, excluded: Set<String> = emptySet()): Int
 
     /**
      * Sum of [ReadingEvent.pageCount] for events of [type] whose timestamp
      * is >= [since]. Rows with a null pageCount contribute 0.
      */
-    suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long
+    suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant, excluded: Set<String> = emptySet()): Long
 
     /** Lifetime sum of [ReadingEvent.pageCount] for events of [type]. */
-    suspend fun sumPagesLifetime(type: ReadingEvent.Type): Long
+    suspend fun sumPagesLifetime(type: ReadingEvent.Type, excluded: Set<String> = emptySet()): Long
 
     /** Distinct local calendar dates with at least one event of [type], newest first, capped. */
-    suspend fun distinctDates(type: ReadingEvent.Type, limit: Int): List<String>
+    suspend fun distinctDates(type: ReadingEvent.Type, limit: Int, excluded: Set<String> = emptySet()): List<String>
+
+    /** Books with an event of [type] whose library has not been resolved yet, at most [limit]. */
+    suspend fun bookIdsWithoutLibrary(type: ReadingEvent.Type, limit: Int): List<KomgaBookId>
+
+    /** Stores the library of each book ("" for a book Komga no longer knows). */
+    suspend fun setLibraryIds(libraries: Map<KomgaBookId, String>)
 
     /**
      * Bucket counts of [type] grouped by year-month ("YYYY-MM"), from [since] onward.
      * Returns one entry per month that actually has events (no zero-filling — caller
      * fills the gaps for the chart axis).
      */
-    suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int>
+    suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant, excluded: Set<String> = emptySet()): Map<String, Int>
 
     /**
      * Bucket counts of [type] grouped by local calendar day ("YYYY-MM-DD"),
@@ -58,7 +69,7 @@ interface ReadingEventsRepository {
      * — the caller pads the missing days for chart axes that need a fixed
      * number of bars (e.g. last 7 / 30 days).
      */
-    suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int>
+    suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant, excluded: Set<String> = emptySet()): Map<String, Int>
 
     /** Total number of distinct books ever associated with at least one event of [type]. */
     suspend fun lifetimeDistinctBooks(type: ReadingEvent.Type): Int
@@ -108,15 +119,19 @@ interface ReadingEventsRepository {
      * The stored server count of READ books and when it was taken, or null when
      * this user has never had one. See
      * [ReadingEvent.Type.LIFETIME_BOOKS_BASELINE].
+     *
+     * [scope] names the excluded libraries the count was taken with (sorted
+     * ids, comma-joined, "" for none): a count stored under another scope is
+     * not returned, so changing the exclusions asks the server again.
      */
-    suspend fun getLifetimeBooksBaseline(): LifetimeBooksBaseline?
+    suspend fun getLifetimeBooksBaseline(scope: String = ""): LifetimeBooksBaseline?
 
     /**
      * Replaces a baseline row. [userId] null means whoever is signed in now —
      * the normal case; an import passes it explicitly so a shadow-restore tags
      * the row with the user the backup came from.
      */
-    suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId? = null)
+    suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId? = null, scope: String = "")
 
     /**
      * Upsert this user's [ReadingEvent.Type.LIFETIME_CARRYOVER] sentinel row.

@@ -60,8 +60,6 @@ class MobileSettingsScreen : Screen {
                     Text(LocalStrings.current.ui.settings, style = MaterialTheme.typography.titleLarge)
                 }
 
-                HorizontalDivider()
-
                 SettingsNavigationMenu(
                     currentScreen = currentNavigator.lastItem,
                     onNavigation = { currentNavigator.push(it) },

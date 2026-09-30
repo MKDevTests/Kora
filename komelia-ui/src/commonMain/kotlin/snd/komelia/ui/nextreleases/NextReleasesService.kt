@@ -1,5 +1,7 @@
 package snd.komelia.ui.nextreleases
 
+import kotlinx.datetime.minus
+import kotlinx.datetime.DateTimeUnit
 import snd.komelia.perf.PerfTrace
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -143,8 +145,12 @@ class NextReleasesService(
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val allParsed = tagsByLibrary.flatMap { it.second }.distinct()
             .mapNotNull { tag -> NextReleaseLabels.parseTag(tag)?.let { tag to it } }
-        val (candidates, expired) = allParsed.partition { (_, release) -> release.date >= today }
-        val futureTags = candidates.map { it.first }.toSet()
+        val (_, expired) = allParsed.partition { (_, release) -> release.date >= today }
+        // Resolved from RECENT_DAYS ago, not from today: the calendar keeps
+        // what came out last week under "Out recently". The expired list
+        // (the admin clean-up banner) is unchanged, every past date.
+        val since = today.minus(RECENT_DAYS, DateTimeUnit.DAY)
+        val futureTags = allParsed.filter { (_, release) -> release.date >= since }.map { it.first }.toSet()
 
         // ONE query per library, asking for every one of its future tags at
         // once, instead of one query per tag.
@@ -180,7 +186,7 @@ class NextReleasesService(
                         PerfTrace.measure(
                             label = "nextreleases.library tags=${libraryTags.size}",
                             count = { it: List<UpcomingRelease> -> it.size },
-                        ) { resolveLibrary(library.id, libraryTags, today) }
+                        ) { resolveLibrary(library.id, libraryTags, since) }
                     }
                 }
             }
@@ -264,17 +270,20 @@ class NextReleasesService(
         return releases
     }
 
-    private companion object {
+    companion object {
+        /** Days a release stays listed after its date, under "Out recently". */
+        const val RECENT_DAYS = 30
+
         /** In-flight series lookups. Low enough that a big tag set can't stampede Komga. */
-        const val MAX_CONCURRENT_LOOKUPS = 4
+        private const val MAX_CONCURRENT_LOOKUPS = 4
 
         /** Series per page when resolving a library's nextrelease tags. */
-        const val PAGE_SIZE = 200
+        private const val PAGE_SIZE = 200
 
         /**
          * Tags per query. 174 in one anyOf never answered; this many keeps each
          * query small while still turning 179 requests into single digits.
          */
-        const val TAGS_PER_QUERY = 20
+        private const val TAGS_PER_QUERY = 20
     }
 }

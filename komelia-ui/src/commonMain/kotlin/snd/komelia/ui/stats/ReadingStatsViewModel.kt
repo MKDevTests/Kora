@@ -1,5 +1,13 @@
 package snd.komelia.ui.stats
 
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.Flow
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -20,7 +28,17 @@ private val logger = KotlinLogging.logger {}
  */
 class ReadingStatsViewModel(
     private val service: ReadingStatsService,
+    excludedLibraryIds: Flow<Set<String>> = flowOf(emptySet()),
 ) : StateScreenModel<LoadState<ReadingStats>>(LoadState.Uninitialized) {
+
+    val excludedLibraryIds: StateFlow<Set<String>> =
+        excludedLibraryIds.stateIn(screenModelScope, SharingStarted.Eagerly, emptySet())
+
+    init {
+        // Back from the stats settings with a library switched on or off:
+        // the figures on screen answer the old question, recompute.
+        excludedLibraryIds.drop(1).onEach { load() }.launchIn(screenModelScope)
+    }
 
     suspend fun initialize() {
         if (state.value !is LoadState.Uninitialized) return

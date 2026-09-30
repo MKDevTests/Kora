@@ -44,148 +44,22 @@ class SearchScreen(
             viewModelFactory.getSearchViewModel()
         }
         LaunchedEffect(initialQuery) { vm.initialize(initialQuery) }
+        // Every return to the tab: a book read in between belongs on top.
+        LaunchedEffect(Unit) { vm.refreshRecentBooks() }
 
         val navigator = LocalNavigator.currentOrThrow
 
         ScreenPullToRefreshBox(screenState = vm.state, onRefresh = vm::reload) {
             if (LocalPlatform.current == PlatformType.MOBILE) {
-                val useNewUI2 = LocalUseNewLibraryUI2.current
-                val theme = LocalTheme.current
-                val barHeight = 45.dp
-                val statusBarHeight = if (theme.transparentBars) LocalRawStatusBarHeight.current else 0.dp
-                val floatingPadding = if (useNewUI2) barHeight + statusBarHeight else 0.dp
-
-                if (useNewUI2) {
-                    CompositionLocalProvider(LocalFloatingToolbarPadding provides floatingPadding) {
-                        Box(Modifier.fillMaxSize()) {
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(top = floatingPadding)
-                            ) {
-                                val state by vm.state.collectAsState()
-                                val libraries by vm.availableLibraries.collectAsState()
-                                SearchBarWithResults(
-                                    query = vm.query,
-                                    onQueryChange = { vm.query = it },
-                                    isLoading = state == LoadState.Loading,
-                                    onBack = { navigator.pop() },
-                                    startExpanded = true,
-                                    libraries = libraries,
-                                    selectedLibraryId = vm.selectedLibraryId,
-                                    onSelectedLibraryChange = vm::onSelectedLibraryChange,
-                                    fuzzyEnabled = vm.fuzzyEnabled,
-                                    onFuzzyEnabledChange = vm::onFuzzyEnabledChange,
-                                    modifier = Modifier.fillMaxSize(),
-                                ) {
-                                    when {
-                                        state is LoadState.Error -> ErrorContent(
-                                            (state as LoadState.Error).exception.message ?: "Error",
-                                            onReload = vm::reload
-                                        )
-
-                                        // Keep the results already on screen while the
-                                        // next search runs. The search bar has its own
-                                        // progress line; blanking everything to a
-                                        // spinner on each keystroke was most of what
-                                        // made searching feel slow.
-                                        state is LoadState.Success || vm.hasAnyResults -> SearchContent(
-                                            query = vm.query,
-                                            searchType = vm.currentTab,
-                                            onSearchTypeChange = vm::onSearchTypeChange,
-
-                                            seriesResults = vm.seriesResults,
-                                            seriesCurrentPage = vm.seriesCurrentPage,
-                                            seriesTotalPages = vm.seriesTotalPages,
-                                            onSeriesPageChange = vm::onSeriesPageChange,
-                                            onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
-
-                                            bookResults = vm.bookResults,
-                                            bookCurrentPage = vm.bookCurrentPage,
-                                            bookTotalPages = vm.bookTotalPages,
-                                            onBookPageChange = vm::onBookPageChange,
-                                            onBookClick = { navigator.pushUnique(bookScreen(it)) },
-
-                                            authorNames = vm.authorNames,
-                                            selectedAuthor = vm.selectedAuthor,
-                                            onAuthorSelected = vm::onAuthorSelected,
-                                            onAuthorCleared = vm::clearSelectedAuthor,
-                                            authorSeriesResults = vm.authorSeriesResults,
-                                            authorSeriesCurrentPage = vm.authorSeriesCurrentPage,
-                                            authorSeriesTotalPages = vm.authorSeriesTotalPages,
-                                            onAuthorSeriesPageChange = vm::onAuthorSeriesPageChange,
-                                            authorBookResults = vm.authorBookResults,
-                                            authorBookCurrentPage = vm.authorBookCurrentPage,
-                                            authorBookTotalPages = vm.authorBookTotalPages,
-                                            onAuthorBookPageChange = vm::onAuthorBookPageChange,
-                                            stale = vm.resultsAreStale,
-                                        )
-
-                                        else -> LoadingMaxSizeIndicator()
-                                    }
-                                }
-                            }
-                            NewTopAppBar()
-                        }
-                    }
-                } else {
                 val state by vm.state.collectAsState()
-                val libraries by vm.availableLibraries.collectAsState()
-                SearchBarWithResults(
-                    query = vm.query,
-                    onQueryChange = { vm.query = it },
-                    isLoading = state == LoadState.Loading,
+                SearchHome(
+                    vm = vm,
+                    state = state,
+                    canGoBack = navigator.canPop,
                     onBack = { navigator.pop() },
-                    startExpanded = true,
-                    libraries = libraries,
-                    selectedLibraryId = vm.selectedLibraryId,
-                    onSelectedLibraryChange = vm::onSelectedLibraryChange,
-                    fuzzyEnabled = vm.fuzzyEnabled,
-                    onFuzzyEnabledChange = vm::onFuzzyEnabledChange,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    when {
-                        state is LoadState.Error -> ErrorContent(
-                            (state as LoadState.Error).exception.message ?: "Error",
-                            onReload = vm::reload
-                        )
-
-                        state is LoadState.Success || vm.hasAnyResults -> SearchContent(
-                            query = vm.query,
-                            searchType = vm.currentTab,
-                            onSearchTypeChange = vm::onSearchTypeChange,
-
-                            seriesResults = vm.seriesResults,
-                            seriesCurrentPage = vm.seriesCurrentPage,
-                            seriesTotalPages = vm.seriesTotalPages,
-                            onSeriesPageChange = vm::onSeriesPageChange,
-                            onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
-
-                            bookResults = vm.bookResults,
-                            bookCurrentPage = vm.bookCurrentPage,
-                            bookTotalPages = vm.bookTotalPages,
-                            onBookPageChange = vm::onBookPageChange,
-                            onBookClick = { navigator.pushUnique(bookScreen(it)) },
-
-                            authorNames = vm.authorNames,
-                            selectedAuthor = vm.selectedAuthor,
-                            onAuthorSelected = vm::onAuthorSelected,
-                            onAuthorCleared = vm::clearSelectedAuthor,
-                            authorSeriesResults = vm.authorSeriesResults,
-                            authorSeriesCurrentPage = vm.authorSeriesCurrentPage,
-                            authorSeriesTotalPages = vm.authorSeriesTotalPages,
-                            onAuthorSeriesPageChange = vm::onAuthorSeriesPageChange,
-                            authorBookResults = vm.authorBookResults,
-                            authorBookCurrentPage = vm.authorBookCurrentPage,
-                            authorBookTotalPages = vm.authorBookTotalPages,
-                            onAuthorBookPageChange = vm::onAuthorBookPageChange,
-                            stale = vm.resultsAreStale,
-                        )
-
-                        else -> LoadingMaxSizeIndicator()
-                    }
-                }
-                }
+                    onSeriesClick = { navigator.pushUnique(seriesScreen(it)) },
+                    onBookClick = { navigator.pushUnique(bookScreen(it)) },
+                )
             } else {
                 Column(
                     modifier = Modifier.fillMaxSize(),

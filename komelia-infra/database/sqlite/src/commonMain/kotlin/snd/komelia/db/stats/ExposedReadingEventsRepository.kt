@@ -1,5 +1,8 @@
 package snd.komelia.db.stats
 
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.notInList
+import org.jetbrains.exposed.v1.core.Op
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -54,6 +57,7 @@ class ExposedReadingEventsRepository(
         type: ReadingEvent.Type,
         at: Instant,
         pageCount: Int?,
+        libraryId: String?,
     ) {
         val userId = currentUserId.value?.value
         transaction {
@@ -63,9 +67,49 @@ class ExposedReadingEventsRepository(
                 it[ReadingEventsTable.timestamp] = at.toEpochMilliseconds()
                 it[ReadingEventsTable.pageCount] = pageCount
                 it[ReadingEventsTable.komgaUserId] = userId
+                it[ReadingEventsTable.libraryId] = libraryId
             }
         }
     }
+
+    override suspend fun bookIdsWithoutLibrary(type: ReadingEvent.Type, limit: Int): List<KomgaBookId> {
+        if (limit <= 0) return emptyList()
+        return transaction {
+            ReadingEventsTable
+                .selectAll()
+                .where { ReadingEventsTable.eventType.eq(type.name).and(ReadingEventsTable.libraryId.isNull()) }
+                .limit(limit)
+                .map { KomgaBookId(it[ReadingEventsTable.bookId]) }
+        }
+    }
+
+    override suspend fun setLibraryIds(libraries: Map<KomgaBookId, String>) {
+        if (libraries.isEmpty()) return
+        transaction {
+            libraries.forEach { (book, library) ->
+                ReadingEventsTable.update(
+                    where = {
+                        ReadingEventsTable.bookId.eq(book.value)
+                            .and(ReadingEventsTable.libraryId.isNull())
+                    },
+                ) {
+                    it[ReadingEventsTable.libraryId] = library
+                }
+            }
+        }
+    }
+
+    /**
+     * [base] restricted to events outside [excluded]. An event whose library
+     * is unknown (NULL, or "" for a book gone from the server) is kept: it
+     * cannot be shown to belong to an excluded library.
+     */
+    private fun scoped(base: Op<Boolean>, excluded: Set<String>): Op<Boolean> =
+        if (excluded.isEmpty()) base
+        else base.and(
+            ReadingEventsTable.libraryId.isNull()
+                .or(ReadingEventsTable.libraryId.notInList(excluded))
+        )
 
     override suspend fun backfillNullUserIds(userId: KomgaUserId): Int {
         return transaction {
@@ -147,13 +191,16 @@ class ExposedReadingEventsRepository(
         }
     }
 
-    override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long {
+    override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Long {
         return transaction {
             ReadingEventsTable
                 .selectAll()
                 .where {
-                    ReadingEventsTable.eventType.eq(type.name)
-                        .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds()))
+                    scoped(
+                        ReadingEventsTable.eventType.eq(type.name)
+                            .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds())),
+                        excluded,
+                    )
                 }
                 // Aggregate in Kotlin rather than via Exposed's Sum<Int?>: the
                 // event volume is tiny (a few completions per day), and this
@@ -163,35 +210,38 @@ class ExposedReadingEventsRepository(
         }
     }
 
-    override suspend fun sumPagesLifetime(type: ReadingEvent.Type): Long {
+    override suspend fun sumPagesLifetime(type: ReadingEvent.Type, excluded: Set<String>): Long {
         return transaction {
             ReadingEventsTable
                 .selectAll()
-                .where { ReadingEventsTable.eventType eq type.name }
+                .where { scoped(ReadingEventsTable.eventType eq type.name, excluded) }
                 .sumOf { (it[ReadingEventsTable.pageCount] ?: 0).toLong() }
         }
     }
 
-    override suspend fun countSince(type: ReadingEvent.Type, since: Instant): Int {
+    override suspend fun countSince(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Int {
         return transaction {
             ReadingEventsTable
                 .selectAll()
                 .where {
-                    ReadingEventsTable.eventType.eq(type.name)
-                        .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds()))
+                    scoped(
+                        ReadingEventsTable.eventType.eq(type.name)
+                            .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds())),
+                        excluded,
+                    )
                 }
                 .count()
                 .toInt()
         }
     }
 
-    override suspend fun distinctDates(type: ReadingEvent.Type, limit: Int): List<String> {
+    override suspend fun distinctDates(type: ReadingEvent.Type, limit: Int, excluded: Set<String>): List<String> {
         if (limit <= 0) return emptyList()
         val tz = TimeZone.currentSystemDefault()
         return transaction {
             ReadingEventsTable
                 .selectAll()
-                .where { ReadingEventsTable.eventType eq type.name }
+                .where { scoped(ReadingEventsTable.eventType eq type.name, excluded) }
                 .orderBy(ReadingEventsTable.timestamp, SortOrder.DESC)
                 .asSequence()
                 .map {
@@ -206,14 +256,17 @@ class ExposedReadingEventsRepository(
         }
     }
 
-    override suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int> {
+    override suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Map<String, Int> {
         val tz = TimeZone.currentSystemDefault()
         return transaction {
             ReadingEventsTable
                 .selectAll()
                 .where {
-                    ReadingEventsTable.eventType.eq(type.name)
-                        .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds()))
+                    scoped(
+                        ReadingEventsTable.eventType.eq(type.name)
+                            .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds())),
+                        excluded,
+                    )
                 }
                 .map {
                     val date = Instant.fromEpochMilliseconds(it[ReadingEventsTable.timestamp])
@@ -226,14 +279,17 @@ class ExposedReadingEventsRepository(
         }
     }
 
-    override suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int> {
+    override suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Map<String, Int> {
         val tz = TimeZone.currentSystemDefault()
         return transaction {
             ReadingEventsTable
                 .selectAll()
                 .where {
-                    ReadingEventsTable.eventType.eq(type.name)
-                        .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds()))
+                    scoped(
+                        ReadingEventsTable.eventType.eq(type.name)
+                            .and(ReadingEventsTable.timestamp.greaterEq(since.toEpochMilliseconds())),
+                        excluded,
+                    )
                 }
                 .map {
                     val date = Instant.fromEpochMilliseconds(it[ReadingEventsTable.timestamp])
@@ -257,7 +313,7 @@ class ExposedReadingEventsRepository(
         }
     }
 
-    override suspend fun getLifetimeBooksBaseline(): LifetimeBooksBaseline? {
+    override suspend fun getLifetimeBooksBaseline(scope: String): LifetimeBooksBaseline? {
         val userId = currentUserId.value ?: return null
         val rowId = booksBaselineBookId(userId)
         return transaction {
@@ -268,6 +324,8 @@ class ExposedReadingEventsRepository(
                         .and(ReadingEventsTable.eventType.eq(ReadingEvent.Type.LIFETIME_BOOKS_BASELINE.name))
                 }
                 .firstOrNull()
+                // A count taken with other libraries excluded answers another question.
+                ?.takeIf { (it[ReadingEventsTable.libraryId] ?: "") == scope }
                 ?.let { row ->
                     LifetimeBooksBaseline(
                         count = row[ReadingEventsTable.pageCount] ?: 0,
@@ -277,7 +335,7 @@ class ExposedReadingEventsRepository(
         }
     }
 
-    override suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId?) {
+    override suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId?, scope: String) {
         val owner = userId ?: currentUserId.value ?: return
         val rowId = booksBaselineBookId(owner)
         transaction {
@@ -287,6 +345,7 @@ class ExposedReadingEventsRepository(
                 it[ReadingEventsTable.timestamp] = at.toEpochMilliseconds()
                 it[ReadingEventsTable.pageCount] = count.coerceAtLeast(0)
                 it[ReadingEventsTable.komgaUserId] = owner.value
+                it[ReadingEventsTable.libraryId] = scope.ifEmpty { null }
             }
         }
     }

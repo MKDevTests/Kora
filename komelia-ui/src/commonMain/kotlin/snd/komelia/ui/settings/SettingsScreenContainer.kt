@@ -42,17 +42,21 @@ import snd.komelia.ui.platform.VerticalScrollbar
 @Composable
 fun SettingsScreenContainer(
     title: String,
+    pinned: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val platform = LocalPlatform.current
     when (platform) {
-        MOBILE -> MobileContainer(title, content)
-        DESKTOP, WEB_KOMF -> DesktopContainer(title, content)
+        MOBILE -> MobileContainer(title, pinned, content)
+        DESKTOP, WEB_KOMF -> DesktopContainer(title) {
+            pinned?.invoke()
+            content()
+        }
     }
 }
 
 @Composable
-private fun MobileContainer(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun MobileContainer(title: String, pinned: (@Composable () -> Unit)?, content: @Composable ColumnScope.() -> Unit) {
     val navigator = LocalNavigator.currentOrThrow
     val extraBottomPadding = LocalTransparentNavBarPadding.current
     Column(Modifier.padding()) {
@@ -69,6 +73,7 @@ private fun MobileContainer(title: String, content: @Composable ColumnScope.() -
         }
 
         HorizontalDivider()
+        pinned?.invoke()
 
         Column(
             modifier = Modifier.weight(1f, false).imePadding().verticalScroll(rememberScrollState()).padding(10.dp),

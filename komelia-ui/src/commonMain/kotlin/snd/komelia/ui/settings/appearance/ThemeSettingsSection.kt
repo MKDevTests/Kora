@@ -60,202 +60,20 @@ import snd.komelia.ui.common.components.SwitchWithLabel
 import snd.komelia.ui.hslColor
 import snd.komelia.ui.toHsl
 
-/**
- * Mode, night schedule, pure black, palette and the cover accent: the
- * theme is a handful of independent switches since 1.8.22, replacing one
- * dropdown of five schemes and a twenty-six-entry accent menu. Everything
- * applies live (MainView collects the same flows), so the preview at the
- * bottom is the app itself, one screen closer.
- */
-@Composable
-fun ThemeSettingsSection(
-    currentTheme: AppTheme,
-    onThemeChange: (AppTheme) -> Unit,
-    darkAtNight: Boolean,
-    onDarkAtNightChange: (Boolean) -> Unit,
-    darkNightStart: Int,
-    onDarkNightStartChange: (Int) -> Unit,
-    darkNightEnd: Int,
-    onDarkNightEndChange: (Int) -> Unit,
-    pureBlack: Boolean,
-    onPureBlackChange: (Boolean) -> Unit,
-    paletteSeed: Color?,
-    onPaletteSeedChange: (Color?) -> Unit,
-    accentFollowsCover: Boolean,
-    onAccentFollowsCoverChange: (Boolean) -> Unit,
-    textScale: Float,
-    onTextScaleChange: (Float) -> Unit,
-    titleFont: TitleFont,
-    onTitleFontChange: (TitleFont) -> Unit,
-) {
-    val strings = LocalStrings.current.ui
-    val rowPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-
-    // -- Mode
-    Text(strings.themeMode, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 10.dp))
-    val modes = listOf(
-        AppTheme.SYSTEM to strings.themeModeSystem,
-        AppTheme.LIGHT to strings.themeModeLight,
-        AppTheme.DARK to strings.themeModeDark,
-    )
-    // The three legacy values map onto the segment they mean.
-    val selectedMode = when (currentTheme) {
-        AppTheme.DARK, AppTheme.DARKER, AppTheme.DARK_MODERN -> AppTheme.DARK
-        AppTheme.LIGHT, AppTheme.LIGHT_MODERN -> AppTheme.LIGHT
-        AppTheme.SYSTEM -> AppTheme.SYSTEM
-    }
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
-        modes.forEachIndexed { index, (mode, label) ->
-            SegmentedButton(
-                selected = selectedMode == mode,
-                onClick = { onThemeChange(mode) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                label = { Text(label) },
-            )
-        }
-    }
-
-    SwitchWithLabel(
-        checked = darkAtNight,
-        onCheckedChange = onDarkAtNightChange,
-        label = { Text(strings.darkAtNight) },
-        supportingText = { Text(strings.darkAtNightDesc) },
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = rowPadding,
-    )
-    if (darkAtNight) {
-        val hours = (0..23).map { LabeledEntry(it * 60, hourLabel(it * 60)) }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp),
-        ) {
-            DropdownChoiceMenu(
-                label = { Text(strings.darkNightFrom) },
-                selectedOption = LabeledEntry(darkNightStart, hourLabel(darkNightStart)),
-                options = hours,
-                onOptionChange = { onDarkNightStartChange(it.value) },
-                inputFieldModifier = Modifier.width(140.dp),
-            )
-            DropdownChoiceMenu(
-                label = { Text(strings.darkNightTo) },
-                selectedOption = LabeledEntry(darkNightEnd, hourLabel(darkNightEnd)),
-                options = hours,
-                onOptionChange = { onDarkNightEndChange(it.value) },
-                inputFieldModifier = Modifier.width(140.dp),
-            )
-        }
-    }
-
-    SwitchWithLabel(
-        checked = pureBlack,
-        onCheckedChange = onPureBlackChange,
-        label = { Text(strings.pureBlack) },
-        supportingText = { Text(strings.pureBlackDesc) },
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = rowPadding,
-    )
-
-    // -- Palette
-    Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(strings.palette, style = MaterialTheme.typography.bodyLarge)
-        Text(
-            strings.paletteDesc,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    val effectiveSeed = paletteSeed ?: Theme.DEFAULT_SEED
-    // Swatches show the primary the seed becomes, not the raw seed.
-    val dark = LocalTheme.current.type == Theme.ThemeType.DARK
-    val isPreset = Theme.PALETTES.any { it.second.toArgb() == effectiveSeed.toArgb() }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.Top,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-    ) {
-        Theme.PALETTES.forEach { (key, color) ->
-            PaletteSwatch(
-                label = strings.paletteName(key),
-                color = Theme.primaryOf(color, dark),
-                selected = isPreset && color.toArgb() == effectiveSeed.toArgb(),
-                onClick = { onPaletteSeedChange(if (color.toArgb() == Theme.DEFAULT_SEED.toArgb()) null else color) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        PaletteSwatch(
-            label = strings.paletteCustom,
-            color = if (isPreset) null else Theme.primaryOf(effectiveSeed, dark),
-            selected = !isPreset,
-            // Starts the custom colour from the current one, so picking
-            // "custom" changes nothing until a slider moves.
-            onClick = { if (isPreset) onPaletteSeedChange(effectiveSeed.withHueShift(0.5f)) },
-            modifier = Modifier.weight(1f),
-        )
-    }
-
-    if (!isPreset) {
-        CustomSeedEditor(seed = effectiveSeed, onSeedChange = onPaletteSeedChange)
-    }
-
-    SwitchWithLabel(
-        checked = accentFollowsCover,
-        onCheckedChange = onAccentFollowsCoverChange,
-        label = { Text(strings.accentFollowsCover) },
-        supportingText = { Text(strings.accentFollowsCoverDesc) },
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = rowPadding,
-    )
-
-    // -- Text
-    Text(
-        "${strings.textScale}: ${(textScale * 100).roundToInt()} %",
-        style = MaterialTheme.typography.bodyLarge,
-        modifier = Modifier.padding(horizontal = 10.dp),
-    )
-    AppSlider(
-        value = textScale,
-        onValueChange = onTextScaleChange,
-        valueRange = 0.85f..1.2f,
-        steps = 6,
-        modifier = Modifier.padding(horizontal = 10.dp),
-    )
-    Text(strings.titleFont, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 10.dp))
-    val fonts = listOf(
-        TitleFont.SERIF to strings.titleFontSerif,
-        TitleFont.SANS to strings.titleFontSans,
-        TitleFont.SYSTEM to strings.titleFontSystem,
-    )
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
-        fonts.forEachIndexed { index, (font, label) ->
-            SegmentedButton(
-                selected = titleFont == font,
-                onClick = { onTitleFontChange(font) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = fonts.size),
-                label = { Text(label) },
-            )
-        }
-    }
-
-    // -- Preview
-    Text(strings.preview, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 10.dp))
-    ThemePreview(Modifier.padding(horizontal = 10.dp))
-}
-
-private fun hourLabel(minutes: Int): String {
+internal fun hourLabel(minutes: Int): String {
     val h = (minutes / 60) % 24
     val m = minutes % 60
     return "${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}"
 }
 
 /** A tiny hue nudge that keeps the colour recognisable but no longer equal to a preset. */
-private fun Color.withHueShift(degrees: Float): Color {
+internal fun Color.withHueShift(degrees: Float): Color {
     val (h, s, l) = toHsl()
     return hslColor(h + degrees, s, l)
 }
 
 @Composable
-private fun PaletteSwatch(
+internal fun PaletteSwatch(
     label: String,
     color: Color?,
     selected: Boolean,
@@ -304,7 +122,7 @@ private fun PaletteSwatch(
  * how strong it is.
  */
 @Composable
-private fun CustomSeedEditor(seed: Color, onSeedChange: (Color) -> Unit) {
+internal fun CustomSeedEditor(seed: Color, onSeedChange: (Color) -> Unit) {
     val strings = LocalStrings.current.ui
     val (h0, s0, _) = seed.toHsl()
     var hue by remember(seed.toArgb()) { mutableStateOf(h0) }
@@ -406,7 +224,7 @@ private fun Color.toHex(): String {
 
 /** What the palette does to the controls people actually touch. */
 @Composable
-private fun ThemePreview(modifier: Modifier = Modifier) {
+internal fun ThemePreview(modifier: Modifier = Modifier) {
     val strings = LocalStrings.current
     val scheme = MaterialTheme.colorScheme
     Column(

@@ -1,5 +1,9 @@
 package snd.komelia.ui.settings.navigation
 
+import snd.komelia.ui.stats.StatsSettingsScreen
+import snd.komelia.ui.settings.components.SettingsNavRow
+import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.navigator.LocalNavigator
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -127,6 +131,16 @@ fun NavigationSettingsContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+
+        // Stats settings (libraries counted) ------------------------------
+        if (statsEnabled) {
+            val navigator = LocalNavigator.currentOrThrow
+            SettingsNavRow(
+                label = LocalStrings.current.ui.statsSettings,
+                summary = LocalStrings.current.ui.statsLibrariesCounted,
+                onClick = { navigator.push(StatsSettingsScreen()) },
             )
         }
 

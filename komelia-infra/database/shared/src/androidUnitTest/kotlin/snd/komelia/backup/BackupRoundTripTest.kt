@@ -246,12 +246,12 @@ private class FakeEventsRepo : ReadingEventsRepository {
         list += ReadingEvent(carryoverBook, ReadingEvent.Type.LIFETIME_CARRYOVER, Instant.fromEpochMilliseconds(0), pages.toInt())
     }
 
-    override suspend fun getLifetimeBooksBaseline(): LifetimeBooksBaseline? =
+    override suspend fun getLifetimeBooksBaseline(scope: String): LifetimeBooksBaseline? =
         byUser.values.flatten()
             .lastOrNull { it.type == ReadingEvent.Type.LIFETIME_BOOKS_BASELINE }
             ?.let { LifetimeBooksBaseline(it.pageCount ?: 0, it.timestamp) }
 
-    override suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId?) {
+    override suspend fun upsertLifetimeBooksBaseline(count: Int, at: Instant, userId: KomgaUserId?, scope: String) {
         val owner = userId ?: return
         val baselineBook = KomgaBookId("_booksbaseline_${owner.value}")
         val list = byUser.getOrPut(owner) { mutableListOf() }
@@ -262,13 +262,15 @@ private class FakeEventsRepo : ReadingEventsRepository {
 
     override suspend fun backfillNullUserIds(userId: KomgaUserId): Int = 0
 
-    override suspend fun record(bookId: KomgaBookId, type: ReadingEvent.Type, at: Instant, pageCount: Int?) = error("unused")
-    override suspend fun countSince(type: ReadingEvent.Type, since: Instant): Int = error("unused")
-    override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant): Long = error("unused")
-    override suspend fun sumPagesLifetime(type: ReadingEvent.Type): Long = error("unused")
-    override suspend fun distinctDates(type: ReadingEvent.Type, limit: Int): List<String> = error("unused")
-    override suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int> = error("unused")
-    override suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant): Map<String, Int> = error("unused")
+    override suspend fun record(bookId: KomgaBookId, type: ReadingEvent.Type, at: Instant, pageCount: Int?, libraryId: String?) = error("unused")
+    override suspend fun countSince(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Int = error("unused")
+    override suspend fun sumPagesSince(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Long = error("unused")
+    override suspend fun sumPagesLifetime(type: ReadingEvent.Type, excluded: Set<String>): Long = error("unused")
+    override suspend fun distinctDates(type: ReadingEvent.Type, limit: Int, excluded: Set<String>): List<String> = error("unused")
+    override suspend fun monthlyBuckets(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Map<String, Int> = error("unused")
+    override suspend fun dailyBuckets(type: ReadingEvent.Type, since: Instant, excluded: Set<String>): Map<String, Int> = error("unused")
+    override suspend fun bookIdsWithoutLibrary(type: ReadingEvent.Type, limit: Int): List<KomgaBookId> = error("unused")
+    override suspend fun setLibraryIds(libraries: Map<KomgaBookId, String>) = error("unused")
     override suspend fun lifetimeDistinctBooks(type: ReadingEvent.Type): Int = error("unused")
     override suspend fun clear(type: ReadingEvent.Type) = error("unused")
     override suspend fun sumPagesLifetimeCarryover(): Long = error("unused")

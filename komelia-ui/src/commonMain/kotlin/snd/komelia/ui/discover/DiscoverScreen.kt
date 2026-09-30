@@ -1,5 +1,9 @@
 package snd.komelia.ui.discover
 
+import snd.komelia.ui.LocalTransparentNavBarPadding
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.background
 import snd.komelia.ui.KoraShapes
 import snd.komelia.ui.common.components.KoraChipDefaults
 import androidx.compose.foundation.layout.Arrangement
@@ -102,12 +106,10 @@ class DiscoverScreen : Screen {
                 IconButton(onClick = { navigator.pop() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.back)
                 }
-                Icon(Icons.Rounded.Explore, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
                 Text(
                     strings.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp).weight(1f),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontFamily = MaterialTheme.typography.titleLarge.fontFamily),
+                    modifier = Modifier.padding(start = 4.dp).weight(1f),
                 )
                 IconButton(
                     onClick = { vm.refresh(libraries.map { it.id }) },
@@ -191,8 +193,11 @@ class DiscoverScreen : Screen {
                         )
                     } else {
                         LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(
+                                start = 16.dp, end = 16.dp, top = 8.dp,
+                                bottom = 16.dp + LocalTransparentNavBarPadding.current,
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             items(shown, key = { it.externalId }) { suggestion ->
                                 SuggestionCard(
@@ -233,6 +238,7 @@ private fun String.encodeUrlQuery(): String = buildString {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun SuggestionCard(
     suggestion: DiscoverSuggestion,
@@ -243,90 +249,99 @@ private fun SuggestionCard(
     onToggleInterested: () -> Unit,
     onSearchFrench: () -> Unit,
 ) {
-    // Collapsed by default: the summaries run several paragraphs, and a page of
-    // them is unreadable. Per-card, and deliberately not remembered — this is a
-    // list to skim, not a state to maintain.
+    // Two lines by default: the summaries run several paragraphs, and a page
+    // of them is unreadable. Per-card, deliberately not remembered -- this is
+    // a list to skim, not a state to maintain.
     var expanded by remember { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(8.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                Box(Modifier.width(70.dp).height(105.dp).clip(KoraShapes.small)) {
-                    if (suggestion.imageUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = suggestion.imageUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                }
-
-                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text(
-                        suggestion.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+    Surface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.Top) {
+            Box(
+                Modifier
+                    .width(112.dp)
+                    .height(162.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                    .clickable(enabled = suggestion.url.isNotBlank(), onClick = onOpen)
+            ) {
+                if (suggestion.imageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = suggestion.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
+                }
+            }
 
-                    // Year, publication state and rating on one line: the three
-                    // things that decide whether a series is worth a second
-                    // look, and they fit.
-                    val facts = buildList {
-                        if (suggestion.year.isNotBlank()) add(suggestion.year)
-                        if (suggestion.status.isNotBlank()) add(suggestion.status)
-                    }
-                    if (facts.isNotEmpty()) {
+            Column(
+                Modifier.weight(1f).padding(start = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Column(Modifier.weight(1f)) {
                         Text(
-                            facts.joinToString("  ·  "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            suggestion.title,
+                            style = MaterialTheme.typography.titleLarge,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                    }
-
-                    // A rating without its sample size is a number pretending to
-                    // be evidence: 8.7 over 4350 votes is not 8.7 over 2.
-                    if (suggestion.rating > 0.0) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
+                        // Year, publication state and authors: the facts that
+                        // decide whether a series is worth a second look.
+                        val facts = buildList {
+                            if (suggestion.year.isNotBlank()) add(suggestion.year)
+                            if (suggestion.status.isNotBlank()) add(suggestion.status)
+                            if (suggestion.authors.isNotEmpty()) add(suggestion.authors.take(2).joinToString(", "))
+                        }
+                        if (facts.isNotEmpty()) {
                             Text(
-                                buildString {
-                                    append(" ")
-                                    append(formatRating(suggestion.rating))
-                                    if (suggestion.ratingVotes > 0) append(" (${strings.votes(suggestion.ratingVotes)})")
-                                },
+                                facts.joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
-
-                    if (suggestion.authors.isNotEmpty()) {
-                        Text(
-                            suggestion.authors.take(3).joinToString(", "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
+                    IconButton(onClick = onToggleInterested, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (suggestion.interested) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            contentDescription = if (suggestion.interested) strings.unmarkInterested else strings.markInterested,
+                            tint = if (suggestion.interested) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Rounded.Close, contentDescription = strings.dismiss, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
 
-                    // Only names that resolved: a raw series id on a card would
-                    // be noise, and a missing one is not worth an error.
-                    // The one availability the source can answer. It tracks
-                    // Original and English publishers and nothing else, so
-                    // "VO uniquement" means "no English edition known" -- a
-                    // French one is neither confirmed nor ruled out, hence the
-                    // Nautiljon button below rather than a French badge.
+                // A rating without its sample size is a number pretending to
+                // be evidence: 8.7 over 4350 votes is not 8.7 over 2. The
+                // edition sits next to it: English is the one availability
+                // the source can answer, so "original only" says nothing
+                // about French -- hence the Nautiljon button below.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (suggestion.rating > 0.0) {
+                        Icon(
+                            Icons.Rounded.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = androidx.compose.ui.graphics.Color(0xFFFACC15),
+                        )
+                        Text(
+                            buildString {
+                                append(" ")
+                                append(formatRating(suggestion.rating))
+                                if (suggestion.ratingVotes > 0) append(" (${strings.votes(suggestion.ratingVotes)})")
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(end = 10.dp),
+                        )
+                    }
                     Text(
                         if (suggestion.licensed) {
                             val by = suggestion.englishPublishers.joinToString(", ")
@@ -337,71 +352,65 @@ private fun SuggestionCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = if (suggestion.licensed) MaterialTheme.colorScheme.tertiary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (suggestion.genres.isNotEmpty()) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        maxLines = 1,
+                    ) {
+                        suggestion.genres.take(4).forEach { genre ->
+                            Text(
+                                genre,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                            )
+                        }
+                    }
+                }
+
+                if (suggestion.description.isNotBlank()) {
+                    Text(
+                        suggestion.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        maxLines = if (expanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable { expanded = !expanded },
+                    )
+                }
+
+                val because = suggestion.becauseOf.mapNotNull { sourceNames[it] }
+                if (because.isNotEmpty()) {
+                    Text(
+                        strings.becauseYouRead(because.joinToString(", ")),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp),
                     )
-
-                    val because = suggestion.becauseOf.mapNotNull { sourceNames[it] }
-                    if (because.isNotEmpty()) {
-                        Text(
-                            strings.becauseYouRead(because.joinToString(", ")),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconButton(onClick = onToggleInterested) {
-                        Icon(
-                            if (suggestion.interested) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            contentDescription = if (suggestion.interested) strings.unmarkInterested else strings.markInterested,
-                            tint = if (suggestion.interested) MaterialTheme.colorScheme.primary
-                            else LocalContentColor.current,
-                        )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 2.dp)) {
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = onSearchFrench,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Rounded.Search, null, modifier = Modifier.size(16.dp))
+                        Text(strings.searchFrench, modifier = Modifier.padding(start = 6.dp), maxLines = 1)
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, contentDescription = strings.dismiss)
+                    TextButton(onClick = onOpen, enabled = suggestion.url.isNotBlank()) {
+                        Text(strings.openPage, maxLines = 1)
                     }
-                }
-            }
-
-            if (suggestion.genres.isNotEmpty()) {
-                Text(
-                    suggestion.genres.take(6).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-
-            if (suggestion.description.isNotBlank()) {
-                Text(
-                    suggestion.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = if (expanded) Int.MAX_VALUE else 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .clickable { expanded = !expanded },
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onSearchFrench) {
-                    Text(strings.searchFrench)
-                }
-                TextButton(onClick = onOpen, enabled = suggestion.url.isNotBlank()) {
-                    Text(strings.openPage)
                 }
             }
         }
