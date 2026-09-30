@@ -1279,6 +1279,13 @@ val EnStrings = AppStrings(
         "volumeNumberN" to "Vol. {n}",
         "pagesProgressN" to "page {page} / {total} · {left} pages left",
     // endregion
+        "statsSettings" to "Statistics settings",
+        "statsLibrariesCounted" to "Libraries counted",
+        "statsLibrariesCountedDesc" to "A library switched off leaves every statistic: books, streak, pages, charts and recently read. The home card follows.",
+        "statsPagesCarryoverNote" to "Pages from reading history older than a year can't be traced to a library: they stay in the page total.",
+        "statsAllLibraries" to "All libraries",
+        "statsLibrariesExcludedOne" to "1 library left out",
+        "statsLibrariesExcludedN" to "{n} libraries left out",
         "goOnlineQuestion" to "Go online?",
         "goOfflineQuestion" to "Go offline?",
         "streakOne" to "Reading streak: 1 day",

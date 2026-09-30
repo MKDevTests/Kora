@@ -1291,6 +1291,13 @@ val FrStrings = AppStrings(
         "volumeNumberN" to "Tome {n}",
         "pagesProgressN" to "page {page} / {total} · {left} pages restantes",
     // endregion
+        "statsSettings" to "Réglages des statistiques",
+        "statsLibrariesCounted" to "Bibliothèques comptées",
+        "statsLibrariesCountedDesc" to "Une bibliothèque désactivée sort de toutes les statistiques : livres, série de jours, pages, graphiques et lectures récentes. La carte de l'accueil suit.",
+        "statsPagesCarryoverNote" to "Les pages d'un historique de plus d'un an ne peuvent pas être rattachées à une bibliothèque : elles restent dans le total des pages.",
+        "statsAllLibraries" to "Toutes les bibliothèques",
+        "statsLibrariesExcludedOne" to "1 bibliothèque exclue",
+        "statsLibrariesExcludedN" to "{n} bibliothèques exclues",
         "goOnlineQuestion" to "Passer en ligne ?",
         "goOfflineQuestion" to "Passer hors ligne ?",
         "streakOne" to "Série en cours : 1 jour",

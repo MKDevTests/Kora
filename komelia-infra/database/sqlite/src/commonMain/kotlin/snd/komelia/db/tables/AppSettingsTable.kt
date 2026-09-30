@@ -95,6 +95,7 @@ object AppSettingsTable : Table("AppSettings") {
     val uiLanguage = text("ui_language").default("")
     val hiddenAuthorRoles = text("hidden_author_roles").default("[]")
     val recentSearches = text("recent_searches").default("[]")
+    val statsExcludedLibraryIds = text("stats_excluded_library_ids").default("[]")
 
     override val primaryKey = PrimaryKey(version)
 }

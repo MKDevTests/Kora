@@ -284,6 +284,10 @@ interface CommonSettingsRepository {
     fun getRecentSearches(): Flow<List<String>>
     suspend fun putRecentSearches(queries: List<String>)
 
+    /** Libraries kept out of every reading statistic (ids). */
+    fun getStatsExcludedLibraryIds(): Flow<Set<String>>
+    suspend fun putStatsExcludedLibraryIds(ids: Set<String>)
+
     /** Optional FR/EN language pill on series covers, with size + position. */
     fun getShowLanguageOnCovers(): Flow<Boolean>
     suspend fun putShowLanguageOnCovers(enabled: Boolean)

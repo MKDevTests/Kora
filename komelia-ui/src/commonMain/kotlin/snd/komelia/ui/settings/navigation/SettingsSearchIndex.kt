@@ -1,5 +1,6 @@
 package snd.komelia.ui.settings.navigation
 
+import snd.komelia.ui.stats.StatsSettingsScreen
 import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import snd.komelia.ui.LocalStrings
@@ -104,6 +105,11 @@ fun settingsSearchIndex(): List<SettingSearchEntry> {
     ).forEach { (label, desc, keywords) ->
         result += SettingSearchEntry(label, desc, s.navigation, keywords) { NavigationSettingsScreen() }
     }
+
+    result += SettingSearchEntry(
+        s.statsLibrariesCounted, s.statsLibrariesCountedDesc, "${s.navigation} › ${s.statsSettings}",
+        "statistiques stats bibliothèque library exclure exclude",
+    ) { StatsSettingsScreen() }
 
     listOf(
         t(s.loadSmallPreviewsWhenDragging, s.canBeSlowForHigh),

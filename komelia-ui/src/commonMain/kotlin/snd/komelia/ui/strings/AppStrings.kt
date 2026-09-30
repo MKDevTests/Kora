@@ -1400,6 +1400,15 @@ class UiStrings(private val values: Map<String, String>) {
     fun volumeShort(number: String): String = at("volumeShortN").replace("{n}", number)
     val goOnlineQuestion: String get() = at("goOnlineQuestion")
     val goOfflineQuestion: String get() = at("goOfflineQuestion")
+
+    // Stats settings (1.8.28).
+    val statsSettings: String get() = at("statsSettings")
+    val statsLibrariesCounted: String get() = at("statsLibrariesCounted")
+    val statsLibrariesCountedDesc: String get() = at("statsLibrariesCountedDesc")
+    val statsPagesCarryoverNote: String get() = at("statsPagesCarryoverNote")
+    val statsAllLibraries: String get() = at("statsAllLibraries")
+    fun statsLibrariesExcluded(n: Int): String =
+        if (n == 1) at("statsLibrariesExcludedOne") else at("statsLibrariesExcludedN").replace("{n}", n.toString())
 }
 
 /** Bottom navigation bar. */

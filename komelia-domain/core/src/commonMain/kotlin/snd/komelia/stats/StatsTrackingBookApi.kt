@@ -95,7 +95,9 @@ class StatsTrackingBookApi(
         // finishing, list-mark-as-read after a row tap), so this is usually
         // free. On miss (offline reader with stale metadata, server
         // unreachable mid-action), we store null and SUM treats it as 0.
-        val pageCount = runCatching { delegate.getOne(bookId).media.pagesCount }
+        // The library travels with the event since V117, so the statistics can
+        // leave a library out without asking Komga about every logged book.
+        val book = runCatching { delegate.getOne(bookId) }
             .onFailure { logger.debug(it) { "Could not fetch pageCount for $bookId; recording without it" } }
             .getOrNull()
 
@@ -104,7 +106,8 @@ class StatsTrackingBookApi(
                 bookId = bookId,
                 type = ReadingEvent.Type.COMPLETED,
                 at = clock.now(),
-                pageCount = pageCount,
+                pageCount = book?.media?.pagesCount,
+                libraryId = book?.libraryId?.value,
             )
         } catch (e: Throwable) {
             logger.warn(e) { "Failed to record COMPLETED event for $bookId; stats may be inaccurate" }

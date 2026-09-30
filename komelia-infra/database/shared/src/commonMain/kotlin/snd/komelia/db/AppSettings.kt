@@ -302,4 +302,6 @@ data class AppSettings(
     val hiddenAuthorRoles: Set<String> = emptySet(),
     /** Search tab history, newest first. */
     val recentSearches: List<String> = emptyList(),
+    /** Libraries kept out of every reading statistic. */
+    val statsExcludedLibraryIds: Set<String> = emptySet(),
 )

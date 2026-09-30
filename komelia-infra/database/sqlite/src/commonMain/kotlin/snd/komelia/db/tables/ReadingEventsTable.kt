@@ -19,5 +19,12 @@ object ReadingEventsTable : Table("reading_events") {
      * See V66 migration.
      */
     val komgaUserId = text("komga_user_id").nullable()
+    /**
+     * Library of the book (V117), so the local figures can leave a library
+     * out. NULL on older rows until resolved; "" when Komga no longer knows
+     * the book. On the books-baseline sentinel row: the exclusion set the
+     * stored count was taken with.
+     */
+    val libraryId = text("library_id").nullable()
     override val primaryKey = PrimaryKey(bookId, eventType)
 }

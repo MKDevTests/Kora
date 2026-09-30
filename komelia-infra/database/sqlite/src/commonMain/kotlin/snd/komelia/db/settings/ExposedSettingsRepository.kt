@@ -137,6 +137,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[recentSearches] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.recentSearches
                 )
+                it[statsExcludedLibraryIds] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.statsExcludedLibraryIds.toList()
+                )
             }
         }
     }
@@ -281,6 +284,12 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                     get(AppSettingsTable.recentSearches)
                 )
             }.getOrDefault(emptyList()),
+            statsExcludedLibraryIds = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.statsExcludedLibraryIds)
+                ).toSet()
+            }.getOrDefault(emptySet()),
         )
     }
 }

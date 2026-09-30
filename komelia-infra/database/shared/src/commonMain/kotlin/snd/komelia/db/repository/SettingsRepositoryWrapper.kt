@@ -538,6 +538,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(recentSearches = queries) }
     }
 
+    override fun getStatsExcludedLibraryIds(): Flow<Set<String>> =
+        wrapper.state.map { it.statsExcludedLibraryIds }.distinctUntilChanged()
+
+    override suspend fun putStatsExcludedLibraryIds(ids: Set<String>) {
+        wrapper.transform { it.copy(statsExcludedLibraryIds = ids) }
+    }
+
     override fun getShowLanguageOnCovers(): Flow<Boolean> =
         wrapper.state.map { it.showLanguageOnCovers }.distinctUntilChanged()
 
