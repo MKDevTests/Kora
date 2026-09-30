@@ -531,6 +531,13 @@ class SettingsRepositoryWrapper(
         wrapper.transform { it.copy(hiddenAuthorRoles = roles) }
     }
 
+    override fun getRecentSearches(): Flow<List<String>> =
+        wrapper.state.map { it.recentSearches }.distinctUntilChanged()
+
+    override suspend fun putRecentSearches(queries: List<String>) {
+        wrapper.transform { it.copy(recentSearches = queries) }
+    }
+
     override fun getShowLanguageOnCovers(): Flow<Boolean> =
         wrapper.state.map { it.showLanguageOnCovers }.distinctUntilChanged()
 

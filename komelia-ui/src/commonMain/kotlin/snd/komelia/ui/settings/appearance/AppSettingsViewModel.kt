@@ -65,6 +65,17 @@ class AppSettingsViewModel(
     suspend fun initialize() {
         if (state.value !is LoadState.Uninitialized) return
         mutableState.value = LoadState.Loading
+        load()
+        settingsRepository.putNavBarColor(null)
+        mutableState.value = LoadState.Success(Unit)
+    }
+
+    /** Re-reads every value, for the hub coming back from one of its pages. */
+    suspend fun refresh() {
+        if (state.value is LoadState.Success) load()
+    }
+
+    private suspend fun load() {
         cardWidth = settingsRepository.getCardWidth().map { it.dp }.first()
         currentTheme = settingsRepository.getAppTheme().first()
         uiLanguage = snd.komelia.ui.i18n.AppLanguage.of(settingsRepository.getUiLanguage().first())
@@ -102,9 +113,6 @@ class AppSettingsViewModel(
         cardShadowLevel = settingsRepository.getCardShadowLevel().first()
         cardCornerRadius = settingsRepository.getCardCornerRadius().first()
         useFloatingNavigationBar = settingsRepository.getFloatingNavigationBar().first()
-
-        settingsRepository.putNavBarColor(null)
-        mutableState.value = LoadState.Success(Unit)
     }
 
     fun onCardShadowLevelChange(level: Float) {

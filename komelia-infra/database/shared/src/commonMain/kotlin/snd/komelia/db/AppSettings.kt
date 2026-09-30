@@ -300,4 +300,6 @@ data class AppSettings(
      * adds later shows up instead of silently vanishing.
      */
     val hiddenAuthorRoles: Set<String> = emptySet(),
+    /** Search tab history, newest first. */
+    val recentSearches: List<String> = emptyList(),
 )

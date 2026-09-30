@@ -1,5 +1,19 @@
 package snd.komelia.ui.nextreleases
 
+import snd.komelia.ui.strings.UiStrings
+import snd.komelia.ui.LocalTransparentNavBarPadding
+import kotlinx.datetime.isoDayNumber
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import snd.komelia.ui.KoraShapes
 import snd.komelia.ui.common.components.KoraChipDefaults
@@ -72,10 +86,12 @@ import snd.komelia.ui.pushUnique
 private val logger = KotlinLogging.logger {}
 
 /**
- * Cross-library "upcoming releases" calendar: every series across every
- * library carrying a parseable, future `nextrelease:*` tag (see
- * [NextReleaseLabels]), sorted by date ascending. Purely a read of the
- * user's existing tagging convention — nothing new to maintain.
+ * Cross-library release calendar: every series across every library
+ * carrying a parseable `nextrelease:*` tag (see [NextReleaseLabels]).
+ * Refonte 2: grouped by day, as covers with the volume on them, and split
+ * in two -- what is coming, and what came out in the last
+ * [NextReleasesService.RECENT_DAYS] days, which used to vanish the day it
+ * was released.
  */
 class NextReleasesScreen : Screen {
     override val key: String = "next_releases"
@@ -87,25 +103,25 @@ class NextReleasesScreen : Screen {
         val vm = rememberScreenModel { viewModelFactory.getNextReleasesViewModel() }
         val libraries = LocalLibraries.current.collectAsState().value
         LaunchedEffect(libraries) { if (libraries.isNotEmpty()) vm.load(libraries) }
+        val strings = LocalStrings.current
 
         var selectedLibraryIds by remember { mutableStateOf<Set<KomgaLibraryId>>(emptySet()) }
+        var showRecent by remember { mutableStateOf(false) }
 
         val statusBarHeight = LocalRawStatusBarHeight.current
 
         Column(Modifier.fillMaxSize().padding(top = statusBarHeight)) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { navigator.pop() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = LocalStrings.current.ui.back)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.ui.back)
                 }
-                Icon(Icons.Rounded.Event, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
                 Text(
-                    LocalStrings.current.ui.prochainesSorties,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp),
+                    strings.ui.prochainesSorties,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontFamily = MaterialTheme.typography.titleLarge.fontFamily),
+                    modifier = Modifier.padding(start = 4.dp),
                 )
             }
 
@@ -125,11 +141,11 @@ class NextReleasesScreen : Screen {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            LocalStrings.current.counts.expiredNextReleaseTags(expiredTags.size),
+                            strings.counts.expiredNextReleaseTags(expiredTags.size),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { navigator.pushUnique(MaintenanceScreen()) }) { Text(LocalStrings.current.ui.gRer) }
+                        TextButton(onClick = { navigator.pushUnique(MaintenanceScreen()) }) { Text(strings.ui.gRer) }
                     }
                 }
             }
@@ -144,7 +160,7 @@ class NextReleasesScreen : Screen {
                         FilterChip(
                             selected = selectedLibraryIds.isEmpty(),
                             onClick = { selectedLibraryIds = emptySet() },
-                            label = { Text(LocalStrings.current.ui.toutes2) },
+                            label = { Text(strings.ui.toutes2) },
                             colors = KoraChipDefaults.filterChipColors(),
                             border = KoraChipDefaults.border,
                         )
@@ -176,34 +192,73 @@ class NextReleasesScreen : Screen {
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
 
                 is LoadState.Success -> {
-                    val releases = state.value.filter {
+                    val today = todayForLabel()
+                    val inSelection = state.value.filter {
                         selectedLibraryIds.isEmpty() || it.libraryId in selectedLibraryIds
                     }
-                    if (releases.isEmpty()) {
+                    val upcoming = inSelection.filter { it.date >= today }.sortedBy { it.date }
+                    val recent = inSelection.filter { it.date < today }.sortedByDescending { it.date }
+                    val shown = if (showRecent) recent else upcoming
+                    val libraryNames = libraries.associate { it.id to it.name }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        FilterChip(
+                            selected = !showRecent,
+                            onClick = { showRecent = false },
+                            label = { Text("${strings.ui.releasesUpcoming} · ${upcoming.size}") },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
+                        )
+                        FilterChip(
+                            selected = showRecent,
+                            onClick = { showRecent = true },
+                            label = { Text("${strings.ui.releasesRecent} · ${recent.size}") },
+                            colors = KoraChipDefaults.filterChipColors(),
+                            border = KoraChipDefaults.border,
+                        )
+                    }
+
+                    if (shown.isEmpty()) {
                         Text(
-                            if (state.value.isEmpty())
-                                "Aucune sortie à venir. Les séries taguées « nextrelease:<tome>-<jj.mm.aaaa> » apparaîtront ici."
-                            else
-                                "Aucune sortie à venir dans les bibliothèques sélectionnées.",
+                            when {
+                                showRecent -> strings.ui.releasesRecentEmpty
+                                state.value.isEmpty() -> strings.ui.releasesNoneTagged
+                                else -> strings.ui.releasesNoneInSelection
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
                         )
                     } else {
-                        val byMonth = releases.groupBy { it.date.year to it.date.monthNumber }
-                        LazyColumn {
-                            byMonth.forEach { (yearMonth, monthReleases) ->
-                                item(key = "header_${yearMonth.first}_${yearMonth.second}") {
-                                    Text(
-                                        monthYearLabel(monthReleases.first().date),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                    )
+                        val byDay = shown.groupBy { it.date }
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(112.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(
+                                start = 16.dp, end = 16.dp, top = 4.dp,
+                                bottom = 24.dp + LocalTransparentNavBarPadding.current,
+                            ),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (!showRecent) {
+                                item(span = { GridItemSpan(maxLineSpan) }, key = "summary") {
+                                    ReleasesSummary(upcoming, today)
                                 }
-                                items(monthReleases, key = { "${it.seriesId.value}_${it.volume}" }) { release ->
-                                    NextReleaseRow(release = release) {
+                            }
+                            byDay.forEach { (date, dayReleases) ->
+                                item(span = { GridItemSpan(maxLineSpan) }, key = "day_$date") {
+                                    DayHeader(date, dayReleases.size, today)
+                                }
+                                items(dayReleases, key = { "${it.seriesId.value}_${it.volume}_${it.date}" }) { release ->
+                                    ReleaseCard(
+                                        release = release,
+                                        libraryName = libraryNames[release.libraryId],
+                                        past = release.date < today,
+                                    ) {
                                         // SeriesScreen resolves the full series (incl. the
                                         // oneshot check + self-redirect) from the id alone.
                                         navigator.pushUnique(SeriesScreen(release.seriesId))
@@ -221,60 +276,131 @@ class NextReleasesScreen : Screen {
 }
 
 @Composable
-private fun NextReleaseRow(
-    release: NextReleasesService.UpcomingRelease,
-    onClick: () -> Unit,
-) {
+private fun ReleasesSummary(upcoming: List<NextReleasesService.UpcomingRelease>, today: LocalDate) {
+    val s = LocalStrings.current.ui
+    val next = upcoming.firstOrNull() ?: return
     Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(bottom = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
-        SeriesThumbnail(
-            release.seriesId,
-            modifier = Modifier.size(width = 56.dp, height = 80.dp).clip(KoraShapes.small),
-        )
-        Column(Modifier.padding(start = 14.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+        ) {
+            Icon(Icons.Rounded.Event, null, tint = MaterialTheme.colorScheme.primary)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(s.releasesAnnounced(upcoming.size), style = MaterialTheme.typography.titleMedium)
             Text(
-                release.seriesTitle,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                LocalStrings.current.counts.volumeNumber(release.volume),
-                style = MaterialTheme.typography.bodyMedium,
+                s.releasesNextOn(dayMonthLabel(next.date, s, today)),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                dayMonthLabel(release.date),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
 }
 
-private val frenchMonths = listOf(
-    "janvier", "février", "mars", "avril", "mai", "juin",
-    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-)
-
-private fun frenchMonthName(monthNumber: Int): String = frenchMonths[monthNumber - 1]
-
-/** "2027-01-12" -> "Janvier 2027". */
-private fun monthYearLabel(date: LocalDate): String {
-    val month = frenchMonthName(date.monthNumber).replaceFirstChar { it.uppercase() }
-    return "$month ${date.year}"
+@Composable
+private fun DayHeader(date: LocalDate, count: Int, today: LocalDate) {
+    val s = LocalStrings.current.ui
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.padding(top = 12.dp),
+    ) {
+        Text(
+            dayHeading(date, s, today),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Text(
+            s.volumesCount(count),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(horizontal = 10.dp, vertical = 3.dp),
+        )
+    }
 }
 
-/** "2027-01-12" -> "12 janvier" (same year as today) or "12 janvier 2027" otherwise. */
-private fun dayMonthLabel(date: LocalDate, today: LocalDate = todayForLabel()): String {
-    val base = "${date.dayOfMonth} ${frenchMonthName(date.monthNumber)}"
+@Composable
+private fun ReleaseCard(
+    release: NextReleasesService.UpcomingRelease,
+    libraryName: String?,
+    past: Boolean,
+    onClick: () -> Unit,
+) {
+    val s = LocalStrings.current.ui
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .alpha(if (past) 0.7f else 1f)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+    ) {
+        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp))) {
+            SeriesThumbnail(
+                release.seriesId,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            Text(
+                s.volumeShort(release.volume),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(6.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.Black.copy(alpha = 0.72f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+        Text(
+            release.seriesTitle,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (libraryName != null) {
+            Text(
+                libraryName,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** "2027-01-12" -> "12 janvier" / "12 January", with the year when it is not this one. */
+internal fun dayMonthLabel(date: LocalDate, s: UiStrings, today: LocalDate = todayForLabel()): String {
+    val base = "${date.dayOfMonth} ${s.monthName(date.monthNumber)}"
     return if (date.year == today.year) base else "$base ${date.year}"
+}
+
+/** "Jeudi 25 septembre" / "Thursday 25 September"; "Aujourd'hui" and "Demain" when they apply. */
+private fun dayHeading(date: LocalDate, s: UiStrings, today: LocalDate): String {
+    val days = (date.toEpochDays() - today.toEpochDays()).toLong()
+    val weekday = s.weekdayName(date.dayOfWeek.isoDayNumber)
+    val label = when (days) {
+        0L -> s.today
+        1L -> s.tomorrow
+        -1L -> s.yesterday
+        else -> "$weekday ${dayMonthLabel(date, s, today)}"
+    }
+    return label.replaceFirstChar { it.uppercase() }
 }
 
 private fun todayForLabel(): LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -331,7 +457,10 @@ fun NextReleasesHomeCard(modifier: Modifier = Modifier) {
     }
 
     val navigator = LocalNavigator.currentOrThrow
-    val current = releases ?: return
+    // The list now also holds what came out in the last days; the teaser is
+    // about what is coming.
+    val today = todayForLabel()
+    val current = (releases ?: return).filter { it.date >= today }
     if (current.isEmpty()) return
     val next = current.first()
 
@@ -358,7 +487,7 @@ fun NextReleasesHomeCard(modifier: Modifier = Modifier) {
             Column(Modifier.weight(1f)) {
                 Text(
                     text = LocalStrings.current.counts.nextReleaseLine(
-                        next.seriesTitle, next.volume, dayMonthLabel(next.date),
+                        next.seriesTitle, next.volume, dayMonthLabel(next.date, LocalStrings.current.ui),
                     ),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,

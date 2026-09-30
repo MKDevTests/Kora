@@ -280,6 +280,10 @@ interface CommonSettingsRepository {
     fun getHiddenAuthorRoles(): Flow<Set<String>>
     suspend fun putHiddenAuthorRoles(roles: Set<String>)
 
+    /** Search tab history, newest first, at most eight. */
+    fun getRecentSearches(): Flow<List<String>>
+    suspend fun putRecentSearches(queries: List<String>)
+
     /** Optional FR/EN language pill on series covers, with size + position. */
     fun getShowLanguageOnCovers(): Flow<Boolean>
     suspend fun putShowLanguageOnCovers(enabled: Boolean)

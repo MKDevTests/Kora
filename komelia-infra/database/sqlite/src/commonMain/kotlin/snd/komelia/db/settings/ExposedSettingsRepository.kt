@@ -134,6 +134,9 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                 it[hiddenAuthorRoles] = Json.encodeToString(
                     ListSerializer(String.serializer()), settings.hiddenAuthorRoles.toList()
                 )
+                it[recentSearches] = Json.encodeToString(
+                    ListSerializer(String.serializer()), settings.recentSearches
+                )
             }
         }
     }
@@ -272,6 +275,12 @@ class ExposedSettingsRepository(database: Database) : ExposedRepository(database
                     get(AppSettingsTable.hiddenAuthorRoles)
                 ).toSet()
             }.getOrDefault(emptySet()),
+            recentSearches = runCatching {
+                Json.decodeFromString(
+                    ListSerializer(String.serializer()),
+                    get(AppSettingsTable.recentSearches)
+                )
+            }.getOrDefault(emptyList()),
         )
     }
 }

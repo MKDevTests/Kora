@@ -30,6 +30,8 @@ import snd.komelia.settings.CommonSettingsRepository
 import snd.komelia.ui.LoadState
 import snd.komelia.ui.common.authorRolesOrder
 import snd.komga.client.book.KomgaBookSearch
+import snd.komga.client.book.KomgaReadStatus
+import androidx.compose.ui.unit.dp
 import snd.komga.client.common.KomgaPageRequest
 import snd.komga.client.common.KomgaSort
 import snd.komga.client.common.pencillerRole
@@ -67,6 +69,8 @@ class SearchViewModel(
         private set
     var seriesTotalPages by mutableStateOf(1)
         private set
+    var seriesTotalCount by mutableStateOf(0)
+        private set
 
     var bookResults by mutableStateOf<List<KomeliaBook>>(emptyList())
         private set
@@ -74,6 +78,56 @@ class SearchViewModel(
         private set
     var bookTotalPages by mutableStateOf(1)
         private set
+    var bookTotalCount by mutableStateOf(0)
+        private set
+
+    /** Last queries that led somewhere (a result opened, or Search pressed), newest first. */
+    var recentSearches by mutableStateOf<List<String>>(emptyList())
+        private set
+
+    /** Books by last read date, for the search tab before anything is typed. */
+    var recentBooks by mutableStateOf<List<KomeliaBook>>(emptyList())
+        private set
+
+    var cardWidth by mutableStateOf(150.dp)
+        private set
+
+    fun rememberQuery() {
+        val q = query.trim()
+        if (q.length < 2) return
+        val updated = (listOf(q) + recentSearches.filterNot { it.equals(q, ignoreCase = true) }).take(8)
+        if (updated == recentSearches) return
+        recentSearches = updated
+        screenModelScope.launch { settingsRepository.putRecentSearches(updated) }
+    }
+
+    fun clearRecentSearches() {
+        recentSearches = emptyList()
+        screenModelScope.launch { settingsRepository.putRecentSearches(emptyList()) }
+    }
+
+    fun refreshRecentBooks() {
+        screenModelScope.launch {
+            recentSearches = settingsRepository.getRecentSearches().first()
+            cardWidth = settingsRepository.getCardWidth().first().dp
+            runCatching {
+                bookApi.getBookList(
+                    search = KomgaBookSearch(
+                        allOfBooks {
+                            anyOf {
+                                readStatus { isEqualTo(KomgaReadStatus.IN_PROGRESS) }
+                                readStatus { isEqualTo(KomgaReadStatus.READ) }
+                            }
+                        }.toBookCondition()
+                    ),
+                    pageRequest = KomgaPageRequest(
+                        sort = KomgaSort.KomgaBooksSort.byReadDate(KomgaSort.Direction.DESC),
+                        size = 12,
+                    ),
+                ).content
+            }.onSuccess { recentBooks = it }
+        }
+    }
 
     // Authors tab: list of matching author names (role-agnostic), and the
     // currently drilled-into author with their series + books.
@@ -296,13 +350,14 @@ class SearchViewModel(
                 search,
                 KomgaPageRequest(
                     pageIndex = pageNumber - 1,
-                    size = 10,
+                    size = 24,
                     sort = if (query.isBlank()) KomgaSort.KomgaSeriesSort.byLastModifiedDateDesc() else KomgaSort.Unsorted
                 )
             )
 
             seriesCurrentPage = page.number + 1
             seriesTotalPages = page.totalPages
+            seriesTotalCount = page.totalElements
             seriesResults = page.content
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }
@@ -331,13 +386,14 @@ class SearchViewModel(
                 search,
                 KomgaPageRequest(
                     pageIndex = pageNumber - 1,
-                    size = 10,
+                    size = 24,
                     sort = if (query.isBlank()) KomgaSort.KomgaBooksSort.byLastModifiedDateDesc() else KomgaSort.Unsorted
                 )
             )
 
             bookCurrentPage = page.number + 1
             bookTotalPages = page.totalPages
+            bookTotalCount = page.totalElements
             bookResults = page.content
         }.onFailure { mutableState.value = LoadState.Error(it) }
     }

@@ -6,101 +6,35 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import snd.komelia.ui.LoadState
+import snd.komelia.ui.LocalStrings
 import snd.komelia.ui.LocalViewModelFactory
 import snd.komelia.ui.common.components.LoadingMaxSizeIndicator
 import snd.komelia.ui.settings.SettingsScreenContainer
-import snd.komelia.ui.LocalStrings
 
+/** Appearance: a summary of five pages (see AppearanceSections.kt). */
 class AppSettingsScreen : Screen {
 
     @Composable
     override fun Content() {
         val viewModelFactory = LocalViewModelFactory.current
+        val navigator = LocalNavigator.currentOrThrow
         val vm = rememberScreenModel { viewModelFactory.getAppearanceViewModel() }
-        LaunchedEffect(Unit) { vm.initialize() }
+        // Runs again each time a sub-page is popped: the summaries have to
+        // show what was just changed there.
+        LaunchedEffect(Unit) {
+            vm.initialize()
+            vm.refresh()
+        }
         val state = vm.state.collectAsState()
 
         SettingsScreenContainer(LocalStrings.current.ui.appearance) {
             when (val result = state.value) {
                 is LoadState.Error -> Text("${result::class.simpleName}: ${result.exception.message}")
                 LoadState.Uninitialized, LoadState.Loading -> LoadingMaxSizeIndicator()
-                is LoadState.Success -> AppearanceSettingsContent(
-                    cardWidth = vm.cardWidth,
-                    onCardWidthChange = vm::onCardWidthChange,
-                    currentTheme = vm.currentTheme,
-                    onThemeChange = vm::onAppThemeChange,
-                    uiLanguage = vm.uiLanguage,
-                    onUiLanguageChange = vm::onUiLanguageChange,
-                    darkAtNight = vm.darkAtNight,
-                    onDarkAtNightChange = vm::onDarkAtNightChange,
-                    darkNightStart = vm.darkNightStart,
-                    onDarkNightStartChange = vm::onDarkNightStartChange,
-                    darkNightEnd = vm.darkNightEnd,
-                    onDarkNightEndChange = vm::onDarkNightEndChange,
-                    pureBlack = vm.pureBlack,
-                    onPureBlackChange = vm::onPureBlackChange,
-                    paletteSeed = vm.paletteSeed,
-                    onPaletteSeedChange = vm::onPaletteSeedChange,
-                    accentFollowsCover = vm.accentFollowsCover,
-                    onAccentFollowsCoverChange = vm::onAccentFollowsCoverChange,
-                    textScale = vm.textScale,
-                    onTextScaleChange = vm::onTextScaleChange,
-                    titleFont = vm.titleFont,
-                    onTitleFontChange = vm::onTitleFontChange,
-                    unreadBadgeStyle = vm.unreadBadgeStyle,
-                    onUnreadBadgeStyleChange = vm::onUnreadBadgeStyleChange,
-                    unreadBadgeAtStart = vm.unreadBadgeAtStart,
-                    onUnreadBadgeAtStartChange = vm::onUnreadBadgeAtStartChange,
-                    compactUi = vm.compactUi,
-                    onCompactUiChange = vm::onCompactUiChange,
-                    appIcon = vm.appIcon,
-                    onAppIconChange = vm::onAppIconChange,
-                    useNewLibraryUI = vm.useNewLibraryUI,
-                    onUseNewLibraryUIChange = vm::onUseNewLibraryUIChange,
-                    cardLayoutBelow = vm.cardLayoutBelow,
-                    onCardLayoutBelowChange = vm::onCardLayoutBelowChange,
-                    immersiveColorEnabled = vm.immersiveColorEnabled,
-                    onImmersiveColorEnabledChange = vm::onImmersiveColorEnabledChange,
-                    immersiveColorAlpha = vm.immersiveColorAlpha,
-                    onImmersiveColorAlphaChange = vm::onImmersiveColorAlphaChange,
-                    showImmersiveNavBar = vm.showImmersiveNavBar,
-                    onShowImmersiveNavBarChange = vm::onShowImmersiveNavBarChange,
-                    hideParenthesesInNames = vm.hideParenthesesInNames,
-                    onHideParenthesesInNamesChange = vm::onHideParenthesesInNamesChange,
-                    authorRolesFilterEnabled = vm.authorRolesFilterEnabled,
-                    onAuthorRolesFilterEnabledChange = vm::onAuthorRolesFilterEnabledChange,
-                    hiddenAuthorRoles = vm.hiddenAuthorRoles,
-                    onAuthorRoleVisibilityChange = vm::onAuthorRoleVisibilityChange,
-                    showLanguageOnCovers = vm.showLanguageOnCovers,
-                    onShowLanguageOnCoversChange = vm::onShowLanguageOnCoversChange,
-                    languageBadgeScale = vm.languageBadgeScale,
-                    onLanguageBadgeScaleChange = vm::onLanguageBadgeScaleChange,
-                    languageBadgeAtBottom = vm.languageBadgeAtBottom,
-                    onLanguageBadgeAtBottomChange = vm::onLanguageBadgeAtBottomChange,
-                    showCompleteSeriesBadge = vm.showCompleteSeriesBadge,
-                    onShowCompleteSeriesBadgeChange = vm::onShowCompleteSeriesBadgeChange,
-                    lockScreenRotation = vm.lockScreenRotation,
-                    onLockScreenRotationChange = vm::onLockScreenRotationChange,
-                    cardLayoutOverlayBackground = vm.cardLayoutOverlayBackground,
-                    onCardLayoutOverlayBackgroundChange = vm::onCardLayoutOverlayBackgroundChange,
-                    useNewLibraryUI2 = vm.useNewLibraryUI2,
-                    onUseNewLibraryUI2Change = vm::onUseNewLibraryUI2Change,
-                    useFloatingNavigationBar = vm.useFloatingNavigationBar,
-                    onUseFloatingNavigationBarChange = vm::onUseFloatingNavigationBarChange,
-                    useImmersiveMorphingCover = vm.useImmersiveMorphingCover,
-                    onUseImmersiveMorphingCoverChange = vm::onUseImmersiveMorphingCoverChange,
-                    cardWidthScale = vm.cardWidthScale,
-                    onCardWidthScaleChange = vm::onCardWidthScaleChange,
-                    cardHeightScale = vm.cardHeightScale,
-                    onCardHeightScaleChange = vm::onCardHeightScaleChange,
-                    cardSpacingBelow = vm.cardSpacingBelow,
-                    onCardSpacingBelowChange = vm::onCardSpacingBelowChange,
-                    cardShadowLevel = vm.cardShadowLevel,
-                    onCardShadowLevelChange = vm::onCardShadowLevelChange,
-                    cardCornerRadius = vm.cardCornerRadius,
-                    onCardCornerRadiusChange = vm::onCardCornerRadiusChange,
-                )
+                is LoadState.Success -> AppearanceHub(vm, onOpen = { navigator.push(AppearanceSectionScreen(it)) })
             }
         }
     }

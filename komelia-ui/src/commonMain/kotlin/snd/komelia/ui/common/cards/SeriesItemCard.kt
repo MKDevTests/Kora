@@ -279,8 +279,28 @@ private fun SeriesImageBadges(
     series: KomgaSeries,
     isDownloaded: Boolean = false,
 ) {
+    val planned = LocalPlanned.current
+    val isPlanned = planned != null && series.id.value in planned.plannedIds.collectAsState().value
+    SeriesCoverBadges(
+        languageLabel = languageBadgeLabel(series.metadata.language),
+        unreadCount = series.booksUnreadCount,
+        isComplete = series.isComplete,
+        isDownloaded = isDownloaded,
+        isPlanned = isPlanned,
+    )
+}
+
+/** The badges of a series cover, from plain values so Appearance can draw a sample. */
+@Composable
+internal fun SeriesCoverBadges(
+    languageLabel: String?,
+    unreadCount: Int,
+    isComplete: Boolean,
+    isDownloaded: Boolean = false,
+    isPlanned: Boolean = false,
+) {
     if (LocalShowLanguageOnCovers.current) {
-        val label = languageBadgeLabel(series.metadata.language)
+        val label = languageLabel
         if (label != null) {
             LanguageBadge(
                 label = label,
@@ -303,10 +323,10 @@ private fun SeriesImageBadges(
             }
         }
     }
-    val showCompleteBadge = LocalShowCompleteSeriesBadge.current && series.isComplete
+    val showCompleteBadge = LocalShowCompleteSeriesBadge.current && isComplete
     val badgeStyle = LocalUnreadBadgeStyle.current
     val badgeCorner = if (LocalUnreadBadgeAtStart.current) Alignment.TopStart else Alignment.TopEnd
-    if (series.booksUnreadCount > 0 && badgeStyle != UnreadBadgeStyle.NONE) {
+    if (unreadCount > 0 && badgeStyle != UnreadBadgeStyle.NONE) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = badgeCorner
@@ -330,7 +350,7 @@ private fun SeriesImageBadges(
                     borderColor = MaterialTheme.colorScheme.tertiary,
                 ) {
                     Text(
-                        "${series.booksUnreadCount}",
+                        "$unreadCount",
                         color = MaterialTheme.colorScheme.onTertiary,
                         style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
                     )
@@ -338,7 +358,7 @@ private fun SeriesImageBadges(
             } else {
                 IndicatorBadge {
                     Text(
-                        "${series.booksUnreadCount}",
+                        "$unreadCount",
                         color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
                     )
@@ -365,8 +385,6 @@ private fun SeriesImageBadges(
             }
         }
     }
-    val planned = LocalPlanned.current
-    val isPlanned = planned != null && series.id.value in planned.plannedIds.collectAsState().value
     if (isPlanned) {
         Box(
             modifier = Modifier.fillMaxSize(),

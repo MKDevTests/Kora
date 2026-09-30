@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import snd.komelia.ui.LocalPlatform
 import snd.komelia.ui.LocalCompactUi
 import snd.komelia.ui.LocalTheme
@@ -47,10 +49,11 @@ fun SettingsGroup(
     ) {
         if (title != null) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                letterSpacing = 0.8.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
             )
         }
         Surface(

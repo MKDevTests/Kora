@@ -84,6 +84,8 @@ fun SearchContent(
      * search cannot be opened while the new one is still in flight.
      */
     stale: Boolean = false,
+    /** False inside SearchHome, which draws its own tabs with counts. */
+    showToolbar: Boolean = true,
 ) {
     if (query.isNotBlank() &&
         bookResults.isEmpty() &&
@@ -109,7 +111,7 @@ fun SearchContent(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SearchToolBar(
+            if (showToolbar) SearchToolBar(
                 searchType = searchType,
                 onSearchTypeChange = onSearchTypeChange,
                 hasSeries = seriesTotalPages > 0,
@@ -179,7 +181,7 @@ fun SearchContent(
                                 )
                             }
                             if (authorSeriesResults.isNotEmpty()) {
-                                item { AuthorSectionLabel("Series", widthModifier) }
+                                item { AuthorSectionLabel(LocalStrings.current.ui.series, widthModifier) }
                                 items(authorSeriesResults) { series ->
                                     SeriesDetailedListCard(
                                         series = series,
@@ -196,7 +198,7 @@ fun SearchContent(
                                 }
                             }
                             if (authorBookResults.isNotEmpty()) {
-                                item { AuthorSectionLabel("Books", widthModifier) }
+                                item { AuthorSectionLabel(LocalStrings.current.ui.books, widthModifier) }
                                 items(authorBookResults) { book ->
                                     BookDetailedListCard(
                                         book = book,
@@ -313,7 +315,7 @@ private fun AuthorSectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EmptySearchResults() {
+internal fun EmptySearchResults() {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally

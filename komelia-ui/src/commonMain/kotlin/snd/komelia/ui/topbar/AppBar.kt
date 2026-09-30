@@ -135,7 +135,7 @@ fun AppBar(
             }
             if (showConfirmationDialog) {
                 ConfirmationDialog(
-                    body = "Go Online?",
+                    body = LocalStrings.current.ui.goOnlineQuestion,
                     onDialogConfirm = onOfflineModeChange,
                     onDialogDismiss = { showConfirmationDialog = false }
                 )

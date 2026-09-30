@@ -94,6 +94,7 @@ object AppSettingsTable : Table("AppSettings") {
     val authorRolesFilterEnabled = bool("author_roles_filter_enabled").default(false)
     val uiLanguage = text("ui_language").default("")
     val hiddenAuthorRoles = text("hidden_author_roles").default("[]")
+    val recentSearches = text("recent_searches").default("[]")
 
     override val primaryKey = PrimaryKey(version)
 }

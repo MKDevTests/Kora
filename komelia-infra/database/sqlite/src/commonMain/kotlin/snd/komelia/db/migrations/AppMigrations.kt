@@ -125,6 +125,7 @@ class AppMigrations : MigrationResourcesProvider() {
         "V113__theme_palette.sql",
         "V114__lot_f_display.sql",
         "V115__ui_2026_cards.sql",
+        "V116__recent_searches.sql",
     )
 
     override suspend fun getMigration(name: String): ByteArray? {
